@@ -232,12 +232,13 @@ test.describe('Publishing', () => {
       const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
       for (const icon of ['img/favicon.svg', 'img/favicon-32.png', 'img/icon-180.png']) assert.ok(html.includes(`href="${icon}"`), `${f}: ${icon}`);
     }
-    for (const [f, img] of [['index.html', 'og-site.png'], ['card.html', 'og-invite.png']]) {
+    for (const [f, img] of [['index.html', 'og-site.jpg'], ['card.html', 'og-invite.jpg']]) {
       const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
       assert.ok(html.includes(`<meta property="og:image" content="https://cardalbum.vercel.app/img/${img}">`), `${f} preview image`);
       for (const tag of ['og:title', 'og:description', 'og:url', 'og:image:width', 'twitter:card']) assert.ok(html.includes(tag), `${f}: ${tag}`);
-      // WhatsApp skips preview images over ~600 KB.
-      assert.ok(fs.statSync(path.join(ROOT, 'img', img)).size < 600 * 1024, `${img} too big for WhatsApp`);
+      // WhatsApp shows no preview image when it is over ~300 KB; keep well under.
+      assert.ok(fs.statSync(path.join(ROOT, 'img', img)).size < 200 * 1024, `${img} too big for WhatsApp`);
+      assert.ok(html.includes('<meta property="og:image:type" content="image/jpeg">'), `${f}: image type`);
     }
     for (const img of ['favicon.svg', 'favicon-32.png', 'icon-180.png', 'icon-192.png', 'icon-512.png']) assert.ok(fs.existsSync(path.join(ROOT, 'img', img)), img);
     const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'site.webmanifest'), 'utf8'));
