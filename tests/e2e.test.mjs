@@ -118,6 +118,10 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.eval(fill('host2', 'Aarav'));
     await page.eval(fill('date', '2026-12-11T20:00'));
     await page.eval(fill('venue', 'Grand Ballroom, Udaipur'));
+    await page.eval(fill('mapUrl', 'not a link'));
+    await next();
+    assert.match(await page.eval(`document.querySelector('#osError').textContent`), /location should be a link/, 'optional location, but checked when filled');
+    await page.eval(fill('mapUrl', 'https://maps.app.goo.gl/abc123'));
     await next();
     assert.equal(await page.eval(`document.querySelector('.os-step[data-step="2"]').hidden`), false);
   });
@@ -527,6 +531,32 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.eval(`document.querySelector('#orderPaste').value = 'hello'`);
     await page.eval(`document.querySelector('#orderFill').click()`);
     assert.match(await page.eval(`document.querySelector('#orderMsg').textContent`), /No order found/);
+    noErrors();
+  });
+
+  test('admin: pasted orders are kept in a list; tapping the name fills everything again', async () => {
+    assert.equal(await page.eval(`document.querySelectorAll('#ordersList .order-item').length`), 1, 'the pasted order was saved once');
+    assert.match(await page.eval(`document.querySelector('#ordersList .order-open').textContent`), /Diya & Aarav[\s\S]*Sangeet Night · #010/);
+    assert.equal(await page.eval(`document.querySelector('#ordersCount').textContent`), '1');
+    // Pasting the same order again does not duplicate it
+    await page.eval(`document.querySelector('#orderPaste').value = ${JSON.stringify(page.lastOrder || '')}`);
+    await page.eval(`document.querySelector('#orderFill').click()`);
+    assert.equal(await page.eval(`document.querySelectorAll('#ordersList .order-item').length`), 1);
+    // Start from an empty editor, then tap the customer's name
+    await page.eval(`document.querySelector('#clearBtn').click()`);
+    assert.equal(await page.eval(`document.querySelector('[name=host1]').value`), '');
+    await page.eval(`document.querySelector('#ordersList .order-open').click()`);
+    assert.equal(await page.eval(`document.querySelector('[name=host1]').value`), 'Diya');
+    assert.equal(await page.eval(`document.querySelector('[name=mapUrl]').value`), 'https://maps.app.goo.gl/abc123', 'optional location filled');
+    assert.equal(await page.eval(`document.querySelector('#designNo').value`), '010');
+    // Survives a reload; done and delete
+    await page.goto(base + 'admin.html');
+    assert.equal(await page.eval(`document.querySelectorAll('#ordersList .order-item').length`), 1);
+    await page.eval(`document.querySelector('#ordersList [data-done]').click()`);
+    assert.ok(await page.eval(`document.querySelector('#ordersList .order-item').classList.contains('done')`));
+    assert.equal(await page.eval(`document.querySelector('#ordersCount').hidden`), true, 'no open orders');
+    await page.eval(`document.querySelector('#ordersList [data-forget]').click()`);
+    assert.equal(await page.eval(`document.querySelectorAll('#ordersList .order-item').length`), 0);
     noErrors();
   });
 

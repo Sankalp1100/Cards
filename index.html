@@ -149,6 +149,11 @@
           <label><span id="osL2">Name 2</span> <input name="host2" maxlength="40" autocomplete="off"></label>
           <label>Date &amp; time <input type="datetime-local" name="date"></label>
           <label>Venue <input name="venue" maxlength="120" autocomplete="off" placeholder="Hall / home address, city"></label>
+          <div class="os-loc">
+            <label>Location on Google Maps <small>(optional)</small> <input name="mapUrl" type="url" inputmode="url" autocomplete="off" placeholder="Paste a Google Maps link"></label>
+            <button type="button" class="chip" id="osHere">📍 Use my current location</button>
+            <small class="os-loc-msg" id="osLocMsg"></small>
+          </div>
         </section>
         <section class="os-step" data-step="2" hidden>
           <h3>Functions <small>(optional)</small></h3>

@@ -217,3 +217,17 @@ td.acts { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
 .import-order .step { margin: 0; }
 .import-order .muted { margin: 0; font-size: .9rem; }
 .order-msg { min-height: 1.2em; font-size: .9rem; color: var(--gold); }
+
+/* Customer orders list */
+.step .count { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 8px; border-radius: 999px; background: #25d366; color: #052e14; font-size: .8rem; }
+.orders { display: grid; gap: 8px; max-height: 320px; overflow-y: auto; }
+.orders:empty { display: none; }
+.order-item { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 16px; border: 1px solid var(--line); background: rgba(255,255,255,.04); }
+.order-item.on { border-color: #25d366; box-shadow: 0 0 0 3px rgba(37,211,102,.2); }
+.order-item.done { opacity: .5; }
+.order-item.done b { text-decoration: line-through; }
+.order-open { flex: 1; min-width: 0; display: grid; gap: 2px; padding: 6px 8px; border: 0; border-radius: 10px; background: none; color: var(--ink); text-align: left; cursor: pointer; font: inherit; }
+.order-open:hover { background: rgba(255,255,255,.06); }
+.order-open b { font-size: 1rem; }
+.order-open small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.order-open .ago { font-size: .72rem; opacity: .7; }

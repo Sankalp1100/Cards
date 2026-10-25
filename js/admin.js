@@ -72,8 +72,56 @@
   const design = () => Templates.get(state.theme) || Templates.get(1);
 
   // ---------- Paste an order from WhatsApp ----------
+  // Orders pasted from WhatsApp are kept in a list (this browser); tapping a customer's name fills everything in.
+  const ORDERS_KEY = 'weddingcard.orders';
+  const loadOrders = () => { try { return JSON.parse(localStorage.getItem(ORDERS_KEY)) || []; } catch (e) { return []; } };
+  const saveOrders = list => { try { localStorage.setItem(ORDERS_KEY, JSON.stringify(list)); } catch (e) { toast('Could not save orders in this browser'); } };
+
+  function rememberOrder(code, order) {
+    const list = loadOrders().filter(o => o.code !== code);
+    const c = order.card;
+    list.unshift({ code, name: who(c), type: c.type, design: c.theme || '', date: c.date, received: Date.now(), done: false });
+    saveOrders(list);
+    renderOrders(code);
+  }
+
+  function renderOrders(active) {
+    const list = loadOrders().sort((a, b) => (a.done - b.done) || (b.received - a.received));
+    const open = list.filter(o => !o.done).length;
+    $('#ordersCount').hidden = !open;
+    $('#ordersCount').textContent = open;
+    $('#ordersList').innerHTML = list.map(o => {
+      const when = Core.parseDate(o.date);
+      return `
+        <div class="order-item${o.done ? ' done' : ''}${o.code === active ? ' on' : ''}">
+          <button type="button" class="order-open" data-open="${esc(o.code)}" title="Fill the editor with this order">
+            <b>${esc(o.name)}</b>
+            <small>${(PRESETS[o.type] || PRESETS.wedding).icon} ${esc((PRESETS[o.type] || PRESETS.wedding).label)}${o.design ? ` · ${Templates.serial(o.design)}` : ''}${when ? ` · ${when.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : ''}</small>
+            <small class="ago">Received ${new Date(o.received).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</small>
+          </button>
+          <button type="button" class="btn-small" data-done="${esc(o.code)}" title="${o.done ? 'Mark as not done' : 'Mark as done'}">${o.done ? '↺' : '✓'}</button>
+          <button type="button" class="btn-small danger" data-forget="${esc(o.code)}" aria-label="Delete order">✕</button>
+        </div>`;
+    }).join('');
+  }
+
+  $('#ordersList').addEventListener('click', e => {
+    const open = e.target.closest('[data-open]'), done = e.target.closest('[data-done]'), forget = e.target.closest('[data-forget]');
+    if (open) {
+      const order = Catalog.readOrder(open.dataset.open);
+      if (order) { fillOrder(order); renderOrders(open.dataset.open); $('.create-grid').scrollIntoView({ behavior: 'smooth' }); }
+    } else if (done) {
+      saveOrders(loadOrders().map(o => o.code === done.dataset.done ? { ...o, done: !o.done } : o));
+      renderOrders();
+    } else if (forget && confirm('Delete this order from the list?')) {
+      saveOrders(loadOrders().filter(o => o.code !== forget.dataset.forget));
+      renderOrders();
+    }
+  });
+
   function fillFromOrder() {
-    const order = Catalog.readOrder($('#orderPaste').value);
+    const text = $('#orderPaste').value;
+    const order = Catalog.readOrder(text);
     const msg = $('#orderMsg');
     if (!order) {
       msg.textContent = 'No order found. Paste the whole message, including the line "Order code: WC1…".';
@@ -84,6 +132,13 @@
       msg.textContent = `Design ${Templates.serial(order.card.theme)} selected. This message has no order code, so please type the details below.`;
       return;
     }
+    rememberOrder(text.match(/WC1\.[A-Za-z0-9_-]+/)[0], order);
+    $('#orderPaste').value = '';
+    fillOrder(order);
+  }
+
+  function fillOrder(order) {
+    const msg = $('#orderMsg');
     state = { ...Core.blankCard(), ...order.card, theme: order.card.theme || design().no };
     touched = true;
     occasionChosen = true;
@@ -767,6 +822,7 @@
   fillSettings();
   renderCatalog();
   renderLinks();
+  renderOrders();
   saveDraft();
   detectServer();
   updatePreview(true);

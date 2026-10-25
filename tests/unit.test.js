@@ -474,7 +474,7 @@ test.describe('Catalog', () => {
     assert.deepEqual(plain(r), {
       card: {
         type: 'bday', title: PRESETS.bday.card.title, tagline: PRESETS.bday.card.tagline, music: true,
-        host1: 'Neha', host2: '', date: '2026-11-28T20:00', venue: 'Skybar, Bengaluru', message: 'Come!', rsvp: '919876543210',
+        host1: 'Neha', host2: '', date: '2026-11-28T20:00', venue: 'Skybar, Bengaluru', mapUrl: '', message: 'Come!', rsvp: '919876543210',
         events: [{ name: '🎂 Cake Cutting', date: '2026-11-28T21:30', venue: '', dress: '' }], theme: 47
       },
       guests: ['Rahul Uncle', 'Priya Di'], photo: true

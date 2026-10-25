@@ -194,7 +194,7 @@
     const v = n => of.elements[n].value.trim();
     const t = Templates.get(v('design'));
     return {
-      design: t ? t.no : '', type: ord.type, host1: v('host1'), host2: v('host2'), date: v('date'), venue: v('venue'),
+      design: t ? t.no : '', type: ord.type, host1: v('host1'), host2: v('host2'), date: v('date'), venue: v('venue'), mapUrl: v('mapUrl'),
       events: ord.events.filter(ev => ev.name.trim()), message: v('message'), rsvp: v('rsvp'),
       guests: v('guests').split('\n').map(g => g.trim()).filter(Boolean), photo: of.elements.photo.checked
     };
@@ -205,8 +205,21 @@
     if (n === 0 && of.elements.design.value && !Templates.get(of.elements.design.value)) return 'Please check the design number, or leave it empty.';
     if (n === 1 && !of.elements.host1.value.trim()) return `Please enter: ${PRESETS[ord.type].labels[0]}`;
     if (n === 1 && !of.elements.date.value) return 'Please choose the date and time.';
+    if (n === 1 && of.elements.mapUrl.value.trim() && !Catalog.mapLink(of.elements.mapUrl.value)) return 'The location should be a link (https://…), or leave it empty.';
     return '';
   }
+
+  // Optional: fill the location with where the customer is now (useful when they are at the venue).
+  $('#osHere').addEventListener('click', () => {
+    const msg = $('#osLocMsg');
+    if (!navigator.geolocation) { msg.textContent = 'This phone cannot share its location. Paste a Google Maps link instead.'; return; }
+    msg.textContent = 'Finding your location…';
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      of.elements.mapUrl.value = `https://www.google.com/maps?q=${lat.toFixed(6)},${lng.toFixed(6)}`;
+      msg.textContent = '✓ Location added. Only do this if you are at the venue.';
+    }, () => { msg.textContent = 'Location not allowed. You can paste a Google Maps link instead, or skip it.'; }, { enableHighAccuracy: true, timeout: 10000 });
+  });
 
   function goTo(n) {
     step = n;

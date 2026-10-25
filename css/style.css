@@ -419,3 +419,6 @@ body.sheet-open { overflow: hidden; }
   100% { opacity: 1; transform: none; }
 }
 @keyframes cardShine { from { background-position: 130% 0; opacity: 1; } to { background-position: -30% 0; opacity: 0; } }
+.os-loc { display: grid; gap: 8px; justify-items: start; }
+.os-loc label { width: 100%; }
+.os-loc-msg { color: var(--gold); min-height: 1em; }

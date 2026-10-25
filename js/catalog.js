@@ -64,6 +64,7 @@ const Catalog = {
     add(names, `• Names: ${names}`);
     add(when(order.date), `• Date: ${when(order.date)}`);
     add(plain(order.venue), `• Venue: ${plain(order.venue)}`);
+    add(Catalog.mapLink(order.mapUrl), `• Location: ${Catalog.mapLink(order.mapUrl)}`);
     add(events.length, `• Functions: ${events.map(ev => `${plain(ev.name)}${when(ev.date) ? ` (${when(ev.date)})` : ''}${plain(ev.venue) ? ` at ${plain(ev.venue)}` : ''}`).join('; ')}`);
     add(plain(order.message), `• Message: ${plain(order.message)}`);
     add(Core.waNumber(order.rsvp), `• RSVP number: ${Core.waNumber(order.rsvp)}`);
@@ -73,9 +74,15 @@ const Catalog = {
     return lines.join('\n');
   },
 
+  // Optional Google Maps location: only plain http(s) links are kept.
+  mapLink(u) {
+    const s = typeof u === 'string' ? u.trim() : '';
+    return /^https?:\/\/[^\s<>"']+$/i.test(s) && s.length <= 500 ? s : '';
+  },
+
   orderCode(order) {
     const o = Core.compact({
-      design: order.design || '', type: order.type, host1: order.host1, host2: order.host2, date: order.date, venue: order.venue,
+      design: order.design || '', type: order.type, host1: order.host1, host2: order.host2, date: order.date, venue: order.venue, mapUrl: Catalog.mapLink(order.mapUrl),
       events: (order.events || []).map(ev => ({ name: ev.name, date: ev.date, venue: ev.venue })), message: order.message,
       rsvp: Core.waNumber(order.rsvp), guests: (order.guests || []).map(g => String(g).trim()).filter(Boolean).join('\n'), photo: order.photo ? 1 : ''
     });
@@ -96,7 +103,7 @@ const Catalog = {
     const str = v => (typeof v === 'string' ? v : '').slice(0, 300);
     const card = {
       type, title: PRESETS[type].card.title, tagline: PRESETS[type].card.tagline, music: true,
-      host1: str(o.host1), host2: str(o.host2), date: str(o.date), venue: str(o.venue), message: str(o.message), rsvp: Core.waNumber(o.rsvp),
+      host1: str(o.host1), host2: str(o.host2), date: str(o.date), venue: str(o.venue), mapUrl: Catalog.mapLink(o.mapUrl), message: str(o.message), rsvp: Core.waNumber(o.rsvp),
       events: (o.events || []).filter(ev => ev && typeof ev.name === 'string' && ev.name.trim()).slice(0, 15)
         .map(ev => ({ name: str(ev.name), date: str(ev.date), venue: str(ev.venue), dress: '' }))
     };
