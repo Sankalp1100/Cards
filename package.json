@@ -1,0 +1,12 @@
+{
+  "name": "wedding-card",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Animated wedding / party invitations shared as a single link",
+  "scripts": {
+    "test": "node --test tests/*.test.js tests/*.test.mjs",
+    "test:unit": "node --test tests/unit.test.js",
+    "test:e2e": "node --test tests/e2e.test.mjs",
+    "start": "npx serve ."
+  }
+}
