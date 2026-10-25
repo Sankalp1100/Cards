@@ -5,7 +5,7 @@
 const SITE = {
   "url": "https://cardalbum.vercel.app/",
   "brand": "Wedding Card",
-  "whatsapp": "",
+  "whatsapp": "919318371733",
   "instagram": "",
   "price": "",
   "currency": "₹"
