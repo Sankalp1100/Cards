@@ -116,8 +116,10 @@ const Catalog = {
   },
 
   // The sample card for a design, using the sample text of its occasion.
+  // A catalog-chosen opening travels in the link, so the card never needs the database.
   demoCode(e) {
-    return Codec.encode(Core.compact({ ...PRESETS[e.occasion].card, theme: e.no }));
+    const intro = e.intro && e.intro !== (Templates.get(e.no) || {}).intro ? e.intro : '';
+    return Codec.encode(Core.compact({ ...PRESETS[e.occasion].card, theme: e.no, intro }));
   },
 
   // Lightweight poster (plain HTML/CSS, no iframe). `tag`/`attrs` let each page make it a link or a button.

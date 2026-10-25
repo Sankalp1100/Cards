@@ -29,6 +29,9 @@ const LAYOUTS = ['classic', 'arch', 'monogram', 'ticket', 'split'];
 const NAME_STYLES = ['shimmer', 'solid', 'outline', 'duo'];
 const CARD_STYLES = ['soft', 'sharp', 'pill', 'outline'];
 const DECORS = ['mandala', 'blobs', 'frame', 'florals', 'sunburst', 'deco', 'lights', 'stars', 'lace'];
+const EVENT_STYLES = ['timeline', 'cards', 'zigzag', 'tickets', 'chapters'];
+const COUNTDOWNS = ['boxes', 'rings', 'strip', 'minimal'];
+const TITLE_STYLES = ['flourish', 'bar', 'lines'];
 
 // The original 12 hand-made designs are #001–#012. `key` keeps links made before numbering working.
 const CLASSICS = [
@@ -267,6 +270,14 @@ const TEMPLATES = (() => {
       if (k % 4 === 3) t.nameStyle = NAME_STYLES[(NAME_STYLES.indexOf(t.nameStyle) + 1) % NAME_STYLES.length];
     }
     seen.add(sig(t));
+  });
+  // The rest of the card differs too: how the functions are listed, the countdown, and the section titles.
+  // Neighbouring designs never list their functions the same way.
+  list.forEach((t, i) => {
+    t.events = EVENT_STYLES[(i * 3 + (i >> 2)) % EVENT_STYLES.length];
+    if (i && t.events === list[i - 1].events) t.events = EVENT_STYLES[(EVENT_STYLES.indexOf(t.events) + 1) % EVENT_STYLES.length];
+    t.countdown = COUNTDOWNS[(i * 5 + (i >> 3)) % COUNTDOWNS.length];
+    t.titles = TITLE_STYLES[(i * 2 + (i >> 2)) % TITLE_STYLES.length];
   });
   // Every design gets its own song (js/music.js): chord progression, melody pattern, instrument and key.
   // Parties may get the playful pluck; weddings and ceremonies keep softer instruments. #001 keeps the original tune.

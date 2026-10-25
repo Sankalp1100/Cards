@@ -2,7 +2,9 @@
 // The browser shows a login box. User name: ADMIN_USER in Vercel, otherwise ADMIN_USER_DEFAULT below.
 // Password: ADMIN_PASSWORD in Vercel, otherwise the one whose salted SHA-256 is ADMIN_HASH below.
 // Setting both in Vercel (Settings → Environment Variables) keeps them out of this public code.
-export const config = { matcher: ['/admin', '/admin.html', '/js/admin.js', '/css/admin.css', '/api/:path*'] };
+// The admin panel itself now asks for the Supabase login (js/db.js), so only the server-side /api (GitHub
+// publishing) still needs this password.
+export const config = { matcher: ['/api/:path*'] };
 
 const SALT = 'wedding-card-admin:';
 const ADMIN_USER_DEFAULT = 'card.com';

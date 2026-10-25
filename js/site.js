@@ -4,29 +4,48 @@
   const { esc } = Core;
   const PAGE = 24;
 
-  document.querySelectorAll('.brand').forEach(el => { el.textContent = SITE.brand; });
   // Every "Order" button opens the order form; it ends in one complete WhatsApp message.
   document.querySelectorAll('[data-order]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); openOrder(); }));
-  if (SITE.instagram) {
-    $('#social').innerHTML = `📸 <a href="https://instagram.com/${encodeURIComponent(SITE.instagram)}" target="_blank" rel="noopener">@${esc(SITE.instagram)}</a>`;
-  }
 
   // ---------- Catalog ----------
-  const designs = Catalog.visible(Catalog.entries());
-  const occasions = Object.keys(PRESETS).filter(k => designs.some(d => d.occasion === k));
+  // Drawn at once from js/config.js, then again if the live settings in the database differ (catalog changes
+  // show up immediately, no redeploy). Opened as a file (tests, or offline) the database is not used.
+  let designs = [], occasions = [], allEntries = [];
   let filter = '', query = '', shown = 0, list = designs;
 
-  $('#tplCount').textContent = $('#seeAll .n').textContent = $('#catShowAll .n').textContent = designs.length;
-  const chips = [['', '✨', 'All']];
-  if (designs.some(d => d.featured)) chips.push(['trending', '🔥', 'Trending']);
-  $('#tplFilters').innerHTML = chips.concat(occasions.map(k => [k, PRESETS[k].icon, PRESETS[k].label]))
-    .map(([k, icon, label]) => `<button type="button" class="chip${k === filter ? ' on' : ''}" data-occ="${k}">${icon} ${esc(label)}</button>`).join('');
+  function applyCatalog() {
+    allEntries = Catalog.entries();
+    designs = Catalog.visible(allEntries);
+    occasions = Object.keys(PRESETS).filter(k => designs.some(d => d.occasion === k));
+    document.querySelectorAll('.brand').forEach(el => { el.textContent = SITE.brand; });
+    $('#social').innerHTML = SITE.instagram
+      ? `📸 <a href="https://instagram.com/${encodeURIComponent(SITE.instagram)}" target="_blank" rel="noopener">@${esc(SITE.instagram)}</a>` : '';
+    $('#tplCount').textContent = $('#seeAll .n').textContent = $('#catShowAll .n').textContent = designs.length;
+    const chips = [['', '✨', 'All']];
+    if (designs.some(d => d.featured)) chips.push(['trending', '🔥', 'Trending']);
+    if (filter && !chips.concat(occasions.map(k => [k])).some(([k]) => k === filter)) filter = '';
+    $('#tplFilters').innerHTML = chips.concat(occasions.map(k => [k, PRESETS[k].icon, PRESETS[k].label]))
+      .map(([k, icon, label]) => `<button type="button" class="chip${k === filter ? ' on' : ''}" data-occ="${k}">${icon} ${esc(label)}</button>`).join('');
+    // "What are you celebrating?": one tile per occasion with its number of designs.
+    $('#occPicker').innerHTML = occasions.map(k => {
+      const n = designs.filter(d => d.occasion === k).length;
+      return `<button type="button" class="occ-tile" data-pick="${k}"><span>${PRESETS[k].icon}</span><b>${esc(PRESETS[k].label)}</b><small>${n} designs</small></button>`;
+    }).join('');
+  }
+  applyCatalog();
 
-  // "What are you celebrating?": one tile per occasion with its number of designs.
-  $('#occPicker').innerHTML = occasions.map(k => {
-    const n = designs.filter(d => d.occasion === k).length;
-    return `<button type="button" class="occ-tile" data-pick="${k}"><span>${PRESETS[k].icon}</span><b>${esc(PRESETS[k].label)}</b><small>${n} designs</small></button>`;
-  }).join('');
+  const online = location.protocol.startsWith('http') && typeof DB !== 'undefined';
+  if (online) {
+    DB.loadCatalog().then(live => {
+      const before = JSON.stringify([SITE, CATALOG]);
+      Object.assign(SITE, live.site);
+      for (const k of Object.keys(CATALOG)) delete CATALOG[k];
+      Object.assign(CATALOG, live.catalog);
+      if (JSON.stringify([SITE, CATALOG]) === before) return;
+      applyCatalog();
+      refresh();
+    }).catch(() => { /* keep js/config.js */ });
+  }
   $('#occPicker').addEventListener('click', e => {
     const tile = e.target.closest('[data-pick]');
     if (!tile) return;
@@ -176,7 +195,6 @@
   ['top', 'templates', 'how'].forEach(id => tabIO.observe(document.getElementById(id)));
   // ---------- Order form ----------
   const sheet = $('#orderSheet'), of = $('#orderForm'), STEPS = 5;
-  const allEntries = Catalog.entries();
   let step = 0, ord = null;
 
   function openOrder(design) {
@@ -317,6 +335,14 @@
   // After sending: a celebration screen while WhatsApp opens.
   $('#osSend').addEventListener('click', () => {
     navigator.vibrate?.([20, 50, 20, 50, 60]);
+    // Also file the order in the owner's order list (keepalive: it still goes through while WhatsApp opens).
+    if (online) {
+      const o = collect();
+      DB.insert('orders', {
+        design_no: o.design || null, occasion: o.type, names: [o.host1, o.host2].filter(Boolean).join(' & ').slice(0, 120),
+        event_date: o.date, code: Catalog.orderCode(o)
+      }, { auth: false, keepalive: true }).catch(() => { /* the WhatsApp message still has everything */ });
+    }
     of.querySelectorAll('.os-step').forEach(s => { s.hidden = true; });
     $('#osError').textContent = '';
     $('.os-foot').hidden = true;

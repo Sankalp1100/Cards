@@ -650,7 +650,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
 
     test('serves the panel with auto-save on', async () => {
       await page.viewport(1300, 900);
-      await page.goto(origin + '/');
+      await page.goto(origin + '/admin.html?offline'); // offline mode: this test is about the PC server, not the login
       await page.waitFor(`/Auto-save is on/.test(document.querySelector('#publishHelp').textContent)`, 4000);
       noErrors();
     });
@@ -659,7 +659,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       const fs = await import('node:fs'), os = await import('node:os');
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wc-video-'));
       await page.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: dir });
-      await page.goto(origin + '/admin.html', 1000);
+      await page.goto(origin + '/admin.html?offline', 1000);
       // A real mouse click: browsers only allow screen capture from a user gesture.
       const r = await page.eval(`(() => { const b = document.querySelector('#videoBtn'); b.scrollIntoView({ block: 'center', behavior: 'instant' }); const r = b.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
       for (const type of ['mousePressed', 'mouseReleased']) await page.send('Input.dispatchMouseEvent', { type, x: r.x, y: r.y, button: 'left', clickCount: 1 });

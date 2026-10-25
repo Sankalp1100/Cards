@@ -29,13 +29,18 @@
       <a href="#catalog">🗂️ <span>Catalog</span></a>
       <a href="#settings">⚙️ <span>Settings</span></a>
       <a id="siteLink" href="index.html" target="_blank" rel="noopener">🏠 <span>Website</span></a>
+      <a href="#logout" class="logout" data-logout hidden>🚪 <span>Logout</span></a>
     </nav>
+    <p class="who-am-i" id="whoAmI" hidden></p>
   </aside>
 
   <main class="admin-main">
     <header class="m-head">
       <a class="logo" href="index.html">💌 <span>Wedding Card</span></a>
-      <a class="btn-small" id="siteLinkM" href="index.html" target="_blank" rel="noopener">🏠 Website</a>
+      <div class="link-actions">
+        <a class="btn-small" id="siteLinkM" href="index.html" target="_blank" rel="noopener">🏠 Website</a>
+        <button type="button" class="btn-small danger" data-logout hidden>🚪 Logout</button>
+      </div>
     </header>
     <div class="publish-bar" id="publishBar" hidden>
       <span id="publishText">📝 You changed the catalog or settings.</span>
@@ -258,6 +263,21 @@
     </div>
   </div>
 
+  <!-- Login (when connected to the database) -->
+  <div class="login-screen" id="loginScreen" hidden>
+    <form class="login-box" id="loginForm" autocomplete="on" novalidate>
+      <a class="logo" href="index.html">💌 <span>Wedding Card</span></a>
+      <h1 id="loginTitle">Admin login</h1>
+      <p class="muted" id="loginNote">Log in with your admin email and password.</p>
+      <label id="emailRow">Email <input name="email" type="email" autocomplete="username" inputmode="email"></label>
+      <label id="pwRow">Password <input name="password" type="password" autocomplete="current-password"></label>
+      <label id="pw2Row" hidden>Repeat the password <input name="password2" type="password" autocomplete="new-password"></label>
+      <button type="submit" class="btn-glow" id="loginBtn">Log in</button>
+      <button type="button" class="link-btn" id="forgotBtn">Forgot password?</button>
+      <p class="login-msg" id="loginMsg" role="alert"></p>
+    </form>
+  </div>
+
   <div class="toast" id="toast" role="status"></div>
 
   <script src="js/config.js"></script>
@@ -265,6 +285,7 @@
   <script src="js/codec.js"></script>
   <script src="js/core.js"></script>
   <script src="js/catalog.js"></script>
+  <script src="js/db.js"></script>
   <script src="js/music.js"></script>
   <script src="js/admin.js"></script>
 </body>

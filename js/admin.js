@@ -15,16 +15,23 @@
   let occasionChosen = false; // an occasion was picked by hand, so picking a design must not change it
   let previewTimer = null;
 
+  // Logged-in mode (the live site, and Start Admin.cmd): catalog, settings, orders and history live in the database.
+  // Opened as a file, or with ?offline on this PC (the tests use it), the panel works in this browser only, as before.
+  const OFFLINE = location.protocol === 'file:' || (new URLSearchParams(location.search).has('offline') && /^(localhost|127\.0\.0\.1)$/.test(location.hostname));
+  const useDb = !OFFLINE && typeof DB !== 'undefined';
+  const newId = () => (window.crypto && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
   // ---------- Site settings + catalog (draft until published) ----------
   const normalize = c => ({
     site: Object.fromEntries(SITE_KEYS.map(k => [k, c.site[k] ?? ''])),
     catalog: Catalog.clean(c.catalog)
   });
   let published = normalize({ site: SITE, catalog: CATALOG });
-  let cfg = (() => {
+  const loadDraft = () => {
     try { const d = JSON.parse(localStorage.getItem(DRAFT_KEY)); if (d && d.site && d.catalog) return normalize(d); } catch (e) { /* no draft */ }
-    return clone(published);
-  })();
+    return null;
+  };
+  let cfg = loadDraft() || clone(published);
   const isDirty = () => JSON.stringify(normalize(cfg)) !== JSON.stringify(published);
   const entries = () => Catalog.entries(cfg.site, cfg.catalog);
   const entry = no => entries()[no - 1];
@@ -67,20 +74,49 @@
   }
 
   // ---------- Card state ----------
-  const code = overrides => Codec.encode(compact({ ...state, ...overrides }));
+  // The design's opening as set in the catalog travels in the link (guests' cards never read the database).
+  const catalogIntro = () => { const t = design(), e = entry(t.no); return e.intro !== t.intro ? e.intro : ''; };
+  const code = overrides => Codec.encode(compact({ ...state, intro: state.intro || catalogIntro(), ...overrides }));
   const occasion = s => (PRESETS[s.type] || PRESETS.wedding);
   const design = () => Templates.get(state.theme) || Templates.get(1);
 
   // ---------- Paste an order from WhatsApp ----------
-  // Orders pasted from WhatsApp are kept in a list (this browser); tapping a customer's name fills everything in.
+  // Orders (from the website's order form, or pasted from WhatsApp) are kept in a list; tapping a customer's name
+  // fills everything in. Logged in, the list lives in the database (same on every device); offline, in this browser.
   const ORDERS_KEY = 'weddingcard.orders';
-  const loadOrders = () => { try { return JSON.parse(localStorage.getItem(ORDERS_KEY)) || []; } catch (e) { return []; } };
-  const saveOrders = list => { try { localStorage.setItem(ORDERS_KEY, JSON.stringify(list)); } catch (e) { toast('Could not save orders in this browser'); } };
+  let ordersCache = [];
+  const loadOrders = () => {
+    if (useDb) return ordersCache.slice();
+    try { return JSON.parse(localStorage.getItem(ORDERS_KEY)) || []; } catch (e) { return []; }
+  };
+  function saveOrders(list) {
+    if (!useDb) {
+      try { localStorage.setItem(ORDERS_KEY, JSON.stringify(list)); } catch (e) { toast('Could not save orders in this browser'); }
+      return;
+    }
+    const before = ordersCache, was = new Map(before.map(o => [o.id, o]));
+    ordersCache = list;
+    const jobs = [];
+    const added = list.filter(o => !was.has(o.id));
+    if (added.length) jobs.push(DB.insert('orders', added.map(o => ({ id: o.id, code: o.code, names: o.name, occasion: o.type, design_no: o.design || null, event_date: o.date || '' }))));
+    for (const o of before) if (!list.some(x => x.id === o.id)) jobs.push(DB.remove('orders', `id=eq.${o.id}`));
+    for (const o of list) if (was.has(o.id) && was.get(o.id).done !== o.done) jobs.push(DB.update('orders', `id=eq.${o.id}`, { status: o.done ? 'done' : 'new' }));
+    Promise.all(jobs).catch(e => { toast(`Orders not saved: ${e.message}`); refreshOrders(); });
+  }
+  async function refreshOrders() {
+    if (!useDb || !DB.user) return;
+    try {
+      const rows = await DB.select('orders', 'select=*&order=created_at.desc&limit=500');
+      ordersCache = rows.map(r => ({ id: r.id, code: r.code, name: r.names || 'Customer', type: r.occasion, design: r.design_no || '', date: r.event_date, received: Date.parse(r.created_at), done: r.status === 'done' }));
+      renderOrders();
+    } catch (e) { /* keep the list we have */ }
+  }
 
   function rememberOrder(code, order) {
-    const list = loadOrders().filter(o => o.code !== code);
+    const list = loadOrders();
+    if (list.some(o => o.code === code)) { renderOrders(code); return; } // already in the list
     const c = order.card;
-    list.unshift({ code, name: who(c), type: c.type, design: c.theme || '', date: c.date, received: Date.now(), done: false });
+    list.unshift({ id: newId(), code, name: who(c), type: c.type, design: c.theme || '', date: c.date, received: Date.now(), done: false });
     saveOrders(list);
     renderOrders(code);
   }
@@ -411,15 +447,42 @@
     return true;
   }
 
-  $('#generate-btn').addEventListener('click', () => {
+  // A short random code for a short link: 7 letters/digits (3.5 trillion possibilities, so nobody can guess one).
+  const shortCode = () => {
+    const A = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+    return [...crypto.getRandomValues(new Uint8Array(7))].map(b => A[b % A.length]).join('');
+  };
+
+  $('#generate-btn').addEventListener('click', async () => {
     if (!cardReady()) return;
     const c = code();
     const guests = $('#guests').value.split('\n').map(g => g.trim()).filter(Boolean);
     const list = guests.length ? guests : [''];
     const now = Date.now();
+    const site = cfg.site.url || location.href;
+    let urls;
+    if (useDb && DB.user) {
+      // Logged in: short links (cardalbum.vercel.app/i#Xy7Kq2p). The card is saved once under a general code
+      // (what guests forward), plus one code per guest with their name.
+      const btn = $('#generate-btn');
+      btn.disabled = true;
+      toast('Making short links…');
+      try {
+        const card = Codec.decode(c), general = shortCode();
+        const rows = [{ id: general, data: card, guest: null, share: null }]
+          .concat(guests.map(g => ({ id: shortCode(), data: card, guest: g, share: general })));
+        await DB.insert('cards', rows);
+        const base = new URL('i', site).href;
+        urls = guests.length ? rows.slice(1).map(r => `${base}#${r.id}`) : [`${base}#${general}`];
+      } catch (e) {
+        toast(`Could not make short links (${e.message}). Making full links instead.`);
+      } finally {
+        btn.disabled = false;
+      }
+    }
     lastResults = list.map((g, i) => ({
-      id: `${now}-${i}`, guest: g, who: who(state), type: state.type, theme: design().no,
-      url: Core.cardUrl(cfg.site.url || location.href, c, g), created: now
+      id: newId(), guest: g, who: who(state), type: state.type, theme: design().no,
+      url: urls ? urls[i] : Core.cardUrl(site, c, g), created: now
     }));
     saveLinks([...lastResults, ...loadLinks()]);
     renderResults();
@@ -567,11 +630,34 @@
   }
 
   // ---------- Link history ----------
+  // Logged in: kept in the database (the same on your phone and PC). Offline: in this browser.
+  let linksCache = [];
   function loadLinks() {
+    if (useDb) return linksCache.slice();
     try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch (e) { return []; }
   }
   function saveLinks(list) {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(list)); } catch (e) { toast('Could not save history in this browser'); }
+    if (!useDb) {
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(list)); } catch (e) { toast('Could not save history in this browser'); }
+      return;
+    }
+    const before = linksCache, had = new Set(before.map(r => r.id)), keep = new Set(list.map(r => r.id));
+    linksCache = list;
+    const jobs = [];
+    const added = list.filter(r => !had.has(r.id));
+    if (added.length) jobs.push(DB.insert('invites', added.map(r => ({ id: r.id, guest: r.guest, who: r.who, occasion: r.type, design_no: r.theme, url: r.url, created_at: new Date(r.created).toISOString() }))));
+    const gone = before.filter(r => !keep.has(r.id));
+    if (gone.length && !list.length) jobs.push(DB.remove('invites', 'id=not.is.null'));
+    else if (gone.length) jobs.push(DB.remove('invites', `id=in.(${gone.map(r => r.id).join(',')})`));
+    Promise.all(jobs).catch(e => { toast(`History not saved: ${e.message}`); refreshLinks(); });
+  }
+  async function refreshLinks() {
+    if (!useDb || !DB.user) return;
+    try {
+      const rows = await DB.select('invites', 'select=*&order=created_at.desc&limit=2000');
+      linksCache = rows.map(r => ({ id: r.id, guest: r.guest || '', who: r.who || '', type: r.occasion, theme: r.design_no, url: r.url, created: Date.parse(r.created_at) }));
+      renderLinks();
+    } catch (e) { /* keep the list we have */ }
   }
   const designLabel = id => {
     const t = Templates.get(id) || Templates.get(1);
@@ -601,13 +687,20 @@
 
   $('#search').addEventListener('input', renderLinks);
 
-  $('#linksTable').addEventListener('click', e => {
+  $('#linksTable').addEventListener('click', async e => {
     const edit = e.target.closest('[data-edit]'), del = e.target.closest('[data-del]');
     if (edit) {
       const r = loadLinks().find(x => x.id === edit.dataset.edit);
       if (!r) return;
       // Start from a blank card so preset values never fill fields the saved link left empty.
-      try { state = Object.assign(Core.blankCard(), Codec.decode(r.code || new URL(r.url).hash.slice(1))); } catch (err) { toast('That saved link is damaged'); return; }
+      try {
+        const hash = r.code || new URL(r.url).hash.slice(1);
+        // A short link holds only a code: its card is in the database.
+        const card = /^[A-Za-z0-9]{6,16}$/.test(hash) && useDb
+          ? (await DB.select('cards', `select=data&id=eq.${hash}`))[0].data
+          : Codec.decode(hash);
+        state = Object.assign(Core.blankCard(), card);
+      } catch (err) { toast('That saved link is damaged'); return; }
       state.theme = (Templates.get(state.theme) || Templates.get(1)).no;
       touched = true;
       fillForm();
@@ -740,8 +833,16 @@
   // ---------- Publish ----------
   let server = false;
   async function detectServer() {
+    if (useDb) {
+      // Logged in: every change goes straight into the database and the website shows it at once.
+      server = true;
+      $('#publishHelp').innerHTML = '✅ <b>Auto-save is on.</b> Every change is saved to the database and the website shows it right away. You only need this button to retry.';
+      saveDraft();
+      return;
+    }
     let status = {};
-    if (location.protocol.startsWith('http')) {
+    // The panel server on this PC (Start Admin.cmd) answers here; the live site's /api needs no asking.
+    if (location.protocol.startsWith('http') && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
       try { status = await (await fetch('api/status', { cache: 'no-store' })).json(); } catch (e) { status = {}; }
     }
     // On your PC the panel server can always save; online it needs the GitHub token set in Vercel.
@@ -757,10 +858,34 @@
     saveDraft(); // refresh the bar, and send any change left from last time
   }
 
-  // Sends the current settings + catalog to the server, which saves js/config.js and puts it live.
+  // Logged in: writes the settings and the catalog into the database (the website reads them on every visit).
+  async function saveToDb(c) {
+    const now = new Date().toISOString();
+    await DB.update('site_settings', 'id=eq.1', { data: c.site, updated_at: now });
+    const rows = Object.entries(c.catalog).map(([no, data]) => ({ design_no: +no, data, updated_at: now }));
+    if (rows.length) await DB.upsert('catalog', rows);
+    // Designs no longer changed by you go back to their defaults.
+    await DB.remove('catalog', rows.length ? `design_no=not.in.(${rows.map(r => r.design_no).join(',')})` : 'design_no=gte.1');
+  }
+
+  // Sends the current settings + catalog: to the database when logged in, otherwise to the panel server
+  // on this PC, which saves js/config.js and puts it live.
   async function sendConfig() {
     const c = normalize(cfg);
     const log = $('#publishLog');
+    if (useDb) {
+      try {
+        await saveToDb(c);
+        published = c;
+        try { if (!isDirty()) localStorage.removeItem(DRAFT_KEY); } catch (e) { /* private mode */ }
+        log.hidden = true;
+        return { saved: true, published: false, message: 'The website shows it right away.' };
+      } catch (e) {
+        log.hidden = false;
+        log.textContent = e.message;
+        return { saved: false, published: false, message: /JWT|expired|auth/i.test(e.message) ? 'your login expired, please log in again' : e.message };
+      }
+    }
     try {
       const res = await (await fetch('api/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ config: Catalog.configFile(c.site, c.catalog) }) })).json();
       log.hidden = false;
@@ -835,14 +960,128 @@
   }), { rootMargin: '-40% 0px -55% 0px' });
   document.querySelectorAll('.block').forEach(s => navIO.observe(s));
 
-  renderGalleryFilters();
-  renderGallery();
-  fillForm();
-  fillSettings();
-  renderCatalog();
-  renderLinks();
-  renderOrders();
-  saveDraft();
-  detectServer();
-  updatePreview(true);
+  let started = false;
+  function startApp() {
+    if (started) return;
+    started = true;
+    renderGalleryFilters();
+    renderGallery();
+    fillForm();
+    fillSettings();
+    renderCatalog();
+    renderLinks();
+    renderOrders();
+    saveDraft();
+    detectServer();
+    updatePreview(true);
+  }
+
+  // ---------- Login (database mode) ----------
+  let loginMode = 'login'; // login | forgot | set (choose a password from an invite or reset email)
+  const LOGIN_TEXT = {
+    login: ['Admin login', 'Log in with your admin email and password.', 'Log in'],
+    forgot: ['Reset your password', 'Enter your admin email. We will email you a link to choose a new password.', 'Email me a link'],
+    set: ['Choose your password', 'Choose a password for your admin login (at least 8 characters).', 'Save password']
+  };
+  function showLogin(mode, msg = '') {
+    loginMode = mode;
+    const f = $('#loginForm').elements, [title, note, button] = LOGIN_TEXT[mode];
+    document.body.classList.add('logged-out');
+    $('#loginScreen').hidden = false;
+    $('#loginTitle').textContent = title;
+    $('#loginNote').textContent = note;
+    $('#loginBtn').textContent = button;
+    $('#emailRow').hidden = mode === 'set';
+    $('#pwRow').hidden = mode === 'forgot';
+    $('#pw2Row').hidden = mode !== 'set';
+    f.password.autocomplete = mode === 'set' ? 'new-password' : 'current-password';
+    $('#forgotBtn').hidden = mode === 'set';
+    $('#forgotBtn').textContent = mode === 'login' ? 'Forgot password?' : '← Back to login';
+    $('#loginMsg').textContent = msg;
+    (mode === 'set' ? f.password : f.email).focus();
+  }
+  const friendly = m => /invalid login|invalid_grant|invalid credentials/i.test(m) ? 'Wrong email or password.'
+    : /rate|too many|security purposes/i.test(m) ? 'Too many tries. Please wait a minute and try again.'
+      : /fetch|network|abort/i.test(m) ? 'No internet connection. Please try again.' : m;
+
+  $('#forgotBtn').addEventListener('click', () => showLogin(loginMode === 'login' ? 'forgot' : 'login'));
+  $('#loginForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target.elements, msg = $('#loginMsg'), btn = $('#loginBtn');
+    btn.disabled = true;
+    msg.textContent = '';
+    try {
+      if (loginMode === 'login') {
+        if (!f.email.value.trim() || !f.password.value) throw new Error('Please enter your email and password.');
+        await DB.signIn(f.email.value, f.password.value);
+        await enter();
+      } else if (loginMode === 'forgot') {
+        if (!/^\S+@\S+\.\S+$/.test(f.email.value.trim())) throw new Error('Please enter your email address.');
+        await DB.recover(f.email.value, location.origin + location.pathname);
+        msg.textContent = '✉️ If this email belongs to an admin, a link is on its way. Open it on this device.';
+      } else {
+        if (f.password.value.length < 8) throw new Error('Please use at least 8 characters.');
+        if (f.password.value !== f.password2.value) throw new Error('The two passwords are not the same.');
+        await DB.setPassword(f.password.value);
+        await enter('✅ Password saved. Welcome!');
+      }
+    } catch (err) {
+      msg.textContent = friendly(err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // Logged in: check this account is an admin, load the live catalog and settings, then open the panel.
+  async function enter(welcome) {
+    let admin = false;
+    try { admin = await DB.isOwner(); } catch (e) { return showLogin('login', friendly(e.message)); }
+    if (!admin) {
+      await DB.signOut();
+      return showLogin('login', 'This account is not an admin.');
+    }
+    try {
+      const live = await DB.loadCatalog({ timeout: 8000 });
+      published = normalize({ site: { ...SITE, ...live.site }, catalog: live.catalog });
+      cfg = loadDraft() || clone(published);
+    } catch (e) {
+      toast(`Could not load the catalog: ${friendly(e.message)}`);
+    }
+    $('#loginScreen').hidden = true;
+    document.body.classList.remove('logged-out');
+    $('#whoAmI').hidden = false;
+    $('#whoAmI').textContent = `Logged in as ${DB.user.email}`;
+    document.querySelectorAll('[data-logout]').forEach(b => { b.hidden = false; });
+    startApp();
+    refreshOrders();
+    refreshLinks();
+    // New website orders show up by themselves.
+    setInterval(refreshOrders, 60000);
+    addEventListener('focus', refreshOrders);
+    if (welcome) toast(welcome);
+  }
+
+  document.querySelectorAll('[data-logout]').forEach(b => b.addEventListener('click', async e => {
+    e.preventDefault();
+    if (!confirm('Log out of the admin panel?')) return;
+    await DB.signOut();
+    location.replace(location.pathname);
+  }));
+
+  async function boot() {
+    if (!useDb) return startApp();
+    document.body.classList.add('logged-out');
+    const hash = new URLSearchParams(location.hash.slice(1));
+    if (hash.get('error_description')) {
+      history.replaceState(null, '', location.pathname);
+      return showLogin('login', 'That email link has expired or was already used. Use "Forgot password?" for a new one.');
+    }
+    let type = null;
+    try { type = await DB.fromLink(location.hash); } catch (e) { return showLogin('login', 'That email link has expired. Use "Forgot password?" for a new one.'); }
+    if (type) history.replaceState(null, '', location.pathname);
+    if (type === 'invite' || type === 'recovery') return showLogin('set');
+    if (DB.user) return enter();
+    showLogin('login');
+  }
+  boot();
 })();

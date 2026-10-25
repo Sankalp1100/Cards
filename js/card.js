@@ -3,7 +3,12 @@
   const params = new URLSearchParams(location.search);
   const record = params.has('record'); // being filmed by the video maker
   const preview = params.has('preview') || record;
-  const guest = params.get('to');
+  let guest = params.get('to');
+  // Short links (cardalbum.vercel.app/i#Xy7Kq2p) carry a code; the card itself is in the database.
+  const SHORT_CODE = /^[A-Za-z0-9]{6,16}$/;
+  let shareCode = '';
+  // The link a guest forwards: the general card, never their personal one.
+  const shareLink = () => shareCode ? `${location.origin}${location.pathname}#${shareCode}` : Core.shareUrl(location.href);
   const $ = (s, r = document) => r.querySelector(s);
   const { esc, safeUrl, parseDate, calStamp, initials } = Core;
 
@@ -175,6 +180,7 @@
     bar.innerHTML = `<span>Sample of design <b>${serial}</b></span>
       <a class="btn" href="index.html?order=${t.no}">💬 Order ${serial}</a>`;
     document.body.appendChild(bar);
+    document.body.classList.add('has-demo-bar'); // leaves room so the bar never covers the footer
   }
 
   function applyTheme(t) {
@@ -337,7 +343,7 @@
       <footer>Loved this invitation? <a href="index.html">Get one for your celebration</a> 💌<br><small>${esc(SITE.brand)}</small></footer>`;
 
     const who = Core.who(d);
-    const inviteUrl = Core.shareUrl(location.href);
+    const inviteUrl = shareLink();
     if (when) {
       const end = new Date(when.getTime() + 4 * 3600e3);
       const cal = new URL('https://calendar.google.com/calendar/render');
@@ -443,7 +449,7 @@
   async function share() {
     const btn = $('#shareBtn');
     // Forward the general link, never this guest's personal one.
-    const url = Core.shareUrl(location.href);
+    const url = shareLink();
     if (navigator.share) {
       try { await navigator.share({ title: "You're invited 💌", url }); return; } catch (e) { if (e.name === 'AbortError') return; }
     }
@@ -455,7 +461,21 @@
     e.currentTarget.classList.toggle('playing', music.toggle());
   });
 
-  function show() {
+  async function show() {
+    const raw = location.hash.slice(1);
+    if (SHORT_CODE.test(raw) && location.protocol.startsWith('http') && typeof DB !== 'undefined') {
+      $('#card').innerHTML = '<p class="opening-note">💌<br>Opening your invitation…</p>';
+      let row = null;
+      try { row = await DB.getCard(raw); } catch (e) { /* offline or unknown code */ }
+      if (row && Core.isCard(row.data)) {
+        guest = guest || row.guest || null;
+        shareCode = row.share || raw;
+        data = row.data;
+        $('#card').innerHTML = '';
+        return render(data);
+      }
+      return renderBroken();
+    }
     data = readData();
     if (data) render(data); else renderBroken();
   }

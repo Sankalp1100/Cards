@@ -179,9 +179,9 @@ test.describe('Publishing', () => {
     for (const f of ['server.mjs', '*.cmd']) assert.ok(ignore.includes(f), `${f} not in .vercelignore`);
   });
 
-  test('the live admin panel and its API are behind the password', async () => {
+  test('the server-side API is behind the password (the admin page uses the Supabase login)', async () => {
     const mw = await import('../middleware.js');
-    for (const p of ['/admin', '/admin.html', '/js/admin.js', '/css/admin.css', '/api/:path*']) assert.ok(mw.config.matcher.includes(p), p);
+    assert.deepEqual([...mw.config.matcher], ['/api/:path*']);
     const basic = s => 'Basic ' + Buffer.from(s).toString('base64');
     // Built-in login (no Vercel variables): card.com / admin@90
     assert.equal(await mw.loginOk(basic('card.com:admin@90')), true);
@@ -219,7 +219,7 @@ test.describe('Publishing', () => {
     assert.match(r.body.message, /GITHUB_TOKEN/);
   });
   test('public pages do not mention the admin panel', () => {
-    for (const f of ['index.html', 'card.html', 'js/site.js', 'js/card.js', 'js/catalog.js', 'js/themes.js', 'js/config.js']) {
+    for (const f of ['index.html', 'card.html', 'js/site.js', 'js/card.js', 'js/catalog.js', 'js/themes.js', 'js/config.js', 'js/db.js']) {
       assert.ok(!/admin/i.test(fs.readFileSync(path.join(ROOT, f), 'utf8')), `${f} mentions admin`);
     }
   });

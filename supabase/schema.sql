@@ -95,3 +95,32 @@ create policy "admins delete orders" on public.orders for delete using (public.i
 -- Invitation history: admins only.
 drop policy if exists "admins manage invites" on public.invites;
 create policy "admins manage invites" on public.invites for all using (public.is_admin()) with check (public.is_admin());
+
+-- Same check under the name the website code uses (js/db.js).
+create or replace function public.is_owner() returns boolean
+language sql stable security definer set search_path = public as $$
+  select public.is_admin();
+$$;
+
+-- Short invitation links (cardalbum.vercel.app/i#Xy7Kq2p): the card is stored under a random code.
+-- Visitors can only open a card by its exact code (get_card); nobody can list other people's invitations.
+create table if not exists public.cards (
+  id text primary key check (id ~ '^[A-Za-z0-9]{6,16}$'),
+  data jsonb not null,
+  guest text,
+  share text,
+  created_at timestamptz not null default now()
+);
+alter table public.cards enable row level security;
+drop policy if exists "owners create cards" on public.cards;
+create policy "owners create cards" on public.cards for insert with check (public.is_admin());
+drop policy if exists "owners read cards" on public.cards;
+create policy "owners read cards" on public.cards for select using (public.is_admin());
+drop policy if exists "owners delete cards" on public.cards;
+create policy "owners delete cards" on public.cards for delete using (public.is_admin());
+
+create or replace function public.get_card(code text) returns json
+language sql stable security definer set search_path = public as $$
+  select json_build_object('data', data, 'guest', guest, 'share', share) from public.cards where id = code;
+$$;
+grant execute on function public.get_card(text) to anon, authenticated;
