@@ -45,7 +45,9 @@ const Catalog = {
   // The WhatsApp message is readable for you, and ends with an order code the control panel turns back into the card.
   ORDER_TAG: 'WC1.',
 
-  orderMessage(order, entries) {
+  // With ref ("WC-7K2Q9H", online only) the message ends with that short order number and the full details
+  // are saved with the order in the database; without it, the long order code carries them.
+  orderMessage(order, entries, ref) {
     const p = PRESETS[order.type] || PRESETS.wedding;
     const e = order.design && entries ? entries[order.design - 1] : null;
     const when = s => {
@@ -72,7 +74,7 @@ const Catalog = {
     add(Core.mobile(order.rsvp), `• RSVP number: ${Core.mobile(order.rsvp)}`);
     add(guests.length, `• Guests (${guests.length}): ${guests.join(', ')}`);
     add(order.photo, `• Photo: I'll send it in this chat`);
-    lines.push('', `Order code (please keep): ${Catalog.orderCode(order)}`);
+    lines.push('', ref ? `Order no: ${ref}` : `Order code (please keep): ${Catalog.orderCode(order)}`);
     return lines.join('\n');
   },
 
@@ -80,6 +82,17 @@ const Catalog = {
   mapLink(u) {
     const s = typeof u === 'string' ? u.trim() : '';
     return /^https?:\/\/[^\s<>"']+$/i.test(s) && s.length <= 500 ? s : '';
+  },
+
+  // A short, easy-to-read order number. No 0/O, 1/I/L, so it can be read out over the phone.
+  orderRef() {
+    const abc = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    const bytes = typeof crypto !== 'undefined' ? crypto.getRandomValues(new Uint8Array(6)) : Array.from({ length: 6 }, () => Math.random() * 256 | 0);
+    return 'WC-' + Array.from(bytes, n => abc[n % abc.length]).join('');
+  },
+  refOf(text) {
+    const m = String(text || '').match(/\bWC-([A-HJ-KM-NP-Z2-9]{6})\b/i);
+    return m ? 'WC-' + m[1].toUpperCase() : '';
   },
 
   orderCode(order) {

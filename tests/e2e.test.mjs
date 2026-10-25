@@ -761,7 +761,11 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.eval(`history.back()`);
     await page.waitFor(`document.body.dataset.tab === 'home' && !!document.querySelector('.hero').offsetParent`, 3000);
     await page.eval(`document.querySelector('.bottom-nav [data-trending]').click()`);
-    assert.equal(await page.eval(`document.querySelectorAll('#showcase .tpl').length`), 6, 'Trending tab');
+    await page.waitFor(`document.body.dataset.tab === 'trending' && !!document.querySelector('#hot').offsetParent`, 3000);
+    assert.equal(await page.eval(`document.querySelectorAll('#hotReel .hot-slide').length`), 6, 'Trending tab: its own ranked slides');
+    assert.equal(await page.eval(`!!document.querySelector('#templates').offsetParent`), false, 'not the Designs grid');
+    assert.equal(await page.eval(`location.hash`), '#trending');
+    assert.ok(await page.eval(`document.documentElement.scrollWidth <= innerWidth`), 'no sideways page scroll');
     noErrors();
   });
 

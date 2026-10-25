@@ -543,6 +543,18 @@ test.describe('Catalog', () => {
     assert.equal(Catalog.readOrder(mangled).card.events[0].name, '🎂 Cake Cutting', 'emoji kept inside the code');
   });
 
+  test('online orders end with a short, easy-to-read order number', () => {
+    const ref = Catalog.orderRef();
+    assert.match(ref, /^WC-[A-HJKMNP-Z2-9]{6}$/);
+    const msg = Catalog.orderMessage(order, Catalog.entries(site, {}), ref);
+    assert.ok(msg.endsWith(`\n\nOrder no: ${ref}`));
+    assert.ok(!msg.includes('WC1.'), 'no long code');
+    assert.equal(Catalog.refOf(`hi\n${msg.toLowerCase()}`), ref);
+    assert.equal(Catalog.refOf('no number here'), '');
+    // The order list keeps the number in front of the full code, so it still opens.
+    assert.equal(Catalog.readOrder(`${ref} ${Catalog.orderCode(order)}`).card.host1, 'Neha');
+  });
+
   test('a message without a code still picks up the design number', () => {
     assert.deepEqual(plain(Catalog.readOrder('Hi, I want design #12 please')), { card: { theme: 12 }, guests: [], photo: false, partial: true });
     assert.equal(Catalog.readOrder('hello there'), null);

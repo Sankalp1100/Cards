@@ -97,6 +97,18 @@
     <div class="see-all-wrap"><button type="button" class="btn-glow" id="seeAll"><span>🎨 See all <b class="n">300</b> designs →</span></button></div>
   </section>
 
+  <!-- Trending tab (phones): a swipeable, ranked showcase, different from the Designs grid -->
+  <section class="hot" id="hot">
+    <div class="hot-head">
+      <h2 class="section-h">🔥 Trending <span class="gradient-text">now</span></h2>
+      <p class="muted">The designs everyone is ordering right now. Swipe →</p>
+    </div>
+    <div class="hot-reel" id="hotReel"></div>
+    <div class="hot-dots" id="hotDots" aria-hidden="true"></div>
+    <h3 class="hot-sub">Top pick for every occasion</h3>
+    <div class="hot-occ" id="hotOcc"></div>
+  </section>
+
   <section class="how" id="how">
     <h2 class="section-h">How it <span class="gradient-text">works</span></h2>
     <div class="steps">
@@ -141,11 +153,14 @@
         <button type="button" class="os-x" id="osClose" aria-label="Close">✕</button>
       </header>
       <ol class="os-dots" id="osDots" aria-hidden="true"><li></li><li></li><li></li><li></li><li></li></ol>
+      <p class="os-stepno" id="osStepNo"></p>
       <form id="orderForm" class="os-body" autocomplete="on" onsubmit="return false">
         <section class="os-step" data-step="0">
           <h3>What are we celebrating?</h3>
           <div class="os-occ" id="osOcc"></div>
-          <label>Design number <small>(optional, we can suggest one)</small><input name="design" inputmode="numeric" maxlength="3" placeholder="e.g. 47"></label>
+          <p class="os-pick-h"><b>Pick a design</b> <small>(optional, we can suggest one)</small></p>
+          <div class="os-picks" id="osPicks"></div>
+          <label class="os-num">Or type a design number <input name="design" inputmode="numeric" maxlength="3" placeholder="e.g. 47"></label>
           <p class="os-design" id="osDesign"></p>
         </section>
         <section class="os-step" data-step="1" hidden>

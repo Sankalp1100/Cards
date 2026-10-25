@@ -131,7 +131,7 @@
       return `
         <div class="order-item${o.done ? ' done' : ''}${o.code === active ? ' on' : ''}">
           <button type="button" class="order-open" data-open="${esc(o.code)}" title="Fill the editor with this order">
-            <b>${esc(o.name)}</b>
+            <b>${esc(o.name)}${Catalog.refOf(o.code) ? ` <span class="order-ref">${Catalog.refOf(o.code)}</span>` : ''}</b>
             <small>${(PRESETS[o.type] || PRESETS.wedding).icon} ${esc((PRESETS[o.type] || PRESETS.wedding).label)}${o.design ? ` · ${Templates.serial(o.design)}` : ''}${when ? ` · ${when.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : ''}</small>
             <small class="ago">Received ${new Date(o.received).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</small>
           </button>
@@ -155,12 +155,21 @@
     }
   });
 
-  function fillFromOrder() {
-    const text = $('#orderPaste').value;
-    const order = Catalog.readOrder(text);
+  async function fillFromOrder() {
+    let text = $('#orderPaste').value;
     const msg = $('#orderMsg');
+    // A short order number ("Order no: WC-7K2Q9H"): the details are in the order list (saved by the website).
+    const ref = !/WC1\./.test(text) && Catalog.refOf(text);
+    if (ref) {
+      msg.textContent = `Looking up order ${ref}…`;
+      await refreshOrders();
+      const found = loadOrders().find(o => String(o.code).startsWith(ref + ' '));
+      if (!found) { msg.textContent = `Order ${ref} was not found. Check the number, or ask the customer to send the order again.`; return; }
+      text = found.code;
+    }
+    const order = Catalog.readOrder(text);
     if (!order) {
-      msg.textContent = 'No order found. Paste the whole message, including the line "Order code: WC1…".';
+      msg.textContent = 'No order found. Paste the whole message, including the line "Order no: WC-…".';
       return;
     }
     if (order.partial) {
@@ -168,7 +177,7 @@
       msg.textContent = `Design ${Templates.serial(order.card.theme)} selected. This message has no order code, so please type the details below.`;
       return;
     }
-    rememberOrder(text.match(/WC1\.[A-Za-z0-9_-]+/)[0], order);
+    rememberOrder(ref ? text : text.match(/WC1\.[A-Za-z0-9_-]+/)[0], order);
     $('#orderPaste').value = '';
     fillOrder(order);
   }
@@ -180,6 +189,7 @@
     occasionChosen = true;
     fillForm();
     updatePreview(true);
+    fastMap(form.elements.mapUrl);
     $('#guests').value = order.guests.join('\n');
     msg.textContent = `✅ Filled: ${who(state)} · ${PRESETS[state.type].label} · ${order.card.theme ? `design ${Templates.serial(state.theme)}` : 'no design chosen, pick one below'}` +
       (order.guests.length ? ` · ${order.guests.length} guest link${order.guests.length > 1 ? 's' : ''} ready to make` : '') +
@@ -345,9 +355,9 @@
   });
 
   // A pasted maps.app.goo.gl link becomes the full Google Maps link (the short ones open very slowly for guests).
-  form.addEventListener('change', async e => {
-    const t = e.target;
-    if (t.name !== 'mapUrl' || OFFLINE || !/^https:\/\/(maps\.app\.)?goo\.gl\//.test(t.value.trim())) return;
+  form.addEventListener('change', e => { if (e.target.name === 'mapUrl') fastMap(e.target); });
+  async function fastMap(t) {
+    if (OFFLINE || !/^https:\/\/(maps\.app\.)?goo\.gl\//.test(t.value.trim())) return;
     const short = t.value.trim();
     try {
       const r = await fetch('api/maplink?u=' + encodeURIComponent(short));
@@ -357,7 +367,7 @@
       updatePreview();
       toast('Map link made faster ✓');
     } catch (err) { /* keep the short link */ }
-  });
+  }
 
   form.addEventListener('click', e => {
     const remove = e.target.closest('[data-remove]'), quick = e.target.closest('[data-quick]');

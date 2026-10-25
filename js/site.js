@@ -31,8 +31,52 @@
       const n = designs.filter(d => d.occasion === k).length;
       return `<button type="button" class="occ-tile" data-pick="${k}"><span>${PRESETS[k].icon}</span><b>${esc(PRESETS[k].label)}</b><small>${n} designs</small></button>`;
     }).join('');
+    renderHot();
+  }
+
+  // ---------- Trending tab: ranked slides you swipe through, then the top pick of every occasion ----------
+  const colors = d => { const v = d.vars; return `--a:${v['--accent']};--a2:${v['--accent2']};--b:${v['--bg']};--c:${v['--bg2']};--i:${v['--ink']}`; };
+  function renderHot() {
+    let hot = designs.filter(d => d.featured);
+    if (hot.length < 3) hot = hot.concat(occasions.map(k => designs.find(d => d.occasion === k && !hot.includes(d))).filter(Boolean));
+    hot = hot.slice(0, 10);
+    $('#hotReel').innerHTML = hot.map((d, i) => {
+      const p = PRESETS[d.occasion], demo = `card.html?demo#${Catalog.demoCode(d)}`;
+      return `
+        <article class="hot-slide${i ? '' : ' on'}" style="${colors(d)}">
+                    ${Catalog.poster(d, 'a', `href="${demo}" target="_blank" rel="noopener" aria-label="Live demo: design ${Templates.serial(d.no)}"`)}
+          <div class="hot-info">
+            <span class="hot-rank" aria-label="Rank ${i + 1}">${i + 1}</span>
+            <b>${Templates.serial(d.no)} · ${esc(d.name)}</b>
+            <small>${p.icon} ${esc(p.label)} · ${esc(INTROS[d.intro] || '')} opening</small>
+          </div>
+          <div class="hot-btns">
+            <a class="btn-line" href="${demo}" target="_blank" rel="noopener">▶ Watch</a>
+            <button type="button" class="btn-glow" data-design="${d.no}"><span>💬 Order this</span></button>
+          </div>
+        </article>`;
+    }).join('');
+    $('#hotDots').innerHTML = hot.map((d, i) => `<i class="${i ? '' : 'on'}"></i>`).join('');
+    $('#hotOcc').innerHTML = occasions.map(k => {
+      const d = designs.find(x => x.occasion === k), n = designs.filter(x => x.occasion === k).length;
+      return `<button type="button" class="hot-occ-card" data-occ-go="${k}" style="${colors(d)}">
+        <span class="e">${d.emoji}</span><b>${PRESETS[k].icon} ${esc(PRESETS[k].label)}</b><small>${n} designs →</small></button>`;
+    }).join('');
+    const slides = [...document.querySelectorAll('#hotReel .hot-slide')], dots = [...document.querySelectorAll('#hotDots i')];
+    const seen = new IntersectionObserver(entries => entries.forEach(en => {
+      if (!en.isIntersecting) return;
+      const i = slides.indexOf(en.target);
+      slides.forEach((s, j) => s.classList.toggle('on', j === i));
+      dots.forEach((s, j) => s.classList.toggle('on', j === i));
+    }), { root: $('#hotReel'), threshold: 0.6 });
+    slides.forEach(s => seen.observe(s));
   }
   applyCatalog();
+  $('#hot').addEventListener('click', e => {
+    const order = e.target.closest('[data-design]'), occ = e.target.closest('[data-occ-go]');
+    if (order) openOrder(+order.dataset.design);
+    else if (occ) setTab('designs', { occasion: occ.dataset.occGo });
+  });
 
   const online = location.protocol.startsWith('http') && typeof DB !== 'undefined';
   if (online) {
@@ -174,19 +218,27 @@
       scrollTo({ top: 0, behavior: 'instant' });
       mark(trending ? 'trending' : 'templates');
     }
-    if (push && tab !== was) history.pushState({ tab }, '', tab === 'designs' ? '#designs' : location.pathname + location.search);
+    if (tab === 'trending') {
+      scrollTo({ top: 0, behavior: 'instant' });
+      $('#hotReel').scrollLeft = 0;
+      mark('trending');
+    }
+    if (push && tab !== was) history.pushState({ tab }, '', tab === 'home' ? location.pathname + location.search : '#' + tab);
   }
   document.querySelector('.bottom-nav').addEventListener('click', e => {
     const a = e.target.closest('[data-sec], [data-trending]');
     if (!a) return;
     e.preventDefault();
-    if (a.dataset.sec === 'templates' || a.hasAttribute('data-trending')) return setTab('designs', { trending: a.hasAttribute('data-trending') });
+    if (a.hasAttribute('data-trending')) return setTab('trending');
+    if (a.dataset.sec === 'templates') return setTab('designs');
     setTab('home');
     requestAnimationFrame(() => document.getElementById(a.dataset.sec).scrollIntoView({ behavior: 'smooth' }));
   });
   $('#seeAll').addEventListener('click', () => setTab('designs'));
-  addEventListener('popstate', e => setTab(e.state?.tab || (location.hash === '#designs' ? 'designs' : 'home'), { push: false }));
-  document.body.dataset.tab = location.hash === '#designs' ? 'designs' : 'home';
+  const tabOfHash = () => ({ '#designs': 'designs', '#trending': 'trending' })[location.hash] || 'home';
+  addEventListener('popstate', e => setTab(e.state?.tab || tabOfHash(), { push: false }));
+  document.body.dataset.tab = tabOfHash();
+  if (tabOfHash() === 'trending') mark('trending');
 
   // On the Home tab, highlight the section in view.
   const tabIO = new IntersectionObserver(entries => entries.forEach(en => {
@@ -197,7 +249,9 @@
   const sheet = $('#orderSheet'), of = $('#orderForm'), STEPS = 5;
   let step = 0, ord = null;
 
+  let orderRef = ''; // the short order number shown in the WhatsApp message
   function openOrder(design) {
+    orderRef = '';
     const e = Templates.get(design) ? allEntries[Templates.get(design).no - 1] : null;
     ord = { design: e ? e.no : '', type: e ? e.occasion : 'wedding', events: [] };
     of.reset();
@@ -228,6 +282,17 @@
       .filter(n => !ord.events.some(ev => ev.name === n))
       .map(n => `<button type="button" class="chip" data-add="${esc(n)}">+ ${esc(n)}</button>`).join('') +
       '<button type="button" class="chip" data-add="">+ Other</button>';
+    renderPicks();
+  }
+  // Small tappable swatches of this occasion's designs (trending first), so nobody needs to know a number.
+  function renderPicks() {
+    const picked = +of.elements.design.value;
+    const mine = designs.filter(d => d.occasion === ord.type);
+    $('#osPicks').innerHTML = mine.slice(0, 12).map(d => {
+      const v = d.vars;
+      return `<button type="button" class="os-pick${d.no === picked ? ' on' : ''}" data-pick="${d.no}" title="${esc(d.name)}" aria-label="Design ${Templates.serial(d.no)} ${esc(d.name)}"
+        style="--a:${v['--accent']};--a2:${v['--accent2']};--b:${v['--bg']};--c:${v['--bg2']}"><span>${d.emoji}</span><b>${Templates.serial(d.no)}</b></button>`;
+    }).join('') + (mine.length ? `<button type="button" class="os-pick more" data-browse>See all<b>${mine.length} →</b></button>` : '');
   }
   function renderEvents() {
     $('#osEvents').innerHTML = ord.events.map((ev, i) => `
@@ -240,8 +305,10 @@
   function showDesign() {
     const t = Templates.get(of.elements.design.value);
     const e = t && allEntries[t.no - 1];
-    $('#osDesign').textContent = !of.elements.design.value ? 'No design yet? No problem, we will suggest one.'
-      : e ? `✓ ${Templates.serial(e.no)} ${e.name} · ${INTROS[e.intro]} opening` : 'There is no design with that number.';
+    $('#osDesign').innerHTML = !of.elements.design.value ? 'No design yet? No problem, we will suggest one.'
+      : e ? `✓ ${Templates.serial(e.no)} ${esc(e.name)} · ${INTROS[e.intro]} opening <a href="card.html?demo#${Catalog.demoCode(e)}" target="_blank" rel="noopener">▶ Preview</a>`
+      : 'There is no design with that number.';
+    document.querySelectorAll('#osPicks [data-pick]').forEach(b => b.classList.toggle('on', +b.dataset.pick === (e && e.no)));
   }
 
   function collect() {
@@ -307,6 +374,7 @@
     step = n;
     of.querySelectorAll('.os-step').forEach(s => { s.hidden = +s.dataset.step !== n; });
     $('#osDots').querySelectorAll('li').forEach((d, i) => d.classList.toggle('on', i <= n));
+    $('#osStepNo').textContent = `Step ${n + 1} of ${STEPS}`;
     $('#osBack').style.visibility = n ? 'visible' : 'hidden';
     $('#osError').textContent = '';
     const last = n === STEPS - 1;
@@ -314,7 +382,8 @@
     $('#osSend').hidden = !last || !SITE.whatsapp;
     $('#osNoWa').hidden = !last || !!SITE.whatsapp;
     if (last) {
-      const msg = Catalog.orderMessage(collect(), allEntries);
+      if (online && !orderRef) orderRef = Catalog.orderRef();
+      const msg = Catalog.orderMessage(collect(), allEntries, online ? orderRef : '');
       $('#osReview').textContent = msg.replace(/\*/g, '').replace(/\n\nOrder code.*$/s, '\n\n🔑 An order code is added so we can start right away.');
       $('#osSend').href = Core.orderUrl(SITE.whatsapp, msg);
     }
@@ -340,7 +409,7 @@
       const o = collect();
       DB.insert('orders', {
         design_no: o.design || null, occasion: o.type, names: [o.host1, o.host2].filter(Boolean).join(' & ').slice(0, 120),
-        event_date: o.date, code: Catalog.orderCode(o)
+        event_date: o.date, code: `${orderRef} ${Catalog.orderCode(o)}`
       }, { auth: false, keepalive: true }).catch(() => { /* the WhatsApp message still has everything */ });
     }
     of.querySelectorAll('.os-step').forEach(s => { s.hidden = true; });
@@ -374,7 +443,15 @@
 
   of.addEventListener('click', e => {
     const occ = e.target.closest('[data-type]'), add = e.target.closest('[data-add]'), del = e.target.closest('[data-del]');
-    if (occ) { ord.type = occ.dataset.type; renderOccasions(); }
+    const pick = e.target.closest('[data-pick]'), browse = e.target.closest('[data-browse]');
+    if (pick) {
+      of.elements.design.value = pick.dataset.pick;
+      showDesign();
+      navigator.vibrate?.(10);
+    } else if (browse) {
+      closeOrder();
+      setTab('designs', { occasion: ord.type });
+    } else if (occ) { ord.type = occ.dataset.type; renderOccasions(); }
     else if (add) {
       ord.events.push({ name: add.dataset.add, date: of.elements.date.value, venue: '' });
       renderEvents();
