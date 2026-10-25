@@ -52,19 +52,23 @@ const Catalog = {
       const d = Core.parseDate(s);
       return d ? d.toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
     };
-    const names = [order.host1, order.host2].map(s => String(s || '').trim()).filter(Boolean).join(' & ');
-    const events = (order.events || []).filter(ev => ev && String(ev.name || '').trim());
-    const guests = (order.guests || []).map(g => String(g).trim()).filter(Boolean);
-    const lines = [`🛍️ *New invitation order*`, e ? `🎨 Design: *${Templates.serial(e.no)}* ${e.name}` : `🎨 Design: please suggest one`, `${p.icon} Occasion: ${p.label}`];
+    // WhatsApp for Windows turns emoji in a pre-filled message into "�" and can drop the line breaks, so the
+    // text uses no emoji and every detail has its own label and bullet: it reads well even as one long line.
+    // (The order code keeps everything exactly as typed, emoji included.)
+    const plain = s => String(s || '').replace(/[\u{10000}-\u{10FFFF}️‍⃣]/gu, '').replace(/\s+/g, ' ').trim();
+    const names = [order.host1, order.host2].map(plain).filter(Boolean).join(' & ');
+    const events = (order.events || []).filter(ev => ev && plain(ev.name));
+    const guests = (order.guests || []).map(plain).filter(Boolean);
+    const lines = ['*NEW INVITATION ORDER*', `• Design: ${e ? `*${Templates.serial(e.no)}* ${plain(e.name)}` : 'please suggest one'}`, `• Occasion: ${p.label}`];
     const add = (show, line) => { if (show) lines.push(line); };
-    add(names, `👤 ${names}`);
-    add(when(order.date), `📅 ${when(order.date)}`);
-    add(order.venue, `📍 ${order.venue}`);
-    add(events.length, `🎊 Functions:\n${events.map(ev => `  • ${ev.name}${when(ev.date) ? ` – ${when(ev.date)}` : ''}${ev.venue ? ` @ ${ev.venue}` : ''}`).join('\n')}`);
-    add(order.message, `💬 Message: ${order.message}`);
-    add(Core.waNumber(order.rsvp), `📲 RSVP on WhatsApp: ${Core.waNumber(order.rsvp)}`);
-    add(guests.length, `👥 Personal links for ${guests.length} guest${guests.length > 1 ? 's' : ''}: ${guests.join(', ')}`);
-    add(order.photo, `📷 I'll send the photo in this chat.`);
+    add(names, `• Names: ${names}`);
+    add(when(order.date), `• Date: ${when(order.date)}`);
+    add(plain(order.venue), `• Venue: ${plain(order.venue)}`);
+    add(events.length, `• Functions: ${events.map(ev => `${plain(ev.name)}${when(ev.date) ? ` (${when(ev.date)})` : ''}${plain(ev.venue) ? ` at ${plain(ev.venue)}` : ''}`).join('; ')}`);
+    add(plain(order.message), `• Message: ${plain(order.message)}`);
+    add(Core.waNumber(order.rsvp), `• RSVP number: ${Core.waNumber(order.rsvp)}`);
+    add(guests.length, `• Guests (${guests.length}): ${guests.join(', ')}`);
+    add(order.photo, `• Photo: I'll send it in this chat`);
     lines.push('', `Order code (please keep): ${Catalog.orderCode(order)}`);
     return lines.join('\n');
   },

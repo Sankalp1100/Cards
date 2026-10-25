@@ -216,6 +216,23 @@ test.describe('Publishing', () => {
   test('public pages and the admin panel load the business config', () => {
     for (const f of ['index.html', 'card.html', 'admin.html']) assert.match(fs.readFileSync(path.join(ROOT, f), 'utf8'), /js\/config\.js/, f);
   });
+
+  test('every page has the icon, and shared links get a preview image', () => {
+    for (const f of ['index.html', 'card.html', 'admin.html']) {
+      const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
+      for (const icon of ['img/favicon.svg', 'img/favicon-32.png', 'img/icon-180.png']) assert.ok(html.includes(`href="${icon}"`), `${f}: ${icon}`);
+    }
+    for (const [f, img] of [['index.html', 'og-site.png'], ['card.html', 'og-invite.png']]) {
+      const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
+      assert.ok(html.includes(`<meta property="og:image" content="https://cardalbum.vercel.app/img/${img}">`), `${f} preview image`);
+      for (const tag of ['og:title', 'og:description', 'og:url', 'og:image:width', 'twitter:card']) assert.ok(html.includes(tag), `${f}: ${tag}`);
+      // WhatsApp skips preview images over ~600 KB.
+      assert.ok(fs.statSync(path.join(ROOT, 'img', img)).size < 600 * 1024, `${img} too big for WhatsApp`);
+    }
+    for (const img of ['favicon.svg', 'favicon-32.png', 'icon-180.png', 'icon-192.png', 'icon-512.png']) assert.ok(fs.existsSync(path.join(ROOT, 'img', img)), img);
+    const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'site.webmanifest'), 'utf8'));
+    for (const i of manifest.icons) assert.ok(fs.existsSync(path.join(ROOT, i.src)), i.src);
+  });
 });
 
 test.describe('Dates', () => {
@@ -441,13 +458,14 @@ test.describe('Catalog', () => {
 
   test('order message is complete and readable, and ends with the order code', () => {
     const msg = Catalog.orderMessage(order, Catalog.entries(site, {}));
-    for (const part of ['*#047* Cobalt Milestone', 'Occasion: Birthday', '👤 Neha', '28 Nov', 'Skybar, Bengaluru', '🎂 Cake Cutting', 'Come!',
-      '919876543210', 'Personal links for 2 guests: Rahul Uncle, Priya Di', "I'll send the photo"]) assert.ok(msg.includes(part), part);
+    for (const part of ['• Design: *#047* Cobalt Milestone', '• Occasion: Birthday', '• Names: Neha', '• Date: Sat, 28 Nov', '• Venue: Skybar, Bengaluru', '• Functions: Cake Cutting (', '• Message: Come!',
+      '• RSVP number: 919876543210', '• Guests (2): Rahul Uncle, Priya Di', "• Photo: I'll send it"]) assert.ok(msg.includes(part), part);
+    assert.ok(!/[\u{10000}-\u{10FFFF}]/u.test(msg), 'no emoji: WhatsApp for Windows shows them as �');
     assert.match(msg, /\n\nOrder code \(please keep\): WC1\.[A-Za-z0-9_-]+$/);
     assert.ok(!/\n\n\n/.test(msg), 'no empty lines in the middle');
     const bare = Catalog.orderMessage({ type: 'kitty', host1: 'Glam Club' }, Catalog.entries(site, {}));
     assert.match(bare, /Design: please suggest one/);
-    assert.ok(!/📅|📍|🎊|💬|📲|👥|📷/.test(bare), 'empty fields are left out');
+    assert.ok(!/Date:|Venue:|Functions:|Message:|RSVP|Guests|Photo:/.test(bare), 'empty fields are left out');
   });
 
   test('a pasted order fills the whole card, with sample headline and tagline for the occasion', () => {
@@ -461,6 +479,12 @@ test.describe('Catalog', () => {
       },
       guests: ['Rahul Uncle', 'Priya Di'], photo: true
     });
+  });
+
+  test('the code survives WhatsApp for Windows mangling the message', () => {
+    const msg = Catalog.orderMessage(order, Catalog.entries(site, {}));
+    const mangled = msg.replace(/[\u{10000}-\u{10FFFF}]/gu, '�').replace(/\n/g, ' ');
+    assert.equal(Catalog.readOrder(mangled).card.events[0].name, '🎂 Cake Cutting', 'emoji kept inside the code');
   });
 
   test('a message without a code still picks up the design number', () => {

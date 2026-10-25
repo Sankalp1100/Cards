@@ -129,7 +129,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.eval(fill('rsvp', '98765 43210'));
     await page.eval(fill('guests', 'Rahul Uncle\nPriya Di'));
     await next();
-    assert.match(await page.eval(`document.querySelector('#osReview').textContent`), /Diya & Aarav[\s\S]*Grand Ballroom[\s\S]*2 guests/);
+    assert.match(await page.eval(`document.querySelector('#osReview').textContent`), /Names: Diya & Aarav[\s\S]*Venue: Grand Ballroom[\s\S]*Guests \(2\)/);
     assert.equal(await page.eval(`document.querySelector('#osSend').hidden`), false);
     const href = await page.eval(`document.querySelector('#osSend').href`);
     assert.match(href, /^https:\/\/wa\.me\/919999999999\?text=/);
