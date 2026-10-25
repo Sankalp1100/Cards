@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Admin Panel · Wedding Card</title>
   <meta name="theme-color" content="#07060f">
+  <meta name="robots" content="noindex, nofollow">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Space+Grotesk:wght@400;500;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
@@ -13,35 +14,60 @@
 </head>
 <body class="admin">
   <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
-  <div class="grain" aria-hidden="true"></div>
 
   <aside class="side">
     <a class="logo" href="index.html">💌 <span>Wedding Card</span></a>
     <p class="side-tag">Admin panel</p>
     <nav class="side-nav">
       <a href="#create">✨ <span>Create invite</span></a>
-      <a href="#templates">🎨 <span>Templates</span></a>
-      <a href="#generate">🔗 <span>Generate links</span></a>
+      <a href="#designs">🎨 <span>Designs</span></a>
+      <a href="#generate">🔗 <span>Get links</span></a>
       <a href="#links">📋 <span>My links</span> <b id="linkCount">0</b></a>
-      <a href="index.html">🏠 <span>Website</span></a>
+      <a href="#catalog">🗂️ <span>Catalog</span></a>
+      <a href="#settings">⚙️ <span>Settings</span></a>
+      <a id="siteLink" href="index.html" target="_blank" rel="noopener">🏠 <span>Website</span></a>
     </nav>
   </aside>
 
   <main class="admin-main">
+    <div class="publish-bar" id="publishBar" hidden>
+      <span>📝 You changed the catalog or settings. Publish to update the website.</span>
+      <div class="link-actions">
+        <button type="button" class="btn-small" id="discardBtn">Undo changes</button>
+        <button type="button" class="btn-small go" data-publish>🚀 Publish</button>
+      </div>
+    </div>
+
     <section id="create" class="block">
       <h1 class="section-h">Create an <span class="gradient-text">invite</span></h1>
-      <p class="muted">Pick the occasion, fill in the details and choose a template. Make as many links as you like.</p>
+      <p class="muted">Type the design number the customer chose, fill in their details, and get the link.</p>
 
-      <h2 class="step"><b>1</b> Choose occasion</h2>
+      <div class="design-pick panel">
+        <h2 class="step"><b>1</b> Design number</h2>
+        <div class="design-row">
+          <label class="no-input"><span>#</span><input id="designNo" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="047" aria-label="Design number"></label>
+          <div class="design-chosen" id="designChosen"></div>
+          <a class="btn-small" href="#designs">Browse all designs</a>
+        </div>
+        <small class="design-msg" id="designMsg"></small>
+      </div>
+
+      <h2 class="step"><b>2</b> Occasion</h2>
       <div class="occasions" id="typeChips"></div>
 
       <div class="create-grid">
         <form id="form" class="panel" autocomplete="off" onsubmit="return false">
-          <h2 class="step"><b>2</b> Fill in the details</h2>
+          <div class="form-head">
+            <h2 class="step"><b>3</b> Customer details</h2>
+            <div class="link-actions">
+              <button type="button" class="btn-small" id="sampleBtn" title="Fill with sample text">Sample text</button>
+              <button type="button" class="btn-small danger" id="clearBtn" title="Empty every field">Clear all</button>
+            </div>
+          </div>
           <fieldset>
             <label>Headline <input name="title" maxlength="80"></label>
             <div class="row">
-              <label><span id="lbl1">Name 1</span> <input name="host1" maxlength="40"></label>
+              <label><span id="lbl1">Name 1</span> <input name="host1" maxlength="40" required></label>
               <label><span id="lbl2">Name 2</span> <input name="host2" maxlength="40"></label>
             </div>
             <label>Tagline <input name="tagline" maxlength="120"></label>
@@ -54,6 +80,7 @@
 
           <fieldset>
             <legend>Functions / schedule</legend>
+            <div class="quick-events" id="quickEvents"></div>
             <div id="events"></div>
             <button type="button" class="btn-small" id="addEvent">+ Add function</button>
           </fieldset>
@@ -79,7 +106,7 @@
         </form>
 
         <aside class="preview-col">
-          <p class="now-theme">Template: <b id="themeName"></b></p>
+          <p class="now-theme">Design: <b id="themeName"></b></p>
           <div class="phone">
             <div class="notch"></div>
             <iframe id="preview" title="Invitation preview"></iframe>
@@ -89,19 +116,15 @@
       </div>
     </section>
 
-    <section id="templates" class="block">
-      <h2 class="step"><b>3</b> Pick a template <small>The previews use your details. Tap one to select it.</small></h2>
-      <div class="gallery" id="gallery"></div>
-    </section>
-
     <section id="generate" class="block panel">
-      <h2 class="step"><b>4</b> Generate links</h2>
+      <h2 class="step"><b>4</b> Get links</h2>
+      <p class="warn" id="urlWarn" hidden>⚠️ Your live website address is not set, so links only work on this PC. Add it in <a href="#settings"><b>Settings</b></a> (e.g. https://your-site.vercel.app/).</p>
       <div class="gen-grid">
         <div class="gen-input">
-          <label>Guest names <small>one per line to make a personal link for each guest; leave empty for one common link</small>
+          <label>Guest names <small>one per line for a personal link each; leave empty for one link for everyone</small>
             <textarea id="guests" rows="6" placeholder="Rahul Uncle&#10;Sharma Family&#10;Priya Di"></textarea>
           </label>
-          <button type="button" class="btn-glow" id="generate-btn">⚡ Generate links</button>
+          <button type="button" class="btn-glow" id="generate-btn">⚡ Get links</button>
         </div>
         <div>
           <div class="results-head" id="resultsHead" hidden>
@@ -111,12 +134,21 @@
           <div class="results" id="results"><p class="muted">Your links will appear here.</p></div>
         </div>
       </div>
-      <p class="warn" id="fileWarn" hidden>⚠️ You opened this panel straight from your computer, so these links only work on this PC. Put the folder online first (README → Netlify Drop, about 1 minute), then open the admin panel from that online URL. After that, every link works on any phone.</p>
+    </section>
+
+    <section id="designs" class="block">
+      <h2 class="step">🎨 All designs <small>Tap one to use it. The number under each is what customers order.</small></h2>
+      <div class="cat-tools left">
+        <input id="galSearch" type="search" placeholder="🔍 Number or name">
+        <div class="chips" id="galFilters"></div>
+      </div>
+      <div class="gallery" id="gallery"></div>
+      <div class="more-wrap"><button type="button" class="btn-line small" id="galMore" hidden>Show more</button></div>
     </section>
 
     <section id="links" class="block">
       <div class="links-head">
-        <h2 class="step"><b>5</b> My links</h2>
+        <h2 class="step">📋 My links</h2>
         <div class="links-tools">
           <input id="search" placeholder="🔍 Search guest or name">
           <button type="button" class="btn-small" id="csv">⬇ Download CSV</button>
@@ -125,20 +157,71 @@
       </div>
       <div class="table-wrap panel">
         <table id="linksTable">
-          <thead><tr><th>Guest</th><th>Invitation</th><th>Template</th><th>Created</th><th></th></tr></thead>
+          <thead><tr><th>Guest</th><th>Invitation</th><th>Design</th><th>Created</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
-        <p class="muted empty" id="emptyLinks">No links yet. Generate your first one above 👆</p>
+        <p class="muted empty" id="emptyLinks">No links yet. Make your first one above 👆</p>
       </div>
       <p class="muted tiny">Links are saved in this browser. Use Download CSV to keep a backup.</p>
+    </section>
+
+    <section id="catalog" class="block">
+      <div class="links-head">
+        <h2 class="step">🗂️ Catalog <small>What customers see on the website</small></h2>
+        <div class="links-tools">
+          <input id="catSearch" type="search" placeholder="🔍 Number or name">
+          <select id="catOcc" aria-label="Occasion"></select>
+          <select id="catShow" aria-label="Show">
+            <option value="">All designs</option>
+            <option value="trending">🔥 Trending</option>
+            <option value="hidden">Hidden</option>
+            <option value="changed">Changed by me</option>
+          </select>
+        </div>
+      </div>
+      <div class="bulk">
+        <small id="catCount"></small>
+        <button type="button" class="btn-small" data-bulk="show">Show these on site</button>
+        <button type="button" class="btn-small danger" data-bulk="hide">Hide these</button>
+      </div>
+      <div class="table-wrap panel">
+        <table id="catTable">
+          <thead><tr><th>Design</th><th>Name</th><th>Occasion</th><th>Price</th><th>On site</th><th>🔥 Trending</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="settings" class="block">
+      <h2 class="step">⚙️ Settings</h2>
+      <form id="siteForm" class="panel settings-grid" autocomplete="off" onsubmit="return false">
+        <label>Live website address <small>(Vercel → Settings → Domains)</small> <input name="url" type="url" placeholder="https://your-site.vercel.app/"></label>
+        <label>Brand name <input name="brand" maxlength="40"></label>
+        <label>WhatsApp number for orders <small>(with country code)</small> <input name="whatsapp" inputmode="tel" placeholder="919876543210"></label>
+        <label>Instagram <small>(without @, optional)</small> <input name="instagram" maxlength="40"></label>
+        <div class="row">
+          <label>Price for every design <small>(empty hides prices)</small> <input name="price" inputmode="numeric" placeholder="999"></label>
+          <label>Currency <input name="currency" maxlength="4"></label>
+        </div>
+      </form>
+      <div class="panel publish-box">
+        <div>
+          <h3>🚀 Publish to the website</h3>
+          <p class="muted" id="publishHelp"></p>
+        </div>
+        <button type="button" class="btn-glow" data-publish>🚀 Publish</button>
+        <pre class="publish-log" id="publishLog" hidden></pre>
+      </div>
     </section>
   </main>
 
   <div class="toast" id="toast" role="status"></div>
 
+  <script src="js/config.js"></script>
   <script src="js/themes.js"></script>
   <script src="js/codec.js"></script>
   <script src="js/core.js"></script>
+  <script src="js/catalog.js"></script>
   <script src="js/admin.js"></script>
 </body>
 </html>

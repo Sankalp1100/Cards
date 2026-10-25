@@ -1,0 +1,9 @@
+# Private: the admin panel runs only from your own PC and is never published.
+admin.html
+js/admin.js
+css/admin.css
+server.mjs
+# Not needed on the live site
+tests/
+package.json
+README.md

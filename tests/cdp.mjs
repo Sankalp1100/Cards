@@ -44,6 +44,7 @@ export async function launch() {
 
   const page = {
     errors,
+    send,
     async viewport(width, height) {
       await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: width < 600 });
     },

@@ -4,6 +4,7 @@
   "private": true,
   "description": "Animated wedding / party invitations shared as a single link",
   "scripts": {
+    "admin": "node server.mjs",
     "test": "node --test tests/*.test.js tests/*.test.mjs",
     "test:unit": "node --test tests/unit.test.js",
     "test:e2e": "node --test tests/e2e.test.mjs",

@@ -7,9 +7,11 @@
 html { scroll-behavior: smooth; }
 body {
   min-height: 100vh; color: var(--ink); font-family: var(--body); font-size: 19px; line-height: 1.6;
-  background: radial-gradient(ellipse at 50% 0%, var(--bg2), var(--bg) 70%) fixed, var(--bg);
+  background: var(--bg);
   overflow-x: hidden; -webkit-font-smoothing: antialiased; text-align: center;
 }
+/* A fixed layer instead of `background-attachment: fixed`, which repaints the whole page on every scroll on phones. */
+body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(ellipse at 50% 0%, var(--bg2), var(--bg) 70%); }
 body.locked { overflow: hidden; height: 100vh; }
 #fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
 a { color: inherit; }
@@ -68,14 +70,22 @@ main { position: relative; z-index: 2; }
   position: relative; min-height: 100vh; min-height: 100svh; display: grid; place-content: center; justify-items: center;
   gap: 14px; padding: 60px 16px; overflow: hidden;
 }
-.mandala { position: absolute; left: 50%; top: 50%; width: min(130vw, 900px); aspect-ratio: 1; pointer-events: none; }
+.mandala { position: absolute; left: 50%; top: 50%; width: min(130vw, 900px); aspect-ratio: 1; pointer-events: none; will-change: transform; }
 .mandala svg { width: 100%; height: 100%; fill: none; stroke: var(--accent); stroke-width: .5; opacity: .28; }
 .mandala.m1 { transform: translate(-50%, -50%); animation: spin 90s linear infinite; }
 .mandala.m2 { width: min(80vw, 520px); transform: translate(-50%, -50%); animation: spinR 60s linear infinite; }
 .mandala.m2 svg { opacity: .18; stroke-width: .8; }
-.blob { position: absolute; width: 60vmax; height: 60vmax; border-radius: 50%; filter: blur(70px); opacity: .45; pointer-events: none; animation: drift 14s ease-in-out infinite alternate; }
-.blob.b1 { background: var(--accent); left: -25vmax; top: -20vmax; }
-.blob.b2 { background: var(--accent2); right: -25vmax; bottom: -25vmax; animation-delay: -7s; }
+/* Soft blobs drawn as gradients: a 70px CSS blur on a moving 60vmax element is very slow on phones. */
+.blob { position: absolute; width: 60vmax; height: 60vmax; border-radius: 50%; opacity: .55; pointer-events: none; animation: drift 14s ease-in-out infinite alternate; will-change: transform; }
+.blob.b1 { background: radial-gradient(circle, var(--accent), transparent 68%); left: -25vmax; top: -20vmax; }
+.blob.b2 { background: radial-gradient(circle, var(--accent2), transparent 68%); right: -25vmax; bottom: -25vmax; animation-delay: -7s; }
+/* Ornate double frame with corner jewels */
+.frame { position: absolute; inset: 18px; pointer-events: none; border: 1px solid var(--line); border-radius: 22px; }
+.frame::before { content: ''; position: absolute; inset: 8px; border: 2px solid color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 16px; }
+.frame i { position: absolute; width: 16px; height: 16px; transform: rotate(45deg); background: var(--accent); box-shadow: 0 0 14px var(--accent); }
+.frame i:nth-child(1) { left: -8px; top: -8px; } .frame i:nth-child(2) { right: -8px; top: -8px; }
+.frame i:nth-child(3) { left: -8px; bottom: -8px; } .frame i:nth-child(4) { right: -8px; bottom: -8px; }
+.opened .frame { animation: floatIn 1.2s ease both; }
 
 .ornament { font-size: 3.4rem; position: relative; animation: bob 3s ease-in-out infinite; }
 .photo {
@@ -118,7 +128,7 @@ section:not(.hero) { padding: 70px 16px; max-width: 760px; margin: 0 auto; }
 .reveal.in { opacity: 1; transform: none; }
 
 .cd-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 520px; margin: 0 auto; }
-.cd-cell { padding: 18px 4px; border-radius: 18px; border: 1px solid var(--line); background: var(--card); backdrop-filter: blur(8px); }
+.cd-cell { padding: 18px 4px; border-radius: 18px; border: 1px solid var(--line); background: var(--card); }
 .cd-cell b { display: block; font-family: var(--display); font-size: clamp(1.6rem, 7vw, 2.6rem); color: var(--accent); line-height: 1.1; }
 .cd-cell b.flip { animation: flip .5s ease; }
 .cd-cell span { font-size: .75rem; text-transform: uppercase; letter-spacing: .15em; color: var(--muted); }
@@ -133,7 +143,7 @@ section:not(.hero) { padding: 70px 16px; max-width: 760px; margin: 0 auto; }
 .event { position: relative; padding-left: 44px; }
 .event-dot { position: absolute; left: 5px; top: 22px; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 25%, transparent), 0 0 18px var(--accent); }
 .event.in .event-dot { animation: popIn .6s calc(var(--i) * 120ms + .3s) both; }
-.event-body { padding: 20px 22px; border-radius: 20px; border: 1px solid var(--line); background: var(--card); backdrop-filter: blur(10px); transition: transform .2s ease, box-shadow .3s; }
+.event-body { padding: 20px 22px; border-radius: 20px; border: 1px solid var(--line); background: var(--card); transition: transform .2s ease, box-shadow .3s; }
 .event-body:hover { box-shadow: 0 18px 40px rgba(0,0,0,.25); }
 .event-body h3 { font-family: var(--display); font-weight: 400; font-size: 1.35rem; color: var(--accent); margin-bottom: 4px; }
 .event-body p { font-size: 1rem; color: var(--muted); }
@@ -163,13 +173,13 @@ footer { padding: 40px 16px 60px; font-size: .9rem; color: var(--muted); }
 .music-btn:not(.playing)::after { content: ''; position: absolute; left: 12px; right: 12px; top: 50%; height: 2px; background: var(--bg); transform: rotate(-45deg); }
 
 /* ---------- Theme flavours ---------- */
-.theme-neon .names .ch { background: none; color: #fff; text-shadow: 0 0 6px #fff, 0 0 18px var(--accent), 0 0 40px var(--accent), 0 0 70px var(--accent2); }
-.theme-neon .section-title, .theme-neon .cd-cell b { text-shadow: 0 0 12px var(--accent); }
-.theme-neon .event-body, .theme-neon .cd-cell { box-shadow: 0 0 0 1px var(--accent), 0 0 24px color-mix(in srgb, var(--accent2) 30%, transparent); }
-.theme-neon .opened .names .ch, .opened.theme-neon .names .ch { animation: dropIn .9s calc(var(--i) * 70ms + .3s) both, flicker 5s calc(var(--i) * 300ms) infinite; }
-.theme-kids .names .ch, .theme-baby .names .ch { background: none; color: var(--accent); -webkit-text-stroke: 0; text-shadow: 3px 3px 0 var(--accent2), 6px 6px 0 rgba(0,0,0,.08); }
-.opened.theme-kids .names .ch, .opened.theme-baby .names .ch { animation: dropIn .9s cubic-bezier(.2,.9,.3,1.5) calc(var(--i) * 70ms + .3s) both, wiggle 2.4s calc(var(--i) * 120ms) ease-in-out infinite; }
-.theme-kids .event-body, .theme-baby .event-body, .theme-kids .cd-cell, .theme-baby .cd-cell { border-radius: 26px; border-width: 2px; }
+.flavor-neon .names .ch { background: none; color: #fff; text-shadow: 0 0 6px #fff, 0 0 18px var(--accent), 0 0 40px var(--accent), 0 0 70px var(--accent2); }
+.flavor-neon .section-title, .flavor-neon .cd-cell b { text-shadow: 0 0 12px var(--accent); }
+.flavor-neon .event-body, .flavor-neon .cd-cell { box-shadow: 0 0 0 1px var(--accent), 0 0 24px color-mix(in srgb, var(--accent2) 30%, transparent); }
+.opened.flavor-neon .names .ch { animation: dropIn .9s calc(var(--i) * 70ms + .3s) both, flicker 5s calc(var(--i) * 300ms) infinite; }
+.flavor-playful .names .ch { background: none; color: var(--accent); -webkit-text-stroke: 0; text-shadow: 3px 3px 0 var(--accent2), 6px 6px 0 rgba(0,0,0,.08); }
+.opened.flavor-playful .names .ch { animation: dropIn .9s cubic-bezier(.2,.9,.3,1.5) calc(var(--i) * 70ms + .3s) both, wiggle 2.4s calc(var(--i) * 120ms) ease-in-out infinite; }
+.flavor-playful .event-body, .flavor-playful .cd-cell { border-radius: 26px; border-width: 2px; }
 
 /* ---------- Keyframes ---------- */
 @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
@@ -198,3 +208,13 @@ footer { padding: 40px 16px 60px; font-size: .9rem; color: var(--muted); }
   .cd-grid { gap: 8px; }
   .photo { width: 150px; height: 150px; }
 }
+
+/* ---------- Sample bar (card opened from the website's catalog) ---------- */
+.demo-bar {
+  position: fixed; left: 14px; right: 80px; bottom: 16px; z-index: 70; max-width: 460px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 8px 8px 16px; border-radius: 999px;
+  background: rgba(10,8,20,.88); color: #fff; font: 500 .85rem system-ui, sans-serif; box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+.demo-bar b { color: var(--accent); }
+.demo-bar .btn { padding: 9px 16px; font: 700 .85rem system-ui, sans-serif; white-space: nowrap; }
+@media (max-width: 380px) { .demo-bar span { font-size: .75rem; } }

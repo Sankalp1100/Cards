@@ -7,10 +7,10 @@ const ROOT = path.join(__dirname, '..');
 
 function loadApp() {
   const ctx = vm.createContext({ TextEncoder, TextDecoder, btoa, atob, URL, URLSearchParams, console });
-  for (const f of ['themes.js', 'codec.js', 'core.js']) {
+  for (const f of ['config.js', 'themes.js', 'codec.js', 'core.js', 'catalog.js']) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', f), 'utf8'), ctx, { filename: f });
   }
-  return vm.runInContext('({ THEMES, PRESETS, Codec, Core })', ctx);
+  return vm.runInContext('({ Templates, PRESETS, Codec, Core, Catalog, SITE, CATALOG })', ctx);
 }
 
 // Objects from the sandbox have a different Object.prototype; normalise before deepStrictEqual.

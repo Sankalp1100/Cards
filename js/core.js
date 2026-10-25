@@ -18,7 +18,7 @@ const Core = {
   // Every field a card can have, all empty. Used as the base when loading a saved link
   // so values from a preset never leak into fields the link left out.
   blankCard() {
-    return { type: 'wedding', theme: 'royal', title: '', host1: '', host2: '', tagline: '', date: '', venue: '', message: '', photo: '', mapUrl: '', rsvp: '', events: [], music: true };
+    return { type: 'wedding', theme: 1, title: '', host1: '', host2: '', tagline: '', date: '', venue: '', message: '', photo: '', mapUrl: '', rsvp: '', events: [], music: true };
   },
 
   // Drop empty values (and functions without a name) so the link stays short.
@@ -78,8 +78,22 @@ const Core = {
     return url.href;
   },
 
+  // Google Fonts URL for just the families one theme uses (instead of every family on every card).
+  fontsUrl(fonts) {
+    const weights = { 'Cinzel Decorative': '400;700', 'Cormorant Garamond': '400;600', 'Playfair Display': '400;700', 'Poppins': '300;500', 'Fredoka': '400;600', 'Lora': '400;600', 'Baloo 2': '400;600', 'Dancing Script': '400;700' };
+    const families = [...new Set(Object.values(fonts).map(f => (f.match(/'([^']+)'/) || [])[1]).filter(Boolean))];
+    const q = families.map(f => `family=${f.replace(/ /g, '+')}${weights[f] ? `:wght@${weights[f]}` : ''}`).join('&');
+    return `https://fonts.googleapis.com/css2?${q}&display=swap`;
+  },
+
   waNumber(rsvp) {
     return String(rsvp || '').replace(/\D/g, '');
+  },
+
+  // WhatsApp chat with the business, or the page's order section when no number is set yet.
+  orderUrl(whatsapp, text) {
+    const number = Core.waNumber(whatsapp);
+    return number ? `https://wa.me/${number}?text=${encodeURIComponent(text)}` : '#order';
   },
 
   inviteText({ guest, who, label, link }) {

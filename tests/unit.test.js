@@ -2,9 +2,10 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 const { loadApp, plain, ROOT } = require('./load');
 
-const { THEMES, PRESETS, Codec, Core } = loadApp();
+const { Templates, PRESETS, Codec, Core, Catalog } = loadApp();
 const PARTICLE_TYPES = ['petal', 'leaf', 'marigold', 'confetti', 'heart', 'sparkle', 'balloon'];
 const REQUIRED_VARS = ['--bg', '--bg2', '--ink', '--muted', '--accent', '--accent2', '--card', '--line'];
 
@@ -155,6 +156,28 @@ test.describe('Links', () => {
   });
 });
 
+test.describe('Core.fontsUrl', () => {
+  test('builds a Google Fonts URL with weights and no duplicates', () => {
+    const url = Core.fontsUrl({ display: "'Playfair Display', serif", script: "'Great Vibes', cursive", body: "'Playfair Display', serif" });
+    assert.equal(url, 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Great+Vibes&display=swap');
+  });
+});
+
+test.describe('Publishing', () => {
+  const ignore = fs.readFileSync(path.join(ROOT, '.vercelignore'), 'utf8').split(/\r?\n/).map(l => l.trim());
+  test('the admin panel and its server are never uploaded to Vercel', () => {
+    for (const f of ['admin.html', 'js/admin.js', 'css/admin.css', 'server.mjs']) assert.ok(ignore.includes(f), `${f} not in .vercelignore`);
+  });
+  test('public pages do not mention the admin panel', () => {
+    for (const f of ['index.html', 'card.html', 'js/site.js', 'js/card.js', 'js/catalog.js', 'js/themes.js', 'js/config.js']) {
+      assert.ok(!/admin/i.test(fs.readFileSync(path.join(ROOT, f), 'utf8')), `${f} mentions admin`);
+    }
+  });
+  test('public pages and the admin panel load the business config', () => {
+    for (const f of ['index.html', 'card.html', 'admin.html']) assert.match(fs.readFileSync(path.join(ROOT, f), 'utf8'), /js\/config\.js/, f);
+  });
+});
+
 test.describe('Dates', () => {
   test('parseDate reads datetime-local values as local time', () => {
     const d = Core.parseDate('2026-12-12T19:30');
@@ -171,33 +194,85 @@ test.describe('Dates', () => {
   });
 });
 
-test.describe('Themes', () => {
-  const cardHtml = fs.readFileSync(path.join(ROOT, 'card.html'), 'utf8');
+test.describe('Templates', () => {
+  const all = Templates.all;
 
-  test('there are 12 templates', () => {
-    assert.equal(Object.keys(THEMES).length, 12);
+  test('there are exactly 200, numbered 1 to 200 in order', () => {
+    assert.equal(all.length, 200);
+    all.forEach((t, i) => assert.equal(t.no, i + 1));
   });
 
-  for (const [key, t] of Object.entries(THEMES)) {
-    test(`${key}: complete and valid`, () => {
-      assert.ok(t.name && t.emoji, 'name and emoji');
-      for (const v of REQUIRED_VARS) assert.ok(t.vars[v], `missing ${v}`);
-      for (const v of ['--bg', '--bg2', '--ink', '--accent', '--accent2']) assert.match(t.vars[v], /^#[0-9a-f]{6}$/i, v);
-      for (const f of ['display', 'script', 'body']) assert.ok(t.fonts[f], `font ${f}`);
-      assert.ok(t.particles.types.length > 0);
-      for (const p of t.particles.types) assert.ok(PARTICLE_TYPES.includes(p), `unknown particle "${p}"`);
-      for (const c of t.particles.colors) assert.match(c, /^#[0-9a-f]{6}$/i);
-      assert.ok(t.particles.count > 0 && t.particles.count <= 120);
-      assert.ok(t.tempo > 0.1 && t.tempo < 1, 'tempo');
-    });
+  test('every occasion gets 20 designs', () => {
+    for (const k of Object.keys(PRESETS)) assert.equal(all.filter(t => t.occasion === k).length, 20, k);
+  });
 
-    test(`${key}: every font is loaded by card.html`, () => {
-      for (const stack of Object.values(t.fonts)) {
-        const family = stack.match(/'([^']+)'/)[1];
-        assert.ok(cardHtml.includes(`family=${family.replace(/ /g, '+')}`), `${family} not in Google Fonts link`);
-      }
-    });
-  }
+  test('names are unique', () => {
+    assert.equal(new Set(all.map(t => t.name)).size, 200);
+  });
+
+  test('numbers are stable: the first designs never move (links store the number)', () => {
+    assert.deepEqual(plain(all.slice(0, 13).map(t => t.name)), ['Royal Maharaja', 'Blush Garden', 'Midnight Glam', 'Haldi Sunshine', 'Mehendi Green',
+      'Neon Love (Y2K)', 'Candy Party', 'Baby Cloud', 'Disco Kitty', 'Filmy Bollywood', 'Golden Hour', 'Lavender Dream', 'Ruby Rajwada']);
+    assert.equal(Templates.get(47).name, 'Cobalt Milestone');
+    assert.equal(Templates.get(200).name, all[199].name);
+  });
+
+  test('get() accepts numbers, padded strings, # and old names', () => {
+    for (const id of [47, '47', '047', '#047', ' #47 ']) assert.equal(Templates.get(id).no, 47, String(id));
+    assert.equal(Templates.get('royal').no, 1);
+    assert.equal(Templates.get('lavender').no, 12);
+    for (const id of [0, 201, -1, 1.5, '', 'abc', null, undefined, {}]) assert.equal(Templates.get(id), null, String(id));
+  });
+
+  test('serial pads to three digits', () => {
+    assert.equal(Templates.serial(7), '#007');
+    assert.equal(Templates.serial(200), '#200');
+  });
+
+  test('every design is complete and valid', () => {
+    for (const t of all) {
+      const at = `#${t.no} ${t.name}`;
+      assert.ok(t.name && t.emoji && PRESETS[t.occasion], at);
+      assert.ok(['mandala', 'blobs', 'frame'].includes(t.decor), `${at} decor`);
+      assert.ok(['', 'neon', 'playful'].includes(t.flavor), `${at} flavor`);
+      for (const v of REQUIRED_VARS) assert.ok(t.vars[v], `${at} missing ${v}`);
+      for (const v of ['--bg', '--bg2', '--ink', '--muted', '--accent', '--accent2']) assert.match(t.vars[v], /^#[0-9a-f]{6}$/i, `${at} ${v}`);
+      for (const f of ['display', 'script', 'body']) assert.match(t.fonts[f], /^'[^']+', (serif|sans-serif|cursive)$/, `${at} font ${f}`);
+      assert.ok(t.particles.types.length > 0, at);
+      for (const p of t.particles.types) assert.ok(PARTICLE_TYPES.includes(p), `${at} unknown particle "${p}"`);
+      for (const c of t.particles.colors) assert.match(c, /^#[0-9a-f]{6}$/i, at);
+      assert.ok(t.particles.count > 0 && t.particles.count <= 120, at);
+      assert.ok(t.tempo > 0.1 && t.tempo < 1, `${at} tempo`);
+    }
+  });
+
+  // WCAG relative luminance contrast between text and background.
+  const lum = hex => {
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(c => c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
+
+  test('text is readable on every design (contrast ≥ 7 for text, ≥ 3 for generated accents)', () => {
+    for (const t of all) {
+      assert.ok(contrast(t.vars['--ink'], t.vars['--bg']) >= 7, `#${t.no} ink`);
+      // #001–#012 are the original hand-made designs; a few use softer accents on purpose (Candy Party, Baby Cloud).
+      if (t.no > 12) assert.ok(contrast(t.vars['--accent'], t.vars['--bg']) >= 3, `#${t.no} accent ${contrast(t.vars['--accent'], t.vars['--bg']).toFixed(2)}`);
+    }
+  });
+
+  test('each design loads exactly the fonts it uses', () => {
+    for (const t of all) {
+      const url = Core.fontsUrl(t.fonts);
+      const families = new Set(Object.values(t.fonts).map(f => f.match(/'([^']+)'/)[1]));
+      for (const family of families) assert.ok(url.includes(`family=${family.replace(/ /g, '+')}`), `#${t.no} ${family} missing`);
+      assert.equal((url.match(/family=/g) || []).length, families.size, `#${t.no} no extra or duplicate families`);
+    }
+  });
+
+  test('neighbouring designs look different', () => {
+    for (let i = 1; i < all.length; i++) assert.notEqual(all[i].vars['--bg'] + all[i].occasion, all[i - 1].vars['--bg'] + all[i - 1].occasion, `#${i} and #${i + 1}`);
+  });
 });
 
 test.describe('Occasion presets', () => {
@@ -210,7 +285,7 @@ test.describe('Occasion presets', () => {
       assert.ok(p.label && p.icon);
       assert.equal(p.labels.length, 2);
       assert.equal(p.card.type, key, 'card.type matches the preset key');
-      assert.ok(THEMES[p.card.theme], `theme ${p.card.theme} exists`);
+      assert.equal(Templates.get(p.card.theme)?.occasion, key, `design ${p.card.theme} belongs to this occasion`);
       assert.ok(p.card.host1 && p.card.title && p.card.tagline);
       assert.ok(Core.parseDate(p.card.date), 'main date valid');
       for (const e of p.card.events) {
@@ -220,15 +295,128 @@ test.describe('Occasion presets', () => {
     });
 
     test(`${key}: link stays short enough for WhatsApp`, () => {
-      const url = Core.cardUrl('https://wedding-card.netlify.app/admin.html', Codec.encode(Core.compact(p.card)), 'Sharma Family');
+      const url = Core.cardUrl('https://wedding-card.netlify.app/', Codec.encode(Core.compact(p.card)), 'Sharma Family');
       assert.ok(url.length < 2500, `${url.length} chars`);
     });
   }
 
   test('a link with an uploaded photo stays under 16 KB', () => {
     const photo = 'data:image/webp;base64,' + 'A'.repeat(10 * 1024);
-    const url = Core.cardUrl('https://x.netlify.app/admin.html', Codec.encode(Core.compact({ ...PRESETS.wedding.card, photo })), 'Rahul');
+    const url = Core.cardUrl('https://x.netlify.app/', Codec.encode(Core.compact({ ...PRESETS.wedding.card, photo })), 'Rahul');
     assert.ok(url.length < 16 * 1024, `${url.length} chars`);
   });
+});
 
+test.describe('Catalog', () => {
+  const site = { url: '', brand: 'B', whatsapp: '', instagram: '', price: '999', currency: '₹' };
+
+  test('with no settings every design is on sale with the default price', () => {
+    const e = Catalog.entries(site, {});
+    assert.equal(e.length, 200);
+    assert.equal(Catalog.visible(e).length, 200);
+    assert.equal(e[46].price, 999);
+    assert.equal(Catalog.priceText(e[46], site), '₹999');
+  });
+
+  test('settings rename, move, price, hide and mark designs as trending', () => {
+    const e = Catalog.entries(site, { 47: { name: 'Shaadi Gold', occasion: 'wedding', price: 1499, featured: true }, 5: { hidden: true }, 9: { occasion: 'nope' } });
+    assert.equal(e[46].name, 'Shaadi Gold');
+    assert.equal(e[46].occasion, 'wedding');
+    assert.equal(Catalog.priceText(e[46], site), '₹1,499');
+    assert.equal(e[8].occasion, 'kitty', 'unknown occasion is ignored');
+    const v = Catalog.visible(e);
+    assert.equal(v.length, 199);
+    assert.ok(!v.some(x => x.no === 5), 'hidden design not shown');
+    assert.equal(v[0].no, 47, 'trending designs come first');
+    assert.equal(v[1].no, 1);
+  });
+
+  test('empty price hides prices', () => {
+    const e = Catalog.entries({ ...site, price: '' }, {});
+    assert.equal(e[0].price, '');
+    assert.equal(Catalog.priceText(e[0], site), '');
+  });
+
+  test('search: a number finds exactly that design, text matches name or occasion', () => {
+    const e = Catalog.entries(site, {});
+    for (const q of ['47', '#047', '047', ' 47 ']) assert.deepEqual(plain(e.filter(x => Catalog.matches(x, q)).map(x => x.no)), [47], q);
+    assert.deepEqual(plain(e.filter(x => Catalog.matches(x, 'royal maha')).map(x => x.no)), [1]);
+    assert.equal(e.filter(x => Catalog.matches(x, 'kitty party')).length, 20);
+    assert.equal(e.filter(x => Catalog.matches(x, '', 'birthday')).length, 20);
+    assert.equal(e.filter(x => Catalog.matches(x, '47', 'wedding')).length, 0, 'number + wrong occasion');
+    assert.equal(e.filter(x => Catalog.matches(x, '')).length, 200);
+  });
+
+  test('clean keeps only real changes', () => {
+    assert.deepEqual(plain(Catalog.clean({
+      1: { name: 'Royal Maharaja', occasion: 'wedding', price: '', hidden: false, featured: false },
+      2: { name: '  New name ', price: '1200', hidden: true },
+      3: { occasion: 'kitty', featured: true },
+      999: { hidden: true }, abc: { hidden: true }, 4: null
+    })), { 2: { name: 'New name', price: 1200, hidden: true }, 3: { occasion: 'kitty', featured: true } });
+  });
+
+  test('order message names the design number', () => {
+    const e = Catalog.entries(site, {})[46];
+    assert.equal(Catalog.orderText(e), "Hi! I'd like to order design #047 (Cobalt Milestone) 💌");
+    assert.equal(Core.orderUrl('+91 98765 43210', 'Hi'), 'https://wa.me/919876543210?text=Hi');
+    assert.equal(Core.orderUrl('', 'Hi'), '#order');
+  });
+
+  test('demo code opens that design with its occasion sample text', () => {
+    const e = Catalog.entries(site, {})[46];
+    const card = Codec.decode(Catalog.demoCode(e));
+    assert.equal(card.theme, 47);
+    assert.equal(card.type, e.occasion);
+    assert.equal(card.host1, PRESETS[e.occasion].card.host1);
+  });
+
+  test('poster escapes text and shows the trending badge', () => {
+    const e = { ...Catalog.entries(site, {})[0], featured: true };
+    const html = Catalog.poster(e, 'a', 'href="#"');
+    assert.match(html, /^\s*<a class="poster d-mandala"/);
+    assert.match(html, /🔥 Trending/);
+    assert.match(html, /Diya<i>&amp;<\/i>Aarav/);
+  });
+
+  test('configFile round-trips through the config loader', () => {
+    const cat = Catalog.clean({ 47: { name: 'Quote " and \\ back', price: 10, featured: true } });
+    const text = Catalog.configFile({ ...site, brand: "Ria's <Cards>" }, cat);
+    const ctx = vm.createContext({});
+    vm.runInContext(text + ';this.out = { SITE, CATALOG };', ctx);
+    assert.equal(ctx.out.SITE.brand, "Ria's <Cards>");
+    assert.deepEqual(plain(ctx.out.CATALOG), plain(cat));
+  });
+
+  test('the shipped config.js is valid and passes the server check', async () => {
+    const { checkConfig } = await import('../server.mjs');
+    const text = fs.readFileSync(path.join(ROOT, 'js', 'config.js'), 'utf8');
+    const { SITE, CATALOG } = checkConfig(text);
+    for (const k of ['url', 'brand', 'whatsapp', 'instagram', 'price', 'currency']) assert.ok(k in SITE, k);
+    assert.deepEqual(plain(Catalog.clean(CATALOG)), plain(CATALOG), 'config.js holds only real changes');
+  });
+});
+
+test.describe('Server config check', () => {
+  let checkConfig;
+  test.before(async () => { ({ checkConfig } = await import('../server.mjs')); });
+  const good = Catalog.configFile({ url: 'https://a.vercel.app/', brand: 'X (Y)', whatsapp: '', instagram: '', price: '', currency: '₹' }, { 3: { name: "it's => fine" } });
+
+  test('accepts what the panel writes, even with brackets and quotes inside strings', () => {
+    assert.equal(checkConfig(good).CATALOG[3].name, "it's => fine");
+  });
+  test('rejects anything that runs code', () => {
+    for (const bad of [
+      'const SITE = {}; const CATALOG = {}; require("fs")',
+      'const SITE = (() => ({}))(); const CATALOG = {};',
+      'const SITE = {}; const CATALOG = {}; process.exit()',
+      'const SITE = {a: `x`}; const CATALOG = {};',
+      'const SITE = new Object(); const CATALOG = {};'
+    ]) assert.throws(() => checkConfig(bad), /only contain data/, bad);
+  });
+  test('rejects a file without SITE and CATALOG', () => {
+    assert.throws(() => checkConfig('const SITE = {};'));
+    assert.throws(() => checkConfig(''));
+    assert.throws(() => checkConfig(42));
+  });
 });

@@ -24,7 +24,7 @@
     opened = true;
     clearInterval(countdownTimer);
     if (fx) { fx.destroy(); fx = null; }
-    applyTheme(THEMES.royal, 'royal');
+    applyTheme(Templates.get(1));
     $('#envelope').classList.add('gone');
     document.body.classList.remove('locked');
     document.body.classList.add('opened');
@@ -63,13 +63,33 @@
     return s + '<circle r="10"/></svg>';
   }
 
-  function applyTheme(t, key) {
+  function decor(kind) {
+    if (kind === 'mandala') return `<div class="mandala m1">${mandalaSVG()}</div><div class="mandala m2">${mandalaSVG()}</div>`;
+    if (kind === 'frame') return '<div class="frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>';
+    return '<div class="blob b1"></div><div class="blob b2"></div>';
+  }
+
+  // Opened from the website's catalog: show which design this is and how to order it.
+  function demoBar(t) {
+    if (!params.has('demo') || preview || $('#demoBar')) return;
+    const serial = Templates.serial(t.no);
+    const text = `Hi! I'd like to order design ${serial} (${t.name}) 💌`;
+    const bar = Object.assign(document.createElement('aside'), { id: 'demoBar', className: 'demo-bar' });
+    const href = SITE.whatsapp ? Core.orderUrl(SITE.whatsapp, text) : 'index.html#order';
+    bar.innerHTML = `<span>Sample of design <b>${serial}</b></span>
+      <a class="btn" href="${esc(href)}"${SITE.whatsapp ? ' target="_blank" rel="noopener"' : ''}>💬 Order ${serial}</a>`;
+    document.body.appendChild(bar);
+  }
+
+  function applyTheme(t) {
     const root = document.documentElement;
     for (const [k, v] of Object.entries(t.vars)) root.style.setProperty(k, v);
     root.style.setProperty('--display', t.fonts.display);
     root.style.setProperty('--script', t.fonts.script);
     root.style.setProperty('--body', t.fonts.body);
-    document.body.className = document.body.className.replace(/\btheme-\S+/g, '').trim() + ` theme-${key}`;
+    const fonts = Core.fontsUrl(t.fonts);
+    if ($('#themeFonts').getAttribute('href') !== fonts) $('#themeFonts').href = fonts;
+    document.body.className = document.body.className.replace(/\b(theme|flavor)-\S+/g, '').trim() + ` theme-${t.no}` + (t.flavor ? ` flavor-${t.flavor}` : '');
     const meta = $('meta[name="theme-color"]') || document.head.appendChild(Object.assign(document.createElement('meta'), { name: 'theme-color' }));
     meta.content = t.vars['--bg'];
   }
@@ -107,8 +127,8 @@
   }
 
   function render(d) {
-    const t = THEMES[d.theme] || THEMES.royal;
-    applyTheme(t, THEMES[d.theme] ? d.theme : 'royal');
+    const t = Templates.get(d.theme) || Templates.get(1);
+    applyTheme(t);
     letterIndex = 0;
 
     const when = parseDate(d.date);
@@ -121,7 +141,7 @@
 
     $('#card').innerHTML = `
       <section class="hero">
-        ${t.mandala ? `<div class="mandala m1">${mandalaSVG()}</div><div class="mandala m2">${mandalaSVG()}</div>` : '<div class="blob b1"></div><div class="blob b2"></div>'}
+        ${decor(t.decor)}
         ${photo ? `<div class="photo"><img src="${esc(photo)}" alt=""></div>` : `<div class="ornament">${esc(t.emoji)}</div>`}
         <p class="title fade" style="--d:.2s">${esc(d.title)}</p>
         <h1 class="names">${names}</h1>
@@ -161,7 +181,7 @@
         <button class="btn ghost" id="shareBtn" type="button">🔗 Share</button>
       </section>
 
-      <footer>Made with 💖 using <a href="index.html">Wedding Card</a></footer>`;
+      <footer>Loved this invitation? <a href="index.html">Get one for your celebration</a> 💌<br><small>${esc(SITE.brand)}</small></footer>`;
 
     const who = Core.who(d);
     const inviteUrl = Core.shareUrl(location.href);
@@ -191,6 +211,7 @@
     if (music) music.tempo = t.tempo; else music = new MusicBox(t.tempo);
 
     document.title = `${who} 💌 You're invited`;
+    demoBar(t);
     if (!opened) {
       renderEnvelope(d, t);
       if (params.has('auto')) setTimeout(openCard, 700);

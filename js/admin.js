@@ -1,18 +1,83 @@
-// Admin panel: build a card, pick a template, generate unlimited (optionally per-guest) links, keep a link history.
+// Admin panel: pick a design by number, fill in the customer's details, generate (per-guest) links, keep a link
+// history, and manage the website's catalog and settings (published through server.mjs, or as a config.js download).
 (function () {
   const $ = (s, r = document) => r.querySelector(s);
   const { esc, compact, who } = Core;
   const clone = o => JSON.parse(JSON.stringify(o));
   const form = $('#form'), frame = $('#preview');
   const FIELDS = ['title', 'host1', 'host2', 'tagline', 'date', 'venue', 'message', 'photo', 'mapUrl', 'rsvp'];
-  const STORE_KEY = 'weddingcard.links';
+  const SITE_KEYS = ['url', 'brand', 'whatsapp', 'instagram', 'price', 'currency'];
+  const STORE_KEY = 'weddingcard.links', DRAFT_KEY = 'weddingcard.config';
+  const GALLERY_PAGE = 40;
 
   let state = clone(PRESETS.wedding.card);
-  let previewTimer = null, galleryTimer = null;
+  let touched = false; // the customer's details were typed in, so picking a design must not replace them
+  let occasionChosen = false; // an occasion was picked by hand, so picking a design must not change it
+  let previewTimer = null;
+
+  // ---------- Site settings + catalog (draft until published) ----------
+  const normalize = c => ({
+    site: Object.fromEntries(SITE_KEYS.map(k => [k, c.site[k] ?? ''])),
+    catalog: Catalog.clean(c.catalog)
+  });
+  let published = normalize({ site: SITE, catalog: CATALOG });
+  let cfg = (() => {
+    try { const d = JSON.parse(localStorage.getItem(DRAFT_KEY)); if (d && d.site && d.catalog) return normalize(d); } catch (e) { /* no draft */ }
+    return clone(published);
+  })();
+  const isDirty = () => JSON.stringify(normalize(cfg)) !== JSON.stringify(published);
+  const entries = () => Catalog.entries(cfg.site, cfg.catalog);
+  const entry = no => entries()[no - 1];
+
+  function saveDraft() {
+    try { if (isDirty()) localStorage.setItem(DRAFT_KEY, JSON.stringify(cfg)); else localStorage.removeItem(DRAFT_KEY); } catch (e) { /* private mode */ }
+    $('#publishBar').hidden = !isDirty();
+    $('#urlWarn').hidden = !!cfg.site.url;
+    if (cfg.site.url) $('#siteLink').href = cfg.site.url;
+  }
 
   // ---------- Card state ----------
-  const code = (overrides) => Codec.encode(compact({ ...state, ...overrides }));
+  const code = overrides => Codec.encode(compact({ ...state, ...overrides }));
   const occasion = s => (PRESETS[s.type] || PRESETS.wedding);
+  const design = () => Templates.get(state.theme) || Templates.get(1);
+
+  // ---------- Design number ----------
+  function chooseDesign(no, { quiet } = {}) {
+    const t = Templates.get(no);
+    if (!t) { $('#designMsg').textContent = `There is no design ${esc(String(no))}. Numbers go from 1 to ${Templates.all.length}.`; return false; }
+    state.theme = t.no;
+    const e = entry(t.no);
+    // A fresh invite follows the design's occasion so the sample text and labels match it.
+    if (!touched && !occasionChosen && e.occasion !== state.type) {
+      state = { ...clone(PRESETS[e.occasion].card), theme: t.no };
+      fillForm();
+    }
+    markDesign();
+    updatePreview(true);
+    if (!quiet) toast(`Design ${Templates.serial(t.no)} selected: ${e.name}`);
+    return true;
+  }
+
+  function markDesign() {
+    const t = design(), e = entry(t.no);
+    $('#designNo').value = String(t.no).padStart(3, '0');
+    $('#designMsg').textContent = e.hidden ? 'Note: this design is hidden on the website, but links made with it still work.' : '';
+    $('#designChosen').innerHTML = `
+      <span class="dot" style="--a:${t.vars['--accent']};--b:${t.vars['--bg']}">${t.emoji}</span>
+      <span><b>${Templates.serial(t.no)} · ${esc(e.name)}</b><small>${PRESETS[e.occasion].icon} ${esc(PRESETS[e.occasion].label)}</small></span>`;
+    $('#themeName').textContent = `${Templates.serial(t.no)} ${e.name}`;
+    document.querySelectorAll('#gallery .tpl').forEach(el => el.classList.toggle('on', +el.dataset.no === t.no));
+  }
+
+  let designTimer;
+  $('#designNo').addEventListener('input', e => {
+    const v = e.target.value.replace(/\D/g, '');
+    e.target.value = v;
+    clearTimeout(designTimer);
+    if (v) designTimer = setTimeout(() => chooseDesign(+v), 400);
+  });
+  $('#designNo').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.value) { clearTimeout(designTimer); chooseDesign(+e.target.value); } });
+  $('#designNo').addEventListener('focus', e => e.target.select());
 
   // ---------- Rendering the form ----------
   function renderTypes() {
@@ -30,6 +95,9 @@
         <input data-k="dress" placeholder="Dress code (optional)" value="${esc(e.dress)}">
         <button type="button" class="x" data-remove="${i}" aria-label="Remove function">✕</button>
       </div>`).join('');
+    const have = new Set((state.events || []).map(e => e.name));
+    const ideas = occasion(state).card.events.map(e => e.name).filter(n => !have.has(n));
+    $('#quickEvents').innerHTML = ideas.map(n => `<button type="button" class="chip mini-chip" data-quick="${esc(n)}">+ ${esc(n)}</button>`).join('');
   }
 
   function renderPhoto() {
@@ -68,6 +136,7 @@
     if (!file) return;
     try {
       state.photo = await compressPhoto(file);
+      touched = true;
       renderPhoto();
       updatePreview(true);
       toast('Photo added 📸');
@@ -81,7 +150,11 @@
   });
 
   function fillForm() {
-    for (const f of FIELDS) form.elements[f].value = state[f] || '';
+    const sample = occasion(state).card;
+    for (const f of FIELDS) {
+      form.elements[f].value = state[f] || '';
+      if (sample[f] && f !== 'photo') form.elements[f].placeholder = sample[f];
+    }
     renderPhoto();
     form.elements.music.checked = state.music !== false;
     const labels = occasion(state).labels;
@@ -89,36 +162,13 @@
     $('#lbl2').textContent = labels[1];
     renderTypes();
     renderEvents();
-    markTheme();
+    markDesign();
   }
 
-  function markTheme() {
-    const t = THEMES[state.theme] || THEMES.royal;
-    $('#themeName').textContent = `${t.emoji} ${t.name}`;
-    document.querySelectorAll('.tpl').forEach(el => el.classList.toggle('on', el.dataset.theme === state.theme));
-  }
-
-  // ---------- Previews ----------
+  // ---------- Preview ----------
   function updatePreview(now) {
     clearTimeout(previewTimer);
-    previewTimer = setTimeout(() => { frame.src = 'card.html?preview#' + code(); }, now ? 0 : 300);
-    clearTimeout(galleryTimer);
-    galleryTimer = setTimeout(updateGallery, now ? 50 : 900);
-  }
-
-  function buildGallery() {
-    $('#gallery').innerHTML = Object.entries(THEMES).map(([k, t]) => `
-      <button type="button" class="tpl" data-theme="${k}" style="--a:${t.vars['--accent']};--b:${t.vars['--bg']}">
-        <div class="mini"><iframe tabindex="-1" loading="lazy" title="${esc(t.name)} preview"></iframe></div>
-        <span class="tpl-name">${t.emoji} ${esc(t.name)}</span>
-        <span class="tpl-pick">Selected ✓</span>
-      </button>`).join('');
-  }
-
-  function updateGallery() {
-    document.querySelectorAll('.tpl').forEach(el => {
-      el.querySelector('iframe').src = 'card.html?preview&auto#' + code({ theme: el.dataset.theme, music: false });
-    });
+    previewTimer = setTimeout(() => { frame.src = 'card.html?preview#' + code(); }, now ? 0 : 350);
   }
 
   // ---------- Form events ----------
@@ -128,14 +178,16 @@
     else if (t.name === 'music') state.music = t.checked;
     else if (FIELDS.includes(t.name)) state[t.name] = t.value;
     else return;
+    touched = true;
     if (t.name === 'photo') renderPhoto();
     updatePreview();
   });
 
   form.addEventListener('click', e => {
-    const remove = e.target.closest('[data-remove]');
-    if (!remove) return;
-    state.events.splice(+remove.dataset.remove, 1);
+    const remove = e.target.closest('[data-remove]'), quick = e.target.closest('[data-quick]');
+    if (remove) state.events.splice(+remove.dataset.remove, 1);
+    else if (quick) (state.events = state.events || []).push({ name: quick.dataset.quick, date: state.date || '', venue: '', dress: '' });
+    else return;
     renderEvents();
     updatePreview();
   });
@@ -143,19 +195,28 @@
   $('#typeChips').addEventListener('click', e => {
     const chip = e.target.closest('[data-type]');
     if (!chip) return;
-    state = clone(PRESETS[chip.dataset.type].card);
+    occasionChosen = true;
+    const theme = state.theme;
+    state = touched
+      ? { ...state, type: chip.dataset.type } // keep what was typed, only switch the occasion
+      : { ...clone(PRESETS[chip.dataset.type].card), theme };
     fillForm();
     updatePreview(true);
   });
 
-  $('#gallery').addEventListener('click', e => {
-    const tpl = e.target.closest('[data-theme]');
-    if (!tpl) return;
-    state.theme = tpl.dataset.theme;
-    markTheme();
-    clearTimeout(previewTimer);
-    frame.src = 'card.html?preview#' + code();
-    toast(`Template set: ${THEMES[state.theme].name}`);
+  $('#sampleBtn').addEventListener('click', () => {
+    state = { ...clone(occasion(state).card), theme: state.theme };
+    touched = false;
+    fillForm();
+    updatePreview(true);
+  });
+
+  $('#clearBtn').addEventListener('click', () => {
+    state = { ...Core.blankCard(), type: state.type, theme: state.theme, music: state.music };
+    touched = true;
+    fillForm();
+    updatePreview(true);
+    form.elements.host1.focus();
   });
 
   $('#addEvent').addEventListener('click', () => {
@@ -169,6 +230,58 @@
     setTimeout(() => { frame.src = 'card.html?preview#' + code(); }, 50);
   });
 
+  // ---------- Design gallery ----------
+  let galFilter = '', galQuery = '', galShown = 0, galList = [];
+  function renderGalleryFilters() {
+    $('#galFilters').innerHTML = [['', '✨ All']].concat([['trending', '🔥 Trending']], Object.entries(PRESETS).map(([k, p]) => [k, `${p.icon} ${p.label}`]))
+      .map(([k, label]) => `<button type="button" class="chip${k === galFilter ? ' on' : ''}" data-occ="${k}">${esc(label)}</button>`).join('');
+  }
+  function galleryCard(e) {
+    return `
+      <div class="tpl${e.no === design().no ? ' on' : ''}${e.hidden ? ' off' : ''}" data-no="${e.no}">
+        ${Catalog.poster(e, 'button', `type="button" data-pick="${e.no}" aria-label="Use design ${Templates.serial(e.no)}"`)}
+        <span class="serial">Design No. <b>${Templates.serial(e.no)}</b></span>
+        <span class="tpl-name">${esc(e.name)}</span>
+        ${e.hidden ? '<small>Hidden on website</small>' : ''}
+        <a class="tpl-demo" href="card.html?demo#${Catalog.demoCode(e)}" target="_blank" rel="noopener">Live demo ↗</a>
+      </div>`;
+  }
+  function galleryMore() {
+    const next = galList.slice(galShown, galShown + GALLERY_PAGE);
+    $('#gallery').insertAdjacentHTML('beforeend', next.map(galleryCard).join(''));
+    galShown += next.length;
+    $('#galMore').hidden = galShown >= galList.length;
+    $('#galMore').textContent = `Show more (${galList.length - galShown} left)`;
+  }
+  function renderGallery() {
+    const all = entries();
+    galList = galFilter === 'trending'
+      ? all.filter(e => e.featured && Catalog.matches(e, galQuery))
+      : all.filter(e => Catalog.matches(e, galQuery, galFilter));
+    galShown = 0;
+    $('#gallery').innerHTML = galList.length ? '' : '<p class="muted">No design matches.</p>';
+    galleryMore();
+  }
+  $('#galMore').addEventListener('click', galleryMore);
+  $('#galFilters').addEventListener('click', e => {
+    const chip = e.target.closest('[data-occ]');
+    if (!chip) return;
+    galFilter = chip.dataset.occ;
+    renderGalleryFilters();
+    renderGallery();
+  });
+  let galTimer;
+  $('#galSearch').addEventListener('input', e => {
+    clearTimeout(galTimer);
+    galTimer = setTimeout(() => { galQuery = e.target.value; renderGallery(); }, 150);
+  });
+  $('#gallery').addEventListener('click', e => {
+    const pick = e.target.closest('[data-pick]');
+    if (!pick) return;
+    chooseDesign(+pick.dataset.pick);
+    $('#create').scrollIntoView({ behavior: 'smooth' });
+  });
+
   // ---------- Link generation ----------
   let lastResults = [];
   $('#generate-btn').addEventListener('click', () => {
@@ -178,14 +291,13 @@
     const list = guests.length ? guests : [''];
     const now = Date.now();
     lastResults = list.map((g, i) => ({
-      id: `${now}-${i}`, guest: g, who: who(state), type: state.type, theme: state.theme,
-      url: Core.cardUrl(location.href, c, g), created: now
+      id: `${now}-${i}`, guest: g, who: who(state), type: state.type, theme: design().no,
+      url: Core.cardUrl(cfg.site.url || location.href, c, g), created: now
     }));
     saveLinks([...lastResults, ...loadLinks()]);
     renderResults();
     renderLinks();
-    $('#fileWarn').hidden = location.protocol !== 'file:';
-    toast(`${lastResults.length} link${lastResults.length > 1 ? 's' : ''} generated 🎉`);
+    toast(`${lastResults.length} link${lastResults.length > 1 ? 's' : ''} ready 🎉`);
   });
 
   function linkActions(r) {
@@ -217,20 +329,22 @@
   function saveLinks(list) {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(list)); } catch (e) { toast('Could not save history in this browser'); }
   }
+  const designLabel = id => {
+    const t = Templates.get(id) || Templates.get(1);
+    return `${Templates.serial(t.no)} ${entry(t.no).name}`;
+  };
 
   function renderLinks() {
     const all = loadLinks();
     const q = $('#search').value.trim().toLowerCase();
-    const list = q ? all.filter(r => `${r.guest} ${r.who}`.toLowerCase().includes(q)) : all;
+    const list = q ? all.filter(r => `${r.guest} ${r.who} ${designLabel(r.theme)}`.toLowerCase().includes(q)) : all;
     $('#linkCount').textContent = all.length;
     $('#emptyLinks').hidden = list.length > 0;
-    $('#linksTable tbody').innerHTML = list.map(r => {
-      const t = THEMES[r.theme] || THEMES.royal;
-      return `
+    $('#linksTable tbody').innerHTML = list.map(r => `
         <tr data-id="${esc(r.id)}">
           <td>${r.guest ? esc(r.guest) : '<i>Everyone</i>'}</td>
           <td><b>${esc(r.who)}</b><br><small>${esc((PRESETS[r.type] || PRESETS.wedding).label)}</small></td>
-          <td>${t.emoji} ${esc(t.name)}</td>
+          <td>${esc(designLabel(r.theme))}</td>
           <td><small>${new Date(r.created).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</small></td>
           <td class="acts">
             <button type="button" class="btn-small" data-copy="${esc(r.url)}">Copy</button>
@@ -238,8 +352,7 @@
             <button type="button" class="btn-small" data-edit="${esc(r.id)}" title="Load into editor">Edit</button>
             <button type="button" class="btn-small danger" data-del="${esc(r.id)}" aria-label="Delete">✕</button>
           </td>
-        </tr>`;
-    }).join('');
+        </tr>`).join('');
   }
 
   $('#search').addEventListener('input', renderLinks);
@@ -251,10 +364,12 @@
       if (!r) return;
       // Start from a blank card so preset values never fill fields the saved link left empty.
       try { state = Object.assign(Core.blankCard(), Codec.decode(r.code || new URL(r.url).hash.slice(1))); } catch (err) { toast('That saved link is damaged'); return; }
+      state.theme = (Templates.get(state.theme) || Templates.get(1)).no;
+      touched = true;
       fillForm();
       updatePreview(true);
       $('#create').scrollIntoView({ behavior: 'smooth' });
-      toast('Loaded into editor. Change it and generate a new link');
+      toast('Loaded into editor. Change it and get a new link');
     } else if (del) {
       saveLinks(loadLinks().filter(x => x.id !== del.dataset.del));
       renderLinks();
@@ -268,15 +383,153 @@
   });
 
   $('#csv').addEventListener('click', () => {
-    const rows = [['Guest', 'Invitation', 'Occasion', 'Template', 'Created', 'Link']].concat(loadLinks().map(r => [
-      r.guest || 'Everyone', r.who, (PRESETS[r.type] || PRESETS.wedding).label, (THEMES[r.theme] || THEMES.royal).name, new Date(r.created).toISOString(), r.url
+    const rows = [['Guest', 'Invitation', 'Occasion', 'Design', 'Created', 'Link']].concat(loadLinks().map(r => [
+      r.guest || 'Everyone', r.who, (PRESETS[r.type] || PRESETS.wedding).label, designLabel(r.theme), new Date(r.created).toISOString(), r.url
     ]));
     const csv = rows.map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
-    const a = Object.assign(document.createElement('a'), {
-      href: URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' })), download: 'wedding-card-links.csv'
-    });
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    download('wedding-card-links.csv', '﻿' + csv, 'text/csv');
+  });
+
+  // ---------- Catalog ----------
+  $('#catOcc').innerHTML = '<option value="">All occasions</option>' + Object.entries(PRESETS).map(([k, p]) => `<option value="${k}">${p.icon} ${esc(p.label)}</option>`).join('');
+  const occOptions = sel => Object.entries(PRESETS).map(([k, p]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${p.icon} ${esc(p.label)}</option>`).join('');
+
+  function catalogRows() {
+    const q = $('#catSearch').value, occ = $('#catOcc').value, show = $('#catShow').value;
+    return entries().filter(e => Catalog.matches(e, q, occ) && (
+      !show || (show === 'trending' && e.featured) || (show === 'hidden' && e.hidden) || (show === 'changed' && cfg.catalog[e.no])));
+  }
+
+  function renderCatalog() {
+    const rows = catalogRows(), cur = cfg.site.currency || '';
+    $('#catCount').textContent = `${rows.length} design${rows.length === 1 ? '' : 's'} · ${entries().filter(e => !e.hidden).length} on the website`;
+    $('#catTable tbody').innerHTML = rows.map(e => {
+      const own = cfg.catalog[e.no] || {};
+      return `
+        <tr data-no="${e.no}" class="${e.hidden ? 'off' : ''}">
+          <td><span class="dot" style="--a:${e.vars['--accent']};--b:${e.vars['--bg']}">${e.emoji}</span> <b>${Templates.serial(e.no)}</b></td>
+          <td><input data-f="name" value="${esc(e.name)}" placeholder="${esc(Templates.get(e.no).name)}" aria-label="Name"></td>
+          <td><select data-f="occasion" aria-label="Occasion">${occOptions(e.occasion)}</select></td>
+          <td><input data-f="price" class="price-in" inputmode="numeric" value="${esc(own.price ?? '')}" placeholder="${esc(cfg.site.price ? cur + cfg.site.price : '-')}" aria-label="Price"></td>
+          <td><label class="switch"><input type="checkbox" data-f="show"${e.hidden ? '' : ' checked'}><span></span></label></td>
+          <td><label class="switch"><input type="checkbox" data-f="featured"${e.featured ? ' checked' : ''}><span></span></label></td>
+          <td><button type="button" class="btn-small" data-use="${e.no}">Use</button></td>
+        </tr>`;
+    }).join('');
+  }
+
+  function setCatalog(no, field, value) {
+    const o = { ...(cfg.catalog[no] || {}) };
+    if (field === 'show') { if (value) delete o.hidden; else o.hidden = true; }
+    else if (field === 'featured') { if (value) o.featured = true; else delete o.featured; }
+    else if (field === 'price') { const v = String(value).replace(/[^\d.]/g, ''); if (v) o.price = Number(v); else delete o.price; }
+    else o[field] = value;
+    cfg.catalog = Catalog.clean({ ...cfg.catalog, [no]: o });
+    saveDraft();
+  }
+
+  let catTimer;
+  $('#catTable').addEventListener('input', e => {
+    const f = e.target.dataset.f, no = +e.target.closest('tr')?.dataset.no;
+    if (!f || !no) return;
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    setCatalog(no, f, value);
+    if (e.target.type === 'checkbox' || e.target.tagName === 'SELECT') {
+      e.target.closest('tr').classList.toggle('off', !!(cfg.catalog[no] || {}).hidden);
+      clearTimeout(catTimer);
+      catTimer = setTimeout(() => { renderGallery(); markDesign(); }, 300);
+    }
+  });
+  $('#catTable').addEventListener('change', e => { if (e.target.dataset.f === 'name') { renderGallery(); markDesign(); } });
+  $('#catTable').addEventListener('click', e => {
+    const use = e.target.closest('[data-use]');
+    if (!use) return;
+    chooseDesign(+use.dataset.use);
+    $('#create').scrollIntoView({ behavior: 'smooth' });
+  });
+  ['catSearch', 'catOcc', 'catShow'].forEach(id => $('#' + id).addEventListener('input', renderCatalog));
+  document.querySelectorAll('[data-bulk]').forEach(b => b.addEventListener('click', () => {
+    const rows = catalogRows(), show = b.dataset.bulk === 'show';
+    if (!rows.length || (!show && !confirm(`Hide ${rows.length} designs from the website?`))) return;
+    rows.forEach(e => setCatalog(e.no, 'show', show));
+    renderCatalog();
+    renderGallery();
+    toast(`${rows.length} designs ${show ? 'shown' : 'hidden'}. Publish to update the website.`);
+  }));
+
+  // ---------- Settings ----------
+  const siteForm = $('#siteForm');
+  function fillSettings() {
+    for (const k of SITE_KEYS) siteForm.elements[k].value = cfg.site[k] ?? '';
+  }
+  siteForm.addEventListener('input', e => {
+    if (SITE_KEYS.includes(e.target.name)) cfg.site[e.target.name] = e.target.value.trim();
+    saveDraft();
+  });
+  siteForm.addEventListener('change', e => {
+    const k = e.target.name;
+    if (k === 'url' && cfg.site.url) {
+      let u = cfg.site.url;
+      if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+      cfg.site.url = Core.safeUrl(u.replace(/\/*$/, '/')) || '';
+      if (!cfg.site.url) toast('That website address does not look right');
+    }
+    if (k === 'whatsapp') cfg.site.whatsapp = Core.waNumber(cfg.site.whatsapp);
+    if (k === 'price') cfg.site.price = String(cfg.site.price).replace(/[^\d.]/g, '');
+    if (k === 'instagram') cfg.site.instagram = cfg.site.instagram.replace(/^@/, '');
+    fillSettings();
+    saveDraft();
+    renderCatalog();
+  });
+
+  // ---------- Publish ----------
+  let server = false;
+  async function detectServer() {
+    if (location.protocol.startsWith('http')) {
+      try { server = (await (await fetch('api/status', { cache: 'no-store' })).json()).ok === true; } catch (e) { server = false; }
+    }
+    $('#publishHelp').innerHTML = server
+      ? 'Saves <b>js/config.js</b> into your project and pushes it to GitHub. Vercel puts it live in about a minute.'
+      : 'Start the panel with <b>npm run admin</b> to publish in one click. Without it, this downloads <b>config.js</b>: put it in the <b>js</b> folder and deploy.';
+  }
+
+  async function publish() {
+    const c = normalize(cfg);
+    const text = Catalog.configFile(c.site, c.catalog);
+    const log = $('#publishLog');
+    if (!server) {
+      download('config.js', text, 'text/javascript');
+      toast('config.js downloaded. Put it in the js folder and deploy.');
+      return;
+    }
+    document.querySelectorAll('[data-publish]').forEach(b => { b.disabled = true; });
+    toast('Publishing…');
+    try {
+      const res = await (await fetch('api/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ config: text }) })).json();
+      log.hidden = false;
+      log.textContent = res.message + (res.log ? '\n\n' + res.log : '');
+      if (res.saved) {
+        published = c;
+        saveDraft();
+      }
+      toast(res.published ? 'Published 🚀' : res.saved ? 'Saved, but not published. See the message below.' : 'Could not publish');
+    } catch (e) {
+      log.hidden = false;
+      log.textContent = 'The panel server is not responding. Is "npm run admin" still running?';
+    } finally {
+      document.querySelectorAll('[data-publish]').forEach(b => { b.disabled = false; });
+    }
+  }
+  document.querySelectorAll('[data-publish]').forEach(b => b.addEventListener('click', publish));
+
+  $('#discardBtn').addEventListener('click', () => {
+    if (!confirm('Undo all catalog and settings changes that are not published yet?')) return;
+    cfg = clone(published);
+    saveDraft();
+    fillSettings();
+    renderCatalog();
+    renderGallery();
+    markDesign();
   });
 
   // ---------- Shared helpers ----------
@@ -284,6 +537,12 @@
     const b = e.target.closest('[data-copy]');
     if (b) copy(b.dataset.copy, 'Link copied ✓');
   });
+
+  function download(name, text, type) {
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type })), download: name });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
 
   async function copy(text, msg) {
     try { await navigator.clipboard.writeText(text); }
@@ -300,7 +559,7 @@
     t.textContent = msg;
     t.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
   }
 
   // Highlight the sidebar item for the section in view.
@@ -309,8 +568,13 @@
   }), { rootMargin: '-40% 0px -55% 0px' });
   document.querySelectorAll('.block').forEach(s => navIO.observe(s));
 
-  buildGallery();
+  renderGalleryFilters();
+  renderGallery();
   fillForm();
+  fillSettings();
+  renderCatalog();
   renderLinks();
+  saveDraft();
+  detectServer();
   updatePreview(true);
 })();
