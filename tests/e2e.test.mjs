@@ -14,6 +14,7 @@ const { PRESETS, Codec, Core, Templates, INTROS, Catalog } = loadApp();
 const base = pathToFileURL(path.join(ROOT, 'index.html')).href.replace(/index\.html$/, '');
 const cardLink = (card, query = '') => `${base}card.html${query}#${Codec.encode(Core.compact(card))}`;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+const future = days => Core.nowLocal(new Date(Date.now() + days * 864e5)); // a date that never becomes "past"
 const type = (sel, value) => `(() => { const i = document.querySelector(${JSON.stringify(sel)}); i.value = ${JSON.stringify(value)}; i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true })); })()`;
 
 test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () => {
@@ -107,20 +108,36 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.match(await page.eval(`document.querySelector('#osDesign').textContent`), /#010 Filmy Bollywood/);
   });
 
-  test('order form: asks for the name and date before moving on', async () => {
+  const errorText = () => page.eval(`document.querySelector('#osError').textContent`);
+  const flagged = () => page.eval(`document.querySelector('#orderForm [aria-invalid="true"]')?.name || ''`);
+
+  test('order form: every needed field is asked for, and the missing one is highlighted', async () => {
     await next();
     assert.equal(await page.eval(`document.querySelector('.os-step[data-step="1"]').hidden`), false);
+    assert.equal(await page.eval(`document.querySelectorAll('.os-step[data-step="1"] .req:not([hidden])').length`), 5, 'note + Name 1, Name 2, date, venue are marked *');
     await next();
-    assert.match(await page.eval(`document.querySelector('#osError').textContent`), /Please enter/);
+    assert.match(await errorText(), /Please enter: Partner 1/);
+    assert.equal(await flagged(), 'host1');
     await page.eval(fill('host1', 'Diya'));
+    assert.equal(await flagged(), '', 'typing clears the warning');
     await next();
-    assert.match(await page.eval(`document.querySelector('#osError').textContent`), /date/);
+    assert.match(await errorText(), /Please enter: Partner 2/, 'a couple needs both names');
     await page.eval(fill('host2', 'Aarav'));
-    await page.eval(fill('date', '2026-12-11T20:00'));
+    await page.eval(fill('nick1', 'Diyu'));
+    await next();
+    assert.match(await errorText(), /date/);
+    assert.equal(await flagged(), 'date');
+    assert.ok(await page.eval(`document.querySelector('#orderForm [name=date]').min`) >= future(-0.01), 'the date picker starts today');
+    await page.eval(fill('date', '2020-01-01T10:00'));
+    await next();
+    assert.match(await errorText(), /already passed/, 'past dates are refused');
+    await page.eval(fill('date', future(60)));
+    await next();
+    assert.match(await errorText(), /venue/);
     await page.eval(fill('venue', 'Grand Ballroom, Udaipur'));
     await page.eval(fill('mapUrl', 'not a link'));
     await next();
-    assert.match(await page.eval(`document.querySelector('#osError').textContent`), /location should be a link/, 'optional location, but checked when filled');
+    assert.match(await errorText(), /location should be a link/, 'optional location, but checked when filled');
     await page.eval(fill('mapUrl', 'https://maps.app.goo.gl/abc123'));
     await next();
     assert.equal(await page.eval(`document.querySelector('.os-step[data-step="2"]').hidden`), false);
@@ -130,10 +147,13 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.eval(`document.querySelector('#osQuick .chip').click()`);
     assert.equal(await page.eval(`document.querySelectorAll('#osEvents .os-event').length`), 1);
     await next();
+    await page.eval(fill('rsvp', '98765 4321'));
+    await next();
+    assert.match(await errorText(), /10-digit mobile/, 'RSVP number must have 10 digits');
     await page.eval(fill('rsvp', '98765 43210'));
     await page.eval(fill('guests', 'Rahul Uncle\nPriya Di'));
     await next();
-    assert.match(await page.eval(`document.querySelector('#osReview').textContent`), /Names: Diya & Aarav[\s\S]*Venue: Grand Ballroom[\s\S]*Guests \(2\)/);
+    assert.match(await page.eval(`document.querySelector('#osReview').textContent`), /Names: Diya & Aarav[\s\S]*Nicknames: Diyu[\s\S]*Venue: Grand Ballroom[\s\S]*RSVP number: 919876543210[\s\S]*Guests \(2\)/);
     assert.equal(await page.eval(`document.querySelector('#osSend').hidden`), false);
     const href = await page.eval(`document.querySelector('#osSend').href`);
     assert.match(href, /^https:\/\/wa\.me\/919999999999\?text=/);
@@ -143,8 +163,14 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(r.card.host2, 'Aarav');
     assert.equal(r.card.events.length, 1);
     assert.deepEqual([...r.guests], ['Rahul Uncle', 'Priya Di']);
+    assert.equal(r.card.nick1, 'Diyu');
     page.lastOrder = decodeURIComponent(new URL(href).search.slice(6));
-    await page.eval(`document.querySelector('#osClose').click()`);
+    // Sending shows the celebration screen
+    await page.eval(`(() => { const a = document.querySelector('#osSend'); a.addEventListener('click', e => e.preventDefault(), { once: true }); a.click(); })()`);
+    assert.equal(await page.eval(`document.querySelector('#osDone').hidden`), false);
+    assert.ok(await page.eval(`document.querySelectorAll('.os-confetti i').length`) > 20, 'confetti');
+    assert.equal(await page.eval(`document.querySelector('.os-foot').hidden`), true);
+    await page.eval(`document.querySelector('#osDoneClose').click()`);
     assert.equal(await page.eval(`document.querySelector('#orderSheet').hidden`), true);
     noErrors();
   });
@@ -155,7 +181,9 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`document.querySelector('#orderForm [name=design]').value`), '', 'general Order: no design yet');
     await next();
     await page.eval(fill('host1', 'Neha'));
-    await page.eval(fill('date', '2026-11-28T20:00'));
+    await page.eval(fill('host2', 'Arjun'));
+    await page.eval(fill('date', future(30)));
+    await page.eval(fill('venue', 'Pune'));
     for (let i = 0; i < 3; i++) await next();
     assert.equal(await page.eval(`document.querySelector('#osSend').hidden`), true);
     assert.equal(await page.eval(`document.querySelector('#osNoWa').hidden`), false);
@@ -254,7 +282,8 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       await page.goto(cardLink({ ...PRESETS[t.occasion].card, theme: t.no }, '?preview&auto'), 0);
       await page.waitFor(`document.body.classList.contains('theme-${t.no}') && document.body.classList.contains('opened')`, 5000);
       assert.ok(await page.eval(`!!document.querySelector('#envelope.intro-${t.intro} .intro-tap')`), `#${t.no} opening ${t.intro}`);
-      const decor = { mandala: '.mandala', blobs: '.blob', frame: '.frame' }[t.decor];
+      const decor = { mandala: '.mandala', blobs: '.blob', frame: '.frame', florals: '.florals', sunburst: '.sunburst', deco: '.deco', lights: '.lights', stars: '.stars', lace: '.lace' }[t.decor];
+      assert.ok(await page.eval(`!!document.querySelector('.hero.layout-${t.layout}')`), `#${t.no} layout ${t.layout}`);
       assert.ok(await page.eval(`!!document.querySelector('${decor}')`), `#${t.no} decor ${t.decor}`);
       assert.deepEqual(page.errors, [], `errors in design #${t.no}`);
     }
@@ -406,6 +435,20 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.eval(type('[name=host1]', 'Kabir'));
   });
 
+  test('admin: refuses a past date, and an RSVP number that is not 10 digits', async () => {
+    assert.ok(await page.eval(`document.querySelector('[name=date]').min`) >= future(-0.01), 'the date picker starts today');
+    await page.eval(type('[name=date]', '2020-01-01T10:00'));
+    await page.eval(`document.querySelector('#generate-btn').click()`);
+    assert.match(await page.eval(`document.querySelector('#toast').textContent`), /already passed/);
+    await page.eval(type('[name=date]', future(40)));
+    await page.eval(type('[name=rsvp]', '12345'));
+    await page.eval(`document.querySelector('#generate-btn').click()`);
+    assert.match(await page.eval(`document.querySelector('#toast').textContent`), /10-digit/);
+    assert.equal(await page.eval(`document.querySelectorAll('#results .result').length`), 0);
+    await page.eval(type('[name=rsvp]', ''));
+    await page.eval(type('[name=nick1]', 'Kabu'));
+  });
+
   test('admin: generates one personal link per guest and saves them', async () => {
     await page.eval(`document.querySelector('#guests').value = ['Rahul Uncle', '', '  Sharma Family  ', 'Priya Di'].join('\\n')`);
     await page.eval(`document.querySelector('#generate-btn').click()`);
@@ -495,6 +538,11 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`document.querySelector('#siteForm [name=url]').value`), 'https://my-cards.vercel.app/');
     assert.equal(await page.eval(`document.querySelector('#siteForm [name=whatsapp]').value`), '919876543210');
     assert.equal(await page.eval(`document.querySelector('#urlWarn').hidden`), true);
+    await page.eval(type('#siteForm [name=whatsapp]', '98765'));
+    assert.match(await page.eval(`document.querySelector('#toast').textContent`), /10-digit/);
+    assert.equal(await page.eval(`JSON.parse(localStorage.getItem('weddingcard.config')).site.whatsapp`), '919876543210', 'a wrong number is never saved');
+    await page.eval(type('#siteForm [name=whatsapp]', '919876543210'));
+    await page.eval(type('[name=date]', future(40)));
     await page.eval(type('#guests', ''));
     await page.eval(`document.querySelector('#generate-btn').click()`);
     assert.match(await page.eval(`document.querySelector('#results input').value`), /^https:\/\/my-cards\.vercel\.app\/card\.html#/, 'links use the live address');
@@ -522,7 +570,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`document.querySelector('.occasion.on').dataset.type`), 'sangeet');
     assert.equal(await page.eval(`document.querySelector('[name=host1]').value`), 'Diya');
     assert.equal(await page.eval(`document.querySelector('[name=venue]').value`), 'Grand Ballroom, Udaipur');
-    assert.equal(await page.eval(`document.querySelector('[name=rsvp]').value`), '9876543210');
+    assert.equal(await page.eval(`document.querySelector('[name=rsvp]').value`), '919876543210');
     assert.equal(await page.eval(`document.querySelectorAll('.event-row').length`), 1);
     assert.equal(await page.eval(`document.querySelector('#guests').value`), 'Rahul Uncle\nPriya Di');
     await page.eval(`document.querySelector('#orderPaste').value = 'Hi, design #33 please'`);
@@ -644,17 +692,49 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.goto(base + 'index.html');
     assert.equal(await page.eval(`[...document.querySelectorAll('#showcase .tpl')].filter(t => t.offsetParent).length`), 4, 'Home: 4-design preview');
     assert.ok(await page.eval(`!!document.querySelector('#seeAll').offsetParent`), 'See all button on Home');
+    assert.equal(await page.eval(`document.querySelector('#seeAll').innerText.trim()`), '🎨 See all 200 designs →', 'spaces around the number (was "all200designs")');
     await page.eval(`document.querySelector('#seeAll').click()`);
     assert.equal(await page.eval(`document.body.dataset.tab`), 'designs');
     assert.equal(await page.eval(`location.hash`), '#designs');
     assert.equal(await page.eval(`!!document.querySelector('.hero').offsetParent`), false, 'only the catalog shows');
+    assert.equal(await page.eval(`!!document.querySelector('.nav').offsetParent`), false, 'no floating top bar over the search');
     assert.equal(await page.eval(`[...document.querySelectorAll('#showcase .tpl')].filter(t => t.offsetParent).length`), 24);
     await page.waitFor(`getComputedStyle(document.querySelector('#showcase .tpl.in') || document.body).animationName.includes('dealIn')`, 3000);
+    // While cards fly in, the page must not get wider than the phone (it made the bottom bar slide sideways)
+    assert.equal(await page.eval(`innerWidth`), 390);
+    assert.ok(await page.eval(`document.documentElement.scrollWidth <= innerWidth`), 'no sideways scrolling during the card deal');
+    // Each card is dealt once, then stays still
+    await page.waitFor(`document.querySelectorAll('#showcase .tpl.dealt').length >= 2`, 5000);
+    assert.equal(await page.eval(`getComputedStyle(document.querySelector('#showcase .tpl.dealt')).animationName`), 'none');
     await page.eval(`history.back()`);
     await page.waitFor(`document.body.dataset.tab === 'home' && !!document.querySelector('.hero').offsetParent`, 3000);
     await page.eval(`document.querySelector('.bottom-nav [data-trending]').click()`);
     assert.equal(await page.eval(`document.querySelectorAll('#showcase .tpl').length`), 6, 'Trending tab');
     noErrors();
+  });
+
+  test('mobile: long names are never cut, in every layout; nicknames show under the names', async () => {
+    await page.viewport(360, 740);
+    for (const theme of [1, 2, 3, 4, 7]) { // classic, arch, monogram, split, ticket
+      const card = { ...PRESETS.wedding.card, theme, host1: 'Venkataramanaswamy', host2: 'Subrahmanyeshwari', nick1: 'Venky', nick2: 'Subbu' };
+      await page.goto(cardLink(card, '?auto'), 300);
+      await page.waitFor(`document.body.classList.contains('opened')`, 5000);
+      await page.eval(`document.fonts.ready`);
+      await sleep(400);
+      const cut = await page.eval(`[...document.querySelectorAll('.names .w')].filter(w => { const r = w.getBoundingClientRect(); return r.left < -1 || r.right > innerWidth + 1; }).length`);
+      assert.equal(cut, 0, `#${theme} ${Templates.get(theme).layout}: a name runs off the screen`);
+      assert.equal(await page.eval(`document.querySelector('.nicks').textContent`), '“Venky” & “Subbu”');
+      noErrors();
+    }
+  });
+
+  test('card: the scrollbar is hidden but the card still scrolls', async () => {
+    await page.viewport(420, 760);
+    await page.goto(cardLink(PRESETS.wedding.card, '?auto'), 300);
+    await page.waitFor(`document.body.classList.contains('opened')`, 5000);
+    assert.equal(await page.eval(`getComputedStyle(document.documentElement).scrollbarWidth`), 'none');
+    await page.eval(`scrollTo(0, 600)`);
+    assert.ok(await page.eval(`scrollY`) > 0);
   });
 
   test('desktop: no tabs or card-deal animation', async () => {

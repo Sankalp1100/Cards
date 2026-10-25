@@ -89,7 +89,7 @@
     <div class="showcase-grid" id="showcase"></div>
     <p class="muted empty-note" id="noMatch" hidden>No design matches that. Try another number or occasion.</p>
     <div class="more-wrap"><button type="button" class="btn-line" id="moreBtn" hidden>Show more designs</button></div>
-    <div class="see-all-wrap"><button type="button" class="btn-glow" id="seeAll">🎨 See all <span class="n">200</span> designs →</button></div>
+    <div class="see-all-wrap"><button type="button" class="btn-glow" id="seeAll"><span>🎨 See all <b class="n">200</b> designs →</span></button></div>
   </section>
 
   <section class="how" id="how">
@@ -145,10 +145,17 @@
         </section>
         <section class="os-step" data-step="1" hidden>
           <h3>Who and when?</h3>
-          <label><span id="osL1">Name 1</span> <input name="host1" maxlength="40" autocomplete="off"></label>
-          <label><span id="osL2">Name 2</span> <input name="host2" maxlength="40" autocomplete="off"></label>
-          <label>Date &amp; time <input type="datetime-local" name="date"></label>
-          <label>Venue <input name="venue" maxlength="120" autocomplete="off" placeholder="Hall / home address, city"></label>
+          <p class="os-req-note"><i class="req">*</i> needed to make your card</p>
+          <div class="os-pair">
+            <label class="req-field" id="osF1"><span><span id="osL1">Name 1</span> <i class="req">*</i></span> <input name="host1" maxlength="40" autocomplete="off" enterkeyhint="next"></label>
+            <label class="nick">Nickname <input name="nick1" maxlength="24" autocomplete="off" placeholder="Optional, e.g. Sonu" enterkeyhint="next"></label>
+          </div>
+          <div class="os-pair">
+            <label id="osF2"><span><span id="osL2">Name 2</span> <i class="req" id="osReq2">*</i></span> <input name="host2" maxlength="40" autocomplete="off" enterkeyhint="next"></label>
+            <label class="nick">Nickname <input name="nick2" maxlength="24" autocomplete="off" placeholder="Optional, e.g. Monu" enterkeyhint="next"></label>
+          </div>
+          <label class="req-field"><span>Date &amp; time <i class="req">*</i></span> <input type="datetime-local" name="date"></label>
+          <label class="req-field"><span>Venue <i class="req">*</i></span> <input name="venue" maxlength="120" autocomplete="off" placeholder="Hall / home address, city" enterkeyhint="done"></label>
           <div class="os-loc">
             <label>Location on Google Maps <small>(optional)</small> <input name="mapUrl" type="url" inputmode="url" autocomplete="off" placeholder="Paste a Google Maps link"></label>
             <button type="button" class="chip" id="osHere">📍 Use my current location</button>
@@ -164,7 +171,7 @@
         <section class="os-step" data-step="3" hidden>
           <h3>Extras <small>(all optional)</small></h3>
           <label>Message for guests <textarea name="message" rows="2" maxlength="300" placeholder="A line from you to your guests"></textarea></label>
-          <label>WhatsApp number for RSVP <input name="rsvp" inputmode="tel" placeholder="919876543210"></label>
+          <label>WhatsApp number for RSVP <small>(10-digit mobile)</small> <input name="rsvp" type="tel" inputmode="numeric" maxlength="15" placeholder="98765 43210" autocomplete="tel-national"></label>
           <label>Guest names for personal links <small>(one per line)</small> <textarea name="guests" rows="3" placeholder="Rahul Uncle&#10;Sharma Family"></textarea></label>
           <label class="os-check"><input type="checkbox" name="photo"> I'll send a photo on WhatsApp</label>
         </section>
@@ -174,6 +181,13 @@
           <p class="muted" id="osNoWa" hidden>Ordering on WhatsApp isn't set up yet. Please check back soon.</p>
         </section>
         <p class="os-error" id="osError" role="alert"></p>
+        <section class="os-done" id="osDone" hidden>
+          <div class="os-confetti" aria-hidden="true"></div>
+          <div class="os-done-icon">🎉</div>
+          <h3>Order sent!</h3>
+          <p>WhatsApp is open with your order. Tap <b>send</b> there, and we will reply with your invitation soon.</p>
+          <button type="button" class="btn-glow" id="osDoneClose">Done ✨</button>
+        </section>
       </form>
       <footer class="os-foot">
         <button type="button" class="btn-line small" id="osBack">← Back</button>

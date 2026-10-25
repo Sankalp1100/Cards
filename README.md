@@ -53,6 +53,8 @@ It opens `http://localhost:5050/admin.html` in your browser. Keep that window op
 - **Photos:** uploads are cropped and shrunk to about 2–10 KB so they fit inside the link. You can also paste a public image URL instead.
 - **Admin security:** the live admin files and `/api` are checked by `middleware.js` (Vercel) before anything is sent; without the password nothing loads. `server.mjs` and `Start Admin.cmd` are never uploaded. Turn off GitHub Pages for the repo, it would publish the admin without a password.
 - **Opening styles:** every design opens with one of 6 animations: ✉️ envelope, 🚪 palace doors, 🎭 curtain raise, 📜 royal scroll, 🎁 gift box, 💌 folding card. Change it per design in Catalog, or per invite in the editor.
+- **Every design is different:** each of the 200 combines its own layout (classic, arch, monogram, ticket, split), background decor (mandala, glow, frame, flower corners, sunburst, art-deco, fairy lights, stars & moon, lace), name style, section style, colours, fonts, opening and **song** (chord progression, melody, instrument and key). Tests check that no two designs look or sound alike.
+- **Order form rules:** names (both for couples), date and venue are required; past dates can't be picked; mobile numbers must be 10 digits (saved with 91). Nicknames are optional and show under the names on the card. Long names shrink to fit, so nothing is cut.
 - **Videos:** in *Get links*, **🎬 Download video** films the real card (about 22 s, 9:16, with music) and saves an MP4 for WhatsApp status or Instagram. Needs Chrome or Edge on a computer; Chrome asks once to share the tab.
 - **Phones:** the website and the admin have a bottom tab bar on phones.
 - **Link history** is stored in your browser. Use Download CSV for a backup.

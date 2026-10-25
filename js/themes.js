@@ -23,87 +23,94 @@ const INTROS = {
   cardflip: '💌 Folding card'
 };
 
+// How each design is laid out and styled, on top of colours, fonts, decor and opening. Combined so that
+// no two of the 200 designs are alike (tests/unit.test.js checks it).
+const LAYOUTS = ['classic', 'arch', 'monogram', 'ticket', 'split'];
+const NAME_STYLES = ['shimmer', 'solid', 'outline', 'duo'];
+const CARD_STYLES = ['soft', 'sharp', 'pill', 'outline'];
+const DECORS = ['mandala', 'blobs', 'frame', 'florals', 'sunburst', 'deco', 'lights', 'stars', 'lace'];
+
 // The original 12 hand-made designs are #001–#012. `key` keeps links made before numbering working.
 const CLASSICS = [
   {
-    key: 'royal', name: 'Royal Maharaja', emoji: '👑', occasion: 'wedding', decor: 'mandala', intro: 'envelope',
+    key: 'royal', name: 'Royal Maharaja', emoji: '👑', occasion: 'wedding', decor: 'mandala', layout: 'classic', nameStyle: 'shimmer', cardStyle: 'soft', intro: 'envelope',
     vars: { '--bg': '#2b0a14', '--bg2': '#5c0f24', '--ink': '#fbeedd', '--muted': '#e8cfa9', '--accent': '#e9b949', '--accent2': '#ff8f3f', '--card': 'rgba(255,255,255,.06)', '--line': 'rgba(233,185,73,.25)' },
     fonts: FONT_SETS.regal,
     particles: { types: ['marigold', 'petal'], colors: ['#ff9f1c', '#ffbf3f', '#e63946', '#ffd166'], count: 38 },
     tempo: 0.3
   },
   {
-    key: 'floral', name: 'Blush Garden', emoji: '🌸', occasion: 'engagement', decor: 'mandala', intro: 'cardflip',
+    key: 'floral', name: 'Blush Garden', emoji: '🌸', occasion: 'engagement', decor: 'florals', layout: 'arch', nameStyle: 'solid', cardStyle: 'pill', intro: 'cardflip',
     vars: { '--bg': '#fff6f4', '--bg2': '#ffe0e7', '--ink': '#5a2a3a', '--muted': '#8a5a6a', '--accent': '#c9577a', '--accent2': '#e8a87c', '--card': 'rgba(255,255,255,.65)', '--line': 'rgba(201,87,122,.22)' },
     fonts: FONT_SETS.garden,
     particles: { types: ['petal'], colors: ['#f7a8b8', '#f4c2c2', '#ffd6e0', '#ffffff', '#e8879c'], count: 45 },
     tempo: 0.32
   },
   {
-    key: 'midnight', name: 'Midnight Glam', emoji: '✨', occasion: 'anniversary', decor: 'mandala', intro: 'curtains',
+    key: 'midnight', name: 'Midnight Glam', emoji: '✨', occasion: 'anniversary', decor: 'stars', layout: 'monogram', nameStyle: 'outline', cardStyle: 'sharp', intro: 'curtains',
     vars: { '--bg': '#07071a', '--bg2': '#1d1446', '--ink': '#f3eefe', '--muted': '#b9b0d9', '--accent': '#e0c27a', '--accent2': '#c9a7ff', '--card': 'rgba(255,255,255,.06)', '--line': 'rgba(224,194,122,.25)' },
     fonts: FONT_SETS.regal,
     particles: { types: ['sparkle'], colors: ['#ffffff', '#e0c3fc', '#ffd700'], count: 90, fireworks: true },
     tempo: 0.28
   },
   {
-    key: 'haldi', name: 'Haldi Sunshine', emoji: '🌼', occasion: 'ceremony', decor: 'mandala', intro: 'scroll',
+    key: 'haldi', name: 'Haldi Sunshine', emoji: '🌼', occasion: 'ceremony', decor: 'sunburst', layout: 'split', nameStyle: 'duo', cardStyle: 'soft', intro: 'scroll',
     vars: { '--bg': '#fff7d6', '--bg2': '#ffe08a', '--ink': '#5b3200', '--muted': '#8a5a10', '--accent': '#d97706', '--accent2': '#e11d48', '--card': 'rgba(255,255,255,.55)', '--line': 'rgba(217,119,6,.25)' },
     fonts: { display: "'Playfair Display', serif", script: "'Great Vibes', cursive", body: "'Cormorant Garamond', serif" },
     particles: { types: ['marigold', 'petal'], colors: ['#ffb703', '#fb8500', '#ffd60a', '#ff7b00'], count: 40 },
     tempo: 0.26
   },
   {
-    key: 'mehendi', name: 'Mehendi Green', emoji: '🌿', occasion: 'wedding', decor: 'mandala', intro: 'doors',
+    key: 'mehendi', name: 'Mehendi Green', emoji: '🌿', occasion: 'wedding', decor: 'lace', layout: 'arch', nameStyle: 'shimmer', cardStyle: 'outline', intro: 'doors',
     vars: { '--bg': '#10261a', '--bg2': '#24513a', '--ink': '#f2efdc', '--muted': '#c9d6b4', '--accent': '#d4b46a', '--accent2': '#a7c957', '--card': 'rgba(255,255,255,.06)', '--line': 'rgba(212,180,106,.25)' },
     fonts: { display: "'Cinzel Decorative', serif", script: "'Parisienne', cursive", body: "'Cormorant Garamond', serif" },
     particles: { types: ['leaf', 'petal'], colors: ['#6a994e', '#a7c957', '#f2e8cf', '#bc4749'], count: 36 },
     tempo: 0.3
   },
   {
-    key: 'neon', name: 'Neon Love (Y2K)', emoji: '💖', occasion: 'bday', decor: 'blobs', intro: 'curtains', flavor: 'neon',
+    key: 'neon', name: 'Neon Love (Y2K)', emoji: '💖', occasion: 'bday', decor: 'blobs', layout: 'classic', nameStyle: 'solid', cardStyle: 'outline', intro: 'curtains', flavor: 'neon',
     vars: { '--bg': '#0d0221', '--bg2': '#2a0a4a', '--ink': '#ffffff', '--muted': '#d1f7ff', '--accent': '#ff2a6d', '--accent2': '#05d9e8', '--card': 'rgba(5,217,232,.07)', '--line': 'rgba(255,42,109,.4)' },
     fonts: FONT_SETS.retro,
     particles: { types: ['heart', 'sparkle'], colors: ['#ff2a6d', '#05d9e8', '#d1f7ff', '#f9c80e'], count: 45, fireworks: true },
     tempo: 0.22
   },
   {
-    key: 'kids', name: 'Candy Party', emoji: '🎈', occasion: 'birthday', decor: 'blobs', intro: 'giftbox', flavor: 'playful',
+    key: 'kids', name: 'Candy Party', emoji: '🎈', occasion: 'birthday', decor: 'blobs', layout: 'ticket', nameStyle: 'duo', cardStyle: 'pill', intro: 'giftbox', flavor: 'playful',
     vars: { '--bg': '#eaf8ff', '--bg2': '#ffe3f1', '--ink': '#2b2d6e', '--muted': '#5a5c9e', '--accent': '#ff4f9a', '--accent2': '#3bceac', '--card': 'rgba(255,255,255,.75)', '--line': 'rgba(94,96,206,.2)' },
     fonts: FONT_SETS.playful,
     particles: { types: ['balloon', 'confetti', 'confetti'], colors: ['#ff5fa2', '#ffd23f', '#3bceac', '#5e60ce', '#ff8c42'], count: 40 },
     tempo: 0.2
   },
   {
-    key: 'baby', name: 'Baby Cloud', emoji: '🍼', occasion: 'babyshower', decor: 'blobs', intro: 'giftbox', flavor: 'playful',
+    key: 'baby', name: 'Baby Cloud', emoji: '🍼', occasion: 'babyshower', decor: 'stars', layout: 'split', nameStyle: 'solid', cardStyle: 'pill', intro: 'giftbox', flavor: 'playful',
     vars: { '--bg': '#f2f7ff', '--bg2': '#fde8f1', '--ink': '#38456b', '--muted': '#6b7699', '--accent': '#7b9fe0', '--accent2': '#f29bbf', '--card': 'rgba(255,255,255,.7)', '--line': 'rgba(123,159,224,.25)' },
     fonts: { display: "'Fredoka', sans-serif", script: "'Parisienne', cursive", body: "'Poppins', sans-serif" },
     particles: { types: ['heart', 'sparkle', 'balloon'], colors: ['#a9c6ff', '#f9b9d2', '#fff1a8', '#c7f0db'], count: 38 },
     tempo: 0.3
   },
   {
-    key: 'disco', name: 'Disco Kitty', emoji: '🪩', occasion: 'kitty', decor: 'blobs', intro: 'curtains',
+    key: 'disco', name: 'Disco Kitty', emoji: '🪩', occasion: 'kitty', decor: 'lights', layout: 'monogram', nameStyle: 'shimmer', cardStyle: 'sharp', intro: 'curtains',
     vars: { '--bg': '#16041f', '--bg2': '#5b0e5e', '--ink': '#fff4fd', '--muted': '#f3c4ec', '--accent': '#ff4fd8', '--accent2': '#ffd400', '--card': 'rgba(255,79,216,.08)', '--line': 'rgba(255,79,216,.4)' },
     fonts: FONT_SETS.retro,
     particles: { types: ['sparkle', 'confetti'], colors: ['#ff4fd8', '#ffd400', '#7df9ff', '#ffffff'], count: 60, fireworks: true },
     tempo: 0.2
   },
   {
-    key: 'bollywood', name: 'Filmy Bollywood', emoji: '🎬', occasion: 'sangeet', decor: 'mandala', intro: 'curtains',
+    key: 'bollywood', name: 'Filmy Bollywood', emoji: '🎬', occasion: 'sangeet', decor: 'sunburst', layout: 'ticket', nameStyle: 'outline', cardStyle: 'sharp', intro: 'curtains',
     vars: { '--bg': '#140500', '--bg2': '#7a1a00', '--ink': '#fff3dc', '--muted': '#ffd59a', '--accent': '#ffcc00', '--accent2': '#ff3c00', '--card': 'rgba(255,204,0,.07)', '--line': 'rgba(255,204,0,.35)' },
     fonts: { display: "'Righteous', sans-serif", script: "'Great Vibes', cursive", body: "'Poppins', sans-serif" },
     particles: { types: ['marigold', 'sparkle'], colors: ['#ffcc00', '#ff7a00', '#ff3c00', '#fff1b8'], count: 45, fireworks: true },
     tempo: 0.22
   },
   {
-    key: 'sunset', name: 'Golden Hour', emoji: '🌅', occasion: 'bday', decor: 'blobs', intro: 'giftbox',
+    key: 'sunset', name: 'Golden Hour', emoji: '🌅', occasion: 'bday', decor: 'lights', layout: 'split', nameStyle: 'duo', cardStyle: 'soft', intro: 'giftbox',
     vars: { '--bg': '#2a1636', '--bg2': '#a33a4f', '--ink': '#fff1e6', '--muted': '#ffcfb3', '--accent': '#ffb86b', '--accent2': '#ff6b9d', '--card': 'rgba(255,255,255,.07)', '--line': 'rgba(255,184,107,.35)' },
     fonts: FONT_SETS.modern,
     particles: { types: ['balloon', 'confetti', 'sparkle'], colors: ['#ffb86b', '#ff6b9d', '#ffe29a', '#c38dff'], count: 42 },
     tempo: 0.24
   },
   {
-    key: 'lavender', name: 'Lavender Dream', emoji: '🪻', occasion: 'naming', decor: 'mandala', intro: 'scroll',
+    key: 'lavender', name: 'Lavender Dream', emoji: '🪻', occasion: 'naming', decor: 'mandala', layout: 'arch', nameStyle: 'solid', cardStyle: 'outline', intro: 'scroll',
     vars: { '--bg': '#f8f3ff', '--bg2': '#e4d6ff', '--ink': '#3b2a5a', '--muted': '#6e5a94', '--accent': '#8e6cd6', '--accent2': '#e88fbd', '--card': 'rgba(255,255,255,.65)', '--line': 'rgba(142,108,214,.25)' },
     fonts: FONT_SETS.garden,
     particles: { types: ['petal'], colors: ['#b79ced', '#d9c7ff', '#f4b6d2', '#ffffff'], count: 42 },
@@ -117,61 +124,61 @@ const RECIPES = {
   wedding: {
     nouns: ['Rajwada', 'Shehnai', 'Mandap', 'Baraat', 'Jharokha', 'Kalira', 'Sindoor', 'Haveli', 'Doli', 'Varmala', 'Toran', 'Chandni', 'Sehra', 'Darbar', 'Palki', 'Kesar', 'Mehrab', 'Zari'],
     emoji: ['👑', '💍', '🪷', '🕌', '🔥', '🌺'], intros: ['doors', 'envelope', 'curtains', 'scroll'], moods: 'dl', gold: true,
-    fonts: ['regal', 'heritage', 'garden', 'dreamy'], decor: ['mandala', 'frame', 'mandala'],
+    fonts: ['regal', 'heritage', 'garden', 'dreamy'], decor: ['mandala', 'lace', 'florals', 'deco', 'lights', 'frame'],
     particles: [['marigold', 'petal'], ['petal'], ['sparkle'], ['petal', 'sparkle'], ['leaf', 'petal']], count: 40, fireworks: true, tempo: 0.3
   },
   engagement: {
     nouns: ['Promise', 'Sagai', 'Forever', 'Rendezvous', 'Solitaire', 'Roka', 'Vow', 'Charm', 'Bloom', 'Starlight', 'Serenade', 'Muse', 'Cherish', 'Petals', 'Embrace', 'Spark', 'Destiny', 'Kismat', 'Ring Ceremony'],
     emoji: ['💞', '💍', '💐', '🌹'], intros: ['cardflip', 'envelope', 'giftbox'], moods: 'ld',
-    fonts: ['garden', 'modern', 'dreamy'], decor: ['blobs', 'frame', 'mandala'],
+    fonts: ['garden', 'modern', 'dreamy'], decor: ['florals', 'lights', 'frame', 'sunburst', 'blobs'],
     particles: [['petal'], ['heart', 'sparkle'], ['petal', 'heart']], count: 40, tempo: 0.3
   },
   sangeet: {
     nouns: ['Dhol', 'Thumka', 'Nach', 'Filmy Night', 'Spotlight', 'Jhoomar', 'Ghungroo', 'Mehfil', 'Superstar', 'Premiere', 'Encore', 'Dandiya', 'Tarana', 'Raag', 'Taal', 'Bhangra', 'Jalwa', 'Rangeela', 'Masti'],
     emoji: ['🎶', '🎬', '💃', '🥁', '🎤'], moods: 'd', flavor: ['', 'neon'], intros: ['curtains', 'doors', 'envelope'],
-    fonts: ['retro', 'festive', 'modern'], decor: ['mandala', 'blobs'],
+    fonts: ['retro', 'festive', 'modern'], decor: ['lights', 'sunburst', 'deco', 'mandala', 'stars'],
     particles: [['marigold', 'sparkle'], ['sparkle', 'confetti'], ['confetti', 'heart']], count: 48, fireworks: true, tempo: 0.22
   },
   kitty: {
     nouns: ['Glam', 'Diva', 'Brunch', 'Tambola', 'Gossip', 'Chai Party', 'Sequin', 'Velvet', 'Cocktail', 'Soirée', 'Fiesta', 'Glitter', 'Boss Lady', 'High Tea', 'Queen Bee', 'Sassy', 'Lounge', 'Gala', 'Girls Night'],
     emoji: ['💃', '🪩', '👠', '🍸', '💅'], moods: 'ddl', flavor: ['neon', ''], intros: ['curtains', 'giftbox', 'cardflip'],
-    fonts: ['retro', 'modern', 'festive'], decor: ['blobs', 'frame'],
+    fonts: ['retro', 'modern', 'festive'], decor: ['deco', 'lights', 'stars', 'blobs', 'sunburst'],
     particles: [['sparkle', 'confetti'], ['heart', 'sparkle'], ['confetti']], count: 50, fireworks: true, tempo: 0.2
   },
   bday: {
     nouns: ['Fabulous', 'Cheers', 'Rooftop', 'Milestone', 'Toast', 'Sparkler', 'Hooray', 'Bash', 'Wishes', 'Vibes', 'Glow Up', 'Big Night', 'Fizz', 'Afterparty', 'Disco Ball', 'Dirty Thirty', 'Golden Fifty', 'Sweet Sixteen'],
     emoji: ['🥳', '🎉', '🍾', '🎂', '✨'], intros: ['giftbox', 'curtains', 'envelope'], moods: 'dl',
-    fonts: ['modern', 'retro', 'soft'], decor: ['blobs', 'frame'],
+    fonts: ['modern', 'retro', 'soft'], decor: ['sunburst', 'lights', 'stars', 'blobs', 'deco'],
     particles: [['balloon', 'confetti', 'sparkle'], ['confetti', 'sparkle'], ['balloon', 'confetti']], count: 42, fireworks: true, tempo: 0.24
   },
   naming: {
     nouns: ['Little Star', 'Naamkaran', 'Tiny Toes', 'Blessing', 'Moonbeam', 'Cradle', 'Lullaby', 'Angel', 'Twinkle', 'Sunbeam', 'Cherub', 'Snowdrop', 'Butterfly', 'Dewdrop', 'Baby Bloom', 'Wish', 'Cuddle', 'Sweet Pea', 'Rainbow Baby'],
     emoji: ['👶', '⭐', '🌙', '🪔', '🦋'], intros: ['scroll', 'cardflip', 'envelope'], moods: 'l',
-    fonts: ['garden', 'soft', 'dreamy'], decor: ['mandala', 'blobs', 'frame'],
+    fonts: ['garden', 'soft', 'dreamy'], decor: ['stars', 'florals', 'lace', 'blobs', 'frame'],
     particles: [['petal'], ['sparkle', 'heart'], ['petal', 'sparkle']], count: 40, tempo: 0.32
   },
   birthday: {
     nouns: ['Jungle', 'Superhero', 'Unicorn', 'Dino', 'Rocket', 'Circus', 'Cupcake', 'Lollipop', 'Robot', 'Mermaid', 'Pirate', 'Safari', 'Toy Box', 'Jelly', 'Bubbles', 'Carnival', 'Space', 'Teddy', 'Princess'],
     emoji: ['🦁', '🦸', '🦄', '🦖', '🚀', '🎪', '🧁', '🍭', '🤖', '🧜‍♀️', '🏴‍☠️', '🦒', '🧸', '🍬', '🫧', '🎠', '🪐', '🐻', '👸'], moods: 'llld', flavor: ['playful'], intros: ['giftbox', 'curtains', 'envelope'],
-    fonts: ['playful', 'soft'], decor: ['blobs'],
+    fonts: ['playful', 'soft'], decor: ['blobs', 'sunburst', 'stars', 'lights'],
     particles: [['balloon', 'confetti', 'confetti'], ['balloon', 'sparkle'], ['confetti', 'heart', 'balloon']], count: 40, tempo: 0.2
   },
   babyshower: {
     nouns: ['Godh Bharai', 'Oh Baby', 'Stork', 'Bundle of Joy', 'Little One', 'Cloud Nine', 'Peekaboo', 'Booties', 'Rattle', 'Baby Bump', 'Hush', 'Nest', 'Blossom', 'Cotton', 'Mama Bear', 'Sweetheart', 'Tiny Hands', 'Pitter Patter', 'Sunshine'],
     emoji: ['🍼', '🧸', '👣', '☁️', '🎀'], moods: 'l', flavor: ['playful', ''], intros: ['giftbox', 'cardflip', 'envelope'],
-    fonts: ['soft', 'playful', 'garden'], decor: ['blobs', 'frame'],
+    fonts: ['soft', 'playful', 'garden'], decor: ['blobs', 'stars', 'florals', 'lace'],
     particles: [['heart', 'sparkle', 'balloon'], ['balloon', 'heart'], ['sparkle', 'petal']], count: 38, tempo: 0.3
   },
   ceremony: {
     nouns: ['Griha Pravesh', 'Ganesh', 'Diya', 'Havan', 'Aarti', 'Kalash', 'Shubh', 'Mangal', 'Pooja', 'Lakshmi', 'Rangoli', 'Toran Gate', 'Sankalp', 'Om', 'Prasad', 'Deepam', 'Kumkum', 'Tulsi', 'Satyanarayan'],
     emoji: ['🪔', '🕉️', '🌼', '🙏', '🏠', '🪷'], intros: ['scroll', 'doors', 'envelope'], moods: 'llld',
-    fonts: ['heritage', 'festive', 'regal', 'garden'], decor: ['mandala', 'frame'],
+    fonts: ['heritage', 'festive', 'regal', 'garden'], decor: ['mandala', 'lace', 'sunburst', 'florals', 'frame'],
     particles: [['marigold', 'petal'], ['marigold'], ['petal', 'leaf'], ['sparkle', 'marigold']], count: 40, tempo: 0.28
   },
   anniversary: {
     nouns: ['Silver Jubilee', 'Golden Years', 'Sacred Vows', 'Forever Us', 'Together', 'Timeless', 'Soulmates', 'Eternity', 'Candlelight', 'Moonlit', 'Memories', 'Devotion', 'Champagne', 'Starry Vows', 'Velvet Night', 'Heirloom', 'Always', 'Ever After', 'Grace'],
     emoji: ['🥂', '💑', '🕯️', '💐', '✨'], intros: ['cardflip', 'doors', 'curtains'], moods: 'ddl', gold: true,
-    fonts: ['regal', 'modern', 'dreamy', 'heritage'], decor: ['mandala', 'frame', 'blobs'],
+    fonts: ['regal', 'modern', 'dreamy', 'heritage'], decor: ['deco', 'stars', 'frame', 'lights', 'florals'],
     particles: [['sparkle'], ['heart', 'sparkle'], ['petal', 'sparkle']], count: 50, fireworks: true, tempo: 0.28
   }
 };
@@ -229,7 +236,8 @@ function generated(occasion, j, c) {
   const types = pick(r.particles, j + c);
   return {
     name: `${hueName} ${r.nouns[j]}`, emoji: pick(r.emoji), occasion,
-    decor: pick(r.decor, j + (j >> 2)), intro: pick(r.intros, j + (j >> 1)), flavor: r.flavor ? pick(r.flavor) : '',
+    decor: pick(r.decor, j + (j >> 2)), layout: LAYOUTS[(j + 2 * c) % LAYOUTS.length],
+    nameStyle: NAME_STYLES[(j * 3 + c) % NAME_STYLES.length], cardStyle: CARD_STYLES[(j + (j >> 2) + c) % CARD_STYLES.length], intro: pick(r.intros, j + (j >> 1)), flavor: r.flavor ? pick(r.flavor) : '',
     vars: p.vars, fonts: FONT_SETS[pick(r.fonts, j + (j >> 1))],
     particles: { types, colors: p.colors, count: r.count, fireworks: !!(r.fireworks && dark) },
     tempo: r.tempo
@@ -245,6 +253,28 @@ const TEMPLATES = (() => {
   for (let j = 0; list.length < 200; j++) {
     occasions.forEach((o, c) => { if (made[o] < need[o] && made[o] <= j) list.push(generated(o, made[o]++, c)); });
   }
+  // If two designs ever ended up with the same layout, decor, fonts and styles, nudge the later one's styles.
+  const seen = new Set();
+  const sig = t => [t.layout, t.decor, t.nameStyle, t.cardStyle, JSON.stringify(t.fonts)].join('|');
+  list.forEach((t, i) => {
+    // Neighbours (#047, #048…) never share a layout.
+    if (i && t.layout === list[i - 1].layout) t.layout = LAYOUTS[(LAYOUTS.indexOf(t.layout) + 1) % LAYOUTS.length];
+    for (let k = 0; seen.has(sig(t)) && k < 16; k++) {
+      t.cardStyle = CARD_STYLES[(CARD_STYLES.indexOf(t.cardStyle) + 1) % CARD_STYLES.length];
+      if (k % 4 === 3) t.nameStyle = NAME_STYLES[(NAME_STYLES.indexOf(t.nameStyle) + 1) % NAME_STYLES.length];
+    }
+    seen.add(sig(t));
+  });
+  // Every design gets its own song (js/music.js): chord progression, melody pattern, instrument and key.
+  // Parties may get the playful pluck; weddings and ceremonies keep softer instruments. #001 keeps the original tune.
+  const songs = new Set();
+  list.forEach((t, i) => {
+    const voices = ['sangeet', 'kitty', 'bday', 'birthday'].includes(t.occasion) ? ['musicbox', 'bells', 'harp', 'pluck'] : ['musicbox', 'bells', 'harp'];
+    const song = { prog: i % 8, pattern: (i * 5 + (i >> 3)) % 6, voice: voices[(i * 3 + (i >> 2)) % voices.length], key: (i * 7) % 12 };
+    while (songs.has(JSON.stringify(song))) song.key = (song.key + 1) % 12;
+    songs.add(JSON.stringify(song));
+    t.song = song;
+  });
   return list.map((t, i) => ({ no: i + 1, ...t }));
 })();
 

@@ -44,11 +44,13 @@
 
   // Letter-by-letter spans for the entrance animation. Indic scripts are split by word so shaping stays intact.
   let letterIndex = 0;
+  // Letters are grouped per word (class "w", no wrapping inside), so a long name only breaks between words.
   function letters(text) {
-    const parts = /[ऀ-෿]/.test(text) ? text.split(/(\s+)/) : graphemes(text);
-    return parts.map(ch => /^\s+$/.test(ch)
-      ? '<span class="sp"> </span>'
-      : `<span class="ch" style="--i:${letterIndex++}">${esc(ch)}</span>`).join('');
+    return text.split(/(\s+)/).filter(Boolean).map(word => {
+      if (/^\s+$/.test(word)) return '<span class="sp"> </span>';
+      const parts = /[ऀ-෿]/.test(word) ? [word] : graphemes(word);
+      return `<span class="w">${parts.map(ch => `<span class="ch" style="--i:${letterIndex++}">${esc(ch)}</span>`).join('')}</span>`;
+    }).join('');
   }
 
   const fmtDate = d => d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -64,10 +66,86 @@
     return s + '<circle r="10"/></svg>';
   }
 
+  // A small cluster of five-petal flowers with leaves, for the flower-corner decor.
+  const FLOWERS = (() => {
+    const flower = (x, y, r, cls) => `<g class="${cls}" transform="translate(${x} ${y})">${[0, 72, 144, 216, 288]
+      .map(a => `<ellipse cx="0" cy="${-r}" rx="${r * 0.62}" ry="${r}" transform="rotate(${a})"/>`).join('')}<circle class="fc" r="${r * 0.42}"/></g>`;
+    return `<svg viewBox="0 0 120 120" aria-hidden="true"><path class="lf" d="M10 70 Q40 40 70 52 Q42 62 10 70Z M48 12 Q60 42 46 72 Q40 40 48 12Z"/>
+      ${flower(26, 28, 14, 'f1')}${flower(62, 58, 11, 'f2')}${flower(22, 82, 8, 'f2')}${flower(86, 22, 7, 'f1')}</svg>`;
+  })();
+
+  // Fairy lights hanging in two loops across the top.
+  const LIGHTS = (() => {
+    const pts = [];
+    for (const [x0, x1] of [[0, 200], [200, 400]]) {
+      for (let i = 1; i < 10; i++) {
+        const s = i / 10, x = x0 + (x1 - x0) * s, y = (1 - s) * (1 - s) * 8 + 2 * (1 - s) * s * 58 + s * s * 8;
+        pts.push([x, y]);
+      }
+    }
+    return `<svg viewBox="0 0 400 80" preserveAspectRatio="none" aria-hidden="true"><path d="M0 8 Q100 58 200 8 Q300 58 400 8"/>
+      ${pts.map(([x, y], i) => `<circle cx="${x.toFixed(1)}" cy="${(y + 5).toFixed(1)}" r="4.5" style="--n:${i % 6}"/>`).join('')}</svg>`;
+  })();
+
+  // Art-deco fan: concentric arcs with rays.
+  const DECO = `<svg viewBox="0 0 200 100" aria-hidden="true">${[90, 72, 54, 36].map(r => `<path d="M${100 - r} 100 A${r} ${r} 0 0 1 ${100 + r} 100"/>`).join('')}
+    ${Array.from({ length: 11 }, (_, i) => { const a = Math.PI * (i + 1) / 12; return `<line x1="100" y1="100" x2="${(100 - Math.cos(a) * 90).toFixed(1)}" y2="${(100 - Math.sin(a) * 90).toFixed(1)}"/>`; }).join('')}</svg>`;
+
   function decor(kind) {
-    if (kind === 'mandala') return `<div class="mandala m1">${mandalaSVG()}</div><div class="mandala m2">${mandalaSVG()}</div>`;
-    if (kind === 'frame') return '<div class="frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>';
-    return '<div class="blob b1"></div><div class="blob b2"></div>';
+    switch (kind) {
+      case 'mandala': return `<div class="mandala m1">${mandalaSVG()}</div><div class="mandala m2">${mandalaSVG()}</div>`;
+      case 'frame': return '<div class="frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>';
+      case 'florals': return `<div class="florals" aria-hidden="true">${['tl', 'tr', 'bl', 'br'].map(p => `<div class="fl ${p}">${FLOWERS}</div>`).join('')}</div>`;
+      case 'sunburst': return '<div class="sunburst" aria-hidden="true"></div>';
+      case 'deco': return `<div class="deco top">${DECO}</div><div class="deco bottom">${DECO}</div>`;
+      case 'lights': return `<div class="lights">${LIGHTS}</div>`;
+      case 'stars': return `<div class="stars" aria-hidden="true"><i class="moon"></i>${Array.from({ length: 26 }, (_, i) =>
+        `<i style="left:${(i * 37 + 11) % 97}%;top:${(i * 53 + 7) % 89}%;--s:${0.5 + (i % 4) * 0.35};--n:${i % 7}"></i>`).join('')}</div>`;
+      case 'lace': return '<div class="lace top" aria-hidden="true"></div><div class="lace bottom" aria-hidden="true"></div>';
+      default: return '<div class="blob b1"></div><div class="blob b2"></div>';
+    }
+  }
+
+  // The host's WhatsApp for RSVPs: a 10-digit mobile gets India's 91; longer numbers already carry a country code.
+  function rsvpNumber(d) {
+    const digits = Core.waNumber(d.rsvp);
+    return Core.mobile(d.rsvp) || (digits.length >= 11 && digits.length <= 15 ? digits : '');
+  }
+
+  // Optional nicknames under the names: “Sonu” & “Monu”.
+  function nickLine(d) {
+    const nicks = [d.nick1, d.nick2].map(n => String(n || '').trim()).filter(Boolean);
+    return nicks.length ? `<p class="nicks fade" style="--d:1.3s">${nicks.map(n => `“${esc(n)}”`).join(' <span>&amp;</span> ')}</p>` : '';
+  }
+
+  // Names must never be cut: if the longest word is wider than the screen, the names shrink until it fits.
+  function fitNames() {
+    const box = $('.names');
+    if (!box) return;
+    box.style.fontSize = '';
+    // The space the text really has: the container minus its padding (arch and ticket panels are padded),
+    // and never more than the screen.
+    const holder = box.parentElement, cs = getComputedStyle(holder);
+    const room = Math.min(holder.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), innerWidth - 32) - 8;
+    const widest = Math.max(...[...box.querySelectorAll('.w')].map(w => w.scrollWidth));
+    if (widest > room) box.style.fontSize = `${parseFloat(getComputedStyle(box).fontSize) * room / widest}px`;
+  }
+
+  // The same pieces, arranged by the design's layout.
+  function heroLayout(t, d, when, p) {
+    const text = `${p.title}${p.names}${p.tagline}`;
+    switch (t.layout) {
+      case 'arch': return `${p.visual}<div class="hero-panel arch-panel">${text}${p.date}</div>${p.hint}`;
+      case 'monogram': return `<div class="monogram" aria-hidden="true">${esc(initials(d))}</div>${p.visual}${text}${p.date}${p.hint}`;
+      case 'ticket': {
+        const stub = when
+          ? `<b>${when.getDate()}</b><span>${esc(when.toLocaleDateString(undefined, { month: 'short', year: 'numeric' }))}</span><small>${esc(fmtTime(when))}</small>`
+          : '<b>♥</b><span>Save the date</span>';
+        return `${p.visual}<div class="hero-panel ticket"><div class="ticket-main">${text}</div><div class="ticket-stub">${stub}</div></div>${p.hint}`;
+      }
+      case 'split': return `<div class="split"><div class="split-visual">${p.visual}${p.date}</div><div class="split-text">${text}</div></div>${p.hint}`;
+      default: return `${p.visual}${text}${p.date}${p.hint}`;
+    }
   }
 
   // Opened from the website's catalog: show which design this is and how to order it.
@@ -89,7 +167,9 @@
     root.style.setProperty('--body', t.fonts.body);
     const fonts = Core.fontsUrl(t.fonts);
     if ($('#themeFonts').getAttribute('href') !== fonts) $('#themeFonts').href = fonts;
-    document.body.className = document.body.className.replace(/\b(theme|flavor)-\S+/g, '').trim() + ` theme-${t.no}` + (t.flavor ? ` flavor-${t.flavor}` : '');
+    // Name style only applies without a flavour (neon and playful have their own lettering).
+    const cls = [`theme-${t.no}`, t.flavor ? `flavor-${t.flavor}` : `ns-${t.nameStyle || 'shimmer'}`, `cs-${t.cardStyle || 'soft'}`];
+    document.body.className = document.body.className.replace(/\b(theme|flavor|ns|cs)-\S+/g, '').trim() + ' ' + cls.join(' ');
     const meta = $('meta[name="theme-color"]') || document.head.appendChild(Object.assign(document.createElement('meta'), { name: 'theme-color' }));
     meta.content = t.vars['--bg'];
   }
@@ -193,14 +273,16 @@
       : `<span class="name">${letters(d.host1 || '')}</span>`;
 
     $('#card').innerHTML = `
-      <section class="hero">
+      <section class="hero layout-${t.layout || 'classic'}">
         ${decor(t.decor)}
-        ${photo ? `<div class="photo"><img src="${esc(photo)}" alt=""></div>` : `<div class="ornament">${esc(t.emoji)}</div>`}
-        <p class="title fade" style="--d:.2s">${esc(d.title)}</p>
-        <h1 class="names">${names}</h1>
-        <p class="tagline fade" style="--d:1.6s">${esc(d.tagline)}</p>
-        ${when ? `<div class="date-badge fade" style="--d:2s"><span>${esc(fmtDate(when))}</span><b>${esc(fmtTime(when))}</b></div>` : ''}
-        <a class="scroll-hint fade" style="--d:2.6s" href="#details" aria-label="Scroll down">⌄</a>
+        ${heroLayout(t, d, when, {
+          visual: photo ? `<div class="photo"><img src="${esc(photo)}" alt=""></div>` : `<div class="ornament">${esc(t.emoji)}</div>`,
+          title: `<p class="title fade" style="--d:.2s">${esc(d.title)}</p>`,
+          names: `<h1 class="names">${names}</h1>${nickLine(d)}`,
+          tagline: `<p class="tagline fade" style="--d:1.6s">${esc(d.tagline)}</p>`,
+          date: when ? `<div class="date-badge fade" style="--d:2s"><span>${esc(fmtDate(when))}</span><b>${esc(fmtTime(when))}</b></div>` : '',
+          hint: '<a class="scroll-hint fade" style="--d:2.6s" href="#details" aria-label="Scroll down">⌄</a>'
+        })}
       </section>
 
       <div id="details"></div>
@@ -230,7 +312,7 @@
 
       <section class="actions reveal">
         ${when ? `<a class="btn" id="calBtn" target="_blank" rel="noopener">📅 Save the date</a>` : ''}
-        ${Core.waNumber(d.rsvp) ? `<a class="btn" id="rsvpBtn" target="_blank" rel="noopener">💬 RSVP on WhatsApp</a>` : ''}
+        ${rsvpNumber(d) ? `<a class="btn" id="rsvpBtn" target="_blank" rel="noopener">💬 RSVP on WhatsApp</a>` : ''}
         <button class="btn ghost" id="shareBtn" type="button">🔗 Share</button>
       </section>
 
@@ -248,20 +330,24 @@
       if (d.venue) cal.searchParams.set('location', d.venue);
       $('#calBtn').href = cal.href;
     }
-    if (Core.waNumber(d.rsvp)) {
-      const num = Core.waNumber(d.rsvp);
+    if (rsvpNumber(d)) {
+      const num = rsvpNumber(d);
       const msg = `Hi! ${guest ? guest + ' here. ' : ''}Thank you for the invitation to ${who}'s celebration. I'll be there! 🎉`;
       $('#rsvpBtn').href = `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
     }
     $('#shareBtn').addEventListener('click', share);
 
     startCountdown(when);
+    // Fit the names now, and again once the design's fonts arrive (they change the width).
+    fitNames();
+    document.fonts.ready.then(fitNames);
+    $('#themeFonts').addEventListener('load', () => document.fonts.ready.then(fitNames), { once: true });
     setupReveal();
     setupTilt();
 
     if (fx) fx.destroy();
     fx = new FX($('#fx'), t.particles);
-    if (music) music.tempo = t.tempo; else music = new MusicBox(t.tempo);
+    if (music) { music.tempo = t.tempo; music.song = t.song; } else music = new MusicBox(t.tempo, t.song);
 
     document.title = `${who} 💌 You're invited`;
     demoBar(t);
@@ -386,6 +472,7 @@
   }
 
   addEventListener('hashchange', show);
+  addEventListener('resize', () => fitNames());
   show();
   if (record) setupRecording();
 })();

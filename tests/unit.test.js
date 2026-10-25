@@ -142,6 +142,16 @@ test.describe('Links', () => {
     const u = Core.shareUrl('https://wed.netlify.app/card.html?to=Rahul&preview&auto&utm=x#abc');
     assert.equal(u, 'https://wed.netlify.app/card.html?utm=x#abc');
   });
+  test('mobile accepts only 10-digit Indian mobiles and adds 91', () => {
+    for (const ok of ['9876543210', '98765 43210', '+91 98765-43210', '919876543210', '09876543210']) assert.equal(Core.mobile(ok), '919876543210', ok);
+    for (const bad of ['987654321', '98765432100', '5876543210', '1234567890', '9198765', 'call me', '', null]) assert.equal(Core.mobile(bad), '', String(bad));
+  });
+
+  test('nowLocal gives the current local time for date pickers', () => {
+    assert.equal(Core.nowLocal(new Date(2026, 9, 25, 21, 5)), '2026-10-25T21:05');
+    assert.ok('2026-10-25T21:04' < Core.nowLocal(new Date(2026, 9, 25, 21, 5)), 'earlier times compare as past');
+  });
+
   test('waNumber keeps digits only', () => {
     assert.equal(Core.waNumber('+91 98765-43210'), '919876543210');
     assert.equal(Core.waNumber('call me'), '');
@@ -290,7 +300,7 @@ test.describe('Templates', () => {
     for (const t of all) {
       const at = `#${t.no} ${t.name}`;
       assert.ok(t.name && t.emoji && PRESETS[t.occasion], at);
-      assert.ok(['mandala', 'blobs', 'frame'].includes(t.decor), `${at} decor`);
+      assert.ok(['mandala', 'blobs', 'frame', 'florals', 'sunburst', 'deco', 'lights', 'stars', 'lace'].includes(t.decor), `${at} decor`);
       assert.ok(['', 'neon', 'playful'].includes(t.flavor), `${at} flavor`);
       assert.ok(INTROS[t.intro], `${at} opening style`);
       for (const v of REQUIRED_VARS) assert.ok(t.vars[v], `${at} missing ${v}`);
@@ -335,7 +345,39 @@ test.describe('Templates', () => {
   });
 
   test('neighbouring designs look different', () => {
-    for (let i = 1; i < all.length; i++) assert.notEqual(all[i].vars['--bg'] + all[i].occasion, all[i - 1].vars['--bg'] + all[i - 1].occasion, `#${i} and #${i + 1}`);
+    for (let i = 1; i < all.length; i++) {
+      assert.notEqual(all[i].vars['--bg'] + all[i].occasion, all[i - 1].vars['--bg'] + all[i - 1].occasion, `#${i} and #${i + 1}`);
+      assert.notEqual(all[i].layout, all[i - 1].layout, `#${i} and #${i + 1} share a layout`);
+    }
+  });
+
+  test('every design has a valid layout, decor, name style and section style, and each is well used', () => {
+    const options = {
+      layout: ['classic', 'arch', 'monogram', 'ticket', 'split'],
+      decor: ['mandala', 'blobs', 'frame', 'florals', 'sunburst', 'deco', 'lights', 'stars', 'lace'],
+      nameStyle: ['shimmer', 'solid', 'outline', 'duo'],
+      cardStyle: ['soft', 'sharp', 'pill', 'outline']
+    };
+    for (const [key, values] of Object.entries(options)) {
+      for (const t of all) assert.ok(values.includes(t[key]), `#${t.no} ${key} "${t[key]}"`);
+      for (const v of values) assert.ok(all.filter(t => t[key] === v).length >= 10, `${key} "${v}" is used by at least 10 designs`);
+    }
+  });
+
+  test('no two of the 200 designs look alike', () => {
+    const looks = all.map(t => [t.layout, t.decor, t.nameStyle, t.cardStyle, JSON.stringify(t.fonts)].join('|'));
+    assert.equal(new Set(looks).size, 200);
+  });
+
+  test('every design has its own song, and #001 keeps the original tune', () => {
+    const { PROGRESSIONS, PATTERNS, VOICES } = require('../js/music.js');
+    for (const t of all) {
+      const s = t.song;
+      assert.ok(PROGRESSIONS[s.prog] && PATTERNS[s.pattern] && VOICES[s.voice] && s.key >= 0 && s.key < 12, `#${t.no} song`);
+      if (s.voice === 'pluck') assert.ok(['sangeet', 'kitty', 'bday', 'birthday'].includes(t.occasion), `#${t.no}: playful pluck only for parties`);
+    }
+    assert.equal(new Set(all.map(t => JSON.stringify(t.song))).size, 200);
+    assert.deepEqual(plain(all[0].song), { prog: 0, pattern: 0, voice: 'musicbox', key: 0 });
   });
 });
 
@@ -451,14 +493,14 @@ test.describe('Catalog', () => {
   });
 
   const order = {
-    design: 47, type: 'bday', host1: 'Neha', host2: '', date: '2026-11-28T20:00', venue: 'Skybar, Bengaluru',
+    design: 47, type: 'bday', host1: 'Neha', host2: '', nick1: 'Nehu 🌸', date: '2026-11-28T20:00', venue: 'Skybar, Bengaluru',
     events: [{ name: '🎂 Cake Cutting', date: '2026-11-28T21:30', venue: '' }, { name: '  ', date: '' }],
     message: 'Come!', rsvp: '+91 98765 43210', guests: ['Rahul Uncle', ' ', 'Priya Di'], photo: true
   };
 
   test('order message is complete and readable, and ends with the order code', () => {
     const msg = Catalog.orderMessage(order, Catalog.entries(site, {}));
-    for (const part of ['• Design: *#047* Cobalt Milestone', '• Occasion: Birthday', '• Names: Neha', '• Date: Sat, 28 Nov', '• Venue: Skybar, Bengaluru', '• Functions: Cake Cutting (', '• Message: Come!',
+    for (const part of ['• Design: *#047* Cobalt Milestone', '• Occasion: Birthday', '• Names: Neha', '• Nicknames: Nehu', '• Date: Sat, 28 Nov', '• Venue: Skybar, Bengaluru', '• Functions: Cake Cutting (', '• Message: Come!',
       '• RSVP number: 919876543210', '• Guests (2): Rahul Uncle, Priya Di', "• Photo: I'll send it"]) assert.ok(msg.includes(part), part);
     assert.ok(!/[\u{10000}-\u{10FFFF}]/u.test(msg), 'no emoji: WhatsApp for Windows shows them as �');
     assert.match(msg, /\n\nOrder code \(please keep\): WC1\.[A-Za-z0-9_-]+$/);
@@ -474,7 +516,7 @@ test.describe('Catalog', () => {
     assert.deepEqual(plain(r), {
       card: {
         type: 'bday', title: PRESETS.bday.card.title, tagline: PRESETS.bday.card.tagline, music: true,
-        host1: 'Neha', host2: '', date: '2026-11-28T20:00', venue: 'Skybar, Bengaluru', mapUrl: '', message: 'Come!', rsvp: '919876543210',
+        host1: 'Neha', host2: '', nick1: 'Nehu 🌸', nick2: '', date: '2026-11-28T20:00', venue: 'Skybar, Bengaluru', mapUrl: '', message: 'Come!', rsvp: '919876543210',
         events: [{ name: '🎂 Cake Cutting', date: '2026-11-28T21:30', venue: '', dress: '' }], theme: 47
       },
       guests: ['Rahul Uncle', 'Priya Di'], photo: true

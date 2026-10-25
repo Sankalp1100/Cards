@@ -94,6 +94,8 @@
     els.forEach((el, i) => {
       el.classList.add('rv');
       el.style.setProperty('--k', i % 6); // stagger for the phone card-deal animation
+      // Deal each card once: off-screen cards skip rendering and would otherwise replay it when scrolled back.
+      el.addEventListener('animationend', ev => { if (ev.animationName === 'dealIn') el.classList.add('dealt'); });
       el.style.transitionDelay = `${(i % 4) * 80}ms`;
       el.addEventListener('transitionend', () => { el.style.transitionDelay = ''; }, { once: true });
       io.observe(el);
@@ -152,6 +154,9 @@
     ord = { design: e ? e.no : '', type: e ? e.occasion : 'wedding', events: [] };
     of.reset();
     of.elements.design.value = e ? e.no : '';
+    of.elements.date.min = nowLocal(); // past dates can't be picked
+    $('#osDone').hidden = true;
+    $('.os-foot').hidden = false;
     renderOccasions();
     renderEvents();
     showDesign();
@@ -169,7 +174,8 @@
       `<button type="button" class="chip${k === ord.type ? ' on' : ''}" data-type="${k}">${p.icon} ${esc(p.label)}</button>`).join('');
     const [l1, l2] = PRESETS[ord.type].labels;
     $('#osL1').textContent = l1;
-    $('#osL2').textContent = l2;
+    $('#osL2').textContent = l2.replace(/\s*\(optional\)/i, '');
+    $('#osReq2').hidden = !needsTwo();
     $('#osQuick').innerHTML = PRESETS[ord.type].card.events.map(ev => ev.name)
       .filter(n => !ord.events.some(ev => ev.name === n))
       .map(n => `<button type="button" class="chip" data-add="${esc(n)}">+ ${esc(n)}</button>`).join('') +
@@ -179,7 +185,7 @@
     $('#osEvents').innerHTML = ord.events.map((ev, i) => `
       <div class="os-event" data-i="${i}">
         <input data-k="name" value="${esc(ev.name)}" placeholder="Function name" aria-label="Function name">
-        <input data-k="date" type="datetime-local" value="${esc(ev.date)}" aria-label="Date and time">
+        <input data-k="date" type="datetime-local" min="${nowLocal()}" value="${esc(ev.date)}" aria-label="Date and time">
         <button type="button" class="x" data-del="${i}" aria-label="Remove">✕</button>
       </div>`).join('');
   }
@@ -194,19 +200,46 @@
     const v = n => of.elements[n].value.trim();
     const t = Templates.get(v('design'));
     return {
-      design: t ? t.no : '', type: ord.type, host1: v('host1'), host2: v('host2'), date: v('date'), venue: v('venue'), mapUrl: v('mapUrl'),
+      design: t ? t.no : '', type: ord.type, host1: v('host1'), host2: v('host2'), nick1: v('nick1'), nick2: v('nick2'), date: v('date'), venue: v('venue'), mapUrl: v('mapUrl'),
       events: ord.events.filter(ev => ev.name.trim()), message: v('message'), rsvp: v('rsvp'),
       guests: v('guests').split('\n').map(g => g.trim()).filter(Boolean), photo: of.elements.photo.checked
     };
   }
 
   // What each step needs before moving on.
+  const nowLocal = () => Core.nowLocal();
+  // The second name is needed for couples (wedding, engagement…), optional for a birthday or a party host.
+  const needsTwo = () => !/optional/i.test(PRESETS[ord.type].labels[1]);
+
+  // What each step needs before moving on: [message, field to highlight], or null.
   function problem(n) {
-    if (n === 0 && of.elements.design.value && !Templates.get(of.elements.design.value)) return 'Please check the design number, or leave it empty.';
-    if (n === 1 && !of.elements.host1.value.trim()) return `Please enter: ${PRESETS[ord.type].labels[0]}`;
-    if (n === 1 && !of.elements.date.value) return 'Please choose the date and time.';
-    if (n === 1 && of.elements.mapUrl.value.trim() && !Catalog.mapLink(of.elements.mapUrl.value)) return 'The location should be a link (https://…), or leave it empty.';
-    return '';
+    const el = of.elements, has = name => el[name].value.trim();
+    const [l1, l2] = PRESETS[ord.type].labels;
+    if (n === 0 && has('design') && !Templates.get(el.design.value)) return ['Please check the design number, or leave it empty.', 'design'];
+    if (n === 3 && has('rsvp') && !Core.mobile(el.rsvp.value)) return ['Please enter a 10-digit mobile number (like 98765 43210), or leave it empty.', 'rsvp'];
+    if (n !== 1) return null;
+    if (!has('host1')) return [`Please enter: ${l1}`, 'host1'];
+    if (needsTwo() && !has('host2')) return [`Please enter: ${l2}`, 'host2'];
+    if (!el.date.value) return ['Please choose the date and time.', 'date'];
+    if (el.date.value < nowLocal()) return ['That date has already passed. Please choose a future date.', 'date'];
+    if (!has('venue')) return ['Please enter the venue.', 'venue'];
+    if (has('mapUrl') && !Catalog.mapLink(el.mapUrl.value)) return ['The location should be a link (https://…), or leave it empty.', 'mapUrl'];
+    return null;
+  }
+
+  // Shows the problem at the field itself: red outline, a little shake, and the cursor placed in it.
+  function flag(p) {
+    of.querySelectorAll('[aria-invalid]').forEach(i => i.removeAttribute('aria-invalid'));
+    $('#osError').textContent = p ? p[0] : '';
+    if (!p) return;
+    const input = of.elements[p[1]];
+    input.setAttribute('aria-invalid', 'true');
+    input.classList.remove('shake');
+    void input.offsetWidth;
+    input.classList.add('shake');
+    input.focus({ preventScroll: true });
+    input.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    navigator.vibrate?.([30, 40, 30]);
   }
 
   // Optional: fill the location with where the customer is now (useful when they are at the venue).
@@ -222,6 +255,7 @@
   });
 
   function goTo(n) {
+    n = Math.max(0, Math.min(n, STEPS - 1)); // never past the review step
     step = n;
     of.querySelectorAll('.os-step').forEach(s => { s.hidden = +s.dataset.step !== n; });
     $('#osDots').querySelectorAll('li').forEach((d, i) => d.classList.toggle('on', i <= n));
@@ -241,14 +275,44 @@
 
   $('#osNext').addEventListener('click', () => {
     const p = problem(step);
-    if (p) { $('#osError').textContent = p; return; }
+    flag(p);
+    if (p) return;
+    navigator.vibrate?.(12);
     goTo(step + 1);
   });
   $('#osBack').addEventListener('click', () => goTo(Math.max(0, step - 1)));
   $('#osClose').addEventListener('click', closeOrder);
   sheet.addEventListener('click', e => { if (e.target === sheet) closeOrder(); });
   addEventListener('keydown', e => { if (e.key === 'Escape' && !sheet.hidden) closeOrder(); });
-  $('#osSend').addEventListener('click', () => setTimeout(closeOrder, 300));
+  // After sending: a celebration screen while WhatsApp opens.
+  $('#osSend').addEventListener('click', () => {
+    navigator.vibrate?.([20, 50, 20, 50, 60]);
+    of.querySelectorAll('.os-step').forEach(s => { s.hidden = true; });
+    $('#osError').textContent = '';
+    $('.os-foot').hidden = true;
+    $('#osDone').hidden = false;
+    const colors = ['#ffc95c', '#ff3d8b', '#8b5cf6', '#22d3ee', '#25d366'];
+    $('.os-confetti').innerHTML = Array.from({ length: 40 }, (_, i) =>
+      `<i style="--x:${(i * 37) % 100}%;--d:${(i % 8) * 0.12}s;--r:${(i * 47) % 360}deg;--c:${colors[i % 5]}"></i>`).join('');
+  });
+  $('#osDoneClose').addEventListener('click', closeOrder);
+
+  // Typing in a flagged field clears the warning.
+  of.addEventListener('input', e => { if (e.target.hasAttribute('aria-invalid')) flag(null); });
+  // Keep the field being typed in visible above the phone keyboard.
+  of.addEventListener('focusin', e => {
+    if (e.target.matches('input, textarea')) setTimeout(() => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 350);
+  });
+  // The sheet follows the visible area, so the keyboard never covers it.
+  if (window.visualViewport) {
+    const fit = () => {
+      document.documentElement.style.setProperty('--vvh', `${visualViewport.height}px`);
+      document.documentElement.style.setProperty('--vvtop', `${visualViewport.offsetTop}px`);
+    };
+    visualViewport.addEventListener('resize', fit);
+    visualViewport.addEventListener('scroll', fit);
+    fit();
+  }
 
   of.addEventListener('click', e => {
     const occ = e.target.closest('[data-type]'), add = e.target.closest('[data-add]'), del = e.target.closest('[data-del]');

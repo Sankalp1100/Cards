@@ -18,7 +18,7 @@ const Core = {
   // Every field a card can have, all empty. Used as the base when loading a saved link
   // so values from a preset never leak into fields the link left out.
   blankCard() {
-    return { type: 'wedding', theme: 1, title: '', host1: '', host2: '', tagline: '', date: '', venue: '', message: '', photo: '', mapUrl: '', rsvp: '', events: [], music: true };
+    return { type: 'wedding', theme: 1, title: '', host1: '', host2: '', nick1: '', nick2: '', tagline: '', date: '', venue: '', message: '', photo: '', mapUrl: '', rsvp: '', events: [], music: true };
   },
 
   // Drop empty values (and functions without a name) so the link stays short.
@@ -45,6 +45,20 @@ const Core = {
   parseDate(s) {
     const d = s ? new Date(s) : null;
     return d && !isNaN(d) ? d : null;
+  },
+
+  // An Indian mobile number as WhatsApp needs it: "9876543210", "+91 98765-43210" or "919876543210"
+  // all give "919876543210". Anything else (wrong length, not starting with 6-9) gives "".
+  mobile(s) {
+    let d = String(s || '').replace(/\D/g, '');
+    if (d.length === 11 && d[0] === '0') d = d.slice(1);
+    if (d.length === 12 && d.startsWith('91')) d = d.slice(2);
+    return /^[6-9]\d{9}$/.test(d) ? '91' + d : '';
+  },
+
+  // Now, as a datetime-local value ("2026-10-25T21:05"): the earliest date that can be picked.
+  nowLocal(now = new Date()) {
+    return new Date(now.getTime() - now.getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
   },
 
   // Local "floating" time stamp for calendar links: 20261212T193000

@@ -405,8 +405,8 @@ body.sheet-open { overflow: hidden; }
   .showcase .tpl { position: relative; overflow: hidden; }
   .showcase .tpl.rv { opacity: 0; transform: none; transition: none; }
   .showcase .tpl.rv.in { opacity: 1; animation: dealIn .75s cubic-bezier(.2,.9,.3,1.15) calc(var(--k, 0) * 90ms) both; }
-  .showcase .tpl:nth-child(odd) { --tilt: -10deg; --from: -40px; }
-  .showcase .tpl:nth-child(even) { --tilt: 10deg; --from: 40px; }
+  .showcase .tpl:nth-child(odd) { --tilt: -10deg; --from: -18px; }
+  .showcase .tpl:nth-child(even) { --tilt: 10deg; --from: 18px; }
   .showcase .tpl.rv.in::after {
     content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: inherit;
     background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.35) 50%, transparent 65%); background-size: 250% 100%;
@@ -422,3 +422,57 @@ body.sheet-open { overflow: hidden; }
 .os-loc { display: grid; gap: 8px; justify-items: start; }
 .os-loc label { width: 100%; }
 .os-loc-msg { color: var(--gold); min-height: 1em; }
+
+/* ---------- Phone UI fixes ---------- */
+/* Nothing may make the page wider than the screen (the card-deal animation slid cards in from the side,
+   which let the page, and the bottom bar with it, be dragged sideways). clip keeps sticky headers working. */
+.showcase-grid { overflow-x: clip; } /* the cards grid only: a page-level clip broke the pinned search bar */
+
+/* Button text never splits around the number */
+#seeAll span { white-space: nowrap; }
+
+/* How it works: emoji and heading get their own room */
+.stepcard span { display: block; line-height: 1.2; margin-bottom: 4px; }
+.stepcard h3 { margin: 6px 0 8px; padding-right: 44px; }
+
+/* Order form: required marks, nicknames, the field in trouble */
+.req { color: #ff6b8b; font-style: normal; font-weight: 700; }
+.os-req-note { font-size: .82rem; color: var(--muted); margin-top: -4px; }
+.os-pair { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; align-items: end; }
+.os-pair .nick small { font-size: .72rem; }
+.os-body input[aria-invalid="true"] { border-color: #ff6b8b; box-shadow: 0 0 0 4px rgba(255,107,139,.2); }
+.shake { animation: shake .45s ease; }
+@keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+.os-foot .btn-glow, .os-foot .btn-line, .os-send { white-space: nowrap; }
+.os-foot .os-send, .os-foot #osNext { flex: 1; justify-content: center; max-width: 320px; }
+.os-foot #osBack { flex: none; }
+
+/* The sheet follows the visible area, so the phone keyboard never covers it */
+.order-sheet { inset: auto 0 auto 0; top: var(--vvtop, 0px); height: var(--vvh, 100dvh); }
+.os-box { max-height: min(760px, calc(var(--vvh, 100dvh) - 32px)); }
+@media (max-width: 640px) { .os-box { max-height: calc(var(--vvh, 100dvh) - 8px); } }
+
+/* Order sent: celebration */
+.os-done { position: relative; display: grid; justify-items: center; gap: 12px; padding: 26px 6px 10px; text-align: center; overflow: hidden; min-height: 320px; align-content: center; }
+.os-done h3 { font-family: 'Syne', sans-serif; font-size: 1.8rem; }
+.os-done p { color: var(--muted); max-width: 32ch; }
+.os-done-icon { font-size: 4.4rem; animation: popBig .8s cubic-bezier(.3,1.8,.5,1) both, bob 3s ease-in-out .8s infinite; }
+.os-confetti { position: absolute; inset: 0; pointer-events: none; }
+.os-confetti i { position: absolute; top: -12px; left: var(--x); width: 8px; height: 14px; border-radius: 2px; background: var(--c); transform: rotate(var(--r)); animation: confettiFall 2.2s cubic-bezier(.3,.6,.4,1) var(--d) both; }
+@keyframes popBig { from { transform: scale(0) rotate(-30deg); } }
+@keyframes confettiFall { from { transform: translateY(0) rotate(var(--r)); opacity: 1; } to { transform: translateY(420px) rotate(calc(var(--r) + 540deg)); opacity: 0; } }
+
+/* Long names on posters shrink to fit instead of being cut */
+.p-names { font-size: min(2rem, 14cqw); overflow-wrap: anywhere; max-width: 100%; }
+
+@media (max-width: 640px) {
+  .os-pair { grid-template-columns: 1fr 1fr; }
+  /* Designs tab: an app-style header, so nothing slides under the floating top bar */
+  body[data-tab="designs"] .nav { display: none; }
+  body[data-tab="designs"] #templates { margin-top: 8px; }
+  body[data-tab="designs"] .cat-tools { top: 0; background: #0b0918; padding-top: max(10px, env(safe-area-inset-top)); box-shadow: 0 10px 24px rgba(0,0,0,.4); }
+}
+
+/* A dealt card stays put: no replay when it scrolls back into view */
+.showcase .tpl.dealt, .showcase .tpl.dealt::after { animation: none !important; }
+.showcase .tpl.dealt::after { content: none; }

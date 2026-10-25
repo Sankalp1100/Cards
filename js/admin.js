@@ -5,7 +5,7 @@
   const { esc, compact, who } = Core;
   const clone = o => JSON.parse(JSON.stringify(o));
   const form = $('#form'), frame = $('#preview');
-  const FIELDS = ['title', 'host1', 'host2', 'tagline', 'date', 'venue', 'message', 'photo', 'mapUrl', 'rsvp', 'intro'];
+  const FIELDS = ['title', 'host1', 'host2', 'nick1', 'nick2', 'tagline', 'date', 'venue', 'message', 'photo', 'mapUrl', 'rsvp', 'intro'];
   const SITE_KEYS = ['url', 'brand', 'whatsapp', 'instagram', 'price', 'currency'];
   const STORE_KEY = 'weddingcard.links', DRAFT_KEY = 'weddingcard.config';
   const GALLERY_PAGE = 40;
@@ -208,7 +208,7 @@
     $('#events').innerHTML = (state.events || []).map((e, i) => `
       <div class="event-row" data-i="${i}">
         <input data-k="name" placeholder="Function, e.g. 🎶 Sangeet" value="${esc(e.name)}">
-        <input data-k="date" type="datetime-local" value="${esc(e.date)}">
+        <input data-k="date" type="datetime-local" min="${Core.nowLocal()}" value="${esc(e.date)}">
         <input data-k="venue" placeholder="Venue (optional)" value="${esc(e.venue)}">
         <input data-k="dress" placeholder="Dress code (optional)" value="${esc(e.dress)}">
         <button type="button" class="x" data-remove="${i}" aria-label="Remove function">✕</button>
@@ -273,6 +273,7 @@
       form.elements[f].value = state[f] || '';
       if (sample[f] && f !== 'photo') form.elements[f].placeholder = sample[f];
     }
+    form.elements.date.min = Core.nowLocal(); // past dates can't be picked
     renderPhoto();
     form.elements.music.checked = state.music !== false;
     const labels = occasion(state).labels;
@@ -402,8 +403,16 @@
 
   // ---------- Link generation ----------
   let lastResults = [];
+  // A card needs a name, and its date (if any) must not have passed.
+  function cardReady() {
+    if (!state.host1) { toast('Please fill in a name first'); form.elements.host1.focus(); return false; }
+    if (state.date && state.date < Core.nowLocal()) { toast('That date has already passed. Please choose a future date'); form.elements.date.focus(); return false; }
+    if (state.rsvp && !Core.mobile(state.rsvp) && Core.waNumber(state.rsvp).length < 11) { toast('RSVP number: please enter a 10-digit mobile number'); form.elements.rsvp.focus(); return false; }
+    return true;
+  }
+
   $('#generate-btn').addEventListener('click', () => {
-    if (!state.host1) { toast('Please fill in a name first'); form.elements.host1.focus(); return; }
+    if (!cardReady()) return;
     const c = code();
     const guests = $('#guests').value.split('\n').map(g => g.trim()).filter(Boolean);
     const list = guests.length ? guests : [''];
@@ -491,7 +500,7 @@
   $('#recClose').addEventListener('click', closeRecorder);
 
   $('#videoBtn').addEventListener('click', async () => {
-    if (!state.host1) { toast('Please fill in a name first'); form.elements.host1.focus(); return; }
+    if (!cardReady()) return;
     if (!(navigator.mediaDevices?.getDisplayMedia && window.MediaRecorder && window.CropTarget)) {
       toast('Videos need Chrome or Edge on a computer');
       return;
@@ -520,7 +529,7 @@
     const tracks = [track];
     let box = null;
     if (state.music !== false) {
-      box = new MusicBox(design().tempo);
+      box = new MusicBox(design().tempo, design().song);
       if (box.start()) {
         const dest = box.ctx.createMediaStreamDestination();
         box.master.connect(dest);
@@ -698,19 +707,29 @@
   function fillSettings() {
     for (const k of SITE_KEYS) siteForm.elements[k].value = cfg.site[k] ?? '';
   }
+  // The website address and WhatsApp number are saved only when complete and valid (on leaving the field),
+  // so auto-save never puts a half-typed number on the live site.
+  const CHECKED = ['url', 'whatsapp'];
   siteForm.addEventListener('input', e => {
-    if (SITE_KEYS.includes(e.target.name)) cfg.site[e.target.name] = e.target.value.trim();
-    saveDraft();
+    if (SITE_KEYS.includes(e.target.name) && !CHECKED.includes(e.target.name)) {
+      cfg.site[e.target.name] = e.target.value.trim();
+      saveDraft();
+    }
   });
   siteForm.addEventListener('change', e => {
-    const k = e.target.name;
-    if (k === 'url' && cfg.site.url) {
-      let u = cfg.site.url;
-      if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
-      cfg.site.url = Core.safeUrl(u.replace(/\/*$/, '/')) || '';
-      if (!cfg.site.url) toast('That website address does not look right');
+    const k = e.target.name, value = e.target.value.trim();
+    if (k === 'url') {
+      let u = value;
+      if (u && !/^https?:\/\//i.test(u)) u = 'https://' + u;
+      const url = u ? Core.safeUrl(u.replace(/\/*$/, '/')) : '';
+      if (u && !url) toast('That website address does not look right');
+      else cfg.site.url = url;
     }
-    if (k === 'whatsapp') cfg.site.whatsapp = Core.waNumber(cfg.site.whatsapp);
+    if (k === 'whatsapp') {
+      const number = Core.mobile(value);
+      if (value && !number) toast('WhatsApp number: please enter a 10-digit mobile number');
+      else cfg.site.whatsapp = number;
+    }
     if (k === 'price') cfg.site.price = String(cfg.site.price).replace(/[^\d.]/g, '');
     if (k === 'instagram') cfg.site.instagram = cfg.site.instagram.replace(/^@/, '');
     fillSettings();

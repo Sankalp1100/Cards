@@ -62,12 +62,14 @@ const Catalog = {
     const lines = ['*NEW INVITATION ORDER*', `• Design: ${e ? `*${Templates.serial(e.no)}* ${plain(e.name)}` : 'please suggest one'}`, `• Occasion: ${p.label}`];
     const add = (show, line) => { if (show) lines.push(line); };
     add(names, `• Names: ${names}`);
+    const nicks = [order.nick1, order.nick2].map(plain).filter(Boolean).join(' & ');
+    add(nicks, `• Nicknames: ${nicks}`);
     add(when(order.date), `• Date: ${when(order.date)}`);
     add(plain(order.venue), `• Venue: ${plain(order.venue)}`);
     add(Catalog.mapLink(order.mapUrl), `• Location: ${Catalog.mapLink(order.mapUrl)}`);
     add(events.length, `• Functions: ${events.map(ev => `${plain(ev.name)}${when(ev.date) ? ` (${when(ev.date)})` : ''}${plain(ev.venue) ? ` at ${plain(ev.venue)}` : ''}`).join('; ')}`);
     add(plain(order.message), `• Message: ${plain(order.message)}`);
-    add(Core.waNumber(order.rsvp), `• RSVP number: ${Core.waNumber(order.rsvp)}`);
+    add(Core.mobile(order.rsvp), `• RSVP number: ${Core.mobile(order.rsvp)}`);
     add(guests.length, `• Guests (${guests.length}): ${guests.join(', ')}`);
     add(order.photo, `• Photo: I'll send it in this chat`);
     lines.push('', `Order code (please keep): ${Catalog.orderCode(order)}`);
@@ -82,9 +84,9 @@ const Catalog = {
 
   orderCode(order) {
     const o = Core.compact({
-      design: order.design || '', type: order.type, host1: order.host1, host2: order.host2, date: order.date, venue: order.venue, mapUrl: Catalog.mapLink(order.mapUrl),
+      design: order.design || '', type: order.type, host1: order.host1, host2: order.host2, nick1: order.nick1, nick2: order.nick2, date: order.date, venue: order.venue, mapUrl: Catalog.mapLink(order.mapUrl),
       events: (order.events || []).map(ev => ({ name: ev.name, date: ev.date, venue: ev.venue })), message: order.message,
-      rsvp: Core.waNumber(order.rsvp), guests: (order.guests || []).map(g => String(g).trim()).filter(Boolean).join('\n'), photo: order.photo ? 1 : ''
+      rsvp: Core.mobile(order.rsvp), guests: (order.guests || []).map(g => String(g).trim()).filter(Boolean).join('\n'), photo: order.photo ? 1 : ''
     });
     return Catalog.ORDER_TAG + Codec.encode(o);
   },
@@ -103,7 +105,7 @@ const Catalog = {
     const str = v => (typeof v === 'string' ? v : '').slice(0, 300);
     const card = {
       type, title: PRESETS[type].card.title, tagline: PRESETS[type].card.tagline, music: true,
-      host1: str(o.host1), host2: str(o.host2), date: str(o.date), venue: str(o.venue), mapUrl: Catalog.mapLink(o.mapUrl), message: str(o.message), rsvp: Core.waNumber(o.rsvp),
+      host1: str(o.host1), host2: str(o.host2), nick1: str(o.nick1).slice(0, 24), nick2: str(o.nick2).slice(0, 24), date: str(o.date), venue: str(o.venue), mapUrl: Catalog.mapLink(o.mapUrl), message: str(o.message), rsvp: Core.mobile(o.rsvp),
       events: (o.events || []).filter(ev => ev && typeof ev.name === 'string' && ev.name.trim()).slice(0, 15)
         .map(ev => ({ name: str(ev.name), date: str(ev.date), venue: str(ev.venue), dress: '' }))
     };
