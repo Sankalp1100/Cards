@@ -416,7 +416,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.eval(`document.querySelector('#discardBtn').click()`);
     assert.equal(await page.eval(`document.querySelector('#publishBar').hidden`), true);
     assert.equal(await page.eval(`localStorage.getItem('weddingcard.config')`), null);
-    assert.equal(await page.eval(`document.querySelector('#siteForm [name=url]').value`), '');
+    assert.equal(await page.eval(`document.querySelector('#siteForm [name=url]').value`), loadApp().SITE.url, 'back to the published address');
     noErrors();
   });
 

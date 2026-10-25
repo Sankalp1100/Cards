@@ -102,5 +102,6 @@
     });
   }
   reveal(document.querySelectorAll('.tile, .builder-head, .cta-band, .stepcard'));
+  io.observe($('#signature')); // its own letter-by-letter animation starts on .in
   refresh();
 })();

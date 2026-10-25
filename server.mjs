@@ -76,9 +76,16 @@ export const server = http.createServer(async (req, res) => {
 });
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  const link = `http://localhost:${PORT}/admin.html`;
+  const open = () => { if (!process.env.NO_OPEN) exec(process.platform === 'win32' ? `start "" "${link}"` : process.platform === 'darwin' ? `open ${link}` : `xdg-open ${link}`); };
+  server.on('error', e => {
+    if (e.code !== 'EADDRINUSE') throw e;
+    // Started twice: the panel is already running in another window, so just show it.
+    console.log(`\n  The control panel is already running: ${link}\n  (Or another program uses port ${PORT}: set PORT=5060 and start again.)\n`);
+    open();
+  });
   server.listen(PORT, '127.0.0.1', () => {
-    const link = `http://localhost:${PORT}/admin.html`;
     console.log(`\n  Control panel running: ${link}\n  Keep this window open while you work. Press Ctrl+C to stop.\n`);
-    if (!process.env.NO_OPEN) exec(process.platform === 'win32' ? `start "" "${link}"` : process.platform === 'darwin' ? `open ${link}` : `xdg-open ${link}`);
+    open();
   });
 }

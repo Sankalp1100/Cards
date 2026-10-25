@@ -24,6 +24,8 @@ npm run admin
 
 It opens `http://localhost:5050/admin.html` in your browser. Keep that window open while you work.
 
+**Easiest on Windows:** double-click **`Start Admin.cmd`** in this folder. (If `npm run admin` says *"running scripts is disabled"*, that is PowerShell blocking npm; the `.cmd` file avoids it.)
+
 1. **Design number.** Type the number the customer sent (e.g. `47`). The design is selected and its occasion's sample text is loaded. Or browse **Designs** and tap one.
 2. **Occasion.** Change it if needed (10 types).
 3. **Customer details.** Names, date, venue, message, functions (tap a suggestion like *+ 🌼 Haldi*), photo upload, RSVP number, music. *Clear all* empties the form; the sample text stays as grey hints. The phone on the right shows the real card live.
