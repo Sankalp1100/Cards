@@ -476,3 +476,33 @@ body.sheet-open { overflow: hidden; }
 /* A dealt card stays put: no replay when it scrolls back into view */
 .showcase .tpl.dealt, .showcase .tpl.dealt::after { animation: none !important; }
 .showcase .tpl.dealt::after { content: none; }
+
+/* Filter status: what is shown, and a way back to all */
+.cat-status { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; margin: -6px 0 20px; color: var(--muted); font-size: .92rem; }
+.cat-status .chip { padding: 7px 14px; font-size: .85rem; }
+
+/* ---------- "What are you celebrating?" picker ---------- */
+.occ-picker-wrap { margin-bottom: 26px; }
+.occ-picker-h { text-align: center; font-family: 'Syne', sans-serif; font-size: 1.25rem; margin-bottom: 14px; }
+.occ-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.occ-tile {
+  display: grid; justify-items: center; gap: 4px; padding: 16px 10px; border-radius: 20px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: 600 .95rem 'Space Grotesk', sans-serif;
+  transition: transform .2s, border-color .2s, background .2s;
+}
+.occ-tile span { font-size: 2rem; line-height: 1.1; transition: transform .3s cubic-bezier(.3,1.6,.5,1); }
+.occ-tile small { font-size: .78rem; color: var(--gold); }
+.occ-tile:hover, .occ-tile:focus-visible { transform: translateY(-3px); border-color: var(--pink); }
+.occ-tile:hover span { transform: scale(1.18) rotate(-6deg); }
+.occ-tile:active { transform: scale(.96); }
+
+@media (max-width: 640px) {
+  .occ-picker { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .occ-tile { grid-template-columns: auto 1fr; grid-template-rows: auto auto; justify-items: start; align-items: center; column-gap: 10px; row-gap: 0; padding: 12px 14px; text-align: left; }
+  .occ-tile span { grid-row: 1 / 3; font-size: 1.7rem; }
+  .occ-tile b { font-size: .88rem; line-height: 1.2; }
+  /* One place for designs on phones: Home shows the picker, the Designs tab shows the cards. */
+  body[data-tab="home"] #showcase, body[data-tab="home"] #catStatus { display: none; }
+  body[data-tab="home"] #templates .builder-head .muted { display: none; }
+  body[data-tab="designs"] .occ-picker-wrap { display: none; }
+}

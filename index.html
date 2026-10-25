@@ -8,7 +8,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Wedding Card">
   <meta property="og:title" content="Animated invitations in one magic link 💌">
-  <meta property="og:description" content="200 animated designs for weddings, haldi, sangeet, birthdays and kitty parties. One link on WhatsApp, the full show for every guest.">
+  <meta property="og:description" content="300 animated designs (30 per occasion) for weddings, haldi, sangeet, birthdays and kitty parties. One link on WhatsApp, the full show for every guest.">
   <meta property="og:url" content="https://cardalbum.vercel.app/">
   <meta property="og:image" content="https://cardalbum.vercel.app/img/og-site.jpg">
   <meta property="og:image:secure_url" content="https://cardalbum.vercel.app/img/og-site.jpg">
@@ -79,17 +79,22 @@
 
   <section class="showcase" id="templates">
     <div class="builder-head">
-      <h2 class="section-h"><span id="tplCount">200</span> stunning <span class="gradient-text">designs</span></h2>
+      <h2 class="section-h"><span id="tplCount">300</span> stunning <span class="gradient-text">designs</span></h2>
       <p class="muted">Tap <b>Live demo</b> to see the real animated invitation. Like one? Order it with its <b>design number</b>.</p>
+    </div>
+    <div class="occ-picker-wrap">
+      <h3 class="occ-picker-h">What are you celebrating?</h3>
+      <div class="occ-picker" id="occPicker"></div>
     </div>
     <div class="cat-tools">
       <input id="tplSearch" type="search" inputmode="search" placeholder="🔍 Design no. (e.g. 47) or name" aria-label="Search designs">
       <div class="chips" id="tplFilters" role="group" aria-label="Occasion"></div>
     </div>
+    <p class="cat-status" id="catStatus" hidden><span id="catStatusText"></span> <button type="button" class="chip" id="catShowAll">✨ Show all <b class="n">300</b></button></p>
     <div class="showcase-grid" id="showcase"></div>
     <p class="muted empty-note" id="noMatch" hidden>No design matches that. Try another number or occasion.</p>
     <div class="more-wrap"><button type="button" class="btn-line" id="moreBtn" hidden>Show more designs</button></div>
-    <div class="see-all-wrap"><button type="button" class="btn-glow" id="seeAll"><span>🎨 See all <b class="n">200</b> designs →</span></button></div>
+    <div class="see-all-wrap"><button type="button" class="btn-glow" id="seeAll"><span>🎨 See all <b class="n">300</b> designs →</span></button></div>
   </section>
 
   <section class="how" id="how">

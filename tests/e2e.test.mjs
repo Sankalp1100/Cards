@@ -29,10 +29,12 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
   };
 
   // ---------- Landing ----------
-  test('landing page sells 200 numbered designs, 24 at a time, without iframes', async () => {
+  test('landing page sells 300 numbered designs, 24 at a time, without iframes', async () => {
     await page.viewport(1300, 900);
     await page.goto(base + 'index.html');
-    assert.equal(await page.eval(`document.querySelector('#tplCount').textContent`), '200');
+    assert.equal(await page.eval(`document.querySelector('#tplCount').textContent`), '300');
+    assert.equal(await page.eval(`document.querySelectorAll('#occPicker .occ-tile').length`), 10, 'a tile per occasion');
+    assert.match(await page.eval(`document.querySelector('#occPicker .occ-tile').textContent`), /Wedding\s*30 designs/);
     assert.equal(await page.eval(`document.querySelectorAll('#showcase .tpl').length`), 24);
     assert.equal(await page.eval(`document.querySelectorAll('iframe').length`), 0, 'no embedded live cards (they made the page slow)');
     assert.match(await page.eval(`document.querySelector('#demoBtn').href`), /card\.html\?demo#/);
@@ -46,10 +48,10 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.deepEqual(first, [['1', true], ['7', true], ['9', true], ['10', true], ['13', true], ['22', true]]);
   });
 
-  test('"Show more" loads the next page until all 200 are shown', async () => {
-    for (let i = 0; i < 10 && !(await page.eval(`document.querySelector('#moreBtn').hidden`)); i++) await page.eval(`document.querySelector('#moreBtn').click()`);
-    assert.equal(await page.eval(`document.querySelectorAll('#showcase .tpl').length`), 200);
-    assert.equal(await page.eval(`new Set([...document.querySelectorAll('#showcase .tpl')].map(t => t.dataset.no)).size`), 200);
+  test('"Show more" loads the next page until all 300 are shown', async () => {
+    for (let i = 0; i < 20 && !(await page.eval(`document.querySelector('#moreBtn').hidden`)); i++) await page.eval(`document.querySelector('#moreBtn').click()`);
+    assert.equal(await page.eval(`document.querySelectorAll('#showcase .tpl').length`), 300);
+    assert.equal(await page.eval(`new Set([...document.querySelectorAll('#showcase .tpl')].map(t => t.dataset.no)).size`), 300);
   });
 
   test('searching a design number shows exactly that design', async () => {
@@ -64,8 +66,15 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
 
   test('occasion and trending filters', async () => {
     await page.eval(`document.querySelector('[data-occ="kitty"]').click()`);
-    await page.waitFor(`document.querySelectorAll('#showcase .tpl').length === 20`);
+    await page.waitFor(`document.querySelectorAll('#showcase .tpl').length === 24`);
+    assert.match(await page.eval(`document.querySelector('#catStatusText').textContent`), /Showing 30 💃 Kitty Party designs of 300/);
+    await page.eval(`document.querySelector('#moreBtn').click()`);
+    assert.equal(await page.eval(`document.querySelectorAll('#showcase .tpl').length`), 30, 'all 30 kitty designs');
+    assert.ok(await page.eval(`[...document.querySelectorAll('#showcase .tpl .tpl-meta small')].every(s => s.textContent.includes('Kitty Party'))`), 'only kitty designs');
     assert.equal(await page.eval(`document.querySelector('#moreBtn').hidden`), true);
+    await page.eval(`document.querySelector('#catShowAll').click()`);
+    assert.equal(await page.eval(`document.querySelector('#catStatus').hidden`), true, 'Show all clears the filter');
+    assert.equal(await page.eval(`document.querySelector('#tplFilters .chip.on').dataset.occ`), '');
     await page.eval(`document.querySelector('[data-occ="trending"]').click()`);
     assert.equal(await page.eval(`document.querySelectorAll('#showcase .tpl').length`), 6);
     await page.eval(`document.querySelector('[data-occ=""]').click()`);
@@ -194,6 +203,10 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.goto(base + 'index.html?order=47');
     assert.equal(await page.eval(`document.querySelector('#orderSheet').hidden`), false);
     assert.equal(await page.eval(`document.querySelector('#orderForm [name=design]').value`), '47');
+    assert.equal(await page.eval(`location.search`), '', 'the address no longer says ?order=47');
+    await page.eval(`location.reload()`);
+    await page.waitFor(`document.readyState === 'complete' && !!document.querySelector('#showcase .tpl')`, 8000);
+    assert.equal(await page.eval(`document.querySelector('#orderSheet').hidden`), true, 'refreshing does not reopen the order form');
   });
 
   // ---------- Card ----------
@@ -222,6 +235,24 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.match(await page.eval(`document.querySelector('#demoBar').textContent`), /#047/);
     assert.match(await page.eval(`document.querySelector('#demoBar a').textContent`), /Order #047/);
     assert.ok(await page.eval(`document.body.classList.contains('theme-47')`));
+  });
+
+  test('on a sample card, the card\'s buttons open the order form for that design', async () => {
+    await page.goto(cardLink({ ...PRESETS.kitty.card, theme: 9 }, '?demo&auto'));
+    await page.waitFor(`document.body.classList.contains('opened')`, 5000);
+    assert.equal(await page.eval(`document.querySelector('.actions .btn').textContent`), '💬 Order design #009', 'Order leads the row');
+    assert.equal(await page.eval(`document.querySelector('.actions .order-this').getAttribute('href')`), 'index.html?order=9');
+    await page.eval(`document.querySelector('#shareBtn').click()`);
+    await page.waitFor(`location.pathname.endsWith('index.html') && location.search === '?order=9'`, 5000);
+    await page.waitFor(`!document.querySelector('#orderSheet').hidden`, 3000);
+    assert.equal(await page.eval(`document.querySelector('#orderForm [name=design]').value`), '9');
+  });
+
+  test('on a real invitation the buttons work normally (no order button)', async () => {
+    await page.goto(cardLink(PRESETS.kitty.card, '?auto'));
+    await page.waitFor(`document.body.classList.contains('opened')`, 5000);
+    assert.equal(await page.eval(`!!document.querySelector('.order-this')`), false);
+    assert.match(await page.eval(`document.querySelector('#calBtn').href`), /calendar\.google\.com/);
   });
 
   test('old links that name a design ("royal", "neon") still open the same design', async () => {
@@ -277,7 +308,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`!!document.querySelector('#rsvpBtn')`), false);
   });
 
-  test('all 200 designs render without errors, with their decor and particles', async () => {
+  test('all 300 designs render without errors, with their decor and particles', async () => {
     for (const t of Templates.all) {
       await page.goto(cardLink({ ...PRESETS[t.occasion].card, theme: t.no }, '?preview&auto'), 0);
       await page.waitFor(`document.body.classList.contains('theme-${t.no}') && document.body.classList.contains('opened')`, 5000);
@@ -349,7 +380,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
 
   test('admin: a number that does not exist explains the range', async () => {
     await page.eval(type('#designNo', '999'));
-    await page.waitFor(`/from 1 to 200/.test(document.querySelector('#designMsg').textContent)`, 3000);
+    await page.waitFor(`/from 1 to 300/.test(document.querySelector('#designMsg').textContent)`, 3000);
     assert.match(await page.eval(`document.querySelector('#themeName').textContent`), /#047/, 'selection unchanged');
   });
 
@@ -508,8 +539,8 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     noErrors();
   });
 
-  test('admin catalog: lists all 200 and filters them', async () => {
-    assert.equal(await page.eval(`document.querySelectorAll('#catTable tbody tr').length`), 200);
+  test('admin catalog: lists all 300 and filters them', async () => {
+    assert.equal(await page.eval(`document.querySelectorAll('#catTable tbody tr').length`), 300);
     await page.eval(`(() => { const s = document.querySelector('#catShow'); s.value = 'trending'; s.dispatchEvent(new Event('input')); })()`);
     assert.equal(await page.eval(`document.querySelectorAll('#catTable tbody tr').length`), 6);
     await page.eval(`(() => { const s = document.querySelector('#catShow'); s.value = ''; s.dispatchEvent(new Event('input')); })()`);
@@ -680,7 +711,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
 
   test('mobile: catalog posters fit two per row with the order button visible', async () => {
     await page.viewport(390, 844);
-    await page.goto(base + 'index.html');
+    await page.goto(base + 'index.html#designs'); // the cards live in the Designs tab on phones
     const cols = await page.eval(`getComputedStyle(document.querySelector('#showcase')).gridTemplateColumns.split(' ').length`);
     assert.equal(cols, 2);
     const fits = await page.eval(`[...document.querySelectorAll('#showcase .tpl')].slice(0, 4).every(t => { const p = t.querySelector('.p-play').getBoundingClientRect(), b = t.querySelector('.poster').getBoundingClientRect(); return p.bottom <= b.bottom + 1; })`);
@@ -690,9 +721,18 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
   test('mobile: Designs is its own tab; Home shows a preview; back returns home', async () => {
     await page.viewport(390, 844);
     await page.goto(base + 'index.html');
-    assert.equal(await page.eval(`[...document.querySelectorAll('#showcase .tpl')].filter(t => t.offsetParent).length`), 4, 'Home: 4-design preview');
+    assert.equal(await page.eval(`[...document.querySelectorAll('#showcase .tpl')].filter(t => t.offsetParent).length`), 0, 'Home shows no design cards (they live in the Designs tab)');
+    assert.equal(await page.eval(`[...document.querySelectorAll('#occPicker .occ-tile')].filter(t => t.offsetParent).length`), 10, 'Home: what are you celebrating?');
+    await page.eval(`document.querySelector('#occPicker [data-pick="wedding"]').click()`);
+    assert.equal(await page.eval(`document.body.dataset.tab`), 'designs');
+    assert.equal(await page.eval(`!!document.querySelector('#occPicker').offsetParent`), false, 'the picker stays on Home');
+    assert.match(await page.eval(`document.querySelector('#catStatusText').textContent`), /Showing 30 💍 Wedding designs/);
+    assert.ok(await page.eval(`[...document.querySelectorAll('#showcase .tpl .tpl-meta small')].every(s => s.textContent.includes('Wedding'))`), 'only wedding designs');
+    await page.eval(`history.back()`);
+    await page.waitFor(`document.body.dataset.tab === 'home'`, 3000);
+    await page.eval(`document.querySelector('#catShowAll').click()`);
     assert.ok(await page.eval(`!!document.querySelector('#seeAll').offsetParent`), 'See all button on Home');
-    assert.equal(await page.eval(`document.querySelector('#seeAll').innerText.trim()`), '🎨 See all 200 designs →', 'spaces around the number (was "all200designs")');
+    assert.equal(await page.eval(`document.querySelector('#seeAll').innerText.trim()`), '🎨 See all 300 designs →', 'spaces around the number (was "all200designs")');
     await page.eval(`document.querySelector('#seeAll').click()`);
     assert.equal(await page.eval(`document.body.dataset.tab`), 'designs');
     assert.equal(await page.eval(`location.hash`), '#designs');

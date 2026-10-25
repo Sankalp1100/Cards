@@ -16,11 +16,27 @@
   const occasions = Object.keys(PRESETS).filter(k => designs.some(d => d.occasion === k));
   let filter = '', query = '', shown = 0, list = designs;
 
-  $('#tplCount').textContent = $('#seeAll .n').textContent = designs.length;
+  $('#tplCount').textContent = $('#seeAll .n').textContent = $('#catShowAll .n').textContent = designs.length;
   const chips = [['', '✨', 'All']];
   if (designs.some(d => d.featured)) chips.push(['trending', '🔥', 'Trending']);
   $('#tplFilters').innerHTML = chips.concat(occasions.map(k => [k, PRESETS[k].icon, PRESETS[k].label]))
     .map(([k, icon, label]) => `<button type="button" class="chip${k === filter ? ' on' : ''}" data-occ="${k}">${icon} ${esc(label)}</button>`).join('');
+
+  // "What are you celebrating?": one tile per occasion with its number of designs.
+  $('#occPicker').innerHTML = occasions.map(k => {
+    const n = designs.filter(d => d.occasion === k).length;
+    return `<button type="button" class="occ-tile" data-pick="${k}"><span>${PRESETS[k].icon}</span><b>${esc(PRESETS[k].label)}</b><small>${n} designs</small></button>`;
+  }).join('');
+  $('#occPicker').addEventListener('click', e => {
+    const tile = e.target.closest('[data-pick]');
+    if (!tile) return;
+    // Phones: open the Designs tab on that occasion. Computers: filter in place and scroll to the designs.
+    if (matchMedia('(max-width: 640px)').matches) setTab('designs', { occasion: tile.dataset.pick });
+    else {
+      $(`#tplFilters [data-occ="${tile.dataset.pick}"]`).click();
+      $('#tplFilters').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
 
   function card(d) {
     const price = Catalog.priceText(d);
@@ -53,8 +69,22 @@
     shown = 0;
     $('#showcase').innerHTML = '';
     $('#noMatch').hidden = list.length > 0;
+    // With a filter or search on, say so plainly, with a way back to everything.
+    const narrowed = filter || query.trim();
+    $('#catStatus').hidden = !narrowed;
+    if (narrowed) {
+      const what = filter === 'trending' ? '🔥 Trending' : filter ? `${PRESETS[filter].icon} ${PRESETS[filter].label}` : 'matching';
+      $('#catStatusText').textContent = `Showing ${list.length} ${what} design${list.length === 1 ? '' : 's'} of ${designs.length}`;
+    }
     showMore();
   }
+  $('#catShowAll').addEventListener('click', () => {
+    query = '';
+    $('#tplSearch').value = '';
+    filter = '';
+    document.querySelectorAll('#tplFilters .chip').forEach(c => c.classList.toggle('on', c.dataset.occ === ''));
+    refresh();
+  });
 
   $('#moreBtn').addEventListener('click', showMore);
   $('#tplFilters').addEventListener('click', e => {
@@ -116,12 +146,12 @@
     tabs.forEach(a => a.classList.toggle('on', a.dataset.sec === sec));
     trendingTab.classList.toggle('on', sec === 'trending');
   }
-  function setTab(tab, { push = true, trending = false } = {}) {
+  function setTab(tab, { push = true, trending = false, occasion = '' } = {}) {
     const was = document.body.dataset.tab;
     document.body.dataset.tab = tab;
     if (tab === 'designs') {
-      pickFilter(trending ? 'trending' : filter === 'trending' ? '' : filter);
-      if (was !== 'designs' && !trending) refresh();
+      pickFilter(occasion || (trending ? 'trending' : filter === 'trending' ? '' : filter));
+      if (was !== 'designs' && !trending && !occasion) refresh();
       scrollTo({ top: 0, behavior: 'instant' });
       mark(trending ? 'trending' : 'templates');
     }
@@ -342,5 +372,9 @@
   refresh();
   // Coming from a demo card's "Order" bar: index.html?order=47
   const wanted = new URLSearchParams(location.search).get('order');
-  if (wanted !== null) openOrder(+wanted);
+  if (wanted !== null) {
+    openOrder(+wanted);
+    // Drop ?order=… from the address, so refreshing the page does not open the form again.
+    history.replaceState(history.state, '', location.pathname + location.hash);
+  }
 })();

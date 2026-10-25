@@ -1,4 +1,4 @@
-// The sellable catalog: the 200 templates merged with the per-design settings in config.js, plus poster markup.
+// The sellable catalog: the 300 templates merged with the per-design settings in config.js, plus poster markup.
 // No DOM access, so it is unit tested in Node (tests/unit.test.js).
 const Catalog = {
   entries(site = SITE, catalog = CATALOG) {

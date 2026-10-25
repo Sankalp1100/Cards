@@ -148,6 +148,24 @@
     }
   }
 
+  // On a sample card (opened from the website's catalog) the card's buttons have nothing real to save or share,
+  // so any of them opens the order form for this design, and an "Order" button leads the row.
+  let sampleGuard = false;
+  function sampleActions(t) {
+    if (!params.has('demo') || preview) return;
+    const orderHref = `index.html?order=${t.no}`;
+    $('.actions').insertAdjacentHTML('afterbegin', `<a class="btn order-this" href="${orderHref}">💬 Order design ${Templates.serial(t.no)}</a>`);
+    if (sampleGuard) return;
+    sampleGuard = true;
+    $('#card').addEventListener('click', e => {
+      const b = e.target.closest('.actions .btn, .venue .btn');
+      if (!b || b.classList.contains('order-this')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      location.href = `index.html?order=${(Templates.get(data.theme) || Templates.get(1)).no}`;
+    }, true);
+  }
+
   // Opened from the website's catalog: show which design this is and how to order it.
   function demoBar(t) {
     if (!params.has('demo') || preview || $('#demoBar')) return;
@@ -336,6 +354,7 @@
       $('#rsvpBtn').href = `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
     }
     $('#shareBtn').addEventListener('click', share);
+    sampleActions(t);
 
     startCountdown(when);
     // Fit the names now, and again once the design's fonts arrive (they change the width).

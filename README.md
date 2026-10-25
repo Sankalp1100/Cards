@@ -2,7 +2,7 @@
 
 Animated invitations for weddings, sangeet, engagements, kitty parties, birthdays, kids' parties, baby showers, naming ceremonies, pujas and anniversaries.
 
-Customers browse **200 numbered designs** on the website and order one on WhatsApp by its number (e.g. *#047*). You type that number in the **admin panel**, fill in their details and get the links. Each guest opens their link and gets the whole show: an envelope with a wax seal that opens, a confetti blast, music, petals, balloons and fireworks, the couple's or child's photo, a live countdown, the function timeline, directions, Save the Date and RSVP on WhatsApp.
+Customers browse **300 numbered designs** (30 for each of the 10 occasions) on the website and order one on WhatsApp by its number (e.g. *#047*). You type that number in the **admin panel**, fill in their details and get the links. Each guest opens their link and gets the whole show: an envelope with a wax seal that opens, a confetti blast, music, petals, balloons and fireworks, the couple's or child's photo, a live countdown, the function timeline, directions, Save the Date and RSVP on WhatsApp.
 
 There's no database. Every invitation is packed inside its own link, so you can make unlimited links.
 
@@ -10,7 +10,7 @@ There's no database. Every invitation is packed inside its own link, so you can 
 
 | Page | Who uses it |
 |---|---|
-| `index.html` | Sales website: 200 designs with their numbers, search by number, occasion and 🔥 Trending filters, live demos, Order on WhatsApp |
+| `index.html` | Sales website: 300 designs with their numbers, a "What are you celebrating?" picker, search by number, occasion and 🔥 Trending filters, live demos, Order on WhatsApp |
 | `card.html` | The animated invitation your guests open (opened from the website it shows *"Sample of design #047 · Order"*) |
 | `admin.html` | **Admin panel**: on your PC (`Start Admin.cmd`) or online at `/admin.html` behind a password: create invites, links, videos, catalog, settings, publish |
 
@@ -40,7 +40,7 @@ It opens `http://localhost:5050/admin.html` in your browser. Keep that window op
 
 ### Catalog and settings (what the website shows)
 
-- **Catalog:** for each of the 200 designs: name, occasion, price, **On site** (show/hide), **🔥 Trending** (shown first with a badge). Search by number, filter, show/hide many at once.
+- **Catalog:** for each of the 300 designs: name, occasion, price, **On site** (show/hide), **🔥 Trending** (shown first with a badge). Search by number, filter, show/hide many at once.
 - **Settings:** live website address, brand, WhatsApp number for orders, Instagram, price for every design, currency.
 - **Auto-save:** every change is saved to the website by itself about 2 seconds after you stop typing (several quick edits become one save). It writes `js/config.js`, commits and pushes **only that file** to GitHub, and Vercel updates the live site in about a minute. The bar at the top shows *Saving…* then *✅ Saved*. This works when the panel is opened with `Start Admin.cmd`, or online once `GITHUB_TOKEN` is set in Vercel; otherwise changes stay on that device and **🚀 Publish** downloads `config.js`.
 - Opened without `npm run admin` (double-clicking `admin.html`), Publish downloads `config.js` instead: put it in the `js` folder and deploy.
@@ -53,7 +53,7 @@ It opens `http://localhost:5050/admin.html` in your browser. Keep that window op
 - **Photos:** uploads are cropped and shrunk to about 2–10 KB so they fit inside the link. You can also paste a public image URL instead.
 - **Admin security:** the live admin files and `/api` are checked by `middleware.js` (Vercel) before anything is sent; without the password nothing loads. `server.mjs` and `Start Admin.cmd` are never uploaded. Turn off GitHub Pages for the repo, it would publish the admin without a password.
 - **Opening styles:** every design opens with one of 6 animations: ✉️ envelope, 🚪 palace doors, 🎭 curtain raise, 📜 royal scroll, 🎁 gift box, 💌 folding card. Change it per design in Catalog, or per invite in the editor.
-- **Every design is different:** each of the 200 combines its own layout (classic, arch, monogram, ticket, split), background decor (mandala, glow, frame, flower corners, sunburst, art-deco, fairy lights, stars & moon, lace), name style, section style, colours, fonts, opening and **song** (chord progression, melody, instrument and key). Tests check that no two designs look or sound alike.
+- **Every design is different:** each of the 300 combines its own layout (classic, arch, monogram, ticket, split), background decor (mandala, glow, frame, flower corners, sunburst, art-deco, fairy lights, stars & moon, lace), name style, section style, colours, fonts, opening and **song** (chord progression, melody, instrument and key). Tests check that no two designs look or sound alike.
 - **Order form rules:** names (both for couples), date and venue are required; past dates can't be picked; mobile numbers must be 10 digits (saved with 91). Nicknames are optional and show under the names on the card. Long names shrink to fit, so nothing is cut.
 - **Videos:** in *Get links*, **🎬 Download video** films the real card (about 22 s, 9:16, with music) and saves an MP4 for WhatsApp status or Instagram. Needs Chrome or Edge on a computer; Chrome asks once to share the tab.
 - **Phones:** the website and the admin have a bottom tab bar on phones.
@@ -70,7 +70,7 @@ api/            online publish (GitHub) + shared config check
 css/style.css   site + shared styles     css/admin.css  admin panel
 css/card.css    invitation animations
 js/config.js    site settings + catalog (written by Publish)
-js/themes.js    200 numbered designs + 10 occasion presets
+js/themes.js    300 numbered designs + 10 occasion presets
 js/catalog.js   designs merged with the catalog settings, posters, search (unit tested)
 js/codec.js     invite data <-> link
 js/core.js      shared pure helpers (unit tested)
@@ -84,12 +84,12 @@ js/site.js      sales website
 ## Tests
 
 ```
-npm test            # everything (about 9 minutes: every one of the 200 designs is opened in a browser)
+npm test            # everything (about 9 minutes: every one of the 300 designs is opened in a browser)
 npm run test:unit   # logic only, under 1 second, no browser needed
 npm run test:e2e    # drives the real pages in headless Chrome/Edge
 ```
 
 No packages to install: it uses Node's built-in test runner (Node 20+). The browser tests find Chrome or Edge automatically (set `CHROME_PATH` to override) and are skipped if neither is installed.
 
-- `tests/unit.test.js`: link encoding, URL safety, escaping, dates; all 200 designs complete, unique, readable (contrast) and stable; catalog settings, search, prices, config file; the server's config check.
-- `tests/e2e.test.mjs`: the sales site (numbers, search, filters, show more, order buttons), the envelope, countdown, personal links, RSVP, all 200 designs, old links, injection attempts, broken links, smoothness, the full admin flow (design number, editor, photo, links, history, catalog, settings, undo), the panel server's safety checks, and phone widths.
+- `tests/unit.test.js`: link encoding, URL safety, escaping, dates; all 300 designs complete, unique, readable (contrast) and stable; catalog settings, search, prices, config file; the server's config check.
+- `tests/e2e.test.mjs`: the sales site (numbers, search, filters, show more, order buttons), the envelope, countdown, personal links, RSVP, all 300 designs, old links, injection attempts, broken links, smoothness, the full admin flow (design number, editor, photo, links, history, catalog, settings, undo), the panel server's safety checks, and phone widths.

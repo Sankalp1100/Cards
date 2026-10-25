@@ -122,61 +122,61 @@ const CLASSICS = [
 // moods: d = dark, l = light, cycled per design. Lists are cycled too, so neighbours differ.
 const RECIPES = {
   wedding: {
-    nouns: ['Rajwada', 'Shehnai', 'Mandap', 'Baraat', 'Jharokha', 'Kalira', 'Sindoor', 'Haveli', 'Doli', 'Varmala', 'Toran', 'Chandni', 'Sehra', 'Darbar', 'Palki', 'Kesar', 'Mehrab', 'Zari'],
+    nouns: ['Rajwada', 'Shehnai', 'Mandap', 'Baraat', 'Jharokha', 'Kalira', 'Sindoor', 'Haveli', 'Doli', 'Varmala', 'Toran', 'Chandni', 'Sehra', 'Darbar', 'Palki', 'Kesar', 'Mehrab', 'Zari', 'Saat Phere', 'Gathbandhan', 'Jaimala', 'Kanyadaan', 'Mangalsutra', 'Shubh Vivah', 'Royal Tilak', 'Raj Mahal', 'Dulhan', 'Mehfil-e-Ishq'],
     emoji: ['👑', '💍', '🪷', '🕌', '🔥', '🌺'], intros: ['doors', 'envelope', 'curtains', 'scroll'], moods: 'dl', gold: true,
     fonts: ['regal', 'heritage', 'garden', 'dreamy'], decor: ['mandala', 'lace', 'florals', 'deco', 'lights', 'frame'],
     particles: [['marigold', 'petal'], ['petal'], ['sparkle'], ['petal', 'sparkle'], ['leaf', 'petal']], count: 40, fireworks: true, tempo: 0.3
   },
   engagement: {
-    nouns: ['Promise', 'Sagai', 'Forever', 'Rendezvous', 'Solitaire', 'Roka', 'Vow', 'Charm', 'Bloom', 'Starlight', 'Serenade', 'Muse', 'Cherish', 'Petals', 'Embrace', 'Spark', 'Destiny', 'Kismat', 'Ring Ceremony'],
+    nouns: ['Promise', 'Sagai', 'Forever', 'Rendezvous', 'Solitaire', 'Roka', 'Vow', 'Charm', 'Bloom', 'Starlight', 'Serenade', 'Muse', 'Cherish', 'Petals', 'Embrace', 'Spark', 'Destiny', 'Kismat', 'Ring Ceremony', 'Ring Bliss', 'Sagai Rasm', 'Pinky Promise', 'Heartstrings', 'Yes Forever', 'Love Knot', 'Tied Together', 'Rose Garden', 'First Chapter', 'Golden Ring'],
     emoji: ['💞', '💍', '💐', '🌹'], intros: ['cardflip', 'envelope', 'giftbox'], moods: 'ld',
     fonts: ['garden', 'modern', 'dreamy'], decor: ['florals', 'lights', 'frame', 'sunburst', 'blobs'],
     particles: [['petal'], ['heart', 'sparkle'], ['petal', 'heart']], count: 40, tempo: 0.3
   },
   sangeet: {
-    nouns: ['Dhol', 'Thumka', 'Nach', 'Filmy Night', 'Spotlight', 'Jhoomar', 'Ghungroo', 'Mehfil', 'Superstar', 'Premiere', 'Encore', 'Dandiya', 'Tarana', 'Raag', 'Taal', 'Bhangra', 'Jalwa', 'Rangeela', 'Masti'],
+    nouns: ['Dhol', 'Thumka', 'Nach', 'Filmy Night', 'Spotlight', 'Jhoomar', 'Ghungroo', 'Mehfil', 'Superstar', 'Premiere', 'Encore', 'Dandiya', 'Tarana', 'Raag', 'Taal', 'Bhangra', 'Jalwa', 'Rangeela', 'Masti', 'Dance Floor', 'Mehendi Beats', 'Bollywood Nights', 'Garba', 'Disco Dhol', 'Naach Gaana', 'Showstopper', 'Stage Lights', 'Filmy Dhamaka', 'Sufi Night'],
     emoji: ['🎶', '🎬', '💃', '🥁', '🎤'], moods: 'd', flavor: ['', 'neon'], intros: ['curtains', 'doors', 'envelope'],
     fonts: ['retro', 'festive', 'modern'], decor: ['lights', 'sunburst', 'deco', 'mandala', 'stars'],
     particles: [['marigold', 'sparkle'], ['sparkle', 'confetti'], ['confetti', 'heart']], count: 48, fireworks: true, tempo: 0.22
   },
   kitty: {
-    nouns: ['Glam', 'Diva', 'Brunch', 'Tambola', 'Gossip', 'Chai Party', 'Sequin', 'Velvet', 'Cocktail', 'Soirée', 'Fiesta', 'Glitter', 'Boss Lady', 'High Tea', 'Queen Bee', 'Sassy', 'Lounge', 'Gala', 'Girls Night'],
+    nouns: ['Glam', 'Diva', 'Brunch', 'Tambola', 'Gossip', 'Chai Party', 'Sequin', 'Velvet', 'Cocktail', 'Soirée', 'Fiesta', 'Glitter', 'Boss Lady', 'High Tea', 'Queen Bee', 'Sassy', 'Lounge', 'Gala', 'Girls Night', 'Kitty Royale', 'Lipstick', 'Champagne Brunch', 'Pajama Party', 'Teen Patti', 'Housie', 'Ladies Night', 'Sparkle Club', 'Golden Girls', 'Bollywood Kitty'],
     emoji: ['💃', '🪩', '👠', '🍸', '💅'], moods: 'ddl', flavor: ['neon', ''], intros: ['curtains', 'giftbox', 'cardflip'],
     fonts: ['retro', 'modern', 'festive'], decor: ['deco', 'lights', 'stars', 'blobs', 'sunburst'],
     particles: [['sparkle', 'confetti'], ['heart', 'sparkle'], ['confetti']], count: 50, fireworks: true, tempo: 0.2
   },
   bday: {
-    nouns: ['Fabulous', 'Cheers', 'Rooftop', 'Milestone', 'Toast', 'Sparkler', 'Hooray', 'Bash', 'Wishes', 'Vibes', 'Glow Up', 'Big Night', 'Fizz', 'Afterparty', 'Disco Ball', 'Dirty Thirty', 'Golden Fifty', 'Sweet Sixteen'],
+    nouns: ['Fabulous', 'Cheers', 'Rooftop', 'Milestone', 'Toast', 'Sparkler', 'Hooray', 'Bash', 'Wishes', 'Vibes', 'Glow Up', 'Big Night', 'Fizz', 'Afterparty', 'Disco Ball', 'Dirty Thirty', 'Golden Fifty', 'Sweet Sixteen', 'Birthday Bash', 'Forty & Fab', 'Midnight Cake', 'Neon Night', 'Retro Party', 'Pool Party', 'Balloon Pop', 'Big Fifty', 'Starry Birthday', 'Garden Party'],
     emoji: ['🥳', '🎉', '🍾', '🎂', '✨'], intros: ['giftbox', 'curtains', 'envelope'], moods: 'dl',
     fonts: ['modern', 'retro', 'soft'], decor: ['sunburst', 'lights', 'stars', 'blobs', 'deco'],
     particles: [['balloon', 'confetti', 'sparkle'], ['confetti', 'sparkle'], ['balloon', 'confetti']], count: 42, fireworks: true, tempo: 0.24
   },
   naming: {
-    nouns: ['Little Star', 'Naamkaran', 'Tiny Toes', 'Blessing', 'Moonbeam', 'Cradle', 'Lullaby', 'Angel', 'Twinkle', 'Sunbeam', 'Cherub', 'Snowdrop', 'Butterfly', 'Dewdrop', 'Baby Bloom', 'Wish', 'Cuddle', 'Sweet Pea', 'Rainbow Baby'],
+    nouns: ['Little Star', 'Naamkaran', 'Tiny Toes', 'Blessing', 'Moonbeam', 'Cradle', 'Lullaby', 'Angel', 'Twinkle', 'Sunbeam', 'Cherub', 'Snowdrop', 'Butterfly', 'Dewdrop', 'Baby Bloom', 'Wish', 'Cuddle', 'Sweet Pea', 'Rainbow Baby', 'Lil Prince', 'Lil Princess', 'Baby Sunshine', 'Namakaran', 'Bless the Baby', 'Heaven Sent', 'Precious One', 'Little Moon', 'Pearl Baby', 'Twinkle Star'],
     emoji: ['👶', '⭐', '🌙', '🪔', '🦋'], intros: ['scroll', 'cardflip', 'envelope'], moods: 'l',
     fonts: ['garden', 'soft', 'dreamy'], decor: ['stars', 'florals', 'lace', 'blobs', 'frame'],
     particles: [['petal'], ['sparkle', 'heart'], ['petal', 'sparkle']], count: 40, tempo: 0.32
   },
   birthday: {
-    nouns: ['Jungle', 'Superhero', 'Unicorn', 'Dino', 'Rocket', 'Circus', 'Cupcake', 'Lollipop', 'Robot', 'Mermaid', 'Pirate', 'Safari', 'Toy Box', 'Jelly', 'Bubbles', 'Carnival', 'Space', 'Teddy', 'Princess'],
-    emoji: ['🦁', '🦸', '🦄', '🦖', '🚀', '🎪', '🧁', '🍭', '🤖', '🧜‍♀️', '🏴‍☠️', '🦒', '🧸', '🍬', '🫧', '🎠', '🪐', '🐻', '👸'], moods: 'llld', flavor: ['playful'], intros: ['giftbox', 'curtains', 'envelope'],
+    nouns: ['Jungle', 'Superhero', 'Unicorn', 'Dino', 'Rocket', 'Circus', 'Cupcake', 'Lollipop', 'Robot', 'Mermaid', 'Pirate', 'Safari', 'Toy Box', 'Jelly', 'Bubbles', 'Carnival', 'Space', 'Teddy', 'Princess', 'Dragon', 'Fairy', 'Train', 'Football', 'Cricket', 'Panda', 'Ice Cream', 'Magic Show', 'Ocean', 'Castle'],
+    emoji: ['🦁', '🦸', '🦄', '🦖', '🚀', '🎪', '🧁', '🍭', '🤖', '🧜‍♀️', '🏴‍☠️', '🦒', '🧸', '🍬', '🫧', '🎠', '🪐', '🐻', '👸', '🐉', '🧚', '🚂', '⚽', '🏏', '🐼', '🍦', '🪄', '🐳', '🏰'], moods: 'llld', flavor: ['playful'], intros: ['giftbox', 'curtains', 'envelope'],
     fonts: ['playful', 'soft'], decor: ['blobs', 'sunburst', 'stars', 'lights'],
     particles: [['balloon', 'confetti', 'confetti'], ['balloon', 'sparkle'], ['confetti', 'heart', 'balloon']], count: 40, tempo: 0.2
   },
   babyshower: {
-    nouns: ['Godh Bharai', 'Oh Baby', 'Stork', 'Bundle of Joy', 'Little One', 'Cloud Nine', 'Peekaboo', 'Booties', 'Rattle', 'Baby Bump', 'Hush', 'Nest', 'Blossom', 'Cotton', 'Mama Bear', 'Sweetheart', 'Tiny Hands', 'Pitter Patter', 'Sunshine'],
+    nouns: ['Godh Bharai', 'Oh Baby', 'Stork', 'Bundle of Joy', 'Little One', 'Cloud Nine', 'Peekaboo', 'Booties', 'Rattle', 'Baby Bump', 'Hush', 'Nest', 'Blossom', 'Cotton', 'Mama Bear', 'Sweetheart', 'Tiny Hands', 'Pitter Patter', 'Sunshine', 'Mommy To Be', 'Stork Delivery', 'Baby Steps', 'Little Treasure', 'Bundle Love', 'Oh Boy', 'Oh Girl', 'Sweet Arrival', 'Hello Baby', 'Lullaby Shower'],
     emoji: ['🍼', '🧸', '👣', '☁️', '🎀'], moods: 'l', flavor: ['playful', ''], intros: ['giftbox', 'cardflip', 'envelope'],
     fonts: ['soft', 'playful', 'garden'], decor: ['blobs', 'stars', 'florals', 'lace'],
     particles: [['heart', 'sparkle', 'balloon'], ['balloon', 'heart'], ['sparkle', 'petal']], count: 38, tempo: 0.3
   },
   ceremony: {
-    nouns: ['Griha Pravesh', 'Ganesh', 'Diya', 'Havan', 'Aarti', 'Kalash', 'Shubh', 'Mangal', 'Pooja', 'Lakshmi', 'Rangoli', 'Toran Gate', 'Sankalp', 'Om', 'Prasad', 'Deepam', 'Kumkum', 'Tulsi', 'Satyanarayan'],
+    nouns: ['Griha Pravesh', 'Ganesh', 'Diya', 'Havan', 'Aarti', 'Kalash', 'Shubh', 'Mangal', 'Pooja', 'Lakshmi', 'Rangoli', 'Toran Gate', 'Sankalp', 'Om', 'Prasad', 'Deepam', 'Kumkum', 'Tulsi', 'Satyanarayan', 'Navgraha', 'Mahalakshmi', 'Grih Shanti', 'Mundan', 'Janeu', 'Diwali Puja', 'Akhand Path', 'Sundarkand', 'Bhoomi Pujan', 'Kirtan'],
     emoji: ['🪔', '🕉️', '🌼', '🙏', '🏠', '🪷'], intros: ['scroll', 'doors', 'envelope'], moods: 'llld',
     fonts: ['heritage', 'festive', 'regal', 'garden'], decor: ['mandala', 'lace', 'sunburst', 'florals', 'frame'],
     particles: [['marigold', 'petal'], ['marigold'], ['petal', 'leaf'], ['sparkle', 'marigold']], count: 40, tempo: 0.28
   },
   anniversary: {
-    nouns: ['Silver Jubilee', 'Golden Years', 'Sacred Vows', 'Forever Us', 'Together', 'Timeless', 'Soulmates', 'Eternity', 'Candlelight', 'Moonlit', 'Memories', 'Devotion', 'Champagne', 'Starry Vows', 'Velvet Night', 'Heirloom', 'Always', 'Ever After', 'Grace'],
+    nouns: ['Silver Jubilee', 'Golden Years', 'Sacred Vows', 'Forever Us', 'Together', 'Timeless', 'Soulmates', 'Eternity', 'Candlelight', 'Moonlit', 'Memories', 'Devotion', 'Champagne', 'Starry Vows', 'Velvet Night', 'Heirloom', 'Always', 'Ever After', 'Grace', 'Golden Jubilee', 'Ten Years', 'Still Us', 'Love Story', 'Hand in Hand', 'Second Honeymoon', 'Our Journey', 'Vow Renewal', 'Cherished Years', 'Diamond Years'],
     emoji: ['🥂', '💑', '🕯️', '💐', '✨'], intros: ['cardflip', 'doors', 'curtains'], moods: 'ddl', gold: true,
     fonts: ['regal', 'modern', 'dreamy', 'heritage'], decor: ['deco', 'stars', 'frame', 'lights', 'florals'],
     particles: [['sparkle'], ['heart', 'sparkle'], ['petal', 'sparkle']], count: 50, fireworks: true, tempo: 0.28
@@ -249,9 +249,12 @@ const TEMPLATES = (() => {
   const list = CLASSICS.map(t => ({ flavor: '', ...t }));
   const occasions = Object.keys(RECIPES);
   const made = Object.fromEntries(occasions.map(o => [o, 0]));
-  const need = Object.fromEntries(occasions.map(o => [o, 20 - CLASSICS.filter(t => t.occasion === o).length]));
-  for (let j = 0; list.length < 200; j++) {
-    occasions.forEach((o, c) => { if (made[o] < need[o] && made[o] <= j) list.push(generated(o, made[o]++, c)); });
+  // First #001–#200 (20 per occasion), then #201–#300 (30 per occasion). Numbers never move: links store them.
+  for (const perOccasion of [20, 30]) {
+    const need = Object.fromEntries(occasions.map(o => [o, perOccasion - CLASSICS.filter(t => t.occasion === o).length]));
+    for (let j = 0; list.length < perOccasion * occasions.length; j++) {
+      occasions.forEach((o, c) => { if (made[o] < need[o] && made[o] <= j) list.push(generated(o, made[o]++, c)); });
+    }
   }
   // If two designs ever ended up with the same layout, decor, fonts and styles, nudge the later one's styles.
   const seen = new Set();
