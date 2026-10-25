@@ -127,7 +127,7 @@
               </div>
             </div>
             <label>Google Maps link <small>(optional, otherwise built from the venue)</small> <input name="mapUrl" type="url" placeholder="https://maps.app.goo.gl/..."></label>
-            <label>WhatsApp number for RSVP <small>(10-digit mobile)</small> <input name="rsvp" type="tel" inputmode="numeric" maxlength="15" placeholder="98765 43210"></label>
+            <label>WhatsApp number for RSVP <small>(10-digit mobile)</small> <input name="rsvp" type="tel" inputmode="numeric" maxlength="15" placeholder="98765 43210" data-mobile><small class="mobile-hint"></small></label>
             <label>Opening animation <small>(how the invitation opens)</small> <select name="intro" id="introSelect"></select></label>
             <label class="switch"><input type="checkbox" name="music"> <span></span> Background music</label>
           </fieldset>
@@ -229,7 +229,7 @@
       <form id="siteForm" class="panel settings-grid" autocomplete="off" onsubmit="return false">
         <label>Live website address <small>(Vercel → Settings → Domains)</small> <input name="url" type="url" placeholder="https://your-site.vercel.app/"></label>
         <label>Brand name <input name="brand" maxlength="40"></label>
-        <label>WhatsApp number for orders <small>(10-digit mobile)</small> <input name="whatsapp" type="tel" inputmode="numeric" maxlength="15" placeholder="98765 43210"></label>
+        <label>WhatsApp number for orders <small>(10-digit mobile)</small> <input name="whatsapp" type="tel" inputmode="numeric" maxlength="15" placeholder="98765 43210" data-mobile><small class="mobile-hint"></small></label>
         <label>Instagram <small>(without @, optional)</small> <input name="instagram" maxlength="40"></label>
         <div class="row">
           <label>Price for every design <small>(empty hides prices)</small> <input name="price" inputmode="numeric" placeholder="999"></label>
@@ -287,6 +287,7 @@
   <script src="js/catalog.js"></script>
   <script src="js/db.js"></script>
   <script src="js/music.js"></script>
+  <script src="js/mp4fix.js"></script>
   <script src="js/admin.js"></script>
 </body>
 </html>

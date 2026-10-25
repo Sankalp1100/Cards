@@ -257,3 +257,4 @@ body.logged-out .side, body.logged-out .admin-main { display: none; }
 .m-head .logo { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 380px) { .m-head .btn-small { padding: 8px 10px; font-size: .8rem; } }
 .login-msg.ok { color: #4ade80; }
+.btn-small.copied { background: #25d366; color: #052e14; border-color: transparent; }

@@ -156,7 +156,13 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.eval(`document.querySelector('#osQuick .chip').click()`);
     assert.equal(await page.eval(`document.querySelectorAll('#osEvents .os-event').length`), 1);
     await next();
+    await page.eval(fill('rsvp', 'dffhdsjjfdjfdsg'));
+    assert.equal(await page.eval(`document.querySelector('#orderForm [name=rsvp]').value`), '', 'letters are not accepted');
+    await page.eval(fill('rsvp', '329847923759743'));
+    assert.equal(await page.eval(`document.querySelector('#orderForm [name=rsvp]').value`), '3298479237', 'at most 10 digits');
+    assert.match(await page.eval(`document.querySelector('#orderForm .mobile-hint').textContent`), /start with 6, 7, 8 or 9/);
     await page.eval(fill('rsvp', '98765 4321'));
+    assert.equal(await page.eval(`document.querySelector('#orderForm .mobile-hint').textContent`), '9/10 digits');
     await next();
     assert.match(await errorText(), /10-digit mobile/, 'RSVP number must have 10 digits');
     await page.eval(fill('rsvp', '98765 43210'));
@@ -223,6 +229,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.match(await page.eval(`document.querySelector('#calBtn').href`), /calendar\.google\.com.*dates=20261212T193000%2F20261212T233000/);
     assert.match(await page.eval(`document.querySelector('.venue a').href`), /^https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=The%20Leela/);
     assert.equal(await page.eval(`document.title`), "Diya & Aarav 💌 You're invited");
+    assert.match(await page.eval(`document.querySelector('.date-badge b').textContent`), /^7:30\s?pm$/i, '12-hour time');
     assert.match(await page.eval(`document.querySelector('footer a').getAttribute('href')`), /^index\.html$/, 'footer sells the service');
     assert.equal(await page.eval(`!!document.querySelector('#demoBar')`), false, 'guests never see the sample bar');
     const fonts = await page.eval(`document.querySelector('#themeFonts').href`);
@@ -494,6 +501,8 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(card.host1, 'Kabir');
     assert.equal(card.theme, 6);
     assert.match(card.photo, /^data:image\//);
+    await page.eval(`document.querySelector('#results [data-copy]').click()`);
+    await page.waitFor(`document.querySelector('#results [data-copy]').textContent === '✓ Copied'`, 3000);
     const wa = await page.eval(`decodeURIComponent(document.querySelector('#results .wa').href)`);
     assert.match(wa, /Dear Rahul Uncle/);
     assert.match(wa, /Kids Birthday/);
@@ -567,7 +576,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.eval(type('#siteForm [name=url]', 'my-cards.vercel.app'));
     await page.eval(type('#siteForm [name=whatsapp]', '+91 98765 43210'));
     assert.equal(await page.eval(`document.querySelector('#siteForm [name=url]').value`), 'https://my-cards.vercel.app/');
-    assert.equal(await page.eval(`document.querySelector('#siteForm [name=whatsapp]').value`), '919876543210');
+    assert.equal(await page.eval(`document.querySelector('#siteForm [name=whatsapp]').value`), '9876543210', 'shown as 10 digits');
     assert.equal(await page.eval(`document.querySelector('#urlWarn').hidden`), true);
     await page.eval(type('#siteForm [name=whatsapp]', '98765'));
     assert.match(await page.eval(`document.querySelector('#toast').textContent`), /10-digit/);
@@ -601,7 +610,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`document.querySelector('.occasion.on').dataset.type`), 'sangeet');
     assert.equal(await page.eval(`document.querySelector('[name=host1]').value`), 'Diya');
     assert.equal(await page.eval(`document.querySelector('[name=venue]').value`), 'Grand Ballroom, Udaipur');
-    assert.equal(await page.eval(`document.querySelector('[name=rsvp]').value`), '919876543210');
+    assert.equal(await page.eval(`document.querySelector('[name=rsvp]').value`), '9876543210', 'shown as 10 digits');
     assert.equal(await page.eval(`document.querySelectorAll('.event-row').length`), 1);
     assert.equal(await page.eval(`document.querySelector('#guests').value`), 'Rahul Uncle\nPriya Di');
     await page.eval(`document.querySelector('#orderPaste').value = 'Hi, design #33 please'`);
@@ -670,6 +679,9 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       for (let i = 0; i < 20 && !fs.readdirSync(dir).some(f => f.endsWith('.mp4')); i++) await sleep(250);
       const file = fs.readdirSync(dir).find(f => f.endsWith('.mp4'));
       assert.ok(file && fs.statSync(path.join(dir, file)).size > 100000, 'MP4 saved to Downloads');
+      const head = fs.readFileSync(path.join(dir, file)).subarray(0, 64).toString('latin1');
+      assert.ok(!fs.readFileSync(path.join(dir, file)).toString('latin1').includes('moof'), 'a standard MP4, not the fragmented kind WhatsApp rejects');
+      assert.ok(head.indexOf('moov') > 0 && head.indexOf('moov') < 64, 'fast start: the index comes first');
       await page.eval(`document.querySelector('#recClose').click()`);
       assert.equal(await page.eval(`document.querySelector('#recModal').hidden`), true);
       noErrors();

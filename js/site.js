@@ -264,7 +264,7 @@
     const el = of.elements, has = name => el[name].value.trim();
     const [l1, l2] = PRESETS[ord.type].labels;
     if (n === 0 && has('design') && !Templates.get(el.design.value)) return ['Please check the design number, or leave it empty.', 'design'];
-    if (n === 3 && has('rsvp') && !Core.mobile(el.rsvp.value)) return ['Please enter a 10-digit mobile number (like 98765 43210), or leave it empty.', 'rsvp'];
+    if (n === 3 && has('rsvp') && !Core.mobile(el.rsvp.value)) return ['Please enter a valid 10-digit mobile number (it starts with 6, 7, 8 or 9), or leave it empty.', 'rsvp'];
     if (n !== 1) return null;
     if (!has('host1')) return [`Please enter: ${l1}`, 'host1'];
     if (needsTwo() && !has('host2')) return [`Please enter: ${l2}`, 'host2'];
@@ -353,6 +353,8 @@
   });
   $('#osDoneClose').addEventListener('click', closeOrder);
 
+  // Mobile-number boxes: digits only, at most 10, with a live hint.
+  Core.wireMobileInputs(document);
   // Typing in a flagged field clears the warning.
   of.addEventListener('input', e => { if (e.target.hasAttribute('aria-invalid')) flag(null); });
   // Keep the field being typed in visible above the phone keyboard.

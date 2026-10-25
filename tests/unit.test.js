@@ -147,6 +147,17 @@ test.describe('Links', () => {
     for (const bad of ['987654321', '98765432100', '5876543210', '1234567890', '9198765', 'call me', '', null]) assert.equal(Core.mobile(bad), '', String(bad));
   });
 
+  test('a mobile box keeps digits only, at most 10', () => {
+    assert.equal(Core.mobileInput('329847923759743'), '3298479237');
+    assert.equal(Core.mobileInput('dffhdsjjfdjfdsg'), '');
+    assert.equal(Core.mobileInput('+91 98765-43210'), '9876543210');
+    assert.equal(Core.mobileInput('09876543210'), '9876543210');
+    assert.equal(Core.mobileInput('98abc76'), '9876');
+    assert.deepEqual([...Core.mobileHint('9876')], ['4/10 digits', '']);
+    assert.deepEqual([...Core.mobileHint('9876543210')], ['10/10 ✓', 'ok']);
+    assert.deepEqual([...Core.mobileHint('3298479237')], ['Mobile numbers start with 6, 7, 8 or 9', 'bad']);
+  });
+
   test('nowLocal gives the current local time for date pickers', () => {
     assert.equal(Core.nowLocal(new Date(2026, 9, 25, 21, 5)), '2026-10-25T21:05');
     assert.ok('2026-10-25T21:04' < Core.nowLocal(new Date(2026, 9, 25, 21, 5)), 'earlier times compare as past');
@@ -181,7 +192,7 @@ test.describe('Publishing', () => {
 
   test('the server-side API is behind the password (the admin page uses the Supabase login)', async () => {
     const mw = await import('../middleware.js');
-    assert.deepEqual([...mw.config.matcher], ['/api/:path*']);
+    assert.deepEqual([...mw.config.matcher], ['/api/((?!maplink).*)']);
     const basic = s => 'Basic ' + Buffer.from(s).toString('base64');
     // Built-in login (no Vercel variables): card.com / admin@90
     assert.equal(await mw.loginOk(basic('card.com:admin@90')), true);

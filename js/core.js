@@ -56,6 +56,41 @@ const Core = {
     return /^[6-9]\d{9}$/.test(d) ? '91' + d : '';
   },
 
+  // What a mobile-number box may hold while typing: digits only, at most 10. A pasted "+91 98765-43210"
+  // or "09876543210" keeps just the 10-digit number.
+  mobileInput(s) {
+    let d = String(s || '').replace(/\D/g, '');
+    if (d.length > 10 && (d.startsWith('91') || d.startsWith('0'))) d = d.replace(/^(91|0)/, '');
+    return d.slice(0, 10);
+  },
+
+  // The hint under a mobile-number box: [text, state] where state is '' (typing), 'ok' or 'bad'.
+  mobileHint(digits) {
+    if (!digits) return ['', ''];
+    if (digits.length < 10) return [`${digits.length}/10 digits`, ''];
+    return Core.mobile(digits) ? ['10/10 ✓', 'ok'] : ['Mobile numbers start with 6, 7, 8 or 9', 'bad'];
+  },
+
+  // Browser only: every <input data-mobile> takes digits only (at most 10) and shows a live hint below it.
+  // Runs before the page's own input handlers (capture), so they always see the cleaned number.
+  wireMobileInputs(doc) {
+    const show = input => {
+      const hint = input.parentElement.querySelector('.mobile-hint');
+      if (!hint) return;
+      const [text, state] = Core.mobileHint(input.value);
+      hint.textContent = text;
+      hint.className = `mobile-hint ${state}`;
+    };
+    doc.addEventListener('input', e => {
+      const input = e.target;
+      if (!input.matches || !input.matches('[data-mobile]')) return;
+      const clean = Core.mobileInput(input.value);
+      if (input.value !== clean) input.value = clean;
+      show(input);
+    }, true);
+    return show;
+  },
+
   // Now, as a datetime-local value ("2026-10-25T21:05"): the earliest date that can be picked.
   nowLocal(now = new Date()) {
     return new Date(now.getTime() - now.getTimezoneOffset() * 6e4).toISOString().slice(0, 16);

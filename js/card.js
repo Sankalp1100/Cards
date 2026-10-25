@@ -59,7 +59,8 @@
   }
 
   const fmtDate = d => d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  const fmtTime = d => d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  // 12-hour time, the way invitations in India say it: "7:30 pm".
+  const fmtTime = d => d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
 
   function mandalaSVG() {
     const rings = [[16, 95, 9, 20], [12, 72, 9, 16], [10, 50, 7, 12], [8, 30, 5, 8]];
@@ -396,7 +397,7 @@
       setTimeout(() => fx.burst(innerWidth * 0.8, innerHeight * 0.6, 70), 600);
     }, OPEN_MS[introKind] || 1500);
     const btn = $('#musicBtn');
-    btn.hidden = (params.has('auto') && preview) || record;
+    btn.hidden = preview; // the builder's preview stays silent
     if (data.music !== false && !preview && !params.has('auto') && music.start()) btn.classList.add('playing');
   }
 
@@ -458,7 +459,7 @@
   }
 
   $('#musicBtn').addEventListener('click', e => {
-    e.currentTarget.classList.toggle('playing', music.toggle());
+    if (!preview) e.currentTarget.classList.toggle('playing', music.toggle());
   });
 
   async function show() {

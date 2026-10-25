@@ -4,7 +4,8 @@
 // Setting both in Vercel (Settings → Environment Variables) keeps them out of this public code.
 // The admin panel itself now asks for the Supabase login (js/db.js), so only the server-side /api (GitHub
 // publishing) still needs this password.
-export const config = { matcher: ['/api/:path*'] };
+// /api/maplink is public: guests' cards never call it, the admin panel does while typing a map link.
+export const config = { matcher: ['/api/((?!maplink).*)'] };
 
 const SALT = 'wedding-card-admin:';
 const ADMIN_USER_DEFAULT = 'card.com';

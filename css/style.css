@@ -532,3 +532,8 @@ body.sheet-open { overflow: hidden; }
 body::before { content: ''; position: fixed; left: 0; right: 0; top: 0; height: 12px; z-index: 19; background: var(--bg); pointer-events: none; }
 @media (max-width: 640px) { body::before { height: 8px; } }
 body[data-tab="designs"]::before { display: none; }
+
+/* Live hint under mobile-number boxes */
+.mobile-hint { min-height: 1em; font-size: .78rem; color: var(--muted); }
+.mobile-hint.ok { color: #4ade80; }
+.mobile-hint.bad { color: #ff8fa8; }

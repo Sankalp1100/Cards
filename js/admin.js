@@ -310,6 +310,8 @@
       if (sample[f] && f !== 'photo') form.elements[f].placeholder = sample[f];
     }
     form.elements.date.min = Core.nowLocal(); // past dates can't be picked
+    form.elements.rsvp.value = tenDigits(state.rsvp);
+    showMobileHint(form.elements.rsvp);
     renderPhoto();
     form.elements.music.checked = state.music !== false;
     const labels = occasion(state).labels;
@@ -326,6 +328,10 @@
     previewTimer = setTimeout(() => { frame.src = 'card.html?preview#' + code(); }, now ? 0 : 350);
   }
 
+  // Mobile-number boxes (customer RSVP, your WhatsApp in Settings): digits only, at most 10, with a live hint.
+  const showMobileHint = Core.wireMobileInputs(document);
+  const tenDigits = n => Core.mobileInput(n); // 919876543210 is shown as 9876543210
+
   // ---------- Form events ----------
   form.addEventListener('input', e => {
     const t = e.target;
@@ -336,6 +342,21 @@
     touched = true;
     if (t.name === 'photo') renderPhoto();
     updatePreview();
+  });
+
+  // A pasted maps.app.goo.gl link becomes the full Google Maps link (the short ones open very slowly for guests).
+  form.addEventListener('change', async e => {
+    const t = e.target;
+    if (t.name !== 'mapUrl' || OFFLINE || !/^https:\/\/(maps\.app\.)?goo\.gl\//.test(t.value.trim())) return;
+    const short = t.value.trim();
+    try {
+      const r = await fetch('api/maplink?u=' + encodeURIComponent(short));
+      const { url } = r.ok ? await r.json() : {};
+      if (!url || t.value.trim() !== short) return;
+      t.value = state.mapUrl = url;
+      updatePreview();
+      toast('Map link made faster ✓');
+    } catch (err) { /* keep the short link */ }
   });
 
   form.addEventListener('click', e => {
@@ -443,7 +464,7 @@
   function cardReady() {
     if (!state.host1) { toast('Please fill in a name first'); form.elements.host1.focus(); return false; }
     if (state.date && state.date < Core.nowLocal()) { toast('That date has already passed. Please choose a future date'); form.elements.date.focus(); return false; }
-    if (state.rsvp && !Core.mobile(state.rsvp) && Core.waNumber(state.rsvp).length < 11) { toast('RSVP number: please enter a 10-digit mobile number'); form.elements.rsvp.focus(); return false; }
+    if (state.rsvp && !Core.mobile(state.rsvp)) { toast('RSVP number: please enter a valid 10-digit mobile number (starts with 6, 7, 8 or 9)'); form.elements.rsvp.focus(); return false; }
     return true;
   }
 
@@ -617,7 +638,12 @@
     }
     await stopped;
 
-    const blob = new Blob(chunks, { type: recorder.mimeType });
+    let blob = new Blob(chunks, { type: recorder.mimeType });
+    // Browsers record a 'fragmented' MP4 that WhatsApp treats as a broken document: rebuild it as a standard
+    // MP4 (same video and sound, just re-indexed, with the right length).
+    if (recorder.mimeType.includes('mp4')) {
+      try { blob = new Blob([MP4Fix.defragment(new Uint8Array(await blob.arrayBuffer()))], { type: 'video/mp4' }); } catch (e) { /* keep it as recorded */ }
+    }
     const ext = recorder.mimeType.includes('mp4') ? 'mp4' : 'webm';
     const name = `${who(state)} invitation.${ext}`.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ');
     const url = URL.createObjectURL(blob);
@@ -799,6 +825,8 @@
   const siteForm = $('#siteForm');
   function fillSettings() {
     for (const k of SITE_KEYS) siteForm.elements[k].value = cfg.site[k] ?? '';
+    siteForm.elements.whatsapp.value = tenDigits(cfg.site.whatsapp);
+    showMobileHint(siteForm.elements.whatsapp);
   }
   // The website address and WhatsApp number are saved only when complete and valid (on leaving the field),
   // so auto-save never puts a half-typed number on the live site.
@@ -925,9 +953,16 @@
   });
 
   // ---------- Shared helpers ----------
-  document.addEventListener('click', e => {
+  document.addEventListener('click', async e => {
     const b = e.target.closest('[data-copy]');
-    if (b) copy(b.dataset.copy, 'Link copied ✓');
+    if (!b) return;
+    await copy(b.dataset.copy, 'Link copied ✓');
+    // Feedback right on the button (the message at the bottom is easy to miss)
+    if (!b.dataset.label) b.dataset.label = b.textContent;
+    b.textContent = '✓ Copied';
+    b.classList.add('copied');
+    clearTimeout(b.copiedTimer);
+    b.copiedTimer = setTimeout(() => { b.textContent = b.dataset.label; b.classList.remove('copied'); }, 2000);
   });
 
   function download(name, text, type) {
