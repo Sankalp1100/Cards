@@ -998,6 +998,7 @@
     $('#forgotBtn').hidden = mode === 'set';
     $('#forgotBtn').textContent = mode === 'login' ? 'Forgot password?' : '← Back to login';
     $('#loginMsg').textContent = msg;
+    $('#loginMsg').classList.remove('ok');
     (mode === 'set' ? f.password : f.email).focus();
   }
   const friendly = m => /invalid login|invalid_grant|invalid credentials/i.test(m) ? 'Wrong email or password.'
@@ -1010,6 +1011,7 @@
     const f = e.target.elements, msg = $('#loginMsg'), btn = $('#loginBtn');
     btn.disabled = true;
     msg.textContent = '';
+    msg.classList.remove('ok');
     try {
       if (loginMode === 'login') {
         if (!f.email.value.trim() || !f.password.value) throw new Error('Please enter your email and password.');
@@ -1018,7 +1020,8 @@
       } else if (loginMode === 'forgot') {
         if (!/^\S+@\S+\.\S+$/.test(f.email.value.trim())) throw new Error('Please enter your email address.');
         await DB.recover(f.email.value, location.origin + location.pathname);
-        msg.textContent = '✉️ If this email belongs to an admin, a link is on its way. Open it on this device.';
+        msg.textContent = '✉️ Sent! If this email is an admin login, a reset link arrives in a minute (check Spam too). Open it on this device.';
+        msg.classList.add('ok'); // good news, so not in the error colour
       } else {
         if (f.password.value.length < 8) throw new Error('Please use at least 8 characters.');
         if (f.password.value !== f.password2.value) throw new Error('The two passwords are not the same.');
