@@ -497,8 +497,8 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.eval(`document.querySelector('#clearAll').click()`);
   });
 
-  test('admin: without the panel server, Publish downloads config.js', async () => {
-    assert.match(await page.eval(`document.querySelector('#publishHelp').textContent`), /npm run admin/);
+  test('admin: opened as a file, it explains how to turn on auto-save', async () => {
+    assert.match(await page.eval(`document.querySelector('#publishHelp').textContent`), /Start Admin.cmd/);
   });
 
   test('admin: Undo changes restores the published catalog', async () => {
@@ -539,10 +539,10 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     });
     test.after(() => new Promise(r => server.close(r)));
 
-    test('serves the panel and offers one-click publishing', async () => {
+    test('serves the panel with auto-save on', async () => {
       await page.viewport(1300, 900);
       await page.goto(origin + '/');
-      await page.waitFor(`/pushes it to GitHub/.test(document.querySelector('#publishHelp').textContent)`, 4000);
+      await page.waitFor(`/Auto-save is on/.test(document.querySelector('#publishHelp').textContent)`, 4000);
       noErrors();
     });
 

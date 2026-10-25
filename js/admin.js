@@ -31,9 +31,39 @@
 
   function saveDraft() {
     try { if (isDirty()) localStorage.setItem(DRAFT_KEY, JSON.stringify(cfg)); else localStorage.removeItem(DRAFT_KEY); } catch (e) { /* private mode */ }
-    $('#publishBar').hidden = !isDirty();
     $('#urlWarn').hidden = !!cfg.site.url;
     if (cfg.site.url) $('#siteLink').href = $('#siteLinkM').href = cfg.site.url;
+    if (!isDirty()) { if (!saving && !savedShown) barStatus('', { show: false }); }
+    else if (server) { barStatus('✏️ Saving to the website…'); scheduleAutoSave(); }
+    else barStatus(offlineHelp, { buttons: true });
+  }
+
+  // ---------- Auto-save: every catalog/settings change goes to the website by itself ----------
+  // Changes are sent 2 s after the last edit (typing a name sends once, not per letter), one save at a time.
+  let autoTimer = null, saving = false, again = false, savedShown = null;
+  let offlineHelp = '📝 Saved on this device only.';
+  function barStatus(text, { buttons = false, show = true } = {}) {
+    $('#publishText').textContent = text;
+    $('#publishBar').hidden = !show;
+    $('#publishBar .link-actions').hidden = !buttons;
+  }
+  function scheduleAutoSave() {
+    clearTimeout(autoTimer);
+    autoTimer = setTimeout(autoSave, 2000);
+  }
+  async function autoSave() {
+    if (saving) { again = true; return; }
+    if (!isDirty() || !server) return;
+    saving = true;
+    barStatus('⏳ Saving to the website…');
+    const res = await sendConfig();
+    saving = false;
+    if (res.saved) {
+      barStatus(res.published ? '✅ Saved to the website. It is live in about a minute.' : `✅ Saved. ${res.message}`);
+      clearTimeout(savedShown);
+      savedShown = setTimeout(() => { savedShown = null; if (!isDirty() && !saving) barStatus('', { show: false }); }, 6000);
+    } else barStatus(`⚠️ Not saved to the website: ${res.message}`, { buttons: true });
+    if (again || (res.saved && isDirty())) { again = false; scheduleAutoSave(); }
   }
 
   // ---------- Card state ----------
@@ -642,41 +672,46 @@
     }
     // On your PC the panel server can always save; online it needs the GitHub token set in Vercel.
     server = status.ok === true && (!status.online || status.git === true);
-    $('#publishHelp').innerHTML = server && status.online
-      ? 'Saves <b>js/config.js</b> to GitHub. Vercel puts it live in about a minute.'
-      : server
-        ? 'Saves <b>js/config.js</b> into your project and pushes it to GitHub. Vercel puts it live in about a minute.'
-        : status.online
-          ? 'To publish from here, add <b>GITHUB_TOKEN</b> in Vercel (see README). Until then this downloads <b>config.js</b>: put it in the <b>js</b> folder and deploy.'
-          : 'Start the panel with <b>npm run admin</b> to publish in one click. Without it, this downloads <b>config.js</b>: put it in the <b>js</b> folder and deploy.';
+    $('#publishHelp').innerHTML = server
+      ? '✅ <b>Auto-save is on.</b> Every change here is saved to the website by itself and is live in about a minute. You only need this button to retry.'
+      : status.online
+        ? 'Auto-save to the website needs <b>GITHUB_TOKEN</b> in Vercel (see README). Until then, changes stay on this device and this button downloads <b>config.js</b>.'
+        : 'Open the panel with <b>Start Admin.cmd</b> and every change saves to the website by itself. Opened as a file, this button downloads <b>config.js</b> instead.';
+    offlineHelp = status.online
+      ? '📝 Saved on this device only. To save to the website automatically, add GITHUB_TOKEN in Vercel (see Settings).'
+      : '📝 Saved on this device only. Open the panel with Start Admin.cmd to save to the website automatically.';
+    saveDraft(); // refresh the bar, and send any change left from last time
   }
 
-  async function publish() {
+  // Sends the current settings + catalog to the server, which saves js/config.js and puts it live.
+  async function sendConfig() {
     const c = normalize(cfg);
-    const text = Catalog.configFile(c.site, c.catalog);
     const log = $('#publishLog');
-    if (!server) {
-      download('config.js', text, 'text/javascript');
-      toast('config.js downloaded. Put it in the js folder and deploy.');
-      return;
-    }
-    document.querySelectorAll('[data-publish]').forEach(b => { b.disabled = true; });
-    toast('Publishing…');
     try {
-      const res = await (await fetch('api/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ config: text }) })).json();
+      const res = await (await fetch('api/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ config: Catalog.configFile(c.site, c.catalog) }) })).json();
       log.hidden = false;
       log.textContent = res.message + (res.log ? '\n\n' + res.log : '');
       if (res.saved) {
         published = c;
-        saveDraft();
+        try { if (!isDirty()) localStorage.removeItem(DRAFT_KEY); } catch (e) { /* private mode */ }
       }
-      toast(res.published ? 'Published 🚀' : res.saved ? 'Saved, but not published. See the message below.' : 'Could not publish');
+      return res;
     } catch (e) {
-      log.hidden = false;
-      log.textContent = 'The panel server is not responding. Is "npm run admin" still running?';
-    } finally {
-      document.querySelectorAll('[data-publish]').forEach(b => { b.disabled = false; });
+      return { saved: false, published: false, message: 'the panel server is not responding (is Start Admin.cmd still open?)' };
     }
+  }
+
+  async function publish() {
+    if (!server) {
+      const c = normalize(cfg);
+      download('config.js', Catalog.configFile(c.site, c.catalog), 'text/javascript');
+      toast('config.js downloaded. Put it in the js folder and deploy.');
+      return;
+    }
+    clearTimeout(autoTimer);
+    document.querySelectorAll('[data-publish]').forEach(b => { b.disabled = true; });
+    await autoSave();
+    document.querySelectorAll('[data-publish]').forEach(b => { b.disabled = false; });
   }
   document.querySelectorAll('[data-publish]').forEach(b => b.addEventListener('click', publish));
 
