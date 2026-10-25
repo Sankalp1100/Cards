@@ -41,6 +41,35 @@
   const occasion = s => (PRESETS[s.type] || PRESETS.wedding);
   const design = () => Templates.get(state.theme) || Templates.get(1);
 
+  // ---------- Paste an order from WhatsApp ----------
+  function fillFromOrder() {
+    const order = Catalog.readOrder($('#orderPaste').value);
+    const msg = $('#orderMsg');
+    if (!order) {
+      msg.textContent = 'No order found. Paste the whole message, including the line "Order code: WC1…".';
+      return;
+    }
+    if (order.partial) {
+      chooseDesign(order.card.theme);
+      msg.textContent = `Design ${Templates.serial(order.card.theme)} selected. This message has no order code, so please type the details below.`;
+      return;
+    }
+    state = { ...Core.blankCard(), ...order.card, theme: order.card.theme || design().no };
+    touched = true;
+    occasionChosen = true;
+    fillForm();
+    updatePreview(true);
+    $('#guests').value = order.guests.join('\n');
+    msg.textContent = `✅ Filled: ${who(state)} · ${PRESETS[state.type].label} · ${order.card.theme ? `design ${Templates.serial(state.theme)}` : 'no design chosen, pick one below'}` +
+      (order.guests.length ? ` · ${order.guests.length} guest link${order.guests.length > 1 ? 's' : ''} ready to make` : '') +
+      (order.photo ? ' · 📷 the customer will send a photo on WhatsApp: upload it under Extras.' : '') +
+      ' Check the headline and tagline, then Get links.';
+    toast('Order filled in ✨');
+  }
+  $('#orderFill').addEventListener('click', fillFromOrder);
+  // Pasting fills straight away.
+  $('#orderPaste').addEventListener('paste', () => setTimeout(fillFromOrder, 0));
+
   // ---------- Design number ----------
   function chooseDesign(no, { quiet } = {}) {
     const t = Templates.get(no);

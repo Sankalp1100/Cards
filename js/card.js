@@ -74,11 +74,10 @@
   function demoBar(t) {
     if (!params.has('demo') || preview || $('#demoBar')) return;
     const serial = Templates.serial(t.no);
-    const text = `Hi! I'd like to order design ${serial} (${t.name}) 💌`;
     const bar = Object.assign(document.createElement('aside'), { id: 'demoBar', className: 'demo-bar' });
-    const href = SITE.whatsapp ? Core.orderUrl(SITE.whatsapp, text) : 'index.html#order';
+    // Opens the website's order form with this design filled in.
     bar.innerHTML = `<span>Sample of design <b>${serial}</b></span>
-      <a class="btn" href="${esc(href)}"${SITE.whatsapp ? ' target="_blank" rel="noopener"' : ''}>💬 Order ${serial}</a>`;
+      <a class="btn" href="index.html?order=${t.no}">💬 Order ${serial}</a>`;
     document.body.appendChild(bar);
   }
 

@@ -46,6 +46,16 @@
       <h1 class="section-h">Create an <span class="gradient-text">invite</span></h1>
       <p class="muted">Type the design number the customer chose, fill in their details, and get the link.</p>
 
+      <div class="panel import-order">
+        <h2 class="step">📥 Got an order on WhatsApp?</h2>
+        <p class="muted">Copy the customer's whole WhatsApp message (it ends with an order code) and paste it here. Everything below fills itself in.</p>
+        <textarea id="orderPaste" rows="3" placeholder="Paste the order message here"></textarea>
+        <div class="link-actions">
+          <button type="button" class="btn-glow" id="orderFill">✨ Fill everything</button>
+        </div>
+        <p class="order-msg" id="orderMsg" role="status"></p>
+      </div>
+
       <div class="design-pick panel">
         <h2 class="step"><b>1</b> Design number</h2>
         <div class="design-row">

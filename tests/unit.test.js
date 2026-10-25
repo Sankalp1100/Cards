@@ -433,6 +433,56 @@ test.describe('Catalog', () => {
     assert.match(html, /Diya<i>&amp;<\/i>Aarav/);
   });
 
+  const order = {
+    design: 47, type: 'bday', host1: 'Neha', host2: '', date: '2026-11-28T20:00', venue: 'Skybar, Bengaluru',
+    events: [{ name: '🎂 Cake Cutting', date: '2026-11-28T21:30', venue: '' }, { name: '  ', date: '' }],
+    message: 'Come!', rsvp: '+91 98765 43210', guests: ['Rahul Uncle', ' ', 'Priya Di'], photo: true
+  };
+
+  test('order message is complete and readable, and ends with the order code', () => {
+    const msg = Catalog.orderMessage(order, Catalog.entries(site, {}));
+    for (const part of ['*#047* Cobalt Milestone', 'Occasion: Birthday', '👤 Neha', '28 Nov', 'Skybar, Bengaluru', '🎂 Cake Cutting', 'Come!',
+      '919876543210', 'Personal links for 2 guests: Rahul Uncle, Priya Di', "I'll send the photo"]) assert.ok(msg.includes(part), part);
+    assert.match(msg, /\n\nOrder code \(please keep\): WC1\.[A-Za-z0-9_-]+$/);
+    assert.ok(!/\n\n\n/.test(msg), 'no empty lines in the middle');
+    const bare = Catalog.orderMessage({ type: 'kitty', host1: 'Glam Club' }, Catalog.entries(site, {}));
+    assert.match(bare, /Design: please suggest one/);
+    assert.ok(!/📅|📍|🎊|💬|📲|👥|📷/.test(bare), 'empty fields are left out');
+  });
+
+  test('a pasted order fills the whole card, with sample headline and tagline for the occasion', () => {
+    const msg = Catalog.orderMessage(order, Catalog.entries(site, {}));
+    const r = Catalog.readOrder(`Hello!\n${msg}\nThanks 🙏`);
+    assert.deepEqual(plain(r), {
+      card: {
+        type: 'bday', title: PRESETS.bday.card.title, tagline: PRESETS.bday.card.tagline, music: true,
+        host1: 'Neha', host2: '', date: '2026-11-28T20:00', venue: 'Skybar, Bengaluru', message: 'Come!', rsvp: '919876543210',
+        events: [{ name: '🎂 Cake Cutting', date: '2026-11-28T21:30', venue: '', dress: '' }], theme: 47
+      },
+      guests: ['Rahul Uncle', 'Priya Di'], photo: true
+    });
+  });
+
+  test('a message without a code still picks up the design number', () => {
+    assert.deepEqual(plain(Catalog.readOrder('Hi, I want design #12 please')), { card: { theme: 12 }, guests: [], photo: false, partial: true });
+    assert.equal(Catalog.readOrder('hello there'), null);
+    assert.equal(Catalog.readOrder('design #999'), null, 'no such design');
+    assert.equal(Catalog.readOrder('WC1.%%%garbage'), null);
+  });
+
+  test('a tampered order code cannot inject odd values', () => {
+    assert.equal(Catalog.readOrder(Catalog.ORDER_TAG + Codec.encode({ events: 'x' })), null, 'broken functions list: rejected');
+    assert.equal(Catalog.readOrder(Catalog.ORDER_TAG + Codec.encode([1, 2])), null, 'not an order: rejected');
+    const evil = Catalog.ORDER_TAG + Codec.encode({ type: 'nope', host1: { x: 1 }, design: '<b>', events: [5, { name: { a: 1 } }, null], guests: 5, rsvp: 'call me' });
+    const r = Catalog.readOrder(evil);
+    assert.equal(r.card.type, 'wedding');
+    assert.equal(r.card.host1, '');
+    assert.equal(r.card.theme, undefined);
+    assert.deepEqual(plain(r.card.events), []);
+    assert.deepEqual(plain(r.guests), []);
+    assert.equal(r.card.rsvp, '');
+  });
+
   test('configFile round-trips through the config loader', () => {
     const cat = Catalog.clean({ 47: { name: 'Quote " and \\ back', price: 10, featured: true } });
     const text = Catalog.configFile({ ...site, brand: "Ria's <Cards>" }, cat);

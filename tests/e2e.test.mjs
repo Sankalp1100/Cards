@@ -9,7 +9,7 @@ import { server } from '../server.mjs';
 
 const require = createRequire(import.meta.url);
 const { loadApp, ROOT } = require('./load.js');
-const { PRESETS, Codec, Core, Templates, INTROS } = loadApp();
+const { PRESETS, Codec, Core, Templates, INTROS, Catalog } = loadApp();
 
 const base = pathToFileURL(path.join(ROOT, 'index.html')).href.replace(/index\.html$/, '');
 const cardLink = (card, query = '') => `${base}card.html${query}#${Codec.encode(Core.compact(card))}`;
@@ -85,15 +85,83 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     }
   });
 
-  test('order buttons quote the design number (WhatsApp when a number is set)', async () => {
-    const orders = await page.eval(`[...document.querySelectorAll('.order')].map(a => [a.textContent, a.href])`);
-    const number = await page.eval(`Core.waNumber(SITE.whatsapp)`);
+  test('each design has an Order button with its number', async () => {
+    const orders = await page.eval(`[...document.querySelectorAll('#showcase .order')].map(b => [b.textContent, b.dataset.design, b.closest('.tpl').dataset.no])`);
     assert.equal(orders.length, 24);
-    for (const [text, h] of orders) {
+    for (const [text, design, no] of orders) {
       assert.match(text, /Order #\d{3}/);
-      if (number) assert.match(decodeURIComponent(h), new RegExp(`^https://wa\\.me/${number}\\?text=.*design #\\d{3}`));
-      else assert.ok(h.endsWith('#order'), h);
+      assert.equal(design, no);
     }
+  });
+
+  // ---------- Order form ----------
+  const fill = (name, value) => `(() => { const i = document.querySelector('#orderForm [name=${name}]'); i.value = ${JSON.stringify(value)}; i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true })); })()`;
+  const next = () => page.eval(`document.querySelector('#osNext').click()`);
+
+  test('order form: a design\'s Order button opens it with the design and occasion filled', async () => {
+    await page.eval(`SITE.whatsapp = '919999999999'`); // as if a business number were set
+    await page.eval(`document.querySelector('#showcase .tpl[data-no="10"] .order').click()`);
+    assert.equal(await page.eval(`document.querySelector('#orderSheet').hidden`), false);
+    assert.equal(await page.eval(`document.querySelector('#orderForm [name=design]').value`), '10');
+    assert.equal(await page.eval(`document.querySelector('#osOcc .chip.on').dataset.type`), 'sangeet');
+    assert.match(await page.eval(`document.querySelector('#osDesign').textContent`), /#010 Filmy Bollywood/);
+  });
+
+  test('order form: asks for the name and date before moving on', async () => {
+    await next();
+    assert.equal(await page.eval(`document.querySelector('.os-step[data-step="1"]').hidden`), false);
+    await next();
+    assert.match(await page.eval(`document.querySelector('#osError').textContent`), /Please enter/);
+    await page.eval(fill('host1', 'Diya'));
+    await next();
+    assert.match(await page.eval(`document.querySelector('#osError').textContent`), /date/);
+    await page.eval(fill('host2', 'Aarav'));
+    await page.eval(fill('date', '2026-12-11T20:00'));
+    await page.eval(fill('venue', 'Grand Ballroom, Udaipur'));
+    await next();
+    assert.equal(await page.eval(`document.querySelector('.os-step[data-step="2"]').hidden`), false);
+  });
+
+  test('order form: functions, extras, and one complete WhatsApp message with the order code', async () => {
+    await page.eval(`document.querySelector('#osQuick .chip').click()`);
+    assert.equal(await page.eval(`document.querySelectorAll('#osEvents .os-event').length`), 1);
+    await next();
+    await page.eval(fill('rsvp', '98765 43210'));
+    await page.eval(fill('guests', 'Rahul Uncle\nPriya Di'));
+    await next();
+    assert.match(await page.eval(`document.querySelector('#osReview').textContent`), /Diya & Aarav[\s\S]*Grand Ballroom[\s\S]*2 guests/);
+    assert.equal(await page.eval(`document.querySelector('#osSend').hidden`), false);
+    const href = await page.eval(`document.querySelector('#osSend').href`);
+    assert.match(href, /^https:\/\/wa\.me\/919999999999\?text=/);
+    const r = Catalog.readOrder(decodeURIComponent(new URL(href).search.slice(6)));
+    assert.equal(r.card.theme, 10);
+    assert.equal(r.card.type, 'sangeet');
+    assert.equal(r.card.host2, 'Aarav');
+    assert.equal(r.card.events.length, 1);
+    assert.deepEqual([...r.guests], ['Rahul Uncle', 'Priya Di']);
+    page.lastOrder = decodeURIComponent(new URL(href).search.slice(6));
+    await page.eval(`document.querySelector('#osClose').click()`);
+    assert.equal(await page.eval(`document.querySelector('#orderSheet').hidden`), true);
+    noErrors();
+  });
+
+  test('order form: without a business WhatsApp number it says ordering is not set up', async () => {
+    await page.eval(`SITE.whatsapp = ''`);
+    await page.eval(`document.querySelector('[data-order]').click()`);
+    assert.equal(await page.eval(`document.querySelector('#orderForm [name=design]').value`), '', 'general Order: no design yet');
+    await next();
+    await page.eval(fill('host1', 'Neha'));
+    await page.eval(fill('date', '2026-11-28T20:00'));
+    for (let i = 0; i < 3; i++) await next();
+    assert.equal(await page.eval(`document.querySelector('#osSend').hidden`), true);
+    assert.equal(await page.eval(`document.querySelector('#osNoWa').hidden`), false);
+    await page.eval(`document.querySelector('#osClose').click()`);
+  });
+
+  test('a demo card\'s Order bar opens the order form for that design', async () => {
+    await page.goto(base + 'index.html?order=47');
+    assert.equal(await page.eval(`document.querySelector('#orderSheet').hidden`), false);
+    assert.equal(await page.eval(`document.querySelector('#orderForm [name=design]').value`), '47');
   });
 
   // ---------- Card ----------
@@ -441,6 +509,27 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     noErrors();
   });
 
+  test('admin: pasting a WhatsApp order fills in the whole invite', async () => {
+    assert.ok(page.lastOrder, 'order message from the order form test');
+    await page.eval(`document.querySelector('#orderPaste').value = ${JSON.stringify('Hi!\n' + (page.lastOrder || ''))}`);
+    await page.eval(`document.querySelector('#orderFill').click()`);
+    assert.match(await page.eval(`document.querySelector('#orderMsg').textContent`), /Filled: Diya & Aarav · Sangeet Night · design #010 · 2 guest links/);
+    assert.equal(await page.eval(`document.querySelector('#designNo').value`), '010');
+    assert.equal(await page.eval(`document.querySelector('.occasion.on').dataset.type`), 'sangeet');
+    assert.equal(await page.eval(`document.querySelector('[name=host1]').value`), 'Diya');
+    assert.equal(await page.eval(`document.querySelector('[name=venue]').value`), 'Grand Ballroom, Udaipur');
+    assert.equal(await page.eval(`document.querySelector('[name=rsvp]').value`), '9876543210');
+    assert.equal(await page.eval(`document.querySelectorAll('.event-row').length`), 1);
+    assert.equal(await page.eval(`document.querySelector('#guests').value`), 'Rahul Uncle\nPriya Di');
+    await page.eval(`document.querySelector('#orderPaste').value = 'Hi, design #33 please'`);
+    await page.eval(`document.querySelector('#orderFill').click()`);
+    assert.match(await page.eval(`document.querySelector('#orderMsg').textContent`), /Design #033 selected/);
+    await page.eval(`document.querySelector('#orderPaste').value = 'hello'`);
+    await page.eval(`document.querySelector('#orderFill').click()`);
+    assert.match(await page.eval(`document.querySelector('#orderMsg').textContent`), /No order found/);
+    noErrors();
+  });
+
   // ---------- Panel server ----------
   test.describe('panel server', () => {
     let origin;
@@ -518,6 +607,32 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(cols, 2);
     const fits = await page.eval(`[...document.querySelectorAll('#showcase .tpl')].slice(0, 4).every(t => { const p = t.querySelector('.p-play').getBoundingClientRect(), b = t.querySelector('.poster').getBoundingClientRect(); return p.bottom <= b.bottom + 1; })`);
     assert.ok(fits, '"Live demo" button is cut off on a phone');
+  });
+
+  test('mobile: Designs is its own tab; Home shows a preview; back returns home', async () => {
+    await page.viewport(390, 844);
+    await page.goto(base + 'index.html');
+    assert.equal(await page.eval(`[...document.querySelectorAll('#showcase .tpl')].filter(t => t.offsetParent).length`), 4, 'Home: 4-design preview');
+    assert.ok(await page.eval(`!!document.querySelector('#seeAll').offsetParent`), 'See all button on Home');
+    await page.eval(`document.querySelector('#seeAll').click()`);
+    assert.equal(await page.eval(`document.body.dataset.tab`), 'designs');
+    assert.equal(await page.eval(`location.hash`), '#designs');
+    assert.equal(await page.eval(`!!document.querySelector('.hero').offsetParent`), false, 'only the catalog shows');
+    assert.equal(await page.eval(`[...document.querySelectorAll('#showcase .tpl')].filter(t => t.offsetParent).length`), 24);
+    await page.waitFor(`getComputedStyle(document.querySelector('#showcase .tpl.in') || document.body).animationName.includes('dealIn')`, 3000);
+    await page.eval(`history.back()`);
+    await page.waitFor(`document.body.dataset.tab === 'home' && !!document.querySelector('.hero').offsetParent`, 3000);
+    await page.eval(`document.querySelector('.bottom-nav [data-trending]').click()`);
+    assert.equal(await page.eval(`document.querySelectorAll('#showcase .tpl').length`), 6, 'Trending tab');
+    noErrors();
+  });
+
+  test('desktop: no tabs or card-deal animation', async () => {
+    await page.viewport(1300, 900);
+    await page.goto(base + 'index.html#designs');
+    assert.ok(await page.eval(`!!document.querySelector('.hero').offsetParent`), 'whole page shows on a computer');
+    assert.equal(await page.eval(`getComputedStyle(document.querySelector('#showcase .tpl')).animationName`), 'none');
+    assert.equal(await page.eval(`getComputedStyle(document.querySelector('.see-all-wrap')).display`), 'none');
   });
 
   test('mobile: the sample bar and music button do not overlap', async () => {

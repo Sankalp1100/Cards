@@ -211,3 +211,9 @@ td.acts { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
 .rec-progress { height: 8px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
 .rec-progress i { display: block; height: 100%; width: 0; background: var(--grad); transition: width .25s linear; }
 .rec-side video { width: 100%; max-height: 300px; border-radius: 14px; background: #000; }
+
+/* Paste an order */
+.import-order { margin-top: 24px; display: grid; gap: 10px; border-color: rgba(37,211,102,.35); background: linear-gradient(140deg, rgba(37,211,102,.1), rgba(16,14,34,.9) 60%); }
+.import-order .step { margin: 0; }
+.import-order .muted { margin: 0; font-size: .9rem; }
+.order-msg { min-height: 1.2em; font-size: .9rem; color: var(--gold); }

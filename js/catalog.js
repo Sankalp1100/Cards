@@ -40,6 +40,68 @@ const Catalog = {
     return `Hi! I'd like to order design ${Templates.serial(e.no)} (${e.name}) 💌`;
   },
 
+  // ---------- Orders from the website's order form ----------
+  // order = { design, type, host1, host2, date, venue, events: [{ name, date, venue }], message, rsvp, guests: [], photo }
+  // The WhatsApp message is readable for you, and ends with an order code the control panel turns back into the card.
+  ORDER_TAG: 'WC1.',
+
+  orderMessage(order, entries) {
+    const p = PRESETS[order.type] || PRESETS.wedding;
+    const e = order.design && entries ? entries[order.design - 1] : null;
+    const when = s => {
+      const d = Core.parseDate(s);
+      return d ? d.toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+    };
+    const names = [order.host1, order.host2].map(s => String(s || '').trim()).filter(Boolean).join(' & ');
+    const events = (order.events || []).filter(ev => ev && String(ev.name || '').trim());
+    const guests = (order.guests || []).map(g => String(g).trim()).filter(Boolean);
+    const lines = [`🛍️ *New invitation order*`, e ? `🎨 Design: *${Templates.serial(e.no)}* ${e.name}` : `🎨 Design: please suggest one`, `${p.icon} Occasion: ${p.label}`];
+    const add = (show, line) => { if (show) lines.push(line); };
+    add(names, `👤 ${names}`);
+    add(when(order.date), `📅 ${when(order.date)}`);
+    add(order.venue, `📍 ${order.venue}`);
+    add(events.length, `🎊 Functions:\n${events.map(ev => `  • ${ev.name}${when(ev.date) ? ` – ${when(ev.date)}` : ''}${ev.venue ? ` @ ${ev.venue}` : ''}`).join('\n')}`);
+    add(order.message, `💬 Message: ${order.message}`);
+    add(Core.waNumber(order.rsvp), `📲 RSVP on WhatsApp: ${Core.waNumber(order.rsvp)}`);
+    add(guests.length, `👥 Personal links for ${guests.length} guest${guests.length > 1 ? 's' : ''}: ${guests.join(', ')}`);
+    add(order.photo, `📷 I'll send the photo in this chat.`);
+    lines.push('', `Order code (please keep): ${Catalog.orderCode(order)}`);
+    return lines.join('\n');
+  },
+
+  orderCode(order) {
+    const o = Core.compact({
+      design: order.design || '', type: order.type, host1: order.host1, host2: order.host2, date: order.date, venue: order.venue,
+      events: (order.events || []).map(ev => ({ name: ev.name, date: ev.date, venue: ev.venue })), message: order.message,
+      rsvp: Core.waNumber(order.rsvp), guests: (order.guests || []).map(g => String(g).trim()).filter(Boolean).join('\n'), photo: order.photo ? 1 : ''
+    });
+    return Catalog.ORDER_TAG + Codec.encode(o);
+  },
+
+  // Reads a pasted WhatsApp order back. Returns { card, guests, photo } or null when there is no valid code.
+  readOrder(text) {
+    const m = String(text || '').match(/WC1\.([A-Za-z0-9_-]+)/);
+    let o = null;
+    if (m) { try { o = Codec.decode(m[1]); } catch (e) { o = null; } }
+    if (!Core.isCard(o)) {
+      // No code (typed by hand): at least pick up the design number.
+      const d = String(text || '').match(/#\s?(\d{1,3})\b/);
+      return d && Templates.get(+d[1]) ? { card: { theme: +d[1] }, guests: [], photo: false, partial: true } : null;
+    }
+    const type = PRESETS[o.type] ? o.type : 'wedding';
+    const str = v => (typeof v === 'string' ? v : '').slice(0, 300);
+    const card = {
+      type, title: PRESETS[type].card.title, tagline: PRESETS[type].card.tagline, music: true,
+      host1: str(o.host1), host2: str(o.host2), date: str(o.date), venue: str(o.venue), message: str(o.message), rsvp: Core.waNumber(o.rsvp),
+      events: (o.events || []).filter(ev => ev && typeof ev.name === 'string' && ev.name.trim()).slice(0, 15)
+        .map(ev => ({ name: str(ev.name), date: str(ev.date), venue: str(ev.venue), dress: '' }))
+    };
+    const t = Templates.get(o.design);
+    if (t) card.theme = t.no;
+    const guests = (typeof o.guests === 'string' ? o.guests : '').split('\n').map(g => g.trim().slice(0, 60)).filter(Boolean).slice(0, 500);
+    return { card, guests, photo: !!o.photo };
+  },
+
   // The sample card for a design, using the sample text of its occasion.
   demoCode(e) {
     return Codec.encode(Core.compact({ ...PRESETS[e.occasion].card, theme: e.no }));

@@ -74,6 +74,7 @@
     <div class="showcase-grid" id="showcase"></div>
     <p class="muted empty-note" id="noMatch" hidden>No design matches that. Try another number or occasion.</p>
     <div class="more-wrap"><button type="button" class="btn-line" id="moreBtn" hidden>Show more designs</button></div>
+    <div class="see-all-wrap"><button type="button" class="btn-glow" id="seeAll">🎨 See all <span class="n">200</span> designs →</button></div>
   </section>
 
   <section class="how" id="how">
@@ -111,6 +112,56 @@
     <a href="#templates" data-trending><i>🔥</i><span>Trending</span></a>
     <a href="#how" data-sec="how"><i>✨</i><span>How</span></a>
   </nav>
+
+  <!-- Order form: collects the details step by step, then sends one complete WhatsApp message -->
+  <div class="order-sheet" id="orderSheet" hidden>
+    <div class="os-box" role="dialog" aria-modal="true" aria-labelledby="osTitle">
+      <header class="os-head">
+        <b id="osTitle">Order your invitation</b>
+        <button type="button" class="os-x" id="osClose" aria-label="Close">✕</button>
+      </header>
+      <ol class="os-dots" id="osDots" aria-hidden="true"><li></li><li></li><li></li><li></li><li></li></ol>
+      <form id="orderForm" class="os-body" autocomplete="on" onsubmit="return false">
+        <section class="os-step" data-step="0">
+          <h3>What are we celebrating?</h3>
+          <div class="os-occ" id="osOcc"></div>
+          <label>Design number <small>(optional, we can suggest one)</small><input name="design" inputmode="numeric" maxlength="3" placeholder="e.g. 47"></label>
+          <p class="os-design" id="osDesign"></p>
+        </section>
+        <section class="os-step" data-step="1" hidden>
+          <h3>Who and when?</h3>
+          <label><span id="osL1">Name 1</span> <input name="host1" maxlength="40" autocomplete="off"></label>
+          <label><span id="osL2">Name 2</span> <input name="host2" maxlength="40" autocomplete="off"></label>
+          <label>Date &amp; time <input type="datetime-local" name="date"></label>
+          <label>Venue <input name="venue" maxlength="120" autocomplete="off" placeholder="Hall / home address, city"></label>
+        </section>
+        <section class="os-step" data-step="2" hidden>
+          <h3>Functions <small>(optional)</small></h3>
+          <p class="muted">Tap to add, then set the date and time.</p>
+          <div class="chips os-quick" id="osQuick"></div>
+          <div id="osEvents"></div>
+        </section>
+        <section class="os-step" data-step="3" hidden>
+          <h3>Extras <small>(all optional)</small></h3>
+          <label>Message for guests <textarea name="message" rows="2" maxlength="300" placeholder="A line from you to your guests"></textarea></label>
+          <label>WhatsApp number for RSVP <input name="rsvp" inputmode="tel" placeholder="919876543210"></label>
+          <label>Guest names for personal links <small>(one per line)</small> <textarea name="guests" rows="3" placeholder="Rahul Uncle&#10;Sharma Family"></textarea></label>
+          <label class="os-check"><input type="checkbox" name="photo"> I'll send a photo on WhatsApp</label>
+        </section>
+        <section class="os-step" data-step="4" hidden>
+          <h3>Check and send</h3>
+          <pre class="os-review" id="osReview"></pre>
+          <p class="muted" id="osNoWa" hidden>Ordering on WhatsApp isn't set up yet. Please check back soon.</p>
+        </section>
+        <p class="os-error" id="osError" role="alert"></p>
+      </form>
+      <footer class="os-foot">
+        <button type="button" class="btn-line small" id="osBack">← Back</button>
+        <button type="button" class="btn-glow" id="osNext">Next →</button>
+        <a class="btn-glow os-send" id="osSend" target="_blank" rel="noopener" hidden>💬 Send on WhatsApp</a>
+      </footer>
+    </div>
+  </div>
 
   <script src="js/config.js"></script>
   <script src="js/themes.js"></script>
