@@ -3,7 +3,7 @@
 // SITE.price: price shown under every design, "" hides prices. CATALOG: per-design changes by design number,
 // e.g. "47": { "name": "...", "occasion": "wedding", "price": 1499, "hidden": true, "featured": true }.
 const SITE = {
-  "url": "",
+  "url": "https://cardalbum.vercel.app/",
   "brand": "Wedding Card",
   "whatsapp": "",
   "instagram": "",
