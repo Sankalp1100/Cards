@@ -18,7 +18,7 @@ Customers can't make cards themselves: the website only shows designs and order 
 
 ## Open the admin panel
 
-**Online (phone or any computer):** https://cardalbum.vercel.app/admin.html. The browser asks for a login: any user name, plus the admin password. To change the password, add `ADMIN_PASSWORD` in Vercel → Settings → Environment Variables and redeploy.
+**Online (phone or any computer):** https://cardalbum.vercel.app/admin.html. The browser asks for a login (user name `card.com`). To change the login, add `ADMIN_USER` and `ADMIN_PASSWORD` in Vercel → Settings → Environment Variables and redeploy; this also keeps them out of the public code.
 
 To **Publish** from the online panel, Vercel needs a GitHub token once: on GitHub create a *fine-grained token* for the `Cards` repo with **Contents: Read and write**, then add it in Vercel as `GITHUB_TOKEN` and redeploy. Without it, Publish online downloads `config.js` instead.
 

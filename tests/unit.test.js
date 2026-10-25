@@ -173,11 +173,18 @@ test.describe('Publishing', () => {
     const mw = await import('../middleware.js');
     for (const p of ['/admin', '/admin.html', '/js/admin.js', '/css/admin.css', '/api/:path*']) assert.ok(mw.config.matcher.includes(p), p);
     const basic = s => 'Basic ' + Buffer.from(s).toString('base64');
-    assert.equal(await mw.passwordOk(basic('admin:s3cret pass'), 's3cret pass'), true);
-    assert.equal(await mw.passwordOk(basic('anyone:s3cret pass'), 's3cret pass'), true, 'any user name');
-    assert.equal(await mw.passwordOk(basic('admin:wrong'), 's3cret pass'), false);
-    assert.equal(await mw.passwordOk(basic('admin:'), ''), false, 'empty password never matches the built-in one');
-    for (const h of [null, '', 'Bearer x', 'Basic', 'Basic %%%']) assert.equal(await mw.passwordOk(h, 'x'), false, String(h));
+    // Built-in login (no Vercel variables): card.com / admin@90
+    assert.equal(await mw.loginOk(basic('card.com:admin@90')), true);
+    assert.equal(await mw.loginOk(basic(' Card.com :admin@90')), true, 'user name ignores case and spaces');
+    assert.equal(await mw.loginOk(basic('admin:admin@90')), false, 'wrong user name');
+    assert.equal(await mw.loginOk(basic('card.com:admin@91')), false, 'wrong password');
+    assert.equal(await mw.loginOk(basic('card.com:')), false, 'empty password');
+    // Vercel variables override both
+    const env = { user: 'boss', password: 's3cret pass' };
+    assert.equal(await mw.loginOk(basic('boss:s3cret pass'), env), true);
+    assert.equal(await mw.loginOk(basic('card.com:admin@90'), env), false, 'built-in login stops working once variables are set');
+    assert.equal(await mw.loginOk(basic('boss:wrong'), env), false);
+    for (const h of [null, '', 'Bearer x', 'Basic', 'Basic %%%', basic('no-colon')]) assert.equal(await mw.loginOk(h, env), false, String(h));
     const res = await mw.default({ headers: new Headers() });
     assert.equal(res.status, 401);
     assert.match(res.headers.get('WWW-Authenticate'), /^Basic/);
