@@ -34,6 +34,7 @@
         <div class="tpl-meta">
           <span class="serial">Design No. <b>${Templates.serial(d.no)}</b></span>
           <span class="tpl-name">${esc(d.name)}</span>
+          <span class="opening">${INTROS[d.intro]} opening</span>
           <small>${PRESETS[d.occasion].icon} ${esc(PRESETS[d.occasion].label)}${price ? ` · <b class="price">${esc(price)}</b>` : ''}</small>
         </div>
         <a class="btn-small order" href="${esc(order(Catalog.orderText(d)))}"${external}>💬 Order ${Templates.serial(d.no)}</a>
@@ -103,5 +104,23 @@
   }
   reveal(document.querySelectorAll('.tile, .builder-head, .cta-band, .stepcard'));
   io.observe($('#signature')); // its own letter-by-letter animation starts on .in
+
+  // ---------- Bottom tab bar (phones) ----------
+  const trendingTab = $('.bottom-nav [data-trending]');
+  trendingTab.addEventListener('click', e => {
+    // Filter first, then scroll: rebuilding the grid mid-scroll would stop the smooth scroll short.
+    e.preventDefault();
+    const chip = $('#tplFilters [data-occ="trending"]');
+    if (chip && !chip.classList.contains('on')) chip.click();
+    requestAnimationFrame(() => $('#templates').scrollIntoView({ behavior: 'smooth' }));
+  });
+  const tabs = [...document.querySelectorAll('.bottom-nav [data-sec]')];
+  const tabIO = new IntersectionObserver(entries => entries.forEach(en => {
+    if (!en.isIntersecting) return;
+    const trending = en.target.id === 'templates' && filter === 'trending';
+    tabs.forEach(a => a.classList.toggle('on', !trending && a.dataset.sec === en.target.id));
+    trendingTab.classList.toggle('on', trending);
+  }), { rootMargin: '-45% 0px -50% 0px' });
+  ['top', 'templates', 'how'].forEach(id => tabIO.observe(document.getElementById(id)));
   refresh();
 })();

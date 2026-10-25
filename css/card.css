@@ -218,3 +218,104 @@ footer { padding: 40px 16px 60px; font-size: .9rem; color: var(--muted); }
 .demo-bar b { color: var(--accent); }
 .demo-bar .btn { padding: 9px 16px; font: 700 .85rem system-ui, sans-serif; white-space: nowrap; }
 @media (max-width: 380px) { .demo-bar span { font-size: .75rem; } }
+
+/* ---------- Opening styles (one per design; the envelope is above) ---------- */
+.intro-tap { cursor: pointer; outline: none; filter: drop-shadow(0 25px 35px rgba(0,0,0,.35)); }
+.intro-tap:focus-visible { outline: 2px dashed var(--accent); outline-offset: 10px; }
+.doors, .curtains, .scroll, .fold { position: relative; animation: bob 3s ease-in-out infinite; }
+.open .doors, .open .curtains, .open .scroll, .open .fold { animation: none; }
+.door-light, .stage-light, .paper, .fold-inside {
+  display: grid; place-content: center; gap: 4px; text-align: center; font-family: var(--script); color: #6b3b22;
+}
+.door-light span, .stage-light span, .paper span, .fold-inside span { font-size: 2.6rem; font-family: system-ui, sans-serif; }
+.door-light small, .stage-light small, .paper small, .fold-inside small { font-size: 1.6rem; }
+.door-seal, .curtain-tag, .scroll-seal {
+  position: absolute; z-index: 5; display: grid; place-items: center; width: 62px; height: 62px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #e63946, #8d0016); color: #ffe7b0; font: 700 1rem var(--display);
+  box-shadow: 0 0 0 4px rgba(255,255,255,.12), 0 6px 18px rgba(0,0,0,.4); animation: pulse 1.8s ease-in-out infinite;
+  left: 50%; transform: translate(-50%, -50%); transition: transform .5s, opacity .4s;
+}
+.open .door-seal, .open .curtain-tag, .open .scroll-seal { transform: translate(-50%, -50%) scale(0) rotate(180deg); opacity: 0; }
+
+/* Palace doors: an arch whose carved doors swing inwards to a warm light */
+.doors { width: min(250px, 66vw); aspect-ratio: 5 / 7; perspective: 900px; }
+.door-light { position: absolute; inset: 0; border-radius: 50% 50% 6px 6px / 32% 32% 6px 6px; background: radial-gradient(circle at 50% 45%, #fffdf2, #ffe6a8 55%, var(--accent)); box-shadow: inset 0 0 40px rgba(255,200,80,.8); }
+.door {
+  position: absolute; top: 0; bottom: 0; width: 50%; z-index: 2; transition: transform 1.3s cubic-bezier(.6,.05,.3,1);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 45%, #3a1a05), color-mix(in srgb, var(--accent) 70%, #2a1203));
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--accent) 80%, #fff);
+}
+.door.l { left: 0; transform-origin: left; border-radius: 100% 0 0 6px / 46% 0 0 6px; }
+.door.r { right: 0; transform-origin: right; border-radius: 0 100% 6px 0 / 0 46% 6px 0; }
+.door i { position: absolute; left: 18%; right: 18%; border: 2px solid color-mix(in srgb, var(--accent) 85%, #fff); border-radius: 8px; opacity: .7; }
+.door i:nth-child(1) { top: 26%; height: 30%; border-radius: 999px 999px 8px 8px; }
+.door i:nth-child(2) { top: 62%; height: 28%; }
+.door-seal { top: 52%; }
+.open .door.l { transform: rotateY(105deg); }
+.open .door.r { transform: rotateY(-105deg); }
+.open .door-light { animation: glowUp 1.6s ease forwards; }
+
+/* Curtain raise: velvet curtains part on a lit stage */
+.curtains { width: min(300px, 80vw); aspect-ratio: 4 / 5; overflow: hidden; border-radius: 14px; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 70%, #000); }
+.stage-light { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 30%, #fffef6, #ffeec4 45%, color-mix(in srgb, var(--accent) 60%, #fff) 100%); }
+.curtain {
+  position: absolute; top: 0; bottom: 0; width: 52%; z-index: 2; transition: transform 1.4s cubic-bezier(.7,0,.3,1);
+  background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent2) 55%, #2a0008) 0 14px, color-mix(in srgb, var(--accent2) 80%, #4a0010) 14px 24px, color-mix(in srgb, var(--accent2) 55%, #2a0008) 24px 32px);
+  box-shadow: inset 0 -30px 40px rgba(0,0,0,.35);
+}
+.curtain.l { left: 0; transform-origin: left top; }
+.curtain.r { right: 0; transform-origin: right top; }
+.valance { position: absolute; top: 0; left: 0; right: 0; height: 16%; z-index: 3; background: linear-gradient(color-mix(in srgb, var(--accent2) 70%, #300), color-mix(in srgb, var(--accent2) 50%, #200)); border-bottom: 4px solid var(--accent); border-radius: 0 0 50% 50% / 0 0 40% 40%; }
+.curtain-tag { top: 56%; }
+.open .curtain.l { transform: translateX(-88%) scaleX(.35) skewY(4deg); }
+.open .curtain.r { transform: translateX(88%) scaleX(.35) skewY(-4deg); }
+.open .stage-light { animation: glowUp 1.5s ease forwards; }
+
+/* Royal scroll: a parchment that unrolls between two golden rods */
+.scroll { width: min(260px, 70vw); height: 330px; display: grid; justify-items: center; align-content: center; }
+.rod { width: 112%; height: 22px; border-radius: 11px; z-index: 2; background: linear-gradient(color-mix(in srgb, var(--accent) 60%, #fff), var(--accent) 45%, color-mix(in srgb, var(--accent) 55%, #000)); box-shadow: 0 4px 10px rgba(0,0,0,.3); }
+.paper {
+  width: 100%; height: 26px; overflow: hidden; transition: height 1.1s cubic-bezier(.5,0,.3,1);
+  background: linear-gradient(90deg, #f1dfb4, #fff6dc 20%, #fff6dc 80%, #f1dfb4); box-shadow: inset 0 0 18px rgba(120,80,20,.35);
+}
+.paper > * { opacity: 0; transition: opacity .5s .7s; }
+.scroll-seal { top: 50%; }
+.open .paper { height: 250px; }
+.open .paper > * { opacity: 1; }
+
+/* Gift box: the lid pops off and the surprise jumps out */
+.gift { position: relative; width: 190px; height: 230px; display: grid; justify-items: center; align-content: end; animation: wiggleBox 2.4s ease-in-out infinite; }
+.gift-box {
+  position: relative; width: 170px; height: 140px; z-index: 2; display: grid; place-items: center; border-radius: 8px;
+  background: linear-gradient(90deg, transparent 42%, var(--accent2) 42% 58%, transparent 58%), linear-gradient(140deg, var(--accent), color-mix(in srgb, var(--accent) 65%, #000));
+}
+.gift-box b { margin-top: 34px; padding: 4px 10px; border-radius: 8px; background: rgba(255,255,255,.88); color: #6b3b22; font: 700 .95rem var(--display); }
+.gift-lid {
+  position: absolute; bottom: 132px; left: 50%; width: 190px; height: 38px; z-index: 3; margin-left: -95px; border-radius: 8px;
+  background: linear-gradient(90deg, transparent 42%, var(--accent2) 42% 58%, transparent 58%), linear-gradient(color-mix(in srgb, var(--accent) 85%, #fff), var(--accent));
+  transition: transform .9s cubic-bezier(.3,1.4,.5,1), opacity .9s;
+}
+.bow { position: absolute; left: 50%; top: -30px; width: 70px; height: 34px; margin-left: -35px; }
+.bow::before, .bow::after { content: ''; position: absolute; top: 0; width: 34px; height: 30px; border-radius: 50% 50% 10% 50%; border: 7px solid var(--accent2); }
+.bow::before { left: 0; transform: rotate(-20deg); }
+.bow::after { right: 0; transform: scaleX(-1) rotate(-20deg); }
+.gift-pop { position: absolute; bottom: 70px; z-index: 1; font-size: 3.6rem; transform: scale(0); transition: transform .8s cubic-bezier(.3,1.8,.5,1) .3s, bottom .8s cubic-bezier(.3,1.8,.5,1) .3s; }
+.open .gift { animation: none; }
+.open .gift-lid { transform: translate(90px, -170px) rotate(50deg); opacity: 0; }
+.open .gift-pop { transform: scale(1.4); bottom: 190px; }
+
+/* Folding card: the cover opens like a book */
+.fold { width: min(230px, 62vw); aspect-ratio: 3 / 4; perspective: 1100px; }
+.fold-inside { position: absolute; inset: 0; border-radius: 6px 12px 12px 6px; background: linear-gradient(160deg, #fffdf6, #f8ecd6); box-shadow: inset 8px 0 16px rgba(0,0,0,.08); }
+.fold-cover {
+  position: absolute; inset: 0; z-index: 2; display: grid; place-content: center; justify-items: center; gap: 10px; border-radius: 6px 12px 12px 6px;
+  transform-origin: left; transition: transform 1.3s cubic-bezier(.5,0,.25,1); backface-visibility: hidden;
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) 35%, var(--bg2)), var(--bg2) 75%);
+  box-shadow: inset 0 0 0 3px var(--accent), inset 0 0 0 10px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.fold-cover b { display: grid; place-items: center; width: 74px; height: 74px; border-radius: 50%; border: 2px solid var(--accent); color: var(--accent); font: 700 1.2rem var(--display); }
+.fold-cover small { color: var(--accent); font: 1.5rem var(--script); }
+.open .fold-cover { transform: rotateY(-165deg); }
+
+@keyframes glowUp { to { filter: brightness(1.6); transform: scale(1.06); } }
+@keyframes wiggleBox { 0%, 70%, 100% { transform: none; } 75% { transform: rotate(-4deg); } 80% { transform: rotate(4deg); } 85% { transform: rotate(-3deg); } 90% { transform: rotate(2deg); } }

@@ -52,7 +52,7 @@ input:disabled { opacity: .55; }
 .gallery .tpl {
   display: grid; justify-items: center; gap: 6px; padding: 10px 10px 12px; border-radius: 22px; text-align: center;
   border: 2px solid var(--line); background: var(--panel); font-size: .88rem; font-weight: 600;
-  content-visibility: auto; contain-intrinsic-size: auto 400px; transition: transform .25s, border-color .25s;
+  content-visibility: auto; contain-intrinsic-block-size: auto 400px; min-width: 0; transition: transform .25s, border-color .25s;
 }
 .gallery .tpl:hover { transform: translateY(-4px); }
 .gallery .tpl.on { border-color: var(--gold); box-shadow: 0 0 0 4px rgba(255,201,92,.25); }
@@ -145,14 +145,69 @@ td.acts { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
   .preview-col { position: static; }
   .gen-grid { grid-template-columns: 1fr; }
 }
+.m-head { display: none; }
+.side-nav em { font-style: normal; }
+
+/* ---------- Phones: bottom tab bar instead of the sidebar ---------- */
 @media (max-width: 820px) {
-  body.admin { grid-template-columns: 1fr; }
-  .side { position: sticky; top: 0; height: auto; flex-direction: row; align-items: center; padding: 10px 12px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); }
-  .side .logo { flex: none; }
-  .side-tag { display: none; }
-  .side-nav { display: flex; gap: 4px; }
-  .side-nav a { padding: 8px 10px; white-space: nowrap; }
-  .side-nav a span { display: none; }
-  .gallery { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  body.admin { grid-template-columns: 1fr; padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+  .m-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .m-head .logo { font-size: 1.05rem; white-space: nowrap; }
+  .side {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto; height: auto; z-index: 60; padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+    flex-direction: row; border-right: 0; border-top: 1px solid var(--line); background: rgba(12,10,26,.97); box-shadow: 0 -10px 30px rgba(0,0,0,.35);
+  }
+  .side > .logo, .side-tag, #siteLink { display: none; }
+  .side-nav { display: flex; width: 100%; gap: 2px; }
+  .side-nav a { position: relative; flex: 1 1 0; min-width: 0; flex-direction: column; justify-content: center; gap: 3px; padding: 7px 2px; border-radius: 14px; font-size: 1.2rem; line-height: 1; text-align: center; }
+  .side-nav a span { display: block; font-size: .62rem; font-weight: 600; letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .side-nav em { display: none; }
+  .side-nav a.on { box-shadow: none; background: rgba(255,61,139,.18); color: #fff; }
+  .side-nav a.on::before { content: ''; position: absolute; top: -7px; left: 30%; right: 30%; height: 3px; border-radius: 0 0 4px 4px; background: var(--grad); }
+  .side-nav b { position: absolute; top: 2px; right: 12%; margin: 0; min-width: 18px; padding: 1px 5px; font-size: .58rem; }
+  .admin-main { padding: 14px 14px 30px; }
+  .admin-main .section-h { font-size: 2rem; }
+  .block { scroll-margin-top: 8px; margin-bottom: 40px; }
+  .toast { bottom: calc(86px + env(safe-area-inset-bottom)); max-width: calc(100% - 32px); text-align: center; }
+  .publish-bar { top: 6px; padding: 10px 12px; font-size: .82rem; }
+  .gallery { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .occasions { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+  .occasion { padding: 12px 6px; font-size: .78rem; }
+  .occasion span { font-size: 1.6rem; }
+  .preview-col { order: 2; }
+  .phone { height: 600px; }
+  .no-input input { width: 96px; font-size: 1.5rem; }
+  .design-row > .btn-small { width: 100%; }
+  .links-tools, .links-tools input, .links-tools select { width: 100%; }
+  .links-tools .btn-small { flex: 1; }
+  .gen-input .link-actions > * { flex: 1; }
+  .table-wrap { padding: 0; background: none; border: 0; }
+  /* Tables become cards */
+  #linksTable thead, #catTable thead { display: none; }
+  #linksTable tr, #catTable tr { display: grid; gap: 6px 10px; padding: 14px; margin-bottom: 10px; border-radius: 18px; border: 1px solid var(--line); background: rgba(16,14,34,.9); }
+  #linksTable td, #catTable td { padding: 0; border: 0; white-space: normal; }
+  #linksTable tr { grid-template-columns: 1fr auto; }
+  #linksTable td:nth-child(2) { grid-column: 1 / -1; order: -1; }
+  #linksTable td.acts { grid-column: 1 / -1; justify-content: flex-start; }
+  #catTable tr { grid-template-columns: 1fr 1fr; align-items: center; }
+  #catTable td:nth-child(1), #catTable td:nth-child(2) { grid-column: 1 / -1; }
+  #catTable td input:not([type=checkbox]), #catTable td select { width: 100%; }
+  #catTable td:nth-child(6)::after { content: ' On site'; font-size: .8rem; color: var(--muted); }
+  #catTable td:nth-child(7)::after { content: ' 🔥 Trending'; font-size: .8rem; color: var(--muted); }
+  #catTable td:nth-child(6), #catTable td:nth-child(7) { display: flex; align-items: center; gap: 6px; }
+  #catTable td:nth-child(8) .btn-small { width: 100%; }
+  .rec-box { gap: 14px; }
+}
 }
 .side .logo { font-size: 1rem; white-space: nowrap; }
+
+/* Video maker */
+.rec-modal { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 16px; background: rgba(4,3,10,.88); overflow: auto; }
+.rec-box { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 28px; }
+.rec-stage { flex: none; overflow: hidden; background: #000; box-shadow: 0 0 0 6px #111, 0 30px 80px rgba(0,0,0,.6); }
+.rec-stage iframe { width: 100%; height: 100%; border: 0; display: block; }
+.rec-side { display: grid; gap: 14px; width: min(320px, 100%); }
+.rec-side h3 { font-family: 'Syne', sans-serif; font-size: 1.4rem; }
+.rec-progress { height: 8px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+.rec-progress i { display: block; height: 100%; width: 0; background: var(--grad); transition: width .25s linear; }
+.rec-side video { width: 100%; max-height: 300px; border-radius: 14px; background: #000; }

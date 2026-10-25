@@ -1,7 +1,8 @@
 // Card viewer: reads the invitation from the URL hash and plays it.
 (function () {
   const params = new URLSearchParams(location.search);
-  const preview = params.has('preview');
+  const record = params.has('record'); // being filmed by the video maker
+  const preview = params.has('preview') || record;
   const guest = params.get('to');
   const $ = (s, r = document) => r.querySelector(s);
   const { esc, safeUrl, parseDate, calStamp, initials } = Core;
@@ -94,22 +95,75 @@
     meta.content = t.vars['--bg'];
   }
 
-  function renderEnvelope(d, t) {
-    $('#envelope').innerHTML = `
-      <div class="env-wrap">
-        ${guest ? `<p class="env-to">Dear <b>${esc(guest)}</b>,</p>` : ''}
-        <div class="envelope" role="button" tabindex="0" aria-label="Open invitation">
+  // How the invitation opens: the invite's own choice, else the catalog's, else the design's.
+  function introOf(d, t) {
+    const own = CATALOG[t.no] && CATALOG[t.no].intro;
+    return INTROS[d.intro] ? d.intro : INTROS[own] ? own : t.intro || 'envelope';
+  }
+  const OPEN_MS = { envelope: 1500, doors: 1700, curtains: 1600, scroll: 1800, giftbox: 1500, cardflip: 1700 };
+  let introKind = 'envelope';
+
+  function introMarkup(kind, d, t) {
+    const seal = esc(initials(d)), emoji = esc(t.emoji);
+    const inside = `<span>${emoji}</span><small>You're invited</small>`;
+    switch (kind) {
+      case 'doors': return `
+        <div class="doors">
+          <div class="door-light">${inside}</div>
+          <div class="door l"><i></i><i></i></div>
+          <div class="door r"><i></i><i></i></div>
+          <div class="door-seal">${seal}</div>
+        </div>`;
+      case 'curtains': return `
+        <div class="curtains">
+          <div class="stage-light">${inside}</div>
+          <div class="curtain l"></div>
+          <div class="curtain r"></div>
+          <div class="valance"></div>
+          <div class="curtain-tag">${seal}</div>
+        </div>`;
+      case 'scroll': return `
+        <div class="scroll">
+          <div class="rod top"></div>
+          <div class="paper">${inside}</div>
+          <div class="rod bottom"></div>
+          <div class="scroll-seal">${seal}</div>
+        </div>`;
+      case 'giftbox': return `
+        <div class="gift">
+          <div class="gift-pop">${emoji}</div>
+          <div class="gift-box"><b>${seal}</b></div>
+          <div class="gift-lid"><i class="bow"></i></div>
+        </div>`;
+      case 'cardflip': return `
+        <div class="fold">
+          <div class="fold-inside">${inside}</div>
+          <div class="fold-cover"><b>${seal}</b><small>Save the date</small></div>
+        </div>`;
+      default: return `
+        <div class="envelope">
           <div class="env-back"></div>
-          <div class="env-letter"><span>${esc(t.emoji)}</span><small>You're invited</small></div>
+          <div class="env-letter">${inside}</div>
           <div class="env-front"></div>
           <div class="env-flap"></div>
-          <div class="env-seal">${esc(initials(d))}</div>
-        </div>
+          <div class="env-seal">${seal}</div>
+        </div>`;
+    }
+  }
+
+  function renderEnvelope(d, t) {
+    introKind = introOf(d, t);
+    const screen = $('#envelope');
+    screen.className = `envelope-screen intro-${introKind}`;
+    screen.innerHTML = `
+      <div class="env-wrap">
+        ${guest ? `<p class="env-to">Dear <b>${esc(guest)}</b>,</p>` : ''}
+        <div class="intro-tap" role="button" tabindex="0" aria-label="Open invitation">${introMarkup(introKind, d, t)}</div>
         <p class="env-hint">Tap to open your invitation</p>
       </div>`;
-    const env = $('.envelope');
-    env.addEventListener('click', openCard);
-    env.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openCard(); });
+    const tap = $('.intro-tap');
+    tap.addEventListener('click', openCard);
+    tap.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openCard(); });
   }
 
   function eventCard(e, i) {
@@ -230,9 +284,9 @@
       fx.burst(innerWidth / 2, innerHeight * 0.45);
       setTimeout(() => fx.burst(innerWidth * 0.2, innerHeight * 0.6, 70), 350);
       setTimeout(() => fx.burst(innerWidth * 0.8, innerHeight * 0.6, 70), 600);
-    }, 1500);
+    }, OPEN_MS[introKind] || 1500);
     const btn = $('#musicBtn');
-    btn.hidden = params.has('auto') && preview;
+    btn.hidden = (params.has('auto') && preview) || record;
     if (data.music !== false && !preview && !params.has('auto') && music.start()) btn.classList.add('playing');
   }
 
@@ -302,6 +356,37 @@
     if (data) render(data); else renderBroken();
   }
 
+  // Video recording: tell the parent page when fonts are in, then on "record-start" play the whole card:
+  // envelope, opening, a few seconds on the names, a slow scroll to the end, and "record-done".
+  function setupRecording() {
+    const tell = msg => parent.postMessage({ wcRecord: msg }, '*');
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    document.documentElement.style.scrollBehavior = 'auto';
+    const t = Templates.get(data && data.theme) || Templates.get(1);
+    const fonts = Object.values(t.fonts).map(f => document.fonts.load(`40px ${f}`).catch(() => null));
+    Promise.race([Promise.all(fonts).then(() => document.fonts.ready), wait(5000)]).then(() => tell('ready'));
+    addEventListener('message', async e => {
+      if (!e.data || e.data.wcRecord !== 'start') return;
+      await wait(1200);
+      openCard();
+      await wait((OPEN_MS[introKind] || 1500) + 3500);
+      const el = document.scrollingElement, end = el.scrollHeight - innerHeight;
+      const ms = Math.min(14000, Math.max(6000, end * 6));
+      const t0 = performance.now();
+      await new Promise(done => {
+        const step = now => {
+          const p = Math.min(1, (now - t0) / ms);
+          el.scrollTop = end * (p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2);
+          p < 1 ? requestAnimationFrame(step) : done();
+        };
+        requestAnimationFrame(step);
+      });
+      await wait(2500);
+      tell('done');
+    });
+  }
+
   addEventListener('hashchange', show);
   show();
+  if (record) setupRecording();
 })();

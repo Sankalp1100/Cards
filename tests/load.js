@@ -10,7 +10,7 @@ function loadApp() {
   for (const f of ['config.js', 'themes.js', 'codec.js', 'core.js', 'catalog.js']) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', f), 'utf8'), ctx, { filename: f });
   }
-  return vm.runInContext('({ Templates, PRESETS, Codec, Core, Catalog, SITE, CATALOG })', ctx);
+  return vm.runInContext('({ Templates, PRESETS, Codec, Core, Catalog, SITE, CATALOG, INTROS })', ctx);
 }
 
 // Objects from the sandbox have a different Object.prototype; normalise before deepStrictEqual.

@@ -9,7 +9,7 @@ import { server } from '../server.mjs';
 
 const require = createRequire(import.meta.url);
 const { loadApp, ROOT } = require('./load.js');
-const { PRESETS, Codec, Core, Templates } = loadApp();
+const { PRESETS, Codec, Core, Templates, INTROS } = loadApp();
 
 const base = pathToFileURL(path.join(ROOT, 'index.html')).href.replace(/index\.html$/, '');
 const cardLink = (card, query = '') => `${base}card.html${query}#${Codec.encode(Core.compact(card))}`;
@@ -23,7 +23,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
 
   const noErrors = () => assert.deepEqual(page.errors, [], 'JavaScript errors on the page');
   const openEnvelope = async () => {
-    await page.eval(`document.querySelector('.envelope').click()`);
+    await page.eval(`document.querySelector('.intro-tap').click()`);
     await page.waitFor(`document.body.classList.contains('opened')`, 5000);
   };
 
@@ -36,6 +36,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`document.querySelectorAll('iframe').length`), 0, 'no embedded live cards (they made the page slow)');
     assert.match(await page.eval(`document.querySelector('#demoBtn').href`), /card\.html\?demo#/);
     assert.match(await page.eval(`document.querySelector('#showcase .tpl .serial').textContent`), /Design No\. #\d{3}/);
+    assert.equal(await page.eval(`document.querySelector('#showcase .tpl .opening').textContent`), '✉️ Envelope opening', '#001 opens with the envelope');
     noErrors();
   });
 
@@ -130,6 +131,17 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.ok(await page.eval(`document.body.classList.contains('theme-1')`), 'unknown design falls back to #001');
   });
 
+  test('every opening style opens with a tap and greets the guest', async () => {
+    for (const kind of Object.keys(INTROS)) {
+      await page.goto(cardLink({ ...PRESETS.wedding.card, intro: kind }, '?to=Rahul'), 300);
+      assert.ok(await page.eval(`document.querySelector('#envelope').classList.contains('intro-${kind}')`), kind);
+      assert.equal(await page.eval(`document.querySelector('.env-to').textContent`), 'Dear Rahul,');
+      assert.match(await page.eval(`document.querySelector('.intro-tap').textContent`), /D&A/, `${kind} shows the initials`);
+      await openEnvelope();
+      assert.deepEqual(page.errors, [], kind);
+    }
+  });
+
   test('countdown ticks every second', async () => {
     const card = { ...PRESETS.birthday.card, date: new Date(Date.now() + 3 * 864e5 + 5e3).toISOString().slice(0, 16) };
     await page.goto(cardLink(card, '?auto'));
@@ -169,6 +181,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     for (const t of Templates.all) {
       await page.goto(cardLink({ ...PRESETS[t.occasion].card, theme: t.no }, '?preview&auto'), 0);
       await page.waitFor(`document.body.classList.contains('theme-${t.no}') && document.body.classList.contains('opened')`, 5000);
+      assert.ok(await page.eval(`!!document.querySelector('#envelope.intro-${t.intro} .intro-tap')`), `#${t.no} opening ${t.intro}`);
       const decor = { mandala: '.mandala', blobs: '.blob', frame: '.frame' }[t.decor];
       assert.ok(await page.eval(`!!document.querySelector('${decor}')`), `#${t.no} decor ${t.decor}`);
       assert.deepEqual(page.errors, [], `errors in design #${t.no}`);
@@ -179,7 +192,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     const evil = {
       host1: '<img src=x onerror="window.__xss=1">', host2: '"><script>window.__xss=2</script>',
       title: '<b>bold</b>', venue: 'Hall', mapUrl: 'javascript:window.__xss=3', photo: 'javascript:window.__xss=4',
-      rsvp: '123', theme: '<img src=x onerror="window.__xss=7">', events: [{ name: '<svg onload="window.__xss=5">', venue: '<i>x</i>' }]
+      rsvp: '123', theme: '<img src=x onerror="window.__xss=7">', intro: '<img src=x onerror="window.__xss=8">', events: [{ name: '<svg onload="window.__xss=5">', venue: '<i>x</i>' }]
     };
     await page.goto(cardLink(evil, '?demo&to=' + encodeURIComponent('<img src=x onerror="window.__xss=6">')));
     await openEnvelope();
@@ -220,7 +233,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`document.querySelectorAll('#gallery .tpl').length`), 40);
     assert.equal(await page.eval(`document.querySelector('#gallery .tpl.on').dataset.no`), '1');
     assert.equal(await page.eval(`document.querySelector('#designNo').value`), '001');
-    assert.equal(await page.eval(`document.querySelectorAll('iframe').length`), 1, 'only the big preview is a live card');
+    assert.equal(await page.eval(`[...document.querySelectorAll('iframe')].filter(f => f.src.includes('card.html')).length`), 1, 'only the big preview is a live card (the video maker stays empty until used)');
     assert.equal(await page.eval(`document.querySelector('#publishBar').hidden`), true, 'nothing to publish yet');
     noErrors();
   });
@@ -280,6 +293,14 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`document.querySelector('#gallery .tpl.on').dataset.no`), '6');
     assert.match(await page.eval(`document.querySelector('#themeName').textContent`), /Neon Love/);
     await page.eval(`document.querySelector('#galSearch').value = ''; document.querySelector('#galSearch').dispatchEvent(new Event('input'))`);
+  });
+
+  test('admin: an invite can pick its own opening animation', async () => {
+    assert.match(await page.eval(`document.querySelector('#introSelect option').textContent`), /Design's own: 🎭 Curtain raise/);
+    await page.eval(`(() => { const s = document.querySelector('#introSelect'); s.value = 'giftbox'; s.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+    await sleep(700);
+    assert.equal(Codec.decode(await page.eval(`new URL(document.querySelector('#preview').src).hash.slice(1)`)).intro, 'giftbox');
+    await page.eval(`(() => { const s = document.querySelector('#introSelect'); s.value = ''; s.dispatchEvent(new Event('input', { bubbles: true })); })()`);
   });
 
   test('admin: functions can be added and removed', async () => {
@@ -436,6 +457,27 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       noErrors();
     });
 
+    test('admin video: films the card and downloads an MP4 of about 20 seconds', async () => {
+      const fs = await import('node:fs'), os = await import('node:os');
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wc-video-'));
+      await page.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: dir });
+      await page.goto(origin + '/admin.html', 1000);
+      // A real mouse click: browsers only allow screen capture from a user gesture.
+      const r = await page.eval(`(() => { const b = document.querySelector('#videoBtn'); b.scrollIntoView({ block: 'center', behavior: 'instant' }); const r = b.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
+      for (const type of ['mousePressed', 'mouseReleased']) await page.send('Input.dispatchMouseEvent', { type, x: r.x, y: r.y, button: 'left', clickCount: 1 });
+      await page.waitFor(`/Saved|Could not|cancelled/.test(document.querySelector('#recStatus').textContent)`, 60000);
+      assert.match(await page.eval(`document.querySelector('#recStatus').textContent`), /Saved "Diya & Aarav invitation\.mp4"/);
+      const dur = await page.eval(`new Promise(r => { const v = document.querySelector('#recVideo'); v.readyState ? r(v.duration) : v.onloadedmetadata = () => r(v.duration); })`);
+      assert.ok(dur > 15 && dur < 30, `video is ${dur}s`);
+      for (let i = 0; i < 20 && !fs.readdirSync(dir).some(f => f.endsWith('.mp4')); i++) await sleep(250);
+      const file = fs.readdirSync(dir).find(f => f.endsWith('.mp4'));
+      assert.ok(file && fs.statSync(path.join(dir, file)).size > 100000, 'MP4 saved to Downloads');
+      await page.eval(`document.querySelector('#recClose').click()`);
+      assert.equal(await page.eval(`document.querySelector('#recModal').hidden`), true);
+      noErrors();
+      fs.rmSync(dir, { recursive: true, force: true });
+    });
+
     test('refuses publishing from another website', async () => {
       const res = await fetch(origin + '/api/publish', { method: 'POST', headers: { Origin: 'https://evil.example' }, body: '{}' });
       assert.equal(res.status, 403);
@@ -461,6 +503,8 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       await page.viewport(w, 800);
       for (const p of ['index.html', 'admin.html', 'card.html?auto', 'card.html?demo&auto#' + Codec.encode({ ...PRESETS.kitty.card, theme: 26 })]) {
         await page.goto(base + p);
+        // innerWidth grows past the phone width when anything is too wide (the browser zooms the page out).
+        assert.equal(await page.eval(`innerWidth`), w, `${p} is laid out wider than a ${w}px phone`);
         assert.ok(await page.eval(`document.documentElement.scrollWidth <= innerWidth + 1`), `${p} wider than a ${w}px screen`);
         noErrors();
       }

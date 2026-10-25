@@ -5,7 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { loadApp, plain, ROOT } = require('./load');
 
-const { Templates, PRESETS, Codec, Core, Catalog } = loadApp();
+const { Templates, PRESETS, Codec, Core, Catalog, INTROS } = loadApp();
 const PARTICLE_TYPES = ['petal', 'leaf', 'marigold', 'confetti', 'heart', 'sparkle', 'balloon'];
 const REQUIRED_VARS = ['--bg', '--bg2', '--ink', '--muted', '--accent', '--accent2', '--card', '--line'];
 
@@ -165,8 +165,41 @@ test.describe('Core.fontsUrl', () => {
 
 test.describe('Publishing', () => {
   const ignore = fs.readFileSync(path.join(ROOT, '.vercelignore'), 'utf8').split(/\r?\n/).map(l => l.trim());
-  test('the admin panel and its server are never uploaded to Vercel', () => {
-    for (const f of ['admin.html', 'js/admin.js', 'css/admin.css', 'server.mjs']) assert.ok(ignore.includes(f), `${f} not in .vercelignore`);
+  test('the PC-only server and launcher are never uploaded to Vercel', () => {
+    for (const f of ['server.mjs', '*.cmd']) assert.ok(ignore.includes(f), `${f} not in .vercelignore`);
+  });
+
+  test('the live admin panel and its API are behind the password', async () => {
+    const mw = await import('../middleware.js');
+    for (const p of ['/admin', '/admin.html', '/js/admin.js', '/css/admin.css', '/api/:path*']) assert.ok(mw.config.matcher.includes(p), p);
+    const basic = s => 'Basic ' + Buffer.from(s).toString('base64');
+    assert.equal(await mw.passwordOk(basic('admin:s3cret pass'), 's3cret pass'), true);
+    assert.equal(await mw.passwordOk(basic('anyone:s3cret pass'), 's3cret pass'), true, 'any user name');
+    assert.equal(await mw.passwordOk(basic('admin:wrong'), 's3cret pass'), false);
+    assert.equal(await mw.passwordOk(basic('admin:'), ''), false, 'empty password never matches the built-in one');
+    for (const h of [null, '', 'Bearer x', 'Basic', 'Basic %%%']) assert.equal(await mw.passwordOk(h, 'x'), false, String(h));
+    const res = await mw.default({ headers: new Headers() });
+    assert.equal(res.status, 401);
+    assert.match(res.headers.get('WWW-Authenticate'), /^Basic/);
+  });
+
+  test('online publish refuses bad requests and explains the missing token', async () => {
+    const publish = require('../api/publish.js');
+    const call = async (req) => {
+      const out = {};
+      const res = { setHeader() {}, status(c) { out.status = c; return this; }, json(d) { out.body = d; return this; } };
+      await publish({ method: 'POST', headers: { host: 'cardalbum.vercel.app' }, ...req }, res);
+      return out;
+    };
+    assert.equal((await call({ method: 'GET' })).status, 405);
+    assert.equal((await call({ headers: { host: 'a.app', origin: 'https://evil.example' }, body: {} })).status, 403);
+    assert.equal((await call({ body: { config: 'const SITE = {}; const CATALOG = {}; require("fs")' } })).status, 400);
+    const saved = process.env.GITHUB_TOKEN;
+    delete process.env.GITHUB_TOKEN;
+    const r = await call({ body: { config: fs.readFileSync(path.join(ROOT, 'js', 'config.js'), 'utf8') } });
+    if (saved) process.env.GITHUB_TOKEN = saved;
+    assert.equal(r.body.published, false);
+    assert.match(r.body.message, /GITHUB_TOKEN/);
   });
   test('public pages do not mention the admin panel', () => {
     for (const f of ['index.html', 'card.html', 'js/site.js', 'js/card.js', 'js/catalog.js', 'js/themes.js', 'js/config.js']) {
@@ -235,6 +268,7 @@ test.describe('Templates', () => {
       assert.ok(t.name && t.emoji && PRESETS[t.occasion], at);
       assert.ok(['mandala', 'blobs', 'frame'].includes(t.decor), `${at} decor`);
       assert.ok(['', 'neon', 'playful'].includes(t.flavor), `${at} flavor`);
+      assert.ok(INTROS[t.intro], `${at} opening style`);
       for (const v of REQUIRED_VARS) assert.ok(t.vars[v], `${at} missing ${v}`);
       for (const v of ['--bg', '--bg2', '--ink', '--muted', '--accent', '--accent2']) assert.match(t.vars[v], /^#[0-9a-f]{6}$/i, `${at} ${v}`);
       for (const f of ['display', 'script', 'body']) assert.match(t.fonts[f], /^'[^']+', (serif|sans-serif|cursive)$/, `${at} font ${f}`);
@@ -268,6 +302,12 @@ test.describe('Templates', () => {
       for (const family of families) assert.ok(url.includes(`family=${family.replace(/ /g, '+')}`), `#${t.no} ${family} missing`);
       assert.equal((url.match(/family=/g) || []).length, families.size, `#${t.no} no extra or duplicate families`);
     }
+  });
+
+  test('there are 6 opening styles and each is used by several designs', () => {
+    assert.deepEqual(plain(Object.keys(INTROS)), ['envelope', 'doors', 'curtains', 'scroll', 'giftbox', 'cardflip']);
+    for (const k of Object.keys(INTROS)) assert.ok(all.filter(t => t.intro === k).length >= 10, k);
+    assert.equal(Templates.get(1).intro, 'envelope', '#001 keeps the original envelope');
   });
 
   test('neighbouring designs look different', () => {
@@ -329,6 +369,13 @@ test.describe('Catalog', () => {
     assert.ok(!v.some(x => x.no === 5), 'hidden design not shown');
     assert.equal(v[0].no, 47, 'trending designs come first');
     assert.equal(v[1].no, 1);
+  });
+
+  test('the catalog can change how a design opens', () => {
+    const e = Catalog.entries(site, { 47: { intro: 'scroll' }, 48: { intro: 'nope' } });
+    assert.equal(e[46].intro, 'scroll');
+    assert.equal(e[47].intro, Templates.get(48).intro, 'unknown opening is ignored');
+    assert.deepEqual(plain(Catalog.clean({ 47: { intro: 'scroll' }, 1: { intro: 'envelope' }, 2: { intro: 'nope' } })), { 47: { intro: 'scroll' } });
   });
 
   test('empty price hides prices', () => {

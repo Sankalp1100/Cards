@@ -3,11 +3,13 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import vm from 'node:vm';
+import { createRequire } from 'node:module';
 import { execFile, exec } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
+// The same data-only check the online admin uses (api/_check.js).
+export const { checkConfig } = createRequire(import.meta.url)('./api/_check.js');
 const PORT = +process.env.PORT || 5050;
 const CONFIG = path.join(ROOT, 'js', 'config.js');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.webp': 'image/webp' };
@@ -15,18 +17,6 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
 const git = (...args) => new Promise(resolve => {
   execFile('git', args, { cwd: ROOT, timeout: 120000 }, (err, stdout, stderr) => resolve({ ok: !err, out: (stdout + stderr).trim() }));
 });
-
-// The file must define SITE and CATALOG as plain objects, and nothing that runs code.
-export function checkConfig(text) {
-  if (typeof text !== 'string' || text.length > 500000) throw new Error('config is missing or too large');
-  const code = text.replace(/"(?:[^"\\\n]|\\.)*"/g, '""').replace(/\/\/.*$/gm, '');
-  if (/[`'()]|=>|\b(function|require|import|process|eval|new)\b/.test(code)) throw new Error('config may only contain data');
-  const ctx = vm.createContext({});
-  vm.runInContext(`${text}\n;this.__out = { SITE, CATALOG };`, ctx, { timeout: 500 });
-  const { SITE, CATALOG } = ctx.__out;
-  if (!SITE || typeof SITE !== 'object' || !CATALOG || typeof CATALOG !== 'object') throw new Error('config must define SITE and CATALOG');
-  return { SITE, CATALOG };
-}
 
 async function publish(text) {
   const { SITE } = checkConfig(text);

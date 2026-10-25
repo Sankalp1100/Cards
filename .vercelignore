@@ -1,7 +1,5 @@
-# Private: the admin panel runs only from your own PC and is never published.
-admin.html
-js/admin.js
-css/admin.css
+# The admin panel IS published, behind the password in middleware.js.
+# These run only on your own PC:
 server.mjs
 *.cmd
 # Not needed on the live site

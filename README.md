@@ -12,11 +12,17 @@ There's no database. Every invitation is packed inside its own link, so you can 
 |---|---|
 | `index.html` | Sales website: 200 designs with their numbers, search by number, occasion and 🔥 Trending filters, live demos, Order on WhatsApp |
 | `card.html` | The animated invitation your guests open (opened from the website it shows *"Sample of design #047 · Order"*) |
-| `admin.html` | **Admin panel**, only on your PC: create invites, links, catalog, settings, publish |
+| `admin.html` | **Admin panel**: on your PC (`Start Admin.cmd`) or online at `/admin.html` behind a password: create invites, links, videos, catalog, settings, publish |
 
 Customers can't make cards themselves: the website only shows designs and order buttons.
 
-## Start the admin panel
+## Open the admin panel
+
+**Online (phone or any computer):** https://cardalbum.vercel.app/admin.html. The browser asks for a login: any user name, plus the admin password. To change the password, add `ADMIN_PASSWORD` in Vercel → Settings → Environment Variables and redeploy.
+
+To **Publish** from the online panel, Vercel needs a GitHub token once: on GitHub create a *fine-grained token* for the `Cards` repo with **Contents: Read and write**, then add it in Vercel as `GITHUB_TOKEN` and redeploy. Without it, Publish online downloads `config.js` instead.
+
+**On your PC:**
 
 ```
 npm run admin
@@ -45,7 +51,10 @@ It opens `http://localhost:5050/admin.html` in your browser. Keep that window op
 
 - **Design numbers never change**: links store the number. Old links that used a design name (`royal`, `neon`, …) still open the same design.
 - **Photos:** uploads are cropped and shrunk to about 2–10 KB so they fit inside the link. You can also paste a public image URL instead.
-- **The admin panel is not published:** `admin.html`, `js/admin.js`, `css/admin.css` and `server.mjs` are in `.vercelignore`. The panel server only listens on your own PC.
+- **Admin security:** the live admin files and `/api` are checked by `middleware.js` (Vercel) before anything is sent; without the password nothing loads. `server.mjs` and `Start Admin.cmd` are never uploaded. Turn off GitHub Pages for the repo, it would publish the admin without a password.
+- **Opening styles:** every design opens with one of 6 animations: ✉️ envelope, 🚪 palace doors, 🎭 curtain raise, 📜 royal scroll, 🎁 gift box, 💌 folding card. Change it per design in Catalog, or per invite in the editor.
+- **Videos:** in *Get links*, **🎬 Download video** films the real card (about 22 s, 9:16, with music) and saves an MP4 for WhatsApp status or Instagram. Needs Chrome or Edge on a computer; Chrome asks once to share the tab.
+- **Phones:** the website and the admin have a bottom tab bar on phones.
 - **Link history** is stored in your browser. Use Download CSV for a backup.
 - **Adding an occasion:** add it to `PRESETS` and a recipe to `RECIPES` in `js/themes.js`.
 
@@ -53,7 +62,9 @@ It opens `http://localhost:5050/admin.html` in your browser. Keep that window op
 
 ```
 index.html / admin.html / card.html
-server.mjs      admin panel server: serves the folder, saves + publishes config.js
+server.mjs      admin panel server on your PC: serves the folder, saves + publishes config.js
+middleware.js   password for the online admin (Vercel)
+api/            online publish (GitHub) + shared config check
 css/style.css   site + shared styles     css/admin.css  admin panel
 css/card.css    invitation animations
 js/config.js    site settings + catalog (written by Publish)

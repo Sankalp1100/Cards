@@ -9,6 +9,7 @@ const Catalog = {
         ...t,
         name: o.name || t.name,
         occasion: PRESETS[o.occasion] ? o.occasion : t.occasion,
+        intro: INTROS[o.intro] ? o.intro : t.intro,
         price: price === '' || price == null ? '' : Number(price),
         hidden: !!o.hidden,
         featured: !!o.featured
@@ -67,6 +68,7 @@ const Catalog = {
       const c = {}, name = String(o.name || '').trim();
       if (name && name !== t.name) c.name = name;
       if (PRESETS[o.occasion] && o.occasion !== t.occasion) c.occasion = o.occasion;
+      if (INTROS[o.intro] && o.intro !== t.intro) c.intro = o.intro;
       if (o.price !== undefined && o.price !== '' && o.price !== null && !isNaN(o.price)) c.price = Number(o.price);
       if (o.hidden) c.hidden = true;
       if (o.featured) c.featured = true;
@@ -79,7 +81,8 @@ const Catalog = {
     return `// Site settings and the design catalog, written by the control panel on your PC (Publish).
 // SITE.url: live address ending with "/". SITE.whatsapp: order number with country code, digits only.
 // SITE.price: price shown under every design, "" hides prices. CATALOG: per-design changes by design number,
-// e.g. "47": { "name": "...", "occasion": "wedding", "price": 1499, "hidden": true, "featured": true }.
+// e.g. "47": { "name": "...", "occasion": "wedding", "intro": "doors", "price": 1499, "hidden": true, "featured": true }.
+// intro (how the card opens): envelope, doors, curtains, scroll, giftbox or cardflip.
 const SITE = ${JSON.stringify(site, null, 2)};
 
 const CATALOG = ${JSON.stringify(catalog, null, 2)};

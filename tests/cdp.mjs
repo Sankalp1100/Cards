@@ -16,10 +16,10 @@ const CANDIDATES = [
 export const chromePath = CANDIDATES.find(p => fs.existsSync(p));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-export async function launch() {
+export async function launch({ headful = false, args = [] } = {}) {
   const port = 9400 + Math.floor(Math.random() * 500);
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'wc-test-'));
-  const proc = spawn(chromePath, ['--headless=new', `--remote-debugging-port=${port}`, '--no-first-run', '--hide-scrollbars', `--user-data-dir=${profile}`, 'about:blank']);
+  const proc = spawn(chromePath, [...(headful ? [] : ['--headless=new']), ...args, `--remote-debugging-port=${port}`, '--no-first-run', '--hide-scrollbars', '--auto-accept-this-tab-capture', '--autoplay-policy=no-user-gesture-required', `--user-data-dir=${profile}`, 'about:blank']);
   let target;
   for (let i = 0; i < 60 && !target; i++) {
     await sleep(250);

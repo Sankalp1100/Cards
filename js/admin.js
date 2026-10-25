@@ -5,7 +5,7 @@
   const { esc, compact, who } = Core;
   const clone = o => JSON.parse(JSON.stringify(o));
   const form = $('#form'), frame = $('#preview');
-  const FIELDS = ['title', 'host1', 'host2', 'tagline', 'date', 'venue', 'message', 'photo', 'mapUrl', 'rsvp'];
+  const FIELDS = ['title', 'host1', 'host2', 'tagline', 'date', 'venue', 'message', 'photo', 'mapUrl', 'rsvp', 'intro'];
   const SITE_KEYS = ['url', 'brand', 'whatsapp', 'instagram', 'price', 'currency'];
   const STORE_KEY = 'weddingcard.links', DRAFT_KEY = 'weddingcard.config';
   const GALLERY_PAGE = 40;
@@ -33,7 +33,7 @@
     try { if (isDirty()) localStorage.setItem(DRAFT_KEY, JSON.stringify(cfg)); else localStorage.removeItem(DRAFT_KEY); } catch (e) { /* private mode */ }
     $('#publishBar').hidden = !isDirty();
     $('#urlWarn').hidden = !!cfg.site.url;
-    if (cfg.site.url) $('#siteLink').href = cfg.site.url;
+    if (cfg.site.url) $('#siteLink').href = $('#siteLinkM').href = cfg.site.url;
   }
 
   // ---------- Card state ----------
@@ -66,6 +66,10 @@
       <span class="dot" style="--a:${t.vars['--accent']};--b:${t.vars['--bg']}">${t.emoji}</span>
       <span><b>${Templates.serial(t.no)} · ${esc(e.name)}</b><small>${PRESETS[e.occasion].icon} ${esc(PRESETS[e.occasion].label)}</small></span>`;
     $('#themeName').textContent = `${Templates.serial(t.no)} ${e.name}`;
+    // Opening animation: the design's own (as set in the catalog) unless this invite picks another.
+    $('#introSelect').innerHTML = `<option value="">Design's own: ${INTROS[e.intro]}</option>` +
+      Object.entries(INTROS).map(([k, label]) => `<option value="${k}">${label}</option>`).join('');
+    $('#introSelect').value = INTROS[state.intro] ? state.intro : '';
     document.querySelectorAll('#gallery .tpl').forEach(el => el.classList.toggle('on', +el.dataset.no === t.no));
   }
 
@@ -322,6 +326,123 @@
     copy(lastResults.map(r => `${r.guest || 'Everyone'}: ${r.url}`).join('\n'), 'All links copied');
   });
 
+  // ---------- Video ----------
+  // Chrome/Edge film this tab cropped to the phone-sized card, so the video is exactly what guests see.
+  // The music is the same synthesized tune, recorded straight from the audio graph. The file is only downloaded.
+  const VIDEO_TYPES = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm'];
+  const recFrame = $('#recFrame');
+  let recStream = null, recSeen = new Set(), recWaiters = {};
+
+  addEventListener('message', e => {
+    const msg = e.data && e.data.wcRecord;
+    if (!msg || e.source !== recFrame.contentWindow) return;
+    recSeen.add(msg);
+    if (recWaiters[msg]) recWaiters[msg]();
+  });
+
+  // Resolves when the card reports `msg`; fails if the tab stops being shared or it takes too long.
+  function recWait(msg, ms) {
+    return new Promise((resolve, reject) => {
+      if (recSeen.has(msg)) return resolve();
+      const timer = setTimeout(() => reject(new Error('the card did not respond in time')), ms);
+      recWaiters[msg] = () => { clearTimeout(timer); resolve(); };
+      recStream?.getVideoTracks()[0]?.addEventListener('ended', () => { clearTimeout(timer); reject(new Error('sharing was stopped')); }, { once: true });
+    });
+  }
+
+  function recStatus(text, progress) {
+    $('#recStatus').textContent = text;
+    $('#recBar').style.width = progress == null ? '0' : `${Math.round(progress * 100)}%`;
+  }
+
+  function openRecorder() {
+    const h = Math.max(480, Math.min(800, innerHeight - 120)), w = Math.round(h * 9 / 16);
+    Object.assign($('#recStage').style, { width: `${w}px`, height: `${h}px` });
+    recSeen = new Set();
+    recWaiters = {};
+    $('#recVideo').hidden = true;
+    $('#recDownload').hidden = true;
+    $('#recModal').hidden = false;
+    recFrame.src = 'card.html?record#' + code({ music: false });
+  }
+
+  function closeRecorder() {
+    recStream?.getTracks().forEach(t => t.stop());
+    recStream = null;
+    $('#recModal').hidden = true;
+    recFrame.src = 'about:blank';
+    const v = $('#recVideo');
+    if (v.src) { URL.revokeObjectURL(v.src); v.removeAttribute('src'); }
+  }
+  $('#recClose').addEventListener('click', closeRecorder);
+
+  $('#videoBtn').addEventListener('click', async () => {
+    if (!state.host1) { toast('Please fill in a name first'); form.elements.host1.focus(); return; }
+    if (!(navigator.mediaDevices?.getDisplayMedia && window.MediaRecorder && window.CropTarget)) {
+      toast('Videos need Chrome or Edge on a computer');
+      return;
+    }
+    openRecorder();
+    recStatus('Chrome will ask to share this tab: click "Allow" (or "Share"). Only the card is recorded.');
+    try {
+      // Has to run straight from the click.
+      recStream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30, width: { ideal: 3840 }, height: { ideal: 2160 }, resizeMode: 'none' }, audio: false, preferCurrentTab: true, selfBrowserSurface: 'include', surfaceSwitching: 'exclude' });
+    } catch (e) {
+      recStatus('Video cancelled. Click "Download video" again and choose Allow.');
+      return;
+    }
+    try { await makeVideo(); }
+    catch (e) { recStatus(`Could not make the video: ${e.message}. Close and try again.`); }
+    finally { recStream?.getTracks().forEach(t => t.stop()); }
+  });
+
+  async function makeVideo() {
+    const [track] = recStream.getVideoTracks();
+    if (track.getSettings().displaySurface && track.getSettings().displaySurface !== 'browser') throw new Error('please share this tab, not a window or the screen');
+    await track.cropTo(await CropTarget.fromElement($('#recStage')));
+    recStatus('Getting the card ready…');
+    await recWait('ready', 15000);
+
+    const tracks = [track];
+    let box = null;
+    if (state.music !== false) {
+      box = new MusicBox(design().tempo);
+      if (box.start()) {
+        const dest = box.ctx.createMediaStreamDestination();
+        box.master.connect(dest);
+        tracks.push(...dest.stream.getAudioTracks());
+      }
+    }
+    const mimeType = VIDEO_TYPES.find(t => MediaRecorder.isTypeSupported(t)) || '';
+    const recorder = new MediaRecorder(new MediaStream(tracks), { mimeType, videoBitsPerSecond: 6e6 });
+    const chunks = [];
+    recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    const stopped = new Promise(r => { recorder.onstop = r; });
+
+    const t0 = Date.now(), expected = 23000;
+    const tick = setInterval(() => recStatus(`🔴 Recording… ${Math.round((Date.now() - t0) / 1000)}s. Keep this window open.`, Math.min(0.97, (Date.now() - t0) / expected)), 250);
+    recorder.start(500);
+    recFrame.contentWindow.postMessage({ wcRecord: 'start' }, '*');
+    try { await recWait('done', 60000); }
+    finally {
+      clearInterval(tick);
+      if (recorder.state !== 'inactive') recorder.stop();
+      if (box) { box.stop(); box.ctx.close(); }
+    }
+    await stopped;
+
+    const blob = new Blob(chunks, { type: recorder.mimeType });
+    const ext = recorder.mimeType.includes('mp4') ? 'mp4' : 'webm';
+    const name = `${who(state)} invitation.${ext}`.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ');
+    const url = URL.createObjectURL(blob);
+    Object.assign($('#recVideo'), { src: url, hidden: false });
+    Object.assign($('#recDownload'), { href: url, download: name, hidden: false });
+    $('#recDownload').click();
+    recStatus(`✅ Saved "${name}" (${(blob.size / 1048576).toFixed(1)} MB) to your Downloads.` +
+      (ext === 'webm' ? ' This browser can only make WebM, which WhatsApp does not accept: update Chrome to get MP4.' : ''), 1);
+    toast('Video downloaded 🎬');
+  }
+
   // ---------- Link history ----------
   function loadLinks() {
     try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch (e) { return []; }
@@ -410,6 +531,7 @@
           <td><span class="dot" style="--a:${e.vars['--accent']};--b:${e.vars['--bg']}">${e.emoji}</span> <b>${Templates.serial(e.no)}</b></td>
           <td><input data-f="name" value="${esc(e.name)}" placeholder="${esc(Templates.get(e.no).name)}" aria-label="Name"></td>
           <td><select data-f="occasion" aria-label="Occasion">${occOptions(e.occasion)}</select></td>
+          <td><select data-f="intro" aria-label="Opening">${Object.entries(INTROS).map(([k, label]) => `<option value="${k}"${k === e.intro ? " selected" : ""}>${label}</option>`).join("")}</select></td>
           <td><input data-f="price" class="price-in" inputmode="numeric" value="${esc(own.price ?? '')}" placeholder="${esc(cfg.site.price ? cur + cfg.site.price : '-')}" aria-label="Price"></td>
           <td><label class="switch"><input type="checkbox" data-f="show"${e.hidden ? '' : ' checked'}><span></span></label></td>
           <td><label class="switch"><input type="checkbox" data-f="featured"${e.featured ? ' checked' : ''}><span></span></label></td>
@@ -485,12 +607,19 @@
   // ---------- Publish ----------
   let server = false;
   async function detectServer() {
+    let status = {};
     if (location.protocol.startsWith('http')) {
-      try { server = (await (await fetch('api/status', { cache: 'no-store' })).json()).ok === true; } catch (e) { server = false; }
+      try { status = await (await fetch('api/status', { cache: 'no-store' })).json(); } catch (e) { status = {}; }
     }
-    $('#publishHelp').innerHTML = server
-      ? 'Saves <b>js/config.js</b> into your project and pushes it to GitHub. Vercel puts it live in about a minute.'
-      : 'Start the panel with <b>npm run admin</b> to publish in one click. Without it, this downloads <b>config.js</b>: put it in the <b>js</b> folder and deploy.';
+    // On your PC the panel server can always save; online it needs the GitHub token set in Vercel.
+    server = status.ok === true && (!status.online || status.git === true);
+    $('#publishHelp').innerHTML = server && status.online
+      ? 'Saves <b>js/config.js</b> to GitHub. Vercel puts it live in about a minute.'
+      : server
+        ? 'Saves <b>js/config.js</b> into your project and pushes it to GitHub. Vercel puts it live in about a minute.'
+        : status.online
+          ? 'To publish from here, add <b>GITHUB_TOKEN</b> in Vercel (see README). Until then this downloads <b>config.js</b>: put it in the <b>js</b> folder and deploy.'
+          : 'Start the panel with <b>npm run admin</b> to publish in one click. Without it, this downloads <b>config.js</b>: put it in the <b>js</b> folder and deploy.';
   }
 
   async function publish() {
