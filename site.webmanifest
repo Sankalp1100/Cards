@@ -1,6 +1,6 @@
 {
-  "name": "Wedding Card",
-  "short_name": "Wedding Card",
+  "name": "CardAlbum",
+  "short_name": "CardAlbum",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#07060f",

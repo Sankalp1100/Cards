@@ -1,6 +1,6 @@
 @echo off
 rem Double-click to open the admin panel. Works without PowerShell script permissions.
-title Wedding Card - Admin
+title CardAlbum - Admin
 cd /d "%~dp0"
 where node >nul 2>nul
 if errorlevel 1 (

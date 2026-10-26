@@ -1,4 +1,4 @@
-# 💌 Wedding Card
+# 💌 CardAlbum
 
 Animated invitations for weddings, sangeet, engagements, kitty parties, birthdays, kids' parties, baby showers, naming ceremonies, pujas and anniversaries.
 

@@ -615,7 +615,7 @@ body:not(.pf-ring) .photo, body:not(.pf-ring) .photo img { animation: none; }
 .rv-flip .reveal { transform: perspective(900px) rotateX(-32deg) translateY(30px); transform-origin: 50% 0; }
 .rv-slide .reveal { transform: translateX(-70px); }
 .rv-slide .reveal:nth-child(even) { transform: translateX(70px); }
-.rv-blur .reveal { transform: translateY(24px) scale(1.04); filter: blur(12px); transition-property: opacity, transform, filter; }
+.rv-blur .reveal { transform: translateY(24px); filter: blur(12px); transition-property: opacity, transform, filter; }
 .rv-wipe .reveal { transform: none; clip-path: inset(0 0 100% 0); transition: opacity .7s ease, clip-path 1.2s cubic-bezier(.7,0,.2,1); transition-delay: calc(var(--i, 0) * 120ms); }
 body[class] .reveal.in { transform: none; filter: none; }
 .rv-wipe .reveal.in { clip-path: inset(-40% -40% -40% -40%); }
@@ -717,3 +717,6 @@ body[class] .reveal.in { transform: none; filter: none; }
 @keyframes edIn { from { opacity: 0; transform: translate(-50%, -38%) scale(.85); } }
 @keyframes barGrow { from { transform: scaleX(0); } }
 @keyframes sigWrite { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 -10% 0 0); } }
+
+/* Sections that slide or grow in while waiting to appear must never widen the page on a phone */
+main { overflow-x: hidden; overflow-x: clip; }

@@ -4,7 +4,7 @@
 // e.g. "47": { "name": "...", "occasion": "wedding", "price": 1499, "hidden": true, "featured": true }.
 const SITE = {
   "url": "https://cardalbum.vercel.app/",
-  "brand": "Wedding Card",
+  "brand": "CardAlbum",
   "whatsapp": "919318371733",
   "instagram": "",
   "price": "",

@@ -1,5 +1,5 @@
 -- ============================================================================
--- Wedding Card: database for the admin panel.
+-- CardAlbum: database for the admin panel.
 -- Supabase → SQL Editor → New query → paste this whole file → Run.
 -- Safe to run again (it only creates what is missing).
 --

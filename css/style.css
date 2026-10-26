@@ -698,3 +698,80 @@ body[data-tab="trending"] :is(.hero, .marquee-wrap, .bento, #templates, .how, #o
 @media (prefers-reduced-motion: reduce) { .p-scene::before, .p-scene::after, .l-orbit .p-emoji::after { animation: none !important; } }
 /* The sunray hint only belongs to mandala and sunburst designs; the background scene does the rest */
 .poster:not(.d-mandala):not(.d-sunburst):not(.d-blobs)::before { display: none; }
+
+/* ---------- Signature, designer badge: rotating gradient border, wax-seal monogram, a pen that writes the
+   underline, orbiting sparkles. Transform/opacity only; it plays when it scrolls into view (.in). ---------- */
+.signature { position: relative; padding: 0; margin: 34px auto 0; text-decoration: none; }
+.sig-card { position: relative; display: flex; align-items: center; gap: 18px; padding: 16px 28px 14px 18px; border-radius: 26px; overflow: hidden; isolation: isolate;
+  box-shadow: 0 22px 60px rgba(0,0,0,.4), 0 0 40px rgba(255,61,139,.12); transition: transform .4s cubic-bezier(.2,.9,.3,1.3), box-shadow .4s; }
+.sig-card::before { content: ''; position: absolute; left: 50%; top: 50%; width: 560px; height: 560px; margin: -280px 0 0 -280px; z-index: -2;
+  background: conic-gradient(from 0deg, transparent 0 55%, #ffc95c 68%, #ff3d8b 78%, #8b5cf6 88%, #22d3ee 96%, transparent);
+  animation: spinPoster 5s linear infinite; }
+.sig-card::after { content: ''; position: absolute; inset: 1.5px; z-index: -1; border-radius: 25px;
+  background: radial-gradient(circle at 15% 50%, rgba(255,61,139,.16), transparent 45%), linear-gradient(135deg, #1a1230, #0f0b1e); }
+.signature:hover .sig-card { transform: translateY(-4px) scale(1.02); box-shadow: 0 28px 70px rgba(0,0,0,.45), 0 0 60px rgba(139,92,246,.3); }
+.signature:hover .sig-card::before { animation-duration: 1.6s; }
+
+/* Wax seal with the monogram: it stamps down, then a shine passes over it */
+.sig-seal { position: relative; flex: none; display: grid; place-items: center; width: 62px; height: 62px; border-radius: 50%; overflow: hidden;
+  background: radial-gradient(circle at 35% 30%, #ff5c8a, #b0124a 60%, #6d0630); box-shadow: inset 0 0 0 3px rgba(255,255,255,.12), inset 0 0 0 7px rgba(0,0,0,.18), 0 6px 18px rgba(176,18,74,.5);
+  opacity: 0; transform: scale(2.2) rotate(-40deg); }
+.sig-seal::before { content: ''; position: absolute; inset: 9px; border-radius: 50%; border: 1.5px dashed rgba(255,231,176,.55); }
+.sig-seal::after { content: ''; position: absolute; top: -20%; bottom: -20%; width: 40%; left: -60%; transform: skewX(-20deg); background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent); }
+.sig-seal b { position: relative; font: 400 2.3rem/1 'Great Vibes', cursive; color: #ffe7b0; text-shadow: 0 2px 0 rgba(0,0,0,.25); padding-top: 4px; }
+.signature.in .sig-seal { animation: sealStamp .7s cubic-bezier(.3,1.4,.5,1) .15s both; }
+.signature.in .sig-seal::after { animation: sealShine 3.6s ease-in-out 1.2s infinite; }
+
+.sig-text { display: grid; justify-items: start; text-align: left; }
+.sig-name { margin-left: -.06em; }
+.sig-ink { position: relative; width: 190px; height: 14px; margin-top: -8px; }
+.sig-ink .sig-line { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; }
+/* The pen follows the underline while it is drawn, then lifts away */
+.sig-pen { position: absolute; left: 0; top: 0; font-size: 1.05rem; font-style: normal; opacity: 0; offset-rotate: 0deg; offset-anchor: 10% 90%;
+  offset-path: path('M3.8 8.5 C 47.5 1.9, 85.5 13.3, 123.5 5.7 S 175.8 3.8, 186.2 7.6'); }
+.signature.in .sig-pen { animation: penWrite 1.4s ease 1s both; }
+.sig-role { margin-top: 4px; font-size: .64rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; opacity: 0; transform: translateY(6px);
+  background: linear-gradient(90deg, #ffc95c, #ff3d8b, #8b5cf6, #ffc95c) 0 0 / 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; }
+.signature.in .sig-role { animation: sigDrop .8s ease 2.2s both, roleFlow 6s linear 3s infinite; }
+
+/* Sparkles circling the seal */
+.sig-spark { position: absolute; left: 49px; top: 50%; margin: -.5em 0 0 -.4em; font-size: .75rem; font-style: normal; color: #ffc95c; pointer-events: none; opacity: 0;
+  transform: rotate(var(--a)) translateX(46px) rotate(calc(-1 * var(--a))); }
+.sig-spark:nth-of-type(even) { color: #ff8fc0; font-size: .6rem; }
+.signature.in .sig-spark { animation: sparkOrbit 9s linear var(--d) infinite, sparkBlink 2.4s ease-in-out var(--d) infinite; }
+
+@keyframes sealStamp { 0% { opacity: 0; transform: scale(2.2) rotate(-40deg); } 70% { opacity: 1; transform: scale(.92) rotate(4deg); } 100% { opacity: 1; transform: none; } }
+@keyframes sealShine { 0%, 60% { left: -60%; } 100% { left: 130%; } }
+@keyframes penWrite { 0% { opacity: 0; offset-distance: 0%; } 8%, 85% { opacity: 1; } 100% { opacity: 0; offset-distance: 100%; } }
+@keyframes sparkBlink { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+@keyframes roleFlow { to { background-position: 300% 0; } }
+@keyframes sparkOrbit { from { transform: rotate(var(--a)) translateX(46px) rotate(calc(-1 * var(--a))); } to { transform: rotate(calc(var(--a) + 360deg)) translateX(46px) rotate(calc(-1 * var(--a) - 360deg)); } }
+@media (max-width: 380px) {
+  .sig-card { gap: 12px; padding: 14px 18px 12px 14px; }
+  .sig-seal { width: 52px; height: 52px; }
+  .sig-spark { left: 40px; }
+}
+
+/* Posters: "by Sankalp" sits under the button (never on it), and a Trending badge gets its own room at the top */
+.p-by { position: static; margin-top: -4px; }
+.p-play { margin-bottom: 0; }
+.poster:has(.p-badge) { padding-top: 40px; }
+.l-ticket .p-tag { display: none; }
+.l-ticket .p-date { margin-bottom: -2px; }
+
+/* Narrow posters (two per row on phones): everything, button and signature included, fits inside */
+@media (max-width: 600px) {
+  .poster { gap: 5px; padding: 14px 10px; }
+  .poster:has(.p-badge) { padding-top: 34px; }
+}
+@container (max-width: 175px) {
+  .p-by { font-size: .78rem; margin-top: -2px; }
+  .p-play { margin-top: 2px; }
+  .p-body { gap: 5px; }
+  .f-ring .p-emoji, .f-halo .p-emoji, .f-blob .p-emoji { width: 50px; height: 50px; font-size: 1.6rem; }
+  .f-arch .p-emoji { width: 44px; height: 58px; font-size: 1.5rem; }
+  .f-polaroid .p-emoji { width: 46px; height: 54px; font-size: 1.5rem; padding-bottom: 9px; }
+  .l-ticket .p-title { display: none; }
+  .l-ticket .p-body { padding: 10px 8px; }
+  .l-arch .p-body { padding: 24px 8px 10px; }
+}

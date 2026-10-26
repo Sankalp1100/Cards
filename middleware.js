@@ -45,6 +45,6 @@ export default async function middleware(request) {
   if (await loginOk(request.headers.get('authorization'), env)) return; // carry on to the file
   return new Response('Login needed for the admin panel.', {
     status: 401,
-    headers: { 'WWW-Authenticate': 'Basic realm="Wedding Card admin", charset="UTF-8"', 'Cache-Control': 'no-store' }
+    headers: { 'WWW-Authenticate': 'Basic realm="CardAlbum admin", charset="UTF-8"', 'Cache-Control': 'no-store' }
   });
 }

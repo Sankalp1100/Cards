@@ -245,7 +245,8 @@ test.describe('Publishing', () => {
     }
     for (const [f, img] of [['index.html', 'og-site.jpg'], ['card.html', 'og-invite.jpg']]) {
       const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
-      assert.ok(html.includes(`<meta property="og:image" content="https://cardalbum.vercel.app/img/${img}">`), `${f} preview image`);
+      // A ?v=N after the file name makes WhatsApp fetch a changed picture instead of its cached one.
+      assert.match(html, new RegExp(`<meta property="og:image" content="https://cardalbum\\.vercel\\.app/img/${img.replace('.', '\\.')}(\\?v=\\d+)?">`), `${f} preview image`);
       for (const tag of ['og:title', 'og:description', 'og:url', 'og:image:width', 'twitter:card']) assert.ok(html.includes(tag), `${f}: ${tag}`);
       // WhatsApp shows no preview image when it is over ~300 KB; keep well under.
       assert.ok(fs.statSync(path.join(ROOT, 'img', img)).size < 200 * 1024, `${img} too big for WhatsApp`);
