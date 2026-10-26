@@ -718,7 +718,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       noErrors();
     });
 
-    test('admin video: films the card and downloads an MP4 of about 20 seconds', async () => {
+    test('admin video: films the card and downloads an MP4 of about half a minute (it rests on every date and venue)', async () => {
       const fs = await import('node:fs'), os = await import('node:os');
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wc-video-'));
       await page.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: dir });
@@ -729,7 +729,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       await page.waitFor(`/Saved|Could not|cancelled/.test(document.querySelector('#recStatus').textContent)`, 60000);
       assert.match(await page.eval(`document.querySelector('#recStatus').textContent`), /Saved "Diya & Aarav invitation\.mp4"/);
       const dur = await page.eval(`new Promise(r => { const v = document.querySelector('#recVideo'); v.readyState ? r(v.duration) : v.onloadedmetadata = () => r(v.duration); })`);
-      assert.ok(dur > 15 && dur < 30, `video is ${dur}s`);
+      assert.ok(dur > 15 && dur < 50, `video is ${dur}s`);
       for (let i = 0; i < 20 && !fs.readdirSync(dir).some(f => f.endsWith('.mp4')); i++) await sleep(250);
       const file = fs.readdirSync(dir).find(f => f.endsWith('.mp4'));
       assert.ok(file && fs.statSync(path.join(dir, file)).size > 100000, 'MP4 saved to Downloads');
