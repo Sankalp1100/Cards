@@ -1131,3 +1131,9 @@ body.scrolled .scene-grid .sun { animation: none; opacity: .07; }
 
 /* The monogram always fits inside its gold ring, however wide the initials */
 .emblem b { font-size: 1.75rem; max-width: 92px; white-space: nowrap; letter-spacing: -.01em; }
+
+/* Sample bar on phones: one slim line, so it does not cover the date on the first screen */
+@media (max-width: 640px) {
+  .demo-bar { left: 10px; right: 72px; bottom: 12px; padding: 5px 5px 5px 14px; font-size: .78rem; }
+  .demo-bar .btn { padding: 8px 14px; font-size: .78rem; }
+}

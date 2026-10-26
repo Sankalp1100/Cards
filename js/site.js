@@ -143,7 +143,7 @@
           <span class="serial">Design No. <b>${Templates.serial(d.no)}</b></span>
           <span class="tpl-name">${esc(d.name)}</span>
           <span class="opening">${INTROS[d.intro]} opening</span>
-          <small>${PRESETS[d.occasion].icon} ${esc(PRESETS[d.occasion].label)}${price ? ` · <b class="price">${esc(price)}</b>` : ''}</small>
+          <small><span class="tpl-occ">${PRESETS[d.occasion].icon} ${esc(PRESETS[d.occasion].label)}</span>${price ? `<b class="price">${esc(price)}</b>` : ''}</small>
         </div>
         <button type="button" class="btn-small order" data-design="${d.no}">💬 Order ${Templates.serial(d.no)}</button>
       </article>`;
@@ -164,6 +164,8 @@
       : designs.filter(d => Catalog.matches(d, query, filter));
     shown = 0;
     $('#showcase').innerHTML = '';
+    // One occasion picked: its name under every card would only repeat itself.
+    $('#showcase').classList.toggle('one-occ', !!filter && filter !== 'trending');
     $('#noMatch').hidden = list.length > 0;
     // With a filter or search on, say so plainly, with a way back to everything.
     const narrowed = filter || query.trim();
