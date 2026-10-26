@@ -325,6 +325,17 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     }
   });
 
+  test('music stays silent after opening and plays only when the guest taps the button', async () => {
+    await page.goto(cardLink({ ...PRESETS.wedding.card, music: true }));
+    await openEnvelope();
+    await sleep(500);
+    assert.equal(await page.eval(`document.querySelector('#musicBtn').classList.contains('playing')`), false, 'no sound on opening');
+    await page.eval(`document.querySelector('#musicBtn').click()`);
+    assert.equal(await page.eval(`document.querySelector('#musicBtn').classList.contains('playing')`), true, 'a tap plays it');
+    await page.eval(`document.querySelector('#musicBtn').click()`);
+    assert.equal(await page.eval(`document.querySelector('#musicBtn').classList.contains('playing')`), false, 'a second tap stops it');
+  });
+
   test('all 300 designs render without errors, with their decor and particles', async () => {
     for (const t of Templates.all) {
       await page.goto(cardLink({ ...PRESETS[t.occasion].card, theme: t.no }, '?preview&auto'), 0);

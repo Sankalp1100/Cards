@@ -510,7 +510,7 @@
         <p class="sell">Loved this invitation? <a href="index.html">Get one for your celebration</a> 💌<br><small>${esc(SITE.brand)}</small></p>
         <p class="signature reveal"><small>Designed by</small><span>${esc(SITE.designer || 'Sankalp')}</span></p>
       </footer>
-      <div class="lightbox" id="lightbox" hidden><button type="button" class="lb-x" aria-label="Close photo">✕</button><img alt=""></div>`;
+      <div class="lightbox" id="lightbox" hidden><button type="button" class="lb-x" aria-label="Close photo">✕</button></div>`;
 
     const who = Core.who(d);
     const inviteUrl = shareLink();
@@ -578,7 +578,8 @@
       setupPremium.clicks = true;
       $('#card').addEventListener('click', e => {
         const lb = $('#lightbox'), item = e.target.closest('[data-gal]');
-        if (item) { lb.querySelector('img').src = item.querySelector('img').src; lb.hidden = false; return; }
+        // The full-size image is made only when a photo is opened (the card holds no empty images).
+        if (item) { (lb.querySelector('img') || lb.appendChild(Object.assign(document.createElement('img'), { alt: '' }))).src = item.querySelector('img').src; lb.hidden = false; return; }
         if (e.target.closest('#lightbox')) lb.hidden = true;
         const copyBtn = e.target.closest('[data-copy-upi]');
         if (copyBtn) {
@@ -616,8 +617,8 @@
     }, OPEN_MS[introKind] || 1500);
     const btn = $('#musicBtn');
     // No music button when the invite has music switched off; the builder's preview stays silent.
+    // The music never starts by itself: only a tap on the button plays it.
     btn.hidden = preview || data.music === false;
-    if (data.music !== false && !preview && !params.has('auto') && music.start()) btn.classList.add('playing');
   }
 
   function startCountdown(when) {

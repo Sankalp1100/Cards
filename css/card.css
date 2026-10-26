@@ -956,3 +956,7 @@ footer.finale .finale-mandala { top: 0; transform: translate(-50%, -40%); }
 .mood-light .finale .sell a { color: var(--ink); }
 .mood-light .hashtag { color: var(--accent); }
 .mood-light .finale-mandala svg { stroke: var(--accent); }
+
+/* Music is off until the guest taps: the button gently pulses to say it can be played */
+.opened .music-btn:not(.playing) { animation: musicHint 2.4s ease-in-out 3s infinite; }
+@keyframes musicHint { 0%, 100% { box-shadow: 0 6px 20px rgba(0,0,0,.3); } 50% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 22%, transparent), 0 6px 20px rgba(0,0,0,.3); } }
