@@ -52,7 +52,9 @@ const Catalog = {
     const e = order.design && entries ? entries[order.design - 1] : null;
     const when = s => {
       const d = Core.parseDate(s);
-      return d ? d.toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+      if (!d) return '';
+      const day = d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+      return Core.hasTime(s) ? `${day}, ${d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}` : `${day} (time not decided yet)`;
     };
     // WhatsApp for Windows turns emoji in a pre-filled message into "�" and can drop the line breaks, so the
     // text uses no emoji and every detail has its own label and bullet: it reads well even as one long line.

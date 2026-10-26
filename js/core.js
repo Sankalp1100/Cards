@@ -70,8 +70,15 @@ const Core = {
   },
 
   parseDate(s) {
-    const d = s ? new Date(s) : null;
+    // "2026-12-12" (time not decided yet) means that day in local time, not midnight UTC.
+    const day = typeof s === 'string' && s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const d = day ? new Date(+day[1], day[2] - 1, +day[3]) : s ? new Date(s) : null;
     return d && !isNaN(d) ? d : null;
+  },
+
+  // Whether a date also says the time ("2026-12-12T19:30") or only the day ("2026-12-12": time not decided yet).
+  hasTime(s) {
+    return typeof s === 'string' && /T\d/.test(s);
   },
 
   // An Indian mobile number as WhatsApp needs it: "9876543210", "+91 98765-43210" or "919876543210"
@@ -181,8 +188,40 @@ const Core = {
     return number ? `https://wa.me/${number}?text=${encodeURIComponent(text)}` : '#order';
   },
 
-  inviteText({ guest, who, label, link }) {
-    return `💌 ${guest ? `Dear ${guest}, y` : 'Y'}ou're invited!\n✨ ${who} · ${label}\n\nTap to open your invitation 👇\n${link}`;
+  // The WhatsApp message that goes with an invitation link, written for the occasion:
+  // "With joy in our hearts, we invite you to the wedding of *Sankalp weds Sonal*", the date, the venue, the link.
+  // Only symbols from the basic set (✨ ♥), because WhatsApp for Windows breaks emoji in pre-filled messages.
+  // `card` needs type, host1, host2, date, venue (and tagline for a puja); old saved links pass who and label instead.
+  inviteText({ guest, card, who, label, link }) {
+    const c = card || {};
+    const a = String(c.host1 || '').trim(), b = String(c.host2 || '').trim();
+    const pair = j => (b ? `*${a} ${j} ${b}*` : `*${a}*`);
+    const lines = {
+      wedding: ['With joy in our hearts, we invite you to the wedding of', pair('weds'), 'Your presence and blessings will make our day complete. ♥'],
+      engagement: ['Two hearts, one promise. You are invited to the engagement of', pair('&'), 'Come celebrate the beginning of our forever. ♥'],
+      sangeet: ['Get your dancing shoes ready! You are invited to the Sangeet of', pair('&'), 'Music, dance and a whole lot of masti await you.'],
+      kitty: [`${pair('&')} invites you to a fabulous kitty party`, '', 'Dress to impress and bring your best moves!'],
+      bday: [`Let's celebrate! You are invited to the birthday party of`, pair('&'), 'Good food, great music and the best people. See you there!'],
+      naming: [`With blessings and joy, ${pair('&')} invite you to the naming ceremony of their little one`, '', 'Your blessings mean the world to our family. ♥'],
+      birthday: ['Balloons, cake and lots of fun! You are invited to the birthday party of', pair('&'), 'Come play, eat cake and make memories with us!'],
+      babyshower: ['A little miracle is on the way! Join us for the baby shower of', pair('&'), 'Your blessings mean the world to us and our little one. ♥'],
+      ceremony: [`With the blessings of the Almighty, ${pair('&')} ${String(c.tagline || 'invites you to a special ceremony').trim()}`, '', 'Please join us with your family to seek blessings.'],
+      anniversary: ['Celebrating a lifetime of love! You are invited to the anniversary of', pair('&'), 'Come raise a toast to many more years together. ♥']
+    }[c.type];
+    if (!lines || !a) {
+      return `✨ ${guest ? `Dear ${guest}, y` : 'Y'}ou're invited! ✨\n${who || ''}${label ? ` · ${label}` : ''}\n\nOpen your invitation:\n${link}`;
+    }
+    const when = Core.parseDate(c.date);
+    const day = when && when.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const time = when && Core.hasTime(c.date) ? `, ${when.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}` : '';
+    return [
+      '✨ *You\'re Invited* ✨', '',
+      guest ? `Dear ${guest},` : '',
+      lines[0], lines[1], '',
+      day ? `Date: ${day}${time}` : '',
+      c.venue ? `Venue: ${String(c.venue).trim()}` : '',
+      '', 'Open your invitation:', link, '', lines[2]
+    ].filter((l, i, all) => l !== '' || (all[i - 1] !== '' && i > 0)).join('\n').trim();
   }
 };
 

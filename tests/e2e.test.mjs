@@ -317,6 +317,22 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`!!document.querySelector('#rsvpBtn')`), false);
   });
 
+  test('View invitation and the menu scroll down the card and keep the invitation link', async () => {
+    await page.goto(cardLink({ ...PRESETS.wedding.card }));
+    await openEnvelope();
+    const before = await page.eval(`location.hash`);
+    await page.eval(`document.querySelector('.view-btn').click()`);
+    await sleep(900);
+    assert.equal(await page.eval(`location.hash`), before, 'the link still holds the invitation');
+    assert.ok(await page.eval(`scrollY > 200`), 'scrolled down to the details');
+    assert.doesNotMatch(await page.eval(`document.querySelector('#card').textContent`), /link is incomplete/);
+    await page.eval(`document.querySelector('#menuBtn').click()`);
+    await page.eval(`document.querySelector('#pmenu a[href="#venue"]').click()`);
+    await sleep(900);
+    assert.equal(await page.eval(`location.hash`), before);
+    assert.doesNotMatch(await page.eval(`document.querySelector('#card').textContent`), /link is incomplete/);
+  });
+
   test('the music button shows only when the invite has music on', async () => {
     for (const music of [true, false]) {
       await page.goto(cardLink({ ...PRESETS.wedding.card, music }));
@@ -531,7 +547,10 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.waitFor(`document.querySelector('#results [data-copy]').textContent === '✓ Copied'`, 3000);
     const wa = await page.eval(`decodeURIComponent(document.querySelector('#results .wa').href)`);
     assert.match(wa, /Dear Rahul Uncle/);
-    assert.match(wa, /Kids Birthday/);
+    assert.match(wa, /You are invited to the birthday party of\n\*Kabir\*/, 'the kids-birthday message');
+    assert.match(wa, /Venue: FunCity Play Zone, Noida/);
+    // "Copy message" copies the same invitation text.
+    assert.ok(await page.eval(`[...document.querySelectorAll('#results [data-copy]')].some(b => b.textContent === 'Copy message' && b.dataset.copy.includes('*Kabir*'))`));
   });
 
   test('admin: a generated link opens the right card', async () => {

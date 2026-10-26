@@ -230,7 +230,7 @@
       case 'monogram': return `<div class="monogram" aria-hidden="true">${esc(initials(d))}</div>${p.visual}${text}${p.date}${p.hint}`;
       case 'ticket': {
         const stub = when
-          ? `<b>${when.getDate()}</b><span>${esc(when.toLocaleDateString(undefined, { month: 'short', year: 'numeric' }))}</span><small>${esc(fmtTime(when))}</small>`
+          ? `<b>${when.getDate()}</b><span>${esc(when.toLocaleDateString(undefined, { month: 'short', year: 'numeric' }))}</span>${Core.hasTime(d.date) ? `<small>${esc(fmtTime(when))}</small>` : ''}`
           : '<b>♥</b><span>Save the date</span>';
         return `${p.visual}<div class="hero-panel ticket"><div class="ticket-main">${text}</div><div class="ticket-stub">${stub}</div></div>${p.hint}`;
       }
@@ -382,7 +382,7 @@
         <div class="event-body tilt">
           ${when ? `<div class="event-date" aria-hidden="true"><b>${when.getDate()}</b><span>${esc(when.toLocaleDateString('en-IN', { month: 'short' }))}</span></div>` : ''}
           <h3>${esc(e.name)}</h3>
-          ${when ? `<p class="event-when">${esc(fmtDate(when))} · ${esc(fmtTime(when))}</p>` : ''}
+          ${when ? `<p class="event-when">${esc(fmtDate(when))}${Core.hasTime(e.date) ? ` · ${esc(fmtTime(when))}` : ''}</p>` : ''}
           ${e.venue ? `<p>📍 ${esc(e.venue)}</p>` : ''}
           ${e.dress ? `<p class="dress">✨ Dress code: ${esc(e.dress)}</p>` : ''}
         </div>
@@ -485,10 +485,11 @@
         ${heroLayout(t, d, when, {
           // Without a photo the design's emoji takes its place; the polaroid frame also shows the initials as a caption.
           visual: photo ? `<div class="photo"><img src="${esc(photo)}" alt=""></div>` : t.emblem ? emblemHTML(d) : `<div class="ornament">${esc(t.emoji)}<small class="orn-cap" aria-hidden="true">${esc(initials(d))}</small></div>`,
-          title: `<p class="title fade" style="--d:.2s">${esc(d.title)}</p>`,
+          // Empty lines are left out altogether, so nothing blank shows on the card.
+          title: d.title ? `<p class="title fade" style="--d:.2s">${esc(d.title)}</p>` : '',
           names: `<h1 class="names">${names}</h1>${nickLine(d)}`,
-          tagline: `<p class="tagline fade" style="--d:1.6s">${esc(d.tagline)}</p>`,
-          date: when ? `<div class="date-badge fade" style="--d:2s"><span>${esc(fmtDate(when))}</span><b>${esc(fmtTime(when))}</b></div>` : '',
+          tagline: d.tagline ? `<p class="tagline fade" style="--d:1.6s">${esc(d.tagline)}</p>` : '',
+          date: when ? `<div class="date-badge fade" style="--d:2s"><span>${esc(fmtDate(when))}</span>${Core.hasTime(d.date) ? `<b>${esc(fmtTime(when))}</b>` : ''}</div>` : '',
           hint: `<a class="btn view-btn fade" style="--d:2.4s" href="#details">View invitation</a><a class="scroll-hint fade" style="--d:2.8s" href="#details" aria-label="Scroll down">⌄</a>`
         })}
       </section>
@@ -528,7 +529,9 @@
       const cal = new URL('https://calendar.google.com/calendar/render');
       cal.searchParams.set('action', 'TEMPLATE');
       cal.searchParams.set('text', `${who}: ${PRESETS[d.type]?.label || 'Celebration'}`);
-      cal.searchParams.set('dates', `${calStamp(when)}/${calStamp(end)}`);
+      // Time not decided yet: an all-day entry for that day.
+      const dayStamp = x => calStamp(x).slice(0, 8);
+      cal.searchParams.set('dates', Core.hasTime(d.date) ? `${calStamp(when)}/${calStamp(end)}` : `${dayStamp(when)}/${dayStamp(new Date(when.getTime() + 864e5))}`);
       cal.searchParams.set('details', `${d.tagline || ''}\n\nInvitation: ${inviteUrl}`);
       if (d.venue) cal.searchParams.set('location', d.venue);
       $('#calBtn').href = cal.href;
@@ -683,10 +686,12 @@
     const btn = $('#shareBtn');
     // Forward the general link, never this guest's personal one.
     const url = shareLink();
+    // The occasion's invitation message with the link in it (never the guest's own name: it is being forwarded).
+    const text = Core.inviteText({ card: data, link: url });
     if (navigator.share) {
-      try { await navigator.share({ title: "You're invited 💌", url }); return; } catch (e) { if (e.name === 'AbortError') return; }
+      try { await navigator.share({ title: "You're invited", text }); return; } catch (e) { if (e.name === 'AbortError') return; }
     }
-    try { await navigator.clipboard.writeText(url); btn.textContent = '✅ Link copied'; }
+    try { await navigator.clipboard.writeText(text); btn.textContent = '✅ Invitation copied'; }
     catch (e) { prompt('Copy this link:', url); }
   }
 
@@ -743,7 +748,17 @@
     });
   }
 
-  addEventListener('hashchange', show);
+  // The invitation itself is in the link's #part, so in-page jumps ("View invitation", the menu, ⌄) must scroll
+  // without changing it: a link ending in "#details" would no longer be the invitation.
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a) return;
+    const target = document.getElementById(a.getAttribute('href').slice(1));
+    e.preventDefault();
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  // A #part that names a section of this page is never read as an invitation (older shared links, back button).
+  addEventListener('hashchange', () => { if (!document.getElementById(location.hash.slice(1))) show(); });
   addEventListener('resize', () => fitNames());
   show();
   if (record) setupRecording();

@@ -1096,3 +1096,6 @@ body .hero .ornament.emblem::before, body .hero .ornament.emblem::after, .orname
 footer.finale .sell a { display: inline-block; padding: 6px 2px; }
 .upi-copy { min-height: 36px; padding: 8px 16px; }
 .menu-open .demo-bar, .menu-open .music-btn { visibility: hidden; }
+
+/* In-page jumps (View invitation, menu) stop below the sticky monogram bar */
+main section, #details { scroll-margin-top: 64px; }

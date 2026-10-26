@@ -168,12 +168,24 @@ test.describe('Links', () => {
     assert.equal(Core.waNumber('call me'), '');
     assert.equal(Core.waNumber(undefined), '');
   });
-  test('inviteText is personal when a guest is given', () => {
-    const t = Core.inviteText({ guest: 'Rahul', who: 'Diya & Aarav', label: 'Wedding', link: 'https://x/card.html#a' });
-    assert.match(t, /^💌 Dear Rahul, you're invited!/);
-    assert.match(t, /Diya & Aarav · Wedding/);
-    assert.ok(t.endsWith('https://x/card.html#a'));
-    assert.match(Core.inviteText({ guest: '', who: 'A', label: 'B', link: 'L' }), /^💌 You're invited!/);
+  test('the invitation message is written for the occasion, with the names, day, venue and link', () => {
+    const wedding = Core.inviteText({ guest: 'Rahul Uncle', card: { type: 'wedding', host1: 'Sankalp', host2: 'Sonal', date: '2026-12-12T19:30', venue: 'The Leela, Udaipur' }, link: 'https://x/i#a' });
+    for (const part of ['*You\'re Invited*', 'Dear Rahul Uncle,', 'we invite you to the wedding of', '*Sankalp weds Sonal*', 'Date: Saturday, 12 December 2026, 7:30 pm', 'Venue: The Leela, Udaipur', 'https://x/i#a'])
+      assert.ok(wedding.includes(part), `wedding message has "${part}"`);
+    const kids = Core.inviteText({ card: { type: 'birthday', host1: 'Kabir', date: '2026-11-22' }, link: 'L' });
+    assert.match(kids, /birthday party of\n\*Kabir\*/);
+    assert.match(kids, /Date: Sunday, 22 November 2026\n/, 'time not decided yet: only the date');
+    assert.ok(!/Dear/.test(kids) && !/Venue/.test(kids), 'no empty greeting or venue');
+    assert.doesNotMatch(wedding + kids, /[\u{10000}-\u{10FFFF}]/u, 'no emoji WhatsApp for Windows would break');
+    // Links saved before the message knew the card still get a tidy message.
+    assert.match(Core.inviteText({ guest: 'Rahul', who: 'Diya & Aarav', label: 'Wedding', link: 'L' }), /Dear Rahul, you're invited![\s\S]*Diya & Aarav · Wedding/);
+  });
+
+  test('a date without a time is that day, and knows it has no time', () => {
+    const d = Core.parseDate('2026-12-12');
+    assert.deepEqual([d.getFullYear(), d.getMonth(), d.getDate(), d.getHours()], [2026, 11, 12, 0]);
+    assert.equal(Core.hasTime('2026-12-12'), false);
+    assert.equal(Core.hasTime('2026-12-12T19:30'), true);
   });
 });
 

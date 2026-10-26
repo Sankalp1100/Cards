@@ -391,13 +391,30 @@
     updatePreview();
   });
 
+  // "Time not decided yet": the date box asks only for the day, and the card shows the date without a time.
+  function showDateMode() {
+    const box = form.elements.date, noTime = !!state.date && !Core.hasTime(state.date);
+    form.elements.noTime.checked = noTime;
+    box.type = noTime ? 'date' : 'datetime-local';
+    box.min = noTime ? Core.nowLocal().slice(0, 10) : Core.nowLocal(); // past dates can't be picked
+    box.value = state.date || '';
+  }
+  form.elements.noTime.addEventListener('change', e => {
+    const day = (state.date || '').slice(0, 10);
+    state.date = e.target.checked ? day : day ? day + 'T19:00' : '';
+    if (e.target.checked && !day) { form.elements.date.type = 'date'; form.elements.date.min = Core.nowLocal().slice(0, 10); form.elements.date.focus(); return; }
+    touched = true;
+    showDateMode();
+    updatePreview();
+  });
+
   function fillForm() {
     const sample = occasion(state).card;
     for (const f of FIELDS) {
       form.elements[f].value = state[f] || '';
       if (sample[f] && f !== 'photo') form.elements[f].placeholder = sample[f];
     }
-    form.elements.date.min = Core.nowLocal(); // past dates can't be picked
+    showDateMode(); // a date without a time when the time is not decided yet
     form.elements.rsvp.value = tenDigits(state.rsvp);
     showMobileHint(form.elements.rsvp);
     renderPhoto();
@@ -556,7 +573,7 @@
   // A card needs a name, and its date (if any) must not have passed.
   function cardReady() {
     if (!state.host1) { toast('Please fill in a name first'); form.elements.host1.focus(); return false; }
-    if (state.date && state.date < Core.nowLocal()) { toast('That date has already passed. Please choose a future date'); form.elements.date.focus(); return false; }
+    if (state.date && state.date < (Core.hasTime(state.date) ? Core.nowLocal() : Core.nowLocal().slice(0, 10))) { toast('That date has already passed. Please choose a future date'); form.elements.date.focus(); return false; }
     if (state.rsvp && !Core.mobile(state.rsvp)) { toast('RSVP number: please enter a valid 10-digit mobile number (starts with 6, 7, 8 or 9)'); form.elements.rsvp.focus(); return false; }
     return true;
   }
@@ -596,6 +613,8 @@
     }
     lastResults = list.map((g, i) => ({
       id: newId(), guest: g, who: who(state), type: state.type, theme: design().no,
+      // What the WhatsApp message says about the celebration (names, day, venue).
+      card: { type: state.type, host1: state.host1, host2: state.host2, date: state.date, venue: state.venue, tagline: state.tagline },
       url: urls ? urls[i] : Core.cardUrl(site, c, g), created: now
     }));
     saveLinks([...lastResults, ...loadLinks()]);
@@ -607,7 +626,8 @@
   function linkActions(r) {
     return `
       <button type="button" class="btn-small" data-copy="${esc(r.url)}">Copy</button>
-      <a class="btn-small wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(Core.inviteText({ guest: r.guest, who: r.who, label: occasion(r).label, link: r.url }))}">WhatsApp</a>
+      <button type="button" class="btn-small" data-copy="${esc(Core.inviteText({ guest: r.guest, card: r.card, who: r.who, label: occasion(r).label, link: r.url }))}">Copy message</button>
+      <a class="btn-small wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(Core.inviteText({ guest: r.guest, card: r.card, who: r.who, label: occasion(r).label, link: r.url }))}">WhatsApp</a>
       <a class="btn-small" target="_blank" rel="noopener" href="${esc(r.url)}">Open</a>`;
   }
 

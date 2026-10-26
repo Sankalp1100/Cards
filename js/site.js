@@ -303,6 +303,7 @@
     ord = { design: e ? e.no : '', type: e ? e.occasion : 'wedding', events: [] };
     of.reset();
     of.elements.design.value = e ? e.no : '';
+    of.elements.date.type = 'datetime-local';
     of.elements.date.min = nowLocal(); // past dates can't be picked
     $('#osDone').hidden = true;
     $('.os-foot').hidden = false;
@@ -361,6 +362,14 @@
     document.querySelectorAll('#osPicks [data-pick]').forEach(b => b.classList.toggle('on', +b.dataset.pick === (e && e.no)));
   }
 
+  // "Time not decided yet": the date box asks only for the day (the card then shows the date without a time).
+  function dateMode(noTime) {
+    const box = of.elements.date, day = box.value.slice(0, 10);
+    box.type = noTime ? 'date' : 'datetime-local';
+    box.min = noTime ? nowLocal().slice(0, 10) : nowLocal();
+    box.value = noTime ? day : day ? day + 'T19:00' : '';
+  }
+
   function collect() {
     const v = n => of.elements[n].value.trim();
     const t = Templates.get(v('design'));
@@ -389,7 +398,7 @@
     if (!has('host1')) return [`Please enter: ${l1}`, 'host1'];
     if (needsTwo() && !has('host2')) return [`Please enter: ${l2}`, 'host2'];
     if (!el.date.value) return ['Please choose the date and time.', 'date'];
-    if (el.date.value < nowLocal()) return ['That date has already passed. Please choose a future date.', 'date'];
+    if (el.date.value < (el.date.type === 'date' ? nowLocal().slice(0, 10) : nowLocal())) return ['That date has already passed. Please choose a future date.', 'date'];
     if (!has('venue')) return ['Please enter the venue.', 'venue'];
     if (has('mapUrl') && !Catalog.mapLink(el.mapUrl.value)) return ['The location should be a link (https://…), or leave it empty.', 'mapUrl'];
     return null;
@@ -516,7 +525,9 @@
   // iPhone Safari ignores `min` and lets past days be picked, so a past date is cleared the moment it is chosen.
   of.addEventListener('change', e => {
     const input = e.target;
-    if (input.type !== 'datetime-local' || !input.value || input.value >= nowLocal()) return;
+    if (input.type === 'checkbox' && input.name === 'xNoTime') { dateMode(input.checked); return; }
+    const today = input.type === 'date' ? nowLocal().slice(0, 10) : nowLocal();
+    if (!/^(datetime-local|date)$/.test(input.type) || !input.value || input.value >= today) return;
     input.value = '';
     const row = input.closest('.os-event');
     if (row) ord.events[row.dataset.i].date = '';

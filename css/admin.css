@@ -288,3 +288,6 @@ body.logged-out .side, body.logged-out .admin-main { display: none; }
   .xrow > :nth-child(3) { grid-column: 1 / 3; grid-row: 2; }
   .xrow .x { grid-column: 3; grid-row: 1; }
 }
+.mini-check { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; font-size: .85rem; color: var(--muted); cursor: pointer; }
+.mini-check input { width: 18px; height: 18px; }
+.date-field { display: grid; gap: 0; align-content: start; }
