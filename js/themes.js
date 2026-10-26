@@ -170,7 +170,7 @@ const RECIPES = {
   naming: {
     scenes: ['bokeh', 'mesh', 'waves', 'aurora', 'glow', 'silk', 'holo'],
     nouns: ['Little Star', 'Naamkaran', 'Tiny Toes', 'Blessing', 'Moonbeam', 'Cradle', 'Lullaby', 'Angel', 'Twinkle', 'Sunbeam', 'Cherub', 'Snowdrop', 'Butterfly', 'Dewdrop', 'Baby Bloom', 'Wish', 'Cuddle', 'Sweet Pea', 'Rainbow Baby', 'Lil Prince', 'Lil Princess', 'Baby Sunshine', 'Namakaran', 'Bless the Baby', 'Heaven Sent', 'Precious One', 'Little Moon', 'Pearl Baby', 'Twinkle Star'],
-    emoji: ['👶', '⭐', '🌙', '🪔', '🦋'], intros: ['scroll', 'cardflip', 'envelope'], moods: 'l',
+    emoji: ['👶', '⭐', '🌙', '🪔', '🦋'], intros: ['scroll', 'cardflip', 'envelope'], moods: 'llld',
     fonts: ['garden', 'soft', 'dreamy'], decor: ['stars', 'florals', 'lace', 'blobs', 'frame'],
     particles: [['petal'], ['sparkle', 'heart'], ['petal', 'sparkle']], count: 40, tempo: 0.32
   },
@@ -184,7 +184,7 @@ const RECIPES = {
   babyshower: {
     scenes: ['mesh', 'bokeh', 'waves', 'aurora', 'silk', 'glow'],
     nouns: ['Godh Bharai', 'Oh Baby', 'Stork', 'Bundle of Joy', 'Little One', 'Cloud Nine', 'Peekaboo', 'Booties', 'Rattle', 'Baby Bump', 'Hush', 'Nest', 'Blossom', 'Cotton', 'Mama Bear', 'Sweetheart', 'Tiny Hands', 'Pitter Patter', 'Sunshine', 'Mommy To Be', 'Stork Delivery', 'Baby Steps', 'Little Treasure', 'Bundle Love', 'Oh Boy', 'Oh Girl', 'Sweet Arrival', 'Hello Baby', 'Lullaby Shower'],
-    emoji: ['🍼', '🧸', '👣', '☁️', '🎀'], moods: 'l', flavor: ['playful', ''], intros: ['giftbox', 'cardflip', 'envelope'],
+    emoji: ['🍼', '🧸', '👣', '☁️', '🎀'], moods: 'llld', flavor: ['playful', ''], intros: ['giftbox', 'cardflip', 'envelope'],
     fonts: ['soft', 'playful', 'garden'], decor: ['blobs', 'stars', 'florals', 'lace'],
     particles: [['heart', 'sparkle', 'balloon'], ['balloon', 'heart'], ['sparkle', 'petal']], count: 38, tempo: 0.3
   },
