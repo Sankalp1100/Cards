@@ -241,6 +241,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`document.title`), "Diya & Aarav 💌 You're invited");
     assert.match(await page.eval(`document.querySelector('.date-badge b').textContent`), /^7:30\s?pm$/i, '12-hour time');
     assert.match(await page.eval(`document.querySelector('footer a').getAttribute('href')`), /^index\.html$/, 'footer sells the service');
+    assert.equal(await page.eval(`document.querySelector('footer a.signature').href`), await page.eval(`SITE.url || new URL('index.html', location.href).href`), 'the signature opens the website');
     assert.equal(await page.eval(`!!document.querySelector('#demoBar')`), false, 'guests never see the sample bar');
     const fonts = await page.eval(`document.querySelector('#themeFonts').href`);
     assert.equal((fonts.match(/family=/g) || []).length, 3, 'only the 3 fonts this design uses');

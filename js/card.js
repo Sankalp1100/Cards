@@ -518,7 +518,8 @@
         ${x.hashtag ? `<p class="hashtag">${esc(x.hashtag.startsWith('#') ? x.hashtag : '#' + x.hashtag)}</p>` : ''}
         <p class="finale-names">${esc(Core.who(d))}${when ? ` · ${esc(when.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }))}` : ''}</p>
         <p class="sell">Loved this invitation? <a href="index.html">Get one for your celebration</a> 💌<br><small>${esc(SITE.brand)}</small></p>
-        <p class="signature reveal"><small>Designed by</small><span>${esc(SITE.designer || 'Sankalp')}</span></p>
+        <!-- The signature opens the website, so anyone who loves the card can order one -->
+        <a class="signature reveal" href="${esc(safeUrl(SITE.url) || 'index.html')}" target="_blank" rel="noopener" aria-label="Designed by ${esc(SITE.designer || 'Sankalp')}: visit the website"><small>Designed by</small><span>${esc(SITE.designer || 'Sankalp')}</span></a>
       </footer>
       <div class="lightbox" id="lightbox" hidden><button type="button" class="lb-x" aria-label="Close photo">✕</button></div>`;
 
