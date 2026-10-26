@@ -514,6 +514,8 @@
     } else if (browse) {
       closeOrder();
       setTab('designs', { occasion: ord.type });
+      // Computers have no Designs tab (the whole page shows): go to the designs, filtered to this occasion.
+      if (!$('.bottom-nav').offsetParent) requestAnimationFrame(() => $('#tplFilters').scrollIntoView({ behavior: 'smooth', block: 'start' }));
     } else if (occ) { ord.type = occ.dataset.type; renderOccasions(); }
     else if (add) {
       ord.events.push({ name: add.dataset.add, date: of.elements.date.value, venue: '', dress: '' });

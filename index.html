@@ -261,10 +261,19 @@
         <p class="os-error" id="osError" role="alert"></p>
         <section class="os-done" id="osDone" hidden>
           <div class="os-confetti" aria-hidden="true"></div>
-          <div class="os-done-icon">🎉</div>
-          <h3>Order sent!</h3>
-          <p>WhatsApp is open with your order. Tap <b>send</b> there, and we will reply with your invitation soon.</p>
-          <button type="button" class="btn-glow" id="osDoneClose">Done ✨</button>
+          <div class="os-done-icon" aria-hidden="true">
+            <svg viewBox="0 0 120 120"><defs><linearGradient id="doneGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffc95c"/><stop offset=".55" stop-color="#ff3d8b"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs>
+              <circle class="dn-ring" cx="60" cy="60" r="50"/><path class="dn-tick" d="M38 62 L54 77 L84 45"/></svg>
+            <i class="dn-ripple"></i><i class="dn-ripple"></i>
+          </div>
+          <h3 class="dn-step" style="--s:0">Order sent!</h3>
+          <p class="dn-step" style="--s:1">WhatsApp is open with your order. Tap <b>send</b> there, and we will reply with your invitation soon.</p>
+          <ol class="dn-next dn-step" style="--s:2" aria-label="What happens next">
+            <li><b>1</b><span>Tap send on WhatsApp</span></li>
+            <li><b>2</b><span>We design your card</span></li>
+            <li><b>3</b><span>You get your link</span></li>
+          </ol>
+          <button type="button" class="btn-glow dn-step" style="--s:3" id="osDoneClose">Done ✨</button>
         </section>
       </form>
       <footer class="os-foot">
