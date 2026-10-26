@@ -799,3 +799,7 @@ body[data-tab="trending"] :is(.hero, .marquee-wrap, .bento, #templates, .how, #o
 
 /* The solid band behind the website's floating top bar is for the website only: on the admin panel it covered the heading */
 body.admin::before { display: none; }
+
+/* The design tiles in the order form scroll sideways without a visible scrollbar */
+.os-picks { scrollbar-width: none; }
+.os-picks::-webkit-scrollbar { display: none; width: 0; height: 0; }
