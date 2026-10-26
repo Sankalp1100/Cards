@@ -683,11 +683,7 @@
     $('#recVideo').hidden = true;
     $('#recDownload').hidden = true;
     $('#recModal').hidden = false;
-    // The video ends on the invitation's link as text (buttons cannot be tapped in a video): the common link if
-    // links were made, else the latest one, else the website's address.
-    const made = lastResults.find(r => !r.guest) || lastResults[0];
-    const link = made ? made.url : (cfg.site.url || 'https://cardalbum.vercel.app/');
-    recFrame.src = `card.html?record&link=${encodeURIComponent(link)}#` + code({ music: false });
+    recFrame.src = 'card.html?record#' + code({ music: false });
   }
 
   function closeRecorder() {

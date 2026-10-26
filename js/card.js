@@ -516,12 +516,6 @@
         <p class="thanks reveal">Thank you</p>
         <p class="thanks-note">${esc(x.thanks || 'For your love, your blessings, and for being part of our celebration.')}</p>
         ${x.hashtag ? `<p class="hashtag">${esc(x.hashtag.startsWith('#') ? x.hashtag : '#' + x.hashtag)}</p>` : ''}
-        ${record ? `
-      <div class="video-link">
-        <p class="kicker">Open your invitation</p>
-        <p class="vl-url">${esc((safeUrl(params.get('link')) || 'https://cardalbum.vercel.app/').replace(/^https?:\/\//, ''))}</p>
-        <p class="vl-note">RSVP, directions and save the date are inside the link</p>
-      </div>` : ''}
         <p class="finale-names">${esc(Core.who(d))}${when ? ` · ${esc(when.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }))}` : ''}</p>
         <p class="sell">Loved this invitation? <a href="index.html">Get one for your celebration</a> 💌<br><small>${esc(SITE.brand)}</small></p>
         <p class="signature reveal"><small>Designed by</small><span>${esc(SITE.designer || 'Sankalp')}</span></p>
@@ -738,18 +732,28 @@
       await wait(600);
       openCard();
       await wait((OPEN_MS[introKind] || 1500) + 3000);
-      // A calm, even scroll (about 300px a second): fast scrolling over a long page looked jerky in the video.
-      const el = document.scrollingElement, end = el.scrollHeight - innerHeight;
-      const ms = Math.min(32000, Math.max(6000, end * 3.4));
-      const t0 = performance.now();
-      await new Promise(done => {
+      // Scroll down the card, stopping on every date and venue: each one glows for a moment before moving on.
+      const el = document.scrollingElement;
+      document.querySelectorAll('.reveal').forEach(r => r.classList.add('in'));
+      const glide = to => new Promise(done => {
+        const from = el.scrollTop, dist = Math.max(0, Math.min(to, el.scrollHeight - innerHeight)) - from;
+        const ms = Math.min(2200, Math.max(700, Math.abs(dist) * 2.6)), t0 = performance.now();
         const step = now => {
           const p = Math.min(1, (now - t0) / ms);
-          el.scrollTop = end * (p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2);
+          el.scrollTop = from + dist * (p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2);
           p < 1 ? requestAnimationFrame(step) : done();
         };
         requestAnimationFrame(step);
       });
+      const stops = [...document.querySelectorAll('.hero .date-badge, .hero .ticket-stub, .countdown .cd-grid, .events .event-body, .venue-card')];
+      for (const s of stops) {
+        const r = s.getBoundingClientRect();
+        await glide(el.scrollTop + r.top + r.height / 2 - innerHeight / 2);
+        s.classList.add('spotlight');
+        await wait(1900);
+        s.classList.remove('spotlight');
+      }
+      await glide(el.scrollHeight);
       await wait(2500);
       tell('done');
     });
