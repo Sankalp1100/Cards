@@ -849,3 +849,14 @@ body.admin::before { display: none; }
 /* Mehendi: lace edge top and bottom */
 .ps-mehendi::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 12px; z-index: -1; opacity: .6;
   background: radial-gradient(circle at 50% 0, var(--a) 5px, transparent 6px) 0 0 / 16px 12px repeat-x; }
+
+/* ---------- Phones: remove buttons keep their size next to the order form's function fields ---------- */
+.os-event .x { width: 40px; min-width: 40px; min-height: 40px; align-self: start; }
+@media (max-width: 640px) {
+  .os-event { grid-template-columns: minmax(0, 1fr) 40px; }
+  .os-event .x { grid-column: 2; grid-row: 1; }
+}
+.nav .logo { padding-block: 9px; } /* a taller tap area, without changing where the logo shows */
+.os-check { min-height: 40px; display: flex; align-items: center; gap: 10px; }
+.os-check input { width: 22px; height: 22px; flex: none; }
+.tpl-demo { display: inline-block; padding: 8px 4px; }

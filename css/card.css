@@ -1086,3 +1086,13 @@ body .hero .ornament.emblem::before, body .hero .ornament.emblem::after, .orname
 .st-toybox .section-title { font-family: var(--display); font-weight: 600; text-transform: none; letter-spacing: 0; font-size: clamp(1.8rem, 8vw, 2.4rem); color: var(--accent); }
 .st-toybox .pcard, .st-toybox .event-body, .st-toybox .cd-cell { background: #fff; border: 3px solid color-mix(in srgb, var(--accent) 30%, #fff); border-radius: 28px; box-shadow: 0 8px 0 color-mix(in srgb, var(--accent2) 35%, transparent); }
 .st-toybox .moment h3, .st-toybox .fam h3 { font-family: var(--display); font-weight: 600; color: var(--accent); }
+
+/* ---------- Phones: the open menu covers everything; comfortable tap areas ---------- */
+.pmenu { z-index: 95; }
+.lightbox { z-index: 96; }
+.mono, .menu-btn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; margin: -6px; }
+.menu-btn { min-width: 64px; justify-content: flex-end; }
+.scroll-hint { display: inline-grid; place-items: center; min-width: 44px; min-height: 44px; }
+footer.finale .sell a { display: inline-block; padding: 6px 2px; }
+.upi-copy { min-height: 36px; padding: 8px 16px; }
+.menu-open .demo-bar, .menu-open .music-btn { visibility: hidden; }

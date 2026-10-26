@@ -17,13 +17,17 @@ export const chromePath = CANDIDATES.find(p => fs.existsSync(p));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 export async function launch({ headful = false, args = [] } = {}) {
-  const port = 9400 + Math.floor(Math.random() * 500);
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'wc-test-'));
-  const proc = spawn(chromePath, [...(headful ? [] : ['--headless=new']), ...args, `--remote-debugging-port=${port}`, '--no-first-run', '--hide-scrollbars', '--auto-accept-this-tab-capture', '--autoplay-policy=no-user-gesture-required', `--user-data-dir=${profile}`, 'about:blank']);
-  let target;
+  // Port 0: Chrome takes a free port and writes it to DevToolsActivePort in its own profile, so two browsers
+  // started at the same time can never end up talking to each other (a random port sometimes collided).
+  const proc = spawn(chromePath, [...(headful ? [] : ['--headless=new']), ...args, '--remote-debugging-port=0', '--no-first-run', '--hide-scrollbars', '--auto-accept-this-tab-capture', '--autoplay-policy=no-user-gesture-required', `--user-data-dir=${profile}`, 'about:blank']);
+  let target, port;
   for (let i = 0; i < 60 && !target; i++) {
     await sleep(250);
-    try { target = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).find(t => t.type === 'page'); } catch { /* not up yet */ }
+    try {
+      port = port || +fs.readFileSync(path.join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0];
+      target = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).find(t => t.type === 'page');
+    } catch { /* not up yet */ }
   }
   if (!target) throw new Error('Chrome did not start');
 

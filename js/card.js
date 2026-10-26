@@ -577,7 +577,8 @@
   let threadRaf = 0;
   function setupPremium() {
     const menu = $('#pmenu'), btn = $('#menuBtn');
-    const setMenu = on => { menu.hidden = !on; requestAnimationFrame(() => menu.classList.toggle('on', on)); btn.setAttribute('aria-expanded', on); };
+    // While the menu is open, the floating sample bar and music button step aside (they sit in another layer).
+    const setMenu = on => { menu.hidden = !on; requestAnimationFrame(() => menu.classList.toggle('on', on)); btn.setAttribute('aria-expanded', on); document.body.classList.toggle('menu-open', on); };
     btn.addEventListener('click', () => setMenu(true));
     $('#menuClose').addEventListener('click', () => setMenu(false));
     menu.addEventListener('click', e => { if (e.target.tagName === 'A') setMenu(false); });
