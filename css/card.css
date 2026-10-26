@@ -1118,3 +1118,9 @@ main section, #details { scroll-margin-top: 64px; }
 }
 footer .signature { text-decoration: none; cursor: pointer; transition: transform .25s ease; }
 footer .signature:hover { transform: translateY(-2px); }
+
+/* Neon Night: the synthwave sun glows behind the first screen only and fades away as you scroll on,
+   and cards have a solid dark backing, so text never sits on the bright sun */
+.scene-grid .sun { transition: opacity .6s ease; }
+body.scrolled .scene-grid .sun { animation: none; opacity: .07; }
+.st-neon .pcard, .st-neon .event-body, .st-neon .cd-cell, .st-neon .date-badge { background-color: color-mix(in srgb, var(--bg) 88%, transparent); }

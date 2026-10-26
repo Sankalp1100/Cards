@@ -291,3 +291,7 @@ body.logged-out .side, body.logged-out .admin-main { display: none; }
 .mini-check { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; font-size: .85rem; color: var(--muted); cursor: pointer; }
 .mini-check input { width: 18px; height: 18px; }
 .date-field { display: grid; gap: 0; align-content: start; }
+
+/* Small phones: the form and preview columns shrink to the screen instead of to their contents */
+.create-grid > * { min-width: 0; }
+@media (max-width: 900px) { .create-grid { grid-template-columns: minmax(0, 1fr); } }

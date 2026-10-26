@@ -70,6 +70,11 @@
       dots.forEach((s, j) => s.classList.toggle('on', j === i));
     }), { root: $('#hotReel'), threshold: 0.6 });
     slides.forEach(s => seen.observe(s));
+    // A tapped dot slides to its design.
+    $('#hotDots').onclick = e => {
+      const i = dots.indexOf(e.target.closest('i'));
+      if (i >= 0) slides[i].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    };
   }
   applyCatalog();
   $('#hot').addEventListener('click', e => {
@@ -229,7 +234,7 @@
 
   const io = new IntersectionObserver(entries => entries.forEach(en => {
     if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
-  }), { threshold: 0.12 });
+  }), { threshold: 0.12, rootMargin: '0px 0px 15% 0px' }); // starts a little before it scrolls in, so nothing is caught half-way
   function reveal(els) {
     els.forEach((el, i) => {
       el.classList.add('rv');

@@ -760,6 +760,9 @@
     });
   }
 
+  // Past the first screen, busy backgrounds (the Neon sun) step back so the text stays readable.
+  addEventListener('scroll', () => document.body.classList.toggle('scrolled', scrollY > innerHeight * 0.6), { passive: true });
+
   // The invitation itself is in the link's #part, so in-page jumps ("View invitation", the menu, ⌄) must scroll
   // without changing it: a link ending in "#details" would no longer be the invitation.
   document.addEventListener('click', e => {
