@@ -89,7 +89,7 @@ const DB = (() => {
       ]);
       const site = { ...((settings[0] && settings[0].data) || {}) };
       // The brand was renamed from "Wedding Card" to "CardAlbum"; settings saved before that still say the old name.
-      // (The admin then saves the new name back with its next change.)
+      // (The new name is stored with the next settings change.)
       if (site.brand === 'Wedding Card') site.brand = 'CardAlbum';
       return { site, catalog: Object.fromEntries(rows.map(r => [r.design_no, r.data])) };
     }
