@@ -259,6 +259,7 @@
     of.elements.date.min = nowLocal(); // past dates can't be picked
     $('#osDone').hidden = true;
     $('.os-foot').hidden = false;
+    $('#osDots').hidden = $('#osStepNo').hidden = false;
     renderOccasions();
     renderEvents();
     showDesign();
@@ -415,6 +416,7 @@
     of.querySelectorAll('.os-step').forEach(s => { s.hidden = true; });
     $('#osError').textContent = '';
     $('.os-foot').hidden = true;
+    $('#osDots').hidden = $('#osStepNo').hidden = true; // the steps are over: no progress bar on the thank-you screen
     $('#osDone').hidden = false;
     const colors = ['#ffc95c', '#ff3d8b', '#8b5cf6', '#22d3ee', '#25d366'];
     $('.os-confetti').innerHTML = Array.from({ length: 40 }, (_, i) =>
@@ -458,6 +460,20 @@
       renderOccasions();
       if (!add.dataset.add) $('#osEvents .os-event:last-child input').focus();
     } else if (del) { ord.events.splice(+del.dataset.del, 1); renderEvents(); renderOccasions(); }
+  });
+  // iPhone Safari ignores `min` and lets past days be picked, so a past date is cleared the moment it is chosen.
+  of.addEventListener('change', e => {
+    const input = e.target;
+    if (input.type !== 'datetime-local' || !input.value || input.value >= nowLocal()) return;
+    input.value = '';
+    const row = input.closest('.os-event');
+    if (row) ord.events[row.dataset.i].date = '';
+    $('#osError').textContent = 'That date has already passed. Please choose a future date.';
+    input.setAttribute('aria-invalid', 'true');
+    input.classList.remove('shake');
+    void input.offsetWidth;
+    input.classList.add('shake');
+    navigator.vibrate?.([30, 40, 30]);
   });
   of.addEventListener('input', e => {
     const row = e.target.closest('.os-event');

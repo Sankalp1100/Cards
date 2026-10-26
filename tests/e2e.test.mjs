@@ -138,8 +138,9 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await flagged(), 'date');
     assert.ok(await page.eval(`document.querySelector('#orderForm [name=date]').min`) >= future(-0.01), 'the date picker starts today');
     await page.eval(fill('date', '2020-01-01T10:00'));
-    await next();
-    assert.match(await errorText(), /already passed/, 'past dates are refused');
+    assert.match(await errorText(), /already passed/, 'a past date is refused as soon as it is picked (iPhone Safari ignores min)');
+    assert.equal(await page.eval(`document.querySelector('#orderForm [name=date]').value`), '', 'and cleared');
+    assert.equal(await flagged(), 'date');
     await page.eval(fill('date', future(60)));
     await next();
     assert.match(await errorText(), /venue/);
@@ -185,6 +186,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`document.querySelector('#osDone').hidden`), false);
     assert.ok(await page.eval(`document.querySelectorAll('.os-confetti i').length`) > 20, 'confetti');
     assert.equal(await page.eval(`document.querySelector('.os-foot').hidden`), true);
+    assert.equal(await page.eval(`document.querySelector('#osDots').hidden && document.querySelector('#osStepNo').hidden`), true, 'no progress bar on the thank-you screen');
     await page.eval(`document.querySelector('#osDoneClose').click()`);
     assert.equal(await page.eval(`document.querySelector('#orderSheet').hidden`), true);
     noErrors();
