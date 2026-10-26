@@ -792,3 +792,7 @@ body[data-tab="trending"] :is(.hero, .marquee-wrap, .bento, #templates, .how, #o
 .ds-num label { flex: 1 1 180px; display: grid; gap: 6px; font-size: .85rem; color: var(--muted); }
 .ds-num .btn-glow { padding: 12px 22px; }
 .ds-msg { min-height: 1.2em; font-size: .85rem; color: #ff8fab; }
+
+/* Pop-up panels (demo picker, order form): no visible scrollbar; they still scroll by touch, wheel and trackpad */
+.os-body { scrollbar-width: none; }
+.os-body::-webkit-scrollbar { display: none; width: 0; height: 0; }
