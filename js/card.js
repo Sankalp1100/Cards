@@ -112,6 +112,28 @@
     }
   }
 
+  // The animated background behind the whole card (fixed, so it never scrolls away). Everything in it moves
+  // with transforms only, so it stays smooth on phones.
+  function renderScene(kind) {
+    const el = $('#scene');
+    if (!el || el.dataset.kind === kind) return;
+    el.dataset.kind = kind;
+    el.className = `scene scene-${kind}`;
+    const many = (n, f) => Array.from({ length: n }, (_, i) => f(i)).join('');
+    el.innerHTML = {
+      aurora: '<i></i><i></i><i></i>',
+      mesh: '<i></i><i></i><i></i><i></i>',
+      bokeh: many(14, i => `<i style="left:${(i * 41 + 7) % 100}%;--s:${0.5 + (i % 5) * 0.3};--d:${-(i * 1.7).toFixed(1)}s;--t:${12 + (i % 4) * 4}s"></i>`),
+      // Two identical swells side by side, so sliding by half loops without a seam.
+      waves: many(3, i => `<svg class="w${i}" viewBox="0 0 2400 120" preserveAspectRatio="none"><path d="M0 60 Q300 ${8 + i * 16} 600 60 T1200 60 T1800 60 T2400 60 V120 H0Z"/></svg>`),
+      grid: '<b class="sun"></b><b class="floor"></b>',
+      rays: '<i></i>',
+      holo: '<i></i>',
+      silk: '<i></i>',
+      grain: '<i></i>'
+    }[kind] || '';
+  }
+
   // The host's WhatsApp for RSVPs: a 10-digit mobile gets India's 91; longer numbers already carry a country code.
   function rsvpNumber(d) {
     const digits = Core.waNumber(d.rsvp);
@@ -150,6 +172,18 @@
         return `${p.visual}<div class="hero-panel ticket"><div class="ticket-main">${text}</div><div class="ticket-stub">${stub}</div></div>${p.hint}`;
       }
       case 'split': return `<div class="split"><div class="split-visual">${p.visual}${p.date}</div><div class="split-text">${text}</div></div>${p.hint}`;
+      // Editorial: a magazine cover, with the date as giant outlined numbers and a line of text up the side.
+      case 'editorial': {
+        const big = when ? `${String(when.getDate()).padStart(2, '0')}<i>.</i>${String(when.getMonth() + 1).padStart(2, '0')}` : '♥';
+        const side = `${PRESETS[d.type]?.label || 'Celebration'} · ${when ? when.getFullYear() : 'Save the date'}`;
+        return `<div class="ed-num" aria-hidden="true">${big}</div><p class="ed-side" aria-hidden="true">${esc(side)}</p>${p.visual}${text}${p.date}${p.hint}`;
+      }
+      // Orbit: a ring of text slowly turning around the photo.
+      case 'orbit': {
+        const ring = `${PRESETS[d.type]?.label || 'Celebration'} ✦ ${initials(d)} ✦ ${when ? when.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Save the date'} ✦ `;
+        return `<div class="orbit"><svg class="orbit-ring" viewBox="0 0 200 200" aria-hidden="true"><defs><path id="orbitPath" d="M100 100 m-84 0 a84 84 0 1 1 168 0 a84 84 0 1 1 -168 0"/></defs>
+          <text><textPath href="#orbitPath" textLength="526" lengthAdjust="spacing">${esc(ring.toUpperCase())}</textPath></text></svg>${p.visual}</div>${text}${p.date}${p.hint}`;
+      }
       default: return `${p.visual}${text}${p.date}${p.hint}`;
     }
   }
@@ -193,8 +227,10 @@
     const fonts = Core.fontsUrl(t.fonts);
     if ($('#themeFonts').getAttribute('href') !== fonts) $('#themeFonts').href = fonts;
     // Name style only applies without a flavour (neon and playful have their own lettering).
-    const cls = [`theme-${t.no}`, t.flavor ? `flavor-${t.flavor}` : `ns-${t.nameStyle || 'shimmer'}`, `cs-${t.cardStyle || 'soft'}`];
-    document.body.className = document.body.className.replace(/\b(theme|flavor|ns|cs)-\S+/g, '').trim() + ' ' + cls.join(' ');
+    const cls = [`theme-${t.no}`, t.flavor ? `flavor-${t.flavor}` : `ns-${t.nameStyle || 'shimmer'}`, `cs-${t.cardStyle || 'soft'}`,
+      `fx-${t.nameFx || 'drop'}`, `pf-${t.frame || 'ring'}`, `rv-${t.reveal || 'up'}`, `ev-${t.events || 'timeline'}`, `cdn-${t.countdown || 'boxes'}`, `tt-${t.titles || 'flourish'}`];
+    document.body.className = document.body.className.replace(/\b(theme|flavor|ns|cs|fx|pf|rv|ev|cdn|tt)-\S+/g, '').trim() + ' ' + cls.join(' ');
+    renderScene(t.scene || 'glow');
     const meta = $('meta[name="theme-color"]') || document.head.appendChild(Object.assign(document.createElement('meta'), { name: 'theme-color' }));
     meta.content = t.vars['--bg'];
   }
@@ -276,6 +312,7 @@
       <article class="event reveal" style="--i:${i}">
         <div class="event-dot"></div>
         <div class="event-body tilt">
+          ${when ? `<div class="event-date" aria-hidden="true"><b>${when.getDate()}</b><span>${esc(when.toLocaleDateString('en-IN', { month: 'short' }))}</span></div>` : ''}
           <h3>${esc(e.name)}</h3>
           ${when ? `<p class="event-when">${esc(fmtDate(when))} · ${esc(fmtTime(when))}</p>` : ''}
           ${e.venue ? `<p>📍 ${esc(e.venue)}</p>` : ''}
@@ -341,7 +378,10 @@
         <button class="btn ghost" id="shareBtn" type="button">🔗 Share</button>
       </section>
 
-      <footer>Loved this invitation? <a href="index.html">Get one for your celebration</a> 💌<br><small>${esc(SITE.brand)}</small></footer>`;
+      <footer>
+        <p class="signature reveal"><small>Designed with ♥ by</small><span>${esc(SITE.designer || 'Sankalp')}</span></p>
+        Loved this invitation? <a href="index.html">Get one for your celebration</a> 💌<br><small>${esc(SITE.brand)}</small>
+      </footer>`;
 
     const who = Core.who(d);
     const inviteUrl = shareLink();
@@ -417,6 +457,8 @@
       for (const [u, v] of Object.entries(vals)) {
         const el = grid.querySelector(`[data-u="${u}"]`);
         const text = String(v).padStart(2, '0');
+        // How full each progress ring is (the "rings" countdown).
+        el.parentElement.style.setProperty('--p', Math.min(1, v / { Days: 100, Hours: 24, Minutes: 60, Seconds: 60 }[u]).toFixed(3));
         if (el.textContent !== text) {
           el.textContent = text;
           el.classList.remove('flip'); void el.offsetWidth; el.classList.add('flip');

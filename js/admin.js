@@ -6,7 +6,7 @@
   const clone = o => JSON.parse(JSON.stringify(o));
   const form = $('#form'), frame = $('#preview');
   const FIELDS = ['title', 'host1', 'host2', 'nick1', 'nick2', 'tagline', 'date', 'venue', 'message', 'photo', 'mapUrl', 'rsvp', 'intro'];
-  const SITE_KEYS = ['url', 'brand', 'whatsapp', 'instagram', 'price', 'currency'];
+  const SITE_KEYS = ['url', 'brand', 'designer', 'whatsapp', 'instagram', 'price', 'currency'];
   const STORE_KEY = 'weddingcard.links', DRAFT_KEY = 'weddingcard.config';
   const GALLERY_PAGE = 40;
 

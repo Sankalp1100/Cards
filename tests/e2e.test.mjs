@@ -323,6 +323,8 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       const decor = { mandala: '.mandala', blobs: '.blob', frame: '.frame', florals: '.florals', sunburst: '.sunburst', deco: '.deco', lights: '.lights', stars: '.stars', lace: '.lace' }[t.decor];
       assert.ok(await page.eval(`!!document.querySelector('.hero.layout-${t.layout}')`), `#${t.no} layout ${t.layout}`);
       assert.ok(await page.eval(`!!document.querySelector('${decor}')`), `#${t.no} decor ${t.decor}`);
+      assert.ok(await page.eval(`!!document.querySelector('#scene.scene-${t.scene}') && ['fx-${t.nameFx}', 'pf-${t.frame}', 'rv-${t.reveal}', 'ev-${t.events}', 'cdn-${t.countdown}', 'tt-${t.titles}'].every(c => document.body.classList.contains(c))`), `#${t.no} animated look`);
+      assert.match(await page.eval(`document.querySelector('footer .signature').textContent`), /Sankalp/, `#${t.no} signed`);
       assert.deepEqual(page.errors, [], `errors in design #${t.no}`);
     }
   });

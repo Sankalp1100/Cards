@@ -367,10 +367,17 @@ test.describe('Templates', () => {
 
   test('every design has a valid layout, decor, name style and section style, and each is well used', () => {
     const options = {
-      layout: ['classic', 'arch', 'monogram', 'ticket', 'split'],
+      layout: ['classic', 'arch', 'monogram', 'ticket', 'split', 'editorial', 'orbit'],
       decor: ['mandala', 'blobs', 'frame', 'florals', 'sunburst', 'deco', 'lights', 'stars', 'lace'],
-      nameStyle: ['shimmer', 'solid', 'outline', 'duo'],
-      cardStyle: ['soft', 'sharp', 'pill', 'outline']
+      nameStyle: ['shimmer', 'solid', 'outline', 'duo', 'chrome', 'holo', 'glow'],
+      cardStyle: ['soft', 'sharp', 'pill', 'outline'],
+      scene: ['glow', 'aurora', 'mesh', 'grain', 'bokeh', 'rays', 'waves', 'grid', 'holo', 'silk'],
+      nameFx: ['drop', 'rise', 'blur', 'flip', 'stamp', 'scatter', 'type', 'swing'],
+      frame: ['ring', 'arch', 'polaroid', 'blob', 'halo'],
+      reveal: ['up', 'zoom', 'flip', 'slide', 'blur', 'wipe'],
+      events: ['timeline', 'cards', 'zigzag', 'tickets', 'chapters'],
+      countdown: ['boxes', 'rings', 'strip', 'minimal'],
+      titles: ['flourish', 'bar', 'lines']
     };
     for (const [key, values] of Object.entries(options)) {
       for (const t of all) assert.ok(values.includes(t[key]), `#${t.no} ${key} "${t[key]}"`);
@@ -381,6 +388,27 @@ test.describe('Templates', () => {
   test('no two of the 300 designs look alike', () => {
     const looks = all.map(t => [t.layout, t.decor, t.nameStyle, t.cardStyle, JSON.stringify(t.fonts)].join('|'));
     assert.equal(new Set(looks).size, 300);
+  });
+
+  // Of the 12 things a guest sees change (layout, decor, background, name entrance and finish, frame, reveal,
+  // function list, countdown, titles, sections, fonts), designs of the same occasion differ in at least 5,
+  // neighbours in the catalog in at least 8, and any two designs in at least 4.
+  test('every design is clearly different from every other', () => {
+    const looks = all.map(t => [t.layout, t.decor, t.scene, t.nameFx, t.frame, t.reveal, t.events, t.countdown, t.titles,
+      t.flavor || t.nameStyle, t.cardStyle, t.fonts.display + t.fonts.script]);
+    const differ = (a, b) => a.reduce((n, v, k) => n + (v !== b[k]), 0);
+    for (let i = 0; i < all.length; i++) {
+      if (i) assert.ok(differ(looks[i], looks[i - 1]) >= 8, `#${i} and #${i + 1} are too alike`);
+      for (let j = i + 1; j < all.length; j++) {
+        const need = all[i].occasion === all[j].occasion ? 5 : 4;
+        assert.ok(differ(looks[i], looks[j]) >= need, `#${i + 1} and #${j + 1} differ in only ${differ(looks[i], looks[j])} ways`);
+      }
+    }
+  });
+
+  test('the classics keep their hand-picked look', () => {
+    assert.deepEqual(plain(['scene', 'nameFx', 'frame', 'reveal', 'layout', 'decor'].map(k => Templates.get(1)[k])), ['rays', 'drop', 'ring', 'up', 'classic', 'mandala']);
+    assert.equal(Templates.get(6).scene, 'grid', 'Neon Love gets the synthwave grid');
   });
 
   test('every design has its own song, and #001 keeps the original tune', () => {
@@ -501,7 +529,9 @@ test.describe('Catalog', () => {
   test('poster escapes text and shows the trending badge', () => {
     const e = { ...Catalog.entries(site, {})[0], featured: true };
     const html = Catalog.poster(e, 'a', 'href="#"');
-    assert.match(html, /^\s*<a class="poster d-mandala"/);
+    assert.match(html, /^\s*<a class="poster d-mandala l-classic s-rays n-shimmer f-ring"/, 'the poster shows the design\'s own look');
+    assert.match(html, /--fs:&quot;Great Vibes&quot;, cursive/, 'and its own fonts');
+    assert.match(html, /<span class="p-by">by Sankalp<\/span>/, 'signed by the designer');
     assert.match(html, /🔥 Trending/);
     assert.match(html, /Diya<i>&amp;<\/i>Aarav/);
   });

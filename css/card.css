@@ -106,7 +106,9 @@ main { position: relative; z-index: 2; }
   background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
   padding: 0 .04em; opacity: 0;
 }
-.opened .names .ch { animation: dropIn .9s cubic-bezier(.2,.9,.3,1.3) calc(var(--i) * 70ms + .3s) both, shimmer 4s linear calc(var(--i) * 90ms) infinite; }
+/* How the letters arrive (--in, set by the design's fx-*) and how they keep moving (--loop, set by its name style). */
+.names .ch { --in: dropIn .9s cubic-bezier(.2,.9,.3,1.3) calc(var(--i) * 70ms + .3s) both; --loop: shimmer 4s linear calc(var(--i) * 90ms) infinite; }
+.opened .names .ch { animation: var(--in), var(--loop); }
 .amp { font-family: var(--display); font-size: .38em; color: var(--accent2); margin: .15em 0; opacity: 0; }
 .opened .amp { animation: popIn .8s 1s both, heartbeat 1.6s 2s ease-in-out infinite; }
 .tagline { position: relative; font-size: clamp(1.05rem, 3.6vw, 1.35rem); font-style: italic; color: var(--muted); max-width: 30ch; }
@@ -177,9 +179,9 @@ footer { padding: 24px 16px 40px; font-size: .9rem; color: var(--muted); }
 .flavor-neon .names .ch { background: none; color: #fff; text-shadow: 0 0 6px #fff, 0 0 18px var(--accent), 0 0 40px var(--accent), 0 0 70px var(--accent2); }
 .flavor-neon .section-title, .flavor-neon .cd-cell b { text-shadow: 0 0 12px var(--accent); }
 .flavor-neon .event-body, .flavor-neon .cd-cell { box-shadow: 0 0 0 1px var(--accent), 0 0 24px color-mix(in srgb, var(--accent2) 30%, transparent); }
-.opened.flavor-neon .names .ch { animation: dropIn .9s calc(var(--i) * 70ms + .3s) both, flicker 5s calc(var(--i) * 300ms) infinite; }
+.flavor-neon .names .ch { --loop: flicker 5s calc(var(--i) * 300ms) infinite; }
 .flavor-playful .names .ch { background: none; color: var(--accent); -webkit-text-stroke: 0; text-shadow: 3px 3px 0 var(--accent2), 6px 6px 0 rgba(0,0,0,.08); }
-.opened.flavor-playful .names .ch { animation: dropIn .9s cubic-bezier(.2,.9,.3,1.5) calc(var(--i) * 70ms + .3s) both, wiggle 2.4s calc(var(--i) * 120ms) ease-in-out infinite; }
+.flavor-playful .names .ch { --loop: wiggle 2.4s calc(var(--i) * 120ms) ease-in-out infinite; }
 .flavor-playful .event-body, .flavor-playful .cd-cell { border-radius: 26px; border-width: 2px; }
 
 /* ---------- Keyframes ---------- */
@@ -420,13 +422,13 @@ footer { padding: 24px 16px 40px; font-size: .9rem; color: var(--muted); }
 
 /* ---------- Name styles ---------- */
 .ns-solid .names .ch { background: none; color: var(--accent); text-shadow: 0 6px 22px color-mix(in srgb, var(--accent) 45%, transparent); }
-.opened.ns-solid .names .ch { animation: dropIn .9s cubic-bezier(.2,.9,.3,1.3) calc(var(--i) * 70ms + .3s) both; }
+.ns-solid .names .ch { --loop: none; }
 .ns-outline .names .ch { background: none; color: color-mix(in srgb, var(--accent) 12%, transparent); -webkit-text-stroke: 1.4px var(--accent); }
-.opened.ns-outline .names .ch { animation: dropIn .9s cubic-bezier(.2,.9,.3,1.3) calc(var(--i) * 70ms + .3s) both, glowPulse 3.5s ease-in-out calc(var(--i) * 90ms + 1.5s) infinite; }
+.ns-outline .names .ch { --loop: glowPulse 3.5s ease-in-out calc(var(--i) * 90ms + 1.5s) infinite; }
 .ns-duo .names .name:first-child .ch { background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--ink))); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .ns-duo .names .name:last-child:not(:first-child) .ch { background: linear-gradient(180deg, var(--accent2), color-mix(in srgb, var(--accent2) 55%, var(--ink))); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .ns-duo .amp { color: var(--muted); }
-.opened.ns-duo .names .ch { animation: dropIn .9s cubic-bezier(.2,.9,.3,1.3) calc(var(--i) * 70ms + .3s) both; }
+.ns-duo .names .ch { --loop: none; }
 
 /* ---------- Section styles ---------- */
 .cs-sharp .event-body, .cs-sharp .cd-cell, .cs-sharp .date-badge, .cs-sharp .hero-panel:not(.arch-panel) { border-radius: 3px; border: 3px double color-mix(in srgb, var(--accent) 55%, transparent); }
@@ -463,3 +465,255 @@ body.has-demo-bar footer { padding-bottom: 120px; }
 .cd-cell { min-width: 0; padding-left: 2px; padding-right: 2px; }
 .cd-cell span { display: block; font-size: clamp(.5rem, 2.4vw, .75rem); letter-spacing: .06em; overflow-wrap: anywhere; }
 .opening-note { min-height: 100vh; display: grid; place-content: center; font-family: var(--display); color: var(--muted); font-size: 1.1rem; line-height: 2; }
+
+/* ==========================================================================
+   Trending motion: animated backgrounds, name entrances and finishes, photo frames,
+   scroll reveals, function lists, countdowns, section titles and the designer's signature.
+   Each design picks one of each in js/themes.js. Backgrounds move with transforms only (smooth on phones).
+   ========================================================================== */
+
+/* ---------- Animated backgrounds (fixed behind the whole card) ---------- */
+.scene { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.scene i, .scene b, .scene svg { position: absolute; display: block; will-change: transform; }
+
+.scene-glow::before { content: ''; position: absolute; left: 50%; top: 32%; width: 90vmax; height: 90vmax; margin: -45vmax 0 0 -45vmax; border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 30%, transparent), transparent); animation: breathe 7s ease-in-out infinite alternate; }
+
+.scene-aurora i { left: 50%; top: 6%; width: 150vmax; height: 42vmax; margin-left: -75vmax; border-radius: 50%; opacity: .38;
+  background: radial-gradient(closest-side, var(--accent), transparent); animation: aurora 18s ease-in-out infinite alternate; }
+.scene-aurora i:nth-child(2) { top: 34%; background: radial-gradient(closest-side, var(--accent2), transparent); animation-duration: 23s; animation-delay: -7s; }
+.scene-aurora i:nth-child(3) { top: 62%; opacity: .26; background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 45%, #5ef2ff), transparent); animation-duration: 29s; animation-delay: -13s; }
+
+.scene-mesh i { width: 85vmax; height: 85vmax; border-radius: 50%; opacity: .5; background: radial-gradient(closest-side, var(--c), transparent); animation: meshMove var(--t) ease-in-out infinite alternate; }
+.scene-mesh i:nth-child(1) { --c: var(--accent); --t: 17s; --x: 25vw; --y: 20vh; left: -35vmax; top: -35vmax; }
+.scene-mesh i:nth-child(2) { --c: var(--accent2); --t: 21s; --x: -25vw; --y: 25vh; right: -35vmax; top: -20vmax; }
+.scene-mesh i:nth-child(3) { --c: color-mix(in srgb, var(--accent) 50%, var(--accent2)); --t: 19s; --x: 20vw; --y: -25vh; left: -25vmax; bottom: -40vmax; }
+.scene-mesh i:nth-child(4) { --c: color-mix(in srgb, var(--accent2) 60%, #fff); --t: 25s; --x: -20vw; --y: -20vh; right: -30vmax; bottom: -35vmax; opacity: .35; }
+
+.scene-grain::before { content: ''; position: absolute; left: 50%; top: 40%; width: 110vmax; height: 110vmax; margin: -55vmax 0 0 -55vmax; border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 34%, transparent), transparent); animation: drift 16s ease-in-out infinite alternate; }
+.scene-grain i { inset: -60px; opacity: .16; animation: grain 1.2s steps(6) infinite;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.scene-grain::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, transparent 55%, color-mix(in srgb, var(--bg) 70%, #000) 130%); }
+
+.scene-bokeh i { bottom: -24vmin; width: 15vmin; aspect-ratio: 1; border-radius: 50%; opacity: 0;
+  background: radial-gradient(circle at 35% 35%, color-mix(in srgb, var(--accent) 70%, #fff), transparent 70%);
+  animation: bokeh var(--t) linear var(--d) infinite; }
+.scene-bokeh i:nth-child(even) { background: radial-gradient(circle at 35% 35%, color-mix(in srgb, var(--accent2) 70%, #fff), transparent 70%); }
+
+.scene-rays i { left: 50%; top: -70vmax; width: 200vmax; height: 200vmax; margin-left: -100vmax;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--accent) 24%, transparent) 0 4deg, transparent 4deg 13deg);
+  -webkit-mask: radial-gradient(circle, #000 12%, transparent 52%); mask: radial-gradient(circle, #000 12%, transparent 52%); animation: spinPlain 90s linear infinite; }
+
+.scene-waves svg { left: 0; bottom: 0; width: 200%; height: 20vh; animation: waveX 16s linear infinite; }
+.scene-waves path { fill: var(--accent); opacity: .14; }
+.scene-waves .w1 { height: 27vh; animation-duration: 23s; animation-direction: reverse; }
+.scene-waves .w1 path { fill: var(--accent2); opacity: .11; }
+.scene-waves .w2 { height: 13vh; animation-duration: 11s; }
+.scene-waves .w2 path { opacity: .2; }
+
+.scene-grid .floor { left: -50%; right: -50%; bottom: -6vh; height: 52vh; overflow: hidden; transform: perspective(320px) rotateX(64deg); transform-origin: 50% 100%;
+  -webkit-mask: linear-gradient(transparent, #000 70%); mask: linear-gradient(transparent, #000 70%); }
+.scene-grid .floor::before { content: ''; position: absolute; left: 0; right: 0; top: -50px; bottom: 0; animation: gridRun 1.6s linear infinite;
+  background: linear-gradient(color-mix(in srgb, var(--accent) 65%, transparent) 2px, transparent 2px) 0 0 / 100% 50px,
+              linear-gradient(90deg, color-mix(in srgb, var(--accent2) 60%, transparent) 2px, transparent 2px) 0 0 / 50px 100%; }
+.scene-grid .sun { left: 50%; top: 18vh; width: 46vmin; aspect-ratio: 1; margin-left: -23vmin; border-radius: 50%; opacity: .42;
+  background: linear-gradient(var(--accent2), var(--accent));
+  -webkit-mask: linear-gradient(#000 52%, transparent 52% 57%, #000 57% 66%, transparent 66% 70%, #000 70% 78%, transparent 78% 82%, #000 82%);
+  mask: linear-gradient(#000 52%, transparent 52% 57%, #000 57% 66%, transparent 66% 70%, #000 70% 78%, transparent 78% 82%, #000 82%);
+  animation: breathe 5s ease-in-out infinite alternate; }
+
+.scene-holo i { left: 50%; top: 50%; width: 180vmax; height: 180vmax; margin: -90vmax 0 0 -90vmax; opacity: .2; animation: spinPlain 36s linear infinite;
+  background: conic-gradient(color-mix(in srgb, var(--accent) 55%, #ff6fd8), color-mix(in srgb, var(--accent2) 55%, #4fd8ff), color-mix(in srgb, var(--accent) 55%, #8dffb0),
+    color-mix(in srgb, var(--accent2) 55%, #ffe36b), color-mix(in srgb, var(--accent) 55%, #ff6fd8)); }
+.scene-holo::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 50% 38%, transparent 10%, var(--bg) 78%); }
+
+.scene-silk i { inset: -40% -60%; animation: silk 13s ease-in-out infinite alternate;
+  background: repeating-linear-gradient(115deg, transparent 0 70px, color-mix(in srgb, var(--accent) 16%, transparent) 100px, transparent 130px 210px),
+              repeating-linear-gradient(115deg, transparent 0 140px, color-mix(in srgb, var(--accent2) 10%, transparent) 175px, transparent 210px 420px); }
+
+/* ---------- How the names arrive ---------- */
+.fx-rise .names .ch { --in: riseIn 1s cubic-bezier(.2,.8,.2,1) calc(var(--i) * 45ms + .3s) both; }
+.fx-blur .names .ch { --in: blurIn 1.3s ease calc(var(--i) * 60ms + .3s) both; }
+.fx-flip .names .ch { --in: flipIn 1s cubic-bezier(.3,1.4,.5,1) calc(var(--i) * 60ms + .3s) both; transform-origin: 50% 90%; }
+.fx-stamp .names .ch { --in: stampIn .7s cubic-bezier(.3,1.5,.6,1) calc(var(--i) * 80ms + .3s) both; }
+.fx-scatter .names .ch { --in: scatterIn 1.4s cubic-bezier(.2,.9,.25,1) calc(var(--i) * 25ms + .3s) both; }
+.fx-type .names .ch { --in: typeIn .01s steps(1) calc(var(--i) * 110ms + .4s) both; }
+.fx-swing .names .ch { --in: swingIn 1.2s cubic-bezier(.3,1.3,.5,1) calc(var(--i) * 70ms + .3s) both; transform-origin: 50% 0; }
+/* A blinking cursor follows the typed names */
+.fx-type .names .name:last-child::after { content: ''; display: inline-block; width: .05em; height: .75em; margin-left: .06em; vertical-align: -.05em; background: var(--accent2); animation: caret 1s steps(1) infinite; }
+
+/* ---------- New name finishes ---------- */
+.ns-chrome .names .ch { --loop: shimmer 3.5s linear calc(var(--i) * 70ms) infinite;
+  background: linear-gradient(110deg, transparent 40%, rgba(255,255,255,.95) 50%, transparent 60%) 0 0 / 300% 100%,
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 35%, #fff) 0%, var(--accent) 45%, color-mix(in srgb, var(--accent) 55%, #000) 52%, color-mix(in srgb, var(--accent) 60%, #fff) 60%, var(--accent) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+.ns-chrome .names { filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--accent) 35%, transparent)); }
+.ns-holo .names .ch { --loop: holoShift 6s linear calc(var(--i) * -120ms) infinite;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 50%, #ff4fc8), color-mix(in srgb, var(--accent) 50%, #3fb8ff), color-mix(in srgb, var(--accent) 50%, #36d98a),
+    color-mix(in srgb, var(--accent) 50%, #f5a623), color-mix(in srgb, var(--accent) 50%, #ff4fc8)) 0 0 / 400% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+.ns-holo .names { filter: drop-shadow(0 3px 8px rgba(0,0,0,.18)); }
+.ns-glow .names .ch { --loop: glowBreath 3s ease-in-out calc(var(--i) * 80ms + 1.5s) infinite alternate; background: none; color: var(--accent);
+  text-shadow: 0 0 .06em color-mix(in srgb, var(--accent) 60%, #fff), 0 0 .3em color-mix(in srgb, var(--accent) 55%, transparent), 0 0 .7em color-mix(in srgb, var(--accent2) 40%, transparent); }
+
+/* ---------- Photo / emoji frames ---------- */
+.ornament { display: grid; place-items: center; }
+body:not(.pf-ring) .photo, body:not(.pf-ring) .photo img { animation: none; }
+/* Ring: the photo spins inside a gradient ring; the emoji sits in a turning dotted ring */
+.pf-ring .ornament { width: 128px; height: 128px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%); }
+.pf-ring .ornament::before { content: ''; position: absolute; inset: 0; border-radius: 50%; animation: spinPlain 14s linear infinite;
+  background: repeating-conic-gradient(var(--accent) 0 6deg, transparent 6deg 15deg);
+  -webkit-mask: radial-gradient(circle, transparent 63%, #000 64% 69%, transparent 70%); mask: radial-gradient(circle, transparent 63%, #000 64% 69%, transparent 70%); }
+/* Arch: a palace window */
+.pf-arch .photo { width: 170px; height: 220px; border-radius: 999px 999px 18px 18px; padding: 5px; background: linear-gradient(var(--accent), var(--accent2)); }
+.pf-arch .photo img { border-radius: 999px 999px 14px 14px; }
+.pf-arch .ornament { width: 116px; height: 150px; border-radius: 999px 999px 14px 14px; border: 2px solid var(--accent); background: var(--card);
+  box-shadow: inset 0 0 0 6px transparent, inset 0 0 0 7px color-mix(in srgb, var(--accent) 40%, transparent), 0 0 40px color-mix(in srgb, var(--accent) 25%, transparent); }
+/* Polaroid: a tilted instant photo with tape, gently swaying */
+.pf-polaroid .photo, .pf-polaroid .ornament { width: 176px; height: 206px; padding: 12px 12px 42px; border-radius: 4px; background: #fffdf8; transform-origin: 50% 0;
+  box-shadow: 0 18px 40px rgba(0,0,0,.3); animation: sway 5s ease-in-out infinite; }
+.pf-polaroid .photo img { border-radius: 2px; border: 0; }
+.pf-polaroid .ornament { width: 140px; height: 168px; padding-bottom: 34px; }
+.pf-polaroid .photo::before, .pf-polaroid .ornament::before { content: ''; position: absolute; top: -12px; left: 50%; width: 74px; height: 24px; margin-left: -37px; transform: rotate(-4deg);
+  background: color-mix(in srgb, var(--accent) 45%, rgba(255,255,255,.7)); opacity: .85; }
+/* Blob: an organic shape that keeps changing */
+.pf-blob .photo, .pf-blob .photo img, .pf-blob .ornament { animation: morph 9s ease-in-out infinite; border-radius: 60% 40% 55% 45% / 50% 60% 40% 50%; }
+.pf-blob .photo { padding: 6px; background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+.pf-blob .photo img { border: 0; }
+.pf-blob .ornament { width: 132px; height: 132px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 40%, transparent), color-mix(in srgb, var(--accent2) 40%, transparent)); }
+/* Halo: rings of light ripple outwards */
+.pf-halo .photo { padding: 4px; background: var(--accent); }
+.pf-halo .ornament { width: 124px; height: 124px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.pf-halo .photo::before, .pf-halo .photo::after, .pf-halo .ornament::before, .pf-halo .ornament::after {
+  content: ''; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--accent); animation: ripple 3s ease-out infinite; }
+.pf-halo .photo::after, .pf-halo .ornament::after { animation-delay: -1.5s; border-color: var(--accent2); }
+
+/* ---------- New hero layouts ---------- */
+/* Editorial: a magazine cover */
+.layout-editorial .names { font-family: var(--display); font-weight: 700; text-transform: uppercase; letter-spacing: .01em; line-height: .98; font-size: clamp(2.5rem, 11.5vw, 6.2rem); }
+.layout-editorial .amp { font-family: var(--script); text-transform: none; font-size: .62em; font-weight: 400; }
+.layout-editorial .title { letter-spacing: .5em; }
+.ed-num { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-family: var(--display); font-weight: 700; line-height: 1; white-space: nowrap; pointer-events: none;
+  font-size: clamp(9rem, 50vmin, 28rem); color: transparent; -webkit-text-stroke: 1.5px var(--accent); opacity: .2; }
+.ed-num i { font-style: normal; color: var(--accent2); -webkit-text-stroke: 0; }
+.ed-side { position: absolute; left: 6px; top: 50%; writing-mode: vertical-rl; transform: translateY(-50%) rotate(180deg); font-family: var(--display); font-size: .62rem;
+  letter-spacing: .5em; text-transform: uppercase; color: var(--muted); opacity: .75; pointer-events: none; }
+.opened .ed-num { animation: edIn 1.8s cubic-bezier(.2,.8,.2,1) both; }
+.opened .ed-side { animation: floatIn 1.2s ease 1s both; }
+/* Orbit: a ring of text turning around the photo */
+.orbit { position: relative; width: 250px; height: 250px; display: grid; place-items: center; }
+.orbit-ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; animation: spinPlain 26s linear infinite; }
+.orbit-ring text { fill: var(--accent); font: 600 10.5px var(--display); letter-spacing: 1px; }
+.orbit .photo { width: 160px; height: 160px; }
+.orbit .ornament { font-size: 3.6rem; }
+.opened .orbit { animation: popIn 1s ease .1s both; }
+@media (max-width: 380px) { .orbit { width: 220px; height: 220px; } .orbit .photo { width: 140px; height: 140px; } }
+
+/* ---------- How sections appear while scrolling ---------- */
+.rv-zoom .reveal { transform: scale(.8); }
+.rv-flip .reveal { transform: perspective(900px) rotateX(-32deg) translateY(30px); transform-origin: 50% 0; }
+.rv-slide .reveal { transform: translateX(-70px); }
+.rv-slide .reveal:nth-child(even) { transform: translateX(70px); }
+.rv-blur .reveal { transform: translateY(24px) scale(1.04); filter: blur(12px); transition-property: opacity, transform, filter; }
+.rv-wipe .reveal { transform: none; clip-path: inset(0 0 100% 0); transition: opacity .7s ease, clip-path 1.2s cubic-bezier(.7,0,.2,1); transition-delay: calc(var(--i, 0) * 120ms); }
+body[class] .reveal.in { transform: none; filter: none; }
+.rv-wipe .reveal.in { clip-path: inset(-40% -40% -40% -40%); }
+
+/* ---------- How the functions are listed ---------- */
+.event-date { display: none; }
+/* Cards: a grid of cards with a colour strip on top */
+.ev-cards .timeline { grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 16px; text-align: center; }
+.ev-cards .timeline::before, .ev-cards .event-dot { display: none; }
+.ev-cards .event { padding-left: 0; }
+.ev-cards .event-body { position: relative; height: 100%; padding-top: 28px; overflow: hidden; }
+.ev-cards .event-body::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 5px; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+/* Zigzag: left and right of a centre line */
+.ev-zigzag .timeline::before { left: 50%; margin-left: -1px; }
+.ev-zigzag .event { width: calc(50% - 26px); padding-left: 0; }
+.ev-zigzag .event:nth-child(odd) { justify-self: start; text-align: right; }
+.ev-zigzag .event:nth-child(even) { justify-self: end; }
+.ev-zigzag .event:nth-child(odd) .event-dot { left: auto; right: -35px; }
+.ev-zigzag .event:nth-child(even) .event-dot { left: -35px; }
+@media (max-width: 560px) {
+  .ev-zigzag .timeline::before { left: 13px; margin: 0; }
+  .ev-zigzag .event { width: 100%; padding-left: 44px; }
+  .ev-zigzag .event:nth-child(odd) { text-align: left; }
+  .ev-zigzag .event:nth-child(n) .event-dot { left: 5px; right: auto; }
+}
+/* Tickets: each function is a ticket with a tear-off date */
+.ev-tickets .timeline::before, .ev-tickets .event-dot { display: none; }
+.ev-tickets .event { padding-left: 0; }
+.ev-tickets .event-body { position: relative; display: grid; grid-template-columns: 92px 1fr; column-gap: 18px; align-items: center; padding: 16px 20px 16px 0; overflow: hidden; }
+.ev-tickets .event-body > :not(.event-date) { grid-column: 2; }
+.ev-tickets .event-date { display: grid; place-content: center; grid-row: 1 / span 4; align-self: stretch; margin: -16px 0; padding: 10px 6px; text-align: center;
+  border-right: 2px dashed color-mix(in srgb, var(--accent) 55%, transparent); background: color-mix(in srgb, var(--accent) 15%, transparent); font-family: var(--display); }
+.ev-tickets .event-date b { font-size: 2.2rem; line-height: 1; color: var(--accent); }
+.ev-tickets .event-date span { font-size: .75rem; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); }
+.ev-tickets .event-body::before, .ev-tickets .event-body::after { content: ''; position: absolute; left: 81px; width: 22px; height: 22px; border-radius: 50%; background: var(--bg); z-index: 1; }
+.ev-tickets .event-body::before { top: -11px; } .ev-tickets .event-body::after { bottom: -11px; }
+/* Chapters: big outlined numbers, like a book */
+.ev-chapters .timeline { counter-reset: ch; gap: 30px; }
+.ev-chapters .timeline::before, .ev-chapters .event-dot { display: none; }
+.ev-chapters .event { padding-left: 0; counter-increment: ch; }
+.ev-chapters .event-body { position: relative; padding: 18px 0 4px 80px; background: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; box-shadow: none; }
+.ev-chapters .event-body::before { content: counter(ch, decimal-leading-zero); position: absolute; left: 0; top: 12px; font: 700 3.2rem/1 var(--display); color: transparent; -webkit-text-stroke: 1.3px var(--accent); }
+
+/* ---------- Countdown styles ---------- */
+@property --p { syntax: '<number>'; inherits: true; initial-value: 0; }
+/* Rings: each number inside a ring that empties as the day comes closer */
+.cdn-rings .cd-cell { position: relative; aspect-ratio: 1; display: grid; place-content: center; padding: 4px; border: 0; border-radius: 50%; transition: --p .8s ease; }
+.cdn-rings .cd-cell::before { content: ''; position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(var(--accent) calc(var(--p) * 360deg), color-mix(in srgb, var(--accent) 16%, transparent) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px)); mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px)); }
+.cdn-rings .cd-cell b { font-size: clamp(1.3rem, 6vw, 2.2rem); }
+/* Strip: one long pill with blinking colons */
+.cdn-strip .cd-grid { gap: 0; padding: 10px 4px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); }
+.cdn-strip .cd-cell { position: relative; aspect-ratio: auto; padding: 6px 2px; border: 0; border-radius: 0; background: none; }
+.cdn-strip .cd-cell + .cd-cell::before { content: ':'; position: absolute; left: -.15em; top: 4px; font: 400 clamp(1.4rem, 6vw, 2.2rem) var(--display); color: var(--accent2); animation: blink 1s steps(1) infinite; }
+/* Minimal: big thin numbers between hairlines */
+.cdn-minimal .cd-cell { aspect-ratio: auto; border: 0; border-left: 1px solid var(--line); border-radius: 0; background: none; }
+.cdn-minimal .cd-cell:first-child { border-left: 0; }
+.cdn-minimal .cd-cell b { font-size: clamp(2.2rem, 10vw, 3.8rem); font-weight: 400; }
+
+/* ---------- Section title styles ---------- */
+.tt-bar .section-title::after { content: ''; width: 64px; height: 3px; margin: 12px auto 0; border-radius: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+.tt-bar .in .section-title::after, .tt-bar .section-title.in::after { animation: barGrow 1s ease .3s both; }
+.tt-lines .section-title { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.tt-lines .section-title::before, .tt-lines .section-title::after { content: ''; flex: 1; max-width: 90px; height: 1px; margin: 0; font-size: 0; background: linear-gradient(90deg, transparent, var(--accent)); }
+.tt-lines .section-title::after { background: linear-gradient(90deg, var(--accent), transparent); }
+
+/* ---------- The designer's signature at the end of every card ---------- */
+.signature { display: grid; justify-items: center; margin: 6px auto 26px; }
+.signature small { font: 600 .68rem var(--display); letter-spacing: .38em; text-transform: uppercase; color: var(--muted); }
+.signature span { position: relative; padding: 0 .25em; font: 400 clamp(2.6rem, 10vw, 3.6rem)/1.25 var(--script);
+  background: linear-gradient(110deg, var(--accent) 30%, color-mix(in srgb, var(--accent) 30%, #fff) 50%, var(--accent2) 70%) 0 0 / 250% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 5s linear infinite; }
+.signature::after { content: ''; width: 140px; height: 2px; margin-top: 2px; background: linear-gradient(90deg, transparent, var(--accent), transparent); }
+.signature.in span { animation: sigWrite 2.2s cubic-bezier(.6,0,.3,1) both, shimmer 5s linear 2.2s infinite; }
+.signature.in::after { animation: barGrow 1.4s ease 1.6s both; }
+
+@keyframes breathe { from { transform: scale(.85); opacity: .7; } to { transform: scale(1.15); opacity: 1; } }
+@keyframes aurora { 0% { transform: translateX(-16vw) rotate(-12deg) scaleY(.7); } 100% { transform: translateX(16vw) rotate(10deg) scaleY(1.25); } }
+@keyframes meshMove { to { transform: translate(var(--x), var(--y)) scale(1.18); } }
+@keyframes grain { 0% { transform: translate(0, 0); } 20% { transform: translate(-30px, 20px); } 40% { transform: translate(20px, -30px); } 60% { transform: translate(-20px, -10px); } 80% { transform: translate(30px, 30px); } }
+@keyframes bokeh { 0% { opacity: 0; transform: translateY(0) scale(var(--s)); } 15%, 80% { opacity: .38; } 100% { opacity: 0; transform: translate(6vw, -135vh) scale(var(--s)); } }
+@keyframes waveX { to { transform: translateX(-50%); } }
+@keyframes gridRun { to { transform: translateY(50px); } }
+@keyframes silk { to { transform: translateX(180px) skewX(-6deg); } }
+@keyframes riseIn { from { opacity: 0; transform: translateY(.7em) scaleY(1.3); } }
+@keyframes blurIn { from { opacity: 0; transform: scale(1.5); filter: blur(14px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes flipIn { from { opacity: 0; transform: perspective(500px) rotateX(-100deg); } }
+@keyframes stampIn { 0% { opacity: 0; transform: scale(3.2) rotate(-10deg); } 60% { opacity: 1; transform: scale(.9); } 100% { opacity: 1; transform: none; } }
+@keyframes scatterIn { from { opacity: 0; transform: rotate(calc(var(--i) * 137deg)) translateX(2.6em) rotate(calc(var(--i) * -137deg + 40deg)) scale(.3); } to { opacity: 1; transform: none; } }
+@keyframes typeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes swingIn { 0% { opacity: 0; transform: rotate(-75deg) translateY(-.3em); } 55% { opacity: 1; transform: rotate(14deg); } 100% { opacity: 1; transform: none; } }
+@keyframes caret { 50% { opacity: 0; } }
+@keyframes holoShift { to { background-position: 400% 0; } }
+@keyframes glowBreath { to { text-shadow: 0 0 .08em #fff, 0 0 .45em var(--accent), 0 0 1em color-mix(in srgb, var(--accent2) 60%, transparent); } }
+@keyframes sway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(3deg); } }
+@keyframes morph { 0%, 100% { border-radius: 60% 40% 55% 45% / 50% 60% 40% 50%; } 33% { border-radius: 40% 60% 45% 55% / 60% 40% 60% 40%; } 66% { border-radius: 52% 48% 38% 62% / 42% 55% 45% 58%; } }
+@keyframes ripple { from { transform: scale(1); opacity: .8; } to { transform: scale(1.6); opacity: 0; } }
+@keyframes edIn { from { opacity: 0; transform: translate(-50%, -38%) scale(.85); } }
+@keyframes barGrow { from { transform: scaleX(0); } }
+@keyframes sigWrite { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 -10% 0 0); } }

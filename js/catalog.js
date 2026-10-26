@@ -136,16 +136,25 @@ const Catalog = {
   },
 
   // Lightweight poster (plain HTML/CSS, no iframe). `tag`/`attrs` let each page make it a link or a button.
+  // It shows the design's own fonts, layout, background, frame and name finish, so no two posters look alike.
   poster(e, tag, attrs) {
-    const c = PRESETS[e.occasion].card, v = e.vars;
+    const c = PRESETS[e.occasion].card, v = e.vars, d = Core.parseDate(c.date);
+    const day = d ? String(d.getDate()).padStart(2, '0') : '♥', month = d ? d.toLocaleDateString('en-IN', { month: 'short' }) : '';
+    const look = `d-${e.decor} l-${e.layout || 'classic'} s-${e.scene || 'glow'} n-${e.flavor || e.nameStyle || 'shimmer'} f-${e.frame || 'ring'}`;
     return `
-      <${tag} class="poster d-${e.decor}" ${attrs} style="--a:${v['--accent']};--a2:${v['--accent2']};--b:${v['--bg']};--c:${v['--bg2']};--i:${v['--ink']}">
+      <${tag} class="poster ${look}" ${attrs} style="--a:${v['--accent']};--a2:${v['--accent2']};--b:${v['--bg']};--c:${v['--bg2']};--i:${v['--ink']};--fd:${e.fonts.display.replace(/'/g, '&quot;')};--fs:${e.fonts.script.replace(/'/g, '&quot;')}">
+        <span class="p-scene" aria-hidden="true"></span>
         ${e.featured ? '<span class="p-badge">🔥 Trending</span>' : ''}
-        <span class="p-emoji">${e.emoji}</span>
-        <span class="p-title">${Core.esc(c.title)}</span>
-        <span class="p-names">${Core.esc(c.host1)}${c.host2 ? `<i>&amp;</i>${Core.esc(c.host2)}` : ''}</span>
-        <span class="p-tag">${Core.esc(c.tagline)}</span>
+        <span class="p-mono" aria-hidden="true">${Core.esc(Core.initials(c))}</span>
+        <span class="p-date" aria-hidden="true"><b>${day}</b>${Core.esc(month)}</span>
+        <span class="p-body">
+          <span class="p-emoji">${e.emoji}</span>
+          <span class="p-title">${Core.esc(c.title)}</span>
+          <span class="p-names">${Core.esc(c.host1)}${c.host2 ? `<i>&amp;</i>${Core.esc(c.host2)}` : ''}</span>
+          <span class="p-tag">${Core.esc(c.tagline)}</span>
+        </span>
         <span class="p-play">▶ Live demo</span>
+        <span class="p-by">by ${Core.esc(SITE.designer || 'Sankalp')}</span>
       </${tag}>`;
   },
 

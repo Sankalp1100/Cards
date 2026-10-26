@@ -614,3 +614,87 @@ body[data-tab="trending"] :is(.hero, .marquee-wrap, .bento, #templates, .how, #o
   body::before { height: 70px; background: linear-gradient(var(--bg) 75%, transparent); }
   body[data-tab="designs"]::before { display: none; }
 }
+
+/* ---------- Posters show each design's own look: fonts, layout, background, frame and name finish ---------- */
+.p-body { position: relative; display: grid; justify-items: center; gap: 8px; max-width: 100%; }
+.p-title { font-family: var(--fd, inherit); }
+.p-names { font-family: var(--fs, 'Great Vibes'), cursive; }
+.p-mono, .p-date { display: none; }
+.p-by { position: absolute; bottom: 8px; left: 0; right: 0; font: .9rem var(--fs, 'Great Vibes'), cursive; color: var(--a); opacity: .85; letter-spacing: .02em; }
+.p-play { margin-bottom: 10px; }
+
+/* The background, moving slowly (transforms only, so a page of posters stays smooth) */
+.p-scene { position: absolute; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; }
+.p-scene::before, .p-scene::after { content: ''; position: absolute; will-change: transform; }
+.s-aurora .p-scene::before { left: -40%; right: -40%; top: 10%; height: 45%; border-radius: 50%; opacity: .45; background: radial-gradient(closest-side, var(--a), transparent); animation: pAurora 9s ease-in-out infinite alternate; }
+.s-aurora .p-scene::after { left: -40%; right: -40%; top: 48%; height: 40%; border-radius: 50%; opacity: .35; background: radial-gradient(closest-side, var(--a2), transparent); animation: pAurora 12s ease-in-out -4s infinite alternate-reverse; }
+.s-mesh .p-scene::before { inset: -40%; background: radial-gradient(circle at 25% 25%, var(--a), transparent 35%), radial-gradient(circle at 75% 70%, var(--a2), transparent 35%); opacity: .5; animation: spinPoster 30s linear infinite; }
+.s-grain .p-scene::before { inset: 0; opacity: .2; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.s-grain .p-scene::after { inset: 0; background: radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--a) 30%, transparent), transparent 60%); }
+.s-bokeh .p-scene::before { inset: 0 0 -100% 0; opacity: .5; animation: pRise 14s linear infinite;
+  background: radial-gradient(circle at 20% 20%, var(--a) 0 6%, transparent 7%), radial-gradient(circle at 70% 35%, var(--a2) 0 4%, transparent 5%), radial-gradient(circle at 40% 65%, var(--a) 0 5%, transparent 6%),
+    radial-gradient(circle at 85% 80%, var(--a2) 0 7%, transparent 8%), radial-gradient(circle at 15% 90%, var(--a2) 0 4%, transparent 5%); background-size: 100% 50%; filter: blur(3px); }
+.s-rays .p-scene::before { left: -50%; right: -50%; top: -60%; aspect-ratio: 1; background: repeating-conic-gradient(color-mix(in srgb, var(--a) 35%, transparent) 0 5deg, transparent 5deg 15deg);
+  -webkit-mask: radial-gradient(circle, #000 15%, transparent 55%); mask: radial-gradient(circle, #000 15%, transparent 55%); animation: spinPoster 40s linear infinite; }
+.s-waves .p-scene::before { left: 0; bottom: 0; width: 200%; height: 22%; opacity: .3; animation: pWave 8s linear infinite;
+  background: radial-gradient(circle at 25% 100%, var(--a) 0 40%, transparent 41%) 0 0 / 25% 100% repeat-x; }
+.s-waves .p-scene::after { left: 0; bottom: 0; width: 200%; height: 14%; opacity: .3; animation: pWave 5s linear infinite reverse;
+  background: radial-gradient(circle at 25% 100%, var(--a2) 0 45%, transparent 46%) 0 0 / 20% 100% repeat-x; }
+.s-grid .p-scene::before { left: -50%; right: -50%; bottom: -5%; height: 45%; transform: perspective(160px) rotateX(60deg); transform-origin: 50% 100%;
+  background: linear-gradient(color-mix(in srgb, var(--a) 70%, transparent) 1px, transparent 1px) 0 0 / 100% 18px, linear-gradient(90deg, color-mix(in srgb, var(--a2) 70%, transparent) 1px, transparent 1px) 0 0 / 18px 100%;
+  -webkit-mask: linear-gradient(transparent, #000 70%); mask: linear-gradient(transparent, #000 70%); }
+.s-grid .p-scene::after { left: 50%; top: 14%; width: 46%; aspect-ratio: 1; margin-left: -23%; border-radius: 50%; opacity: .45; background: linear-gradient(var(--a2), var(--a));
+  -webkit-mask: linear-gradient(#000 55%, transparent 55% 62%, #000 62% 72%, transparent 72% 78%, #000 78%); mask: linear-gradient(#000 55%, transparent 55% 62%, #000 62% 72%, transparent 72% 78%, #000 78%); }
+.s-holo .p-scene::before { inset: -50%; opacity: .35; animation: spinPoster 18s linear infinite;
+  background: conic-gradient(color-mix(in srgb, var(--a) 55%, #ff6fd8), color-mix(in srgb, var(--a2) 55%, #4fd8ff), color-mix(in srgb, var(--a) 55%, #8dffb0), color-mix(in srgb, var(--a2) 55%, #ffe36b), color-mix(in srgb, var(--a) 55%, #ff6fd8)); }
+.s-holo .p-scene::after { inset: 0; background: radial-gradient(circle at 50% 45%, transparent 15%, var(--b) 85%); }
+.s-silk .p-scene::before { inset: -20% -60%; animation: pSilk 7s ease-in-out infinite alternate;
+  background: repeating-linear-gradient(115deg, transparent 0 22px, color-mix(in srgb, var(--a) 22%, transparent) 32px, transparent 42px 70px); }
+.s-glow .p-scene::before { left: 50%; top: 35%; width: 120%; aspect-ratio: 1; margin: -60% 0 0 -60%; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--a) 35%, transparent), transparent); animation: pBreathe 5s ease-in-out infinite alternate; }
+
+/* The emoji's frame */
+.f-ring .p-emoji, .f-halo .p-emoji, .f-blob .p-emoji, .f-arch .p-emoji, .f-polaroid .p-emoji { display: grid; place-items: center; width: 64px; height: 64px; font-size: 2rem; }
+.f-ring .p-emoji { border-radius: 50%; border: 2px dotted var(--a); }
+.f-halo .p-emoji { border-radius: 50%; background: color-mix(in srgb, var(--a) 18%, transparent); box-shadow: 0 0 0 6px color-mix(in srgb, var(--a) 12%, transparent), 0 0 0 12px color-mix(in srgb, var(--a) 6%, transparent); }
+.f-blob .p-emoji { border-radius: 60% 40% 55% 45% / 50% 60% 40% 50%; background: linear-gradient(135deg, color-mix(in srgb, var(--a) 45%, transparent), color-mix(in srgb, var(--a2) 45%, transparent)); }
+.f-arch .p-emoji { height: 78px; width: 58px; border-radius: 999px 999px 8px 8px; border: 1.5px solid var(--a); }
+.f-polaroid .p-emoji { width: 58px; height: 68px; padding-bottom: 12px; border-radius: 3px; background: #fffdf8; transform: rotate(-5deg); box-shadow: 0 6px 14px rgba(0,0,0,.3); }
+
+/* Name finishes */
+.n-shimmer .p-names, .n-chrome .p-names, .n-holo .p-names, .n-duo .p-names { -webkit-background-clip: text; background-clip: text; color: transparent; }
+.n-shimmer .p-names { background-image: linear-gradient(110deg, var(--a) 35%, #fff8e1 50%, var(--a) 65%); background-size: 250% 100%; }
+.n-chrome .p-names { background-image: linear-gradient(180deg, color-mix(in srgb, var(--a) 35%, #fff), var(--a) 45%, color-mix(in srgb, var(--a) 55%, #000) 52%, color-mix(in srgb, var(--a) 60%, #fff) 60%, var(--a)); }
+.n-holo .p-names { background-image: linear-gradient(90deg, color-mix(in srgb, var(--a) 50%, #ff4fc8), color-mix(in srgb, var(--a) 50%, #3fb8ff), color-mix(in srgb, var(--a) 50%, #36d98a), color-mix(in srgb, var(--a) 50%, #ff4fc8)); background-size: 300% 100%; }
+.n-duo .p-names { background-image: linear-gradient(180deg, var(--a) 45%, var(--a2) 55%); }
+.n-duo .p-names i, .n-shimmer .p-names i, .n-chrome .p-names i, .n-holo .p-names i { -webkit-text-fill-color: var(--a2); }
+.n-outline .p-names { color: transparent; -webkit-text-stroke: 1px var(--a); }
+.n-glow .p-names, .n-neon .p-names { text-shadow: 0 0 6px color-mix(in srgb, var(--a) 70%, transparent), 0 0 16px color-mix(in srgb, var(--a2) 50%, transparent); }
+.n-neon .p-names { color: #fff; }
+.n-playful .p-names { text-shadow: 2px 2px 0 var(--a2); }
+.poster:hover .p-names { animation: pSheen 2.5s linear infinite; }
+
+/* Layouts */
+.l-arch .p-body { padding: 34px 10px 16px; border: 1.5px solid color-mix(in srgb, var(--a) 60%, transparent); border-radius: 999px 999px 14px 14px; background: color-mix(in srgb, var(--b) 40%, transparent); }
+.l-ticket .p-body { padding: 14px 10px; border: 1.5px dashed color-mix(in srgb, var(--a) 55%, transparent); border-radius: 14px; }
+.l-ticket .p-date { display: grid; justify-items: center; padding: 4px 14px; border-radius: 8px; background: color-mix(in srgb, var(--a) 18%, transparent); font: .7rem var(--fd, inherit); letter-spacing: .15em; text-transform: uppercase; }
+.l-ticket .p-date b { font-size: 1.4rem; line-height: 1.1; color: var(--a); }
+.l-monogram .p-mono { display: block; position: absolute; inset: 0; z-index: -1; display: grid; place-items: center; font: 700 clamp(4rem, 42cqw, 7rem)/1 var(--fd, inherit); color: var(--a); opacity: .12; letter-spacing: -.04em; }
+.l-split .p-body { justify-items: start; text-align: left; padding-left: 12px; border-left: 3px solid var(--a); }
+.l-split { justify-items: stretch; }
+.l-editorial .p-names { font-family: var(--fd, inherit); font-weight: 700; text-transform: uppercase; font-size: min(1.6rem, 12cqw); line-height: 1; }
+.l-editorial .p-names i { font-family: var(--fs, 'Great Vibes'), cursive; text-transform: none; }
+.l-editorial .p-date { display: block; position: absolute; inset: 18% 0 auto; z-index: -1; font: 700 clamp(4rem, 48cqw, 8rem)/1 var(--fd, inherit); color: transparent; -webkit-text-stroke: 1px var(--a); opacity: .3; }
+.l-editorial .p-date b { font-weight: inherit; }
+.l-orbit .p-emoji { position: relative; }
+.l-orbit .p-emoji::after { content: ''; position: absolute; inset: -10px; border-radius: 50%; border: 1.5px dashed color-mix(in srgb, var(--a) 70%, transparent); animation: spinPoster 16s linear infinite; }
+.l-orbit .p-body { padding-top: 10px; }
+
+@keyframes pAurora { to { transform: translateX(18%) rotate(8deg) scaleY(1.2); } }
+@keyframes pRise { to { transform: translateY(-50%); } }
+@keyframes pWave { to { transform: translateX(-50%); } }
+@keyframes pSilk { to { transform: translateX(30%); } }
+@keyframes pBreathe { from { transform: scale(.8); } to { transform: scale(1.15); } }
+@keyframes pSheen { to { background-position: -250% 0; } }
+@media (prefers-reduced-motion: reduce) { .p-scene::before, .p-scene::after, .l-orbit .p-emoji::after { animation: none !important; } }
+/* The sunray hint only belongs to mandala and sunburst designs; the background scene does the rest */
+.poster:not(.d-mandala):not(.d-sunburst):not(.d-blobs)::before { display: none; }
