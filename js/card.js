@@ -663,12 +663,26 @@
     countdownTimer = setInterval(tick, 1000);
   }
 
+  // Safety net for the scroll animations: whatever is on screen is shown, even if the browser's in-view
+  // signal never came (a section can be hidden so completely that the browser thinks it is not visible).
+  let revealRaf = 0;
+  const revealOnScreen = () => {
+    revealRaf = 0;
+    for (const el of document.querySelectorAll('.reveal:not(.in)')) {
+      const r = el.getBoundingClientRect();
+      if (r.top < innerHeight * 0.92 && r.bottom > 0) el.classList.add('in');
+    }
+  };
+  addEventListener('scroll', () => { if (!revealRaf) revealRaf = requestAnimationFrame(revealOnScreen); }, { passive: true });
+  addEventListener('resize', () => { if (!revealRaf) revealRaf = requestAnimationFrame(revealOnScreen); });
+
   function setupReveal() {
     if (revealObserver) revealObserver.disconnect();
     revealObserver = new IntersectionObserver(entries => {
       for (const e of entries) if (e.isIntersecting) { e.target.classList.add('in'); revealObserver.unobserve(e.target); }
     }, { threshold: 0.15 });
     document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+    requestAnimationFrame(revealOnScreen);
   }
 
   function setupTilt() {

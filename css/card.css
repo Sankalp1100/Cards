@@ -1124,3 +1124,10 @@ footer .signature:hover { transform: translateY(-2px); }
 .scene-grid .sun { transition: opacity .6s ease; }
 body.scrolled .scene-grid .sun { animation: none; opacity: .07; }
 .st-neon .pcard, .st-neon .event-body, .st-neon .cd-cell, .st-neon .date-badge { background-color: color-mix(in srgb, var(--bg) 88%, transparent); }
+
+/* Wipe reveal: the section stays a sliver tall while waiting (still invisible: opacity 0), so the browser
+   can see it come into view. Fully clipped, it was never detected and the card stayed blank below the top. */
+.rv-wipe .reveal:not(.in) { clip-path: inset(0 0 80% 0); }
+
+/* The monogram always fits inside its gold ring, however wide the initials */
+.emblem b { font-size: 1.75rem; max-width: 92px; white-space: nowrap; letter-spacing: -.01em; }

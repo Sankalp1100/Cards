@@ -326,6 +326,21 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`!!document.querySelector('#rsvpBtn')`), false);
   });
 
+  test('scrolling down shows every section, for every scroll effect and every style', async () => {
+    const picks = new Map();
+    for (const t of Templates.all) { if (!picks.has('rv-' + t.reveal)) picks.set('rv-' + t.reveal, t); if (!picks.has('st-' + t.style)) picks.set('st-' + t.style, t); }
+    await page.viewport(1280, 800);
+    for (const [why, t] of picks) {
+      await page.goto(cardLink({ ...PRESETS[t.occasion].card, theme: t.no, story: [{ when: '2020', title: 'Met' }], families: [{ side: 'Hers', parents: 'Mr & Mrs Rao' }] }));
+      await openEnvelope();
+      const end = await page.eval('document.documentElement.scrollHeight');
+      for (let y = 0; y < end + 800; y += 480) { await page.eval(`scrollTo(0, ${y})`); await sleep(60); }
+      await sleep(400);
+      assert.deepEqual(await page.eval(`[...document.querySelectorAll('.reveal:not(.in)')].map(e => e.className)`), [], `#${t.no} (${why}): a section stayed hidden after scrolling`);
+    }
+    await page.viewport(420, 860);
+  });
+
   test('View invitation and the menu scroll down the card and keep the invitation link', async () => {
     await page.goto(cardLink({ ...PRESETS.wedding.card }));
     await openEnvelope();
