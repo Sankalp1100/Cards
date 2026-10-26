@@ -69,28 +69,41 @@ const Catalog = {
     add(when(order.date), `• Date: ${when(order.date)}`);
     add(plain(order.venue), `• Venue: ${plain(order.venue)}`);
     add(Catalog.mapLink(order.mapUrl), `• Location: ${Catalog.mapLink(order.mapUrl)}`);
-    add(events.length, `• Functions: ${events.map(ev => `${plain(ev.name)}${when(ev.date) ? ` (${when(ev.date)})` : ''}${plain(ev.venue) ? ` at ${plain(ev.venue)}` : ''}`).join('; ')}`);
+    add(events.length, `• Functions: ${events.map(ev => `${plain(ev.name)}${when(ev.date) ? ` (${when(ev.date)})` : ''}${plain(ev.venue) ? ` at ${plain(ev.venue)}` : ''}${plain(ev.dress) ? `, wear ${plain(ev.dress)}` : ''}`).join('; ')}`);
+    add(plain(order.title), `• Headline: ${plain(order.title)}`);
+    add(plain(order.tagline), `• Line under the names: ${plain(order.tagline)}`);
     add(plain(order.message), `• Message: ${plain(order.message)}`);
     add(Core.mobile(order.rsvp), `• RSVP number: ${Core.mobile(order.rsvp)}`);
     add(guests.length, `• Guests (${guests.length}): ${guests.join(', ')}`);
     add(order.photo, `• Photo: I'll send it in this chat`);
-    // "Make it special": named here so the owner sees it; the order code carries the details.
-    const special = [['story', 'our story'], ['families', 'families'], ['attire', 'dress code']].filter(([k]) => (order[k] || []).length).map(([, l]) => l)
-      .concat(plain(order.upi) ? ['gifts (UPI)'] : [], plain(order.hashtag) ? [`hashtag ${plain(order.hashtag)}`] : []);
-    add(special.length, `• Make it special: ${special.join(', ')}`);
+    add(order.gallery, `• Gallery: I'll send more photos in this chat`);
+    add(order.music === false, `• Music: no background music`);
+    // Every "Make it special" detail, written out so the owner can read the whole order here.
+    const list = (k, f) => (order[k] || []).map(f).filter(Boolean).join('; ');
+    add((order.story || []).length, `• Our story: ${list('story', s => [s.when, s.title, s.text].map(plain).filter(Boolean).join(' - '))}`);
+    add((order.families || []).length, `• Families: ${list('families', f => [f.side, f.parents, f.more].map(plain).filter(Boolean).join(' - '))}`);
+    add((order.attire || []).length, `• Dress code: ${list('attire', a => [a.name, a.text].map(plain).filter(Boolean).join(' - '))}`);
+    add(plain(order.upi), `• UPI for gifts: ${plain(order.upi)}`);
+    add(plain(order.giftNote), `• Gift note: ${plain(order.giftNote)}`);
+    add(plain(order.venueNote), `• Venue note: ${plain(order.venueNote)}`);
+    add(plain(order.thanks), `• Thank-you line: ${plain(order.thanks)}`);
+    add(plain(order.hashtag), `• Hashtag: ${plain(order.hashtag)}`);
     lines.push('', ref ? `Order no: ${ref}` : `Order code (please keep): ${Catalog.orderCode(order)}`);
     return lines.join('\n');
   },
 
-  // "Make it special" in the order form: one entry per line, "left – right" (a dash, en dash or colon splits it).
-  // Story lines become { when, title }, family lines { side, parents }, dress lines { name, text }.
+  // "Make it special" in the order form: one entry per line, parts split by " – " (a dash, en dash or colon).
+  // Story lines are "when – title – a line about it", family lines "side – parents – siblings",
+  // dress lines "function – what to wear". A line without a dash is the title / parents / function alone.
   specialLines({ story = '', families = '', attire = '' }) {
     const rows = s => String(s).split('\n').map(l => l.trim()).filter(Boolean).slice(0, 8)
-      .map(l => { const m = l.match(/^(.*?)\s*[–—:-]\s+(.+)$/); return m ? [m[1].trim(), m[2].trim()] : ['', l]; });
+      .map(l => l.split(/\s+[–—-]\s+|\s*:\s+/).map(p => p.trim()).filter(Boolean));
     return {
-      story: rows(story).map(([when, title]) => ({ when: when.slice(0, 40), title: title.slice(0, 60) })),
-      families: rows(families).map(([side, parents]) => ({ side: side.slice(0, 40), parents: parents.slice(0, 120) })),
-      attire: rows(attire).map(([name, text]) => name ? { name: name.slice(0, 40), text: text.slice(0, 100) } : { name: text.slice(0, 40), text: '' })
+      story: rows(story).map(p => p.length === 1 ? { when: '', title: p[0].slice(0, 60), text: '' }
+        : { when: p[0].slice(0, 40), title: p[1].slice(0, 60), text: p.slice(2).join(' – ').slice(0, 300) }),
+      families: rows(families).map(p => p.length === 1 ? { side: '', parents: p[0].slice(0, 120), more: '' }
+        : { side: p[0].slice(0, 40), parents: p[1].slice(0, 120), more: p.slice(2).join(' – ').slice(0, 160) }),
+      attire: rows(attire).map(p => ({ name: p[0].slice(0, 40), text: p.slice(1).join(' – ').slice(0, 100) }))
     };
   },
 
@@ -114,9 +127,11 @@ const Catalog = {
   orderCode(order) {
     const o = Core.compact({
       design: order.design || '', type: order.type, host1: order.host1, host2: order.host2, nick1: order.nick1, nick2: order.nick2, date: order.date, venue: order.venue, mapUrl: Catalog.mapLink(order.mapUrl),
-      events: (order.events || []).map(ev => ({ name: ev.name, date: ev.date, venue: ev.venue })), message: order.message,
+      events: (order.events || []).map(ev => ({ name: ev.name, date: ev.date, venue: ev.venue, dress: ev.dress })), message: order.message,
       rsvp: Core.mobile(order.rsvp), guests: (order.guests || []).map(g => String(g).trim()).filter(Boolean).join('\n'), photo: order.photo ? 1 : '',
-      story: order.story, families: order.families, attire: order.attire, upi: order.upi, hashtag: order.hashtag
+      story: order.story, families: order.families, attire: order.attire, upi: order.upi, hashtag: order.hashtag,
+      giftNote: order.giftNote, venueNote: order.venueNote, thanks: order.thanks, title: order.title, tagline: order.tagline,
+      morePhotos: order.gallery ? 1 : '', music: order.music === false ? false : '' // ("gallery" is the card's photo list)
     });
     return Catalog.ORDER_TAG + Codec.encode(o);
   },
@@ -134,19 +149,20 @@ const Catalog = {
     const type = PRESETS[o.type] ? o.type : 'wedding';
     const str = v => (typeof v === 'string' ? v : '').slice(0, 300);
     const card = {
-      type, title: PRESETS[type].card.title, tagline: PRESETS[type].card.tagline, music: true,
+      // The customer's own headline and tagline, or the occasion's sample wording.
+      type, title: str(o.title).slice(0, 80) || PRESETS[type].card.title, tagline: str(o.tagline).slice(0, 120) || PRESETS[type].card.tagline, music: o.music !== false,
       host1: str(o.host1), host2: str(o.host2), nick1: str(o.nick1).slice(0, 24), nick2: str(o.nick2).slice(0, 24), date: str(o.date), venue: str(o.venue), mapUrl: Catalog.mapLink(o.mapUrl), message: str(o.message), rsvp: Core.mobile(o.rsvp),
       events: (o.events || []).filter(ev => ev && typeof ev.name === 'string' && ev.name.trim()).slice(0, 15)
-        .map(ev => ({ name: str(ev.name), date: str(ev.date), venue: str(ev.venue), dress: '' }))
+        .map(ev => ({ name: str(ev.name), date: str(ev.date), venue: str(ev.venue), dress: str(ev.dress).slice(0, 60) }))
     };
     // "Make it special" sections, cleaned the same way the card cleans them.
     const x = Core.extras(o);
-    Object.assign(card, { story: x.story, families: x.families, upi: x.upi, hashtag: x.hashtag,
+    Object.assign(card, { story: x.story, families: x.families, upi: x.upi, hashtag: x.hashtag, giftNote: x.giftNote, venueNote: x.venueNote, thanks: x.thanks,
       attire: x.attire.map(a => ({ name: a.name, text: a.text, colors: a.colors.join(',') })) });
     const t = Templates.get(o.design);
     if (t) card.theme = t.no;
     const guests = (typeof o.guests === 'string' ? o.guests : '').split('\n').map(g => g.trim().slice(0, 60)).filter(Boolean).slice(0, 500);
-    return { card, guests, photo: !!o.photo };
+    return { card, guests, photo: !!o.photo, gallery: !!o.morePhotos };
   },
 
   // The sample card for a design, using the sample text of its occasion.
@@ -169,7 +185,7 @@ const Catalog = {
         <span class="p-mono" aria-hidden="true">${Core.esc(Core.initials(c))}</span>
         <span class="p-date" aria-hidden="true"><b>${day}</b>${Core.esc(month)}</span>
         <span class="p-body">
-          <span class="p-emoji">${e.emoji}</span>
+          ${e.emblem ? `<span class="p-emoji p-medal">${Core.esc(Core.initials(c))}</span>` : `<span class="p-emoji">${e.emoji}</span>`}
           <span class="p-title">${Core.esc(c.title)}</span>
           <span class="p-names">${Core.esc(c.host1)}${c.host2 ? `<i>&amp;</i>${Core.esc(c.host2)}` : ''}</span>
           <span class="p-tag">${Core.esc(c.tagline)}</span>

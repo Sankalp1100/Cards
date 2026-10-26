@@ -811,3 +811,41 @@ body.admin::before { display: none; }
 .os-special[open] summary { margin-bottom: 4px; }
 .os-special label { display: grid; gap: 6px; }
 .os-special label small { color: var(--muted); }
+
+/* Order form functions: name and date, then venue and dress code underneath */
+.os-event { grid-template-columns: 1fr 1fr auto; }
+.os-event input[data-k="venue"] { grid-column: 1; }
+.os-event input[data-k="dress"] { grid-column: 2; }
+@media (max-width: 640px) {
+  .os-event { grid-template-columns: 1fr auto; padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
+  .os-event input[data-k="venue"], .os-event input[data-k="dress"] { grid-column: 1; }
+}
+
+/* ---------- Posters in each design's style (js/themes.js STYLES) ---------- */
+/* Elegant styles: a gold monogram medallion instead of the emoji */
+.poster .p-medal { position: relative; display: grid; place-items: center; width: 62px; height: 62px; border-radius: 50%; font: 400 1.4rem/1 var(--fs, 'Great Vibes'), cursive;
+  color: var(--a); border: 1.5px solid color-mix(in srgb, var(--a) 70%, transparent); box-shadow: 0 0 0 4px transparent, 0 0 0 5px color-mix(in srgb, var(--a) 35%, transparent); background: none; transform: none; padding: 0; }
+.poster .p-medal::after { content: ''; position: absolute; inset: -9px; border-radius: 50%; border: 1px dotted color-mix(in srgb, var(--a) 70%, transparent); animation: spinPoster 30s linear infinite; }
+.ps-ivory .p-medal, .ps-marigold .p-medal, .ps-pichwai .p-medal { color: var(--a2); border-color: var(--a2); }
+.ps-ivory .p-names { font-family: var(--fd), serif; font-style: italic; }
+.ps-ivory { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--a2) 55%, transparent), inset 0 0 0 7px transparent, inset 0 0 0 8px color-mix(in srgb, var(--a2) 30%, transparent); }
+/* Modern Minimal: no ornament, big serif names, hairline frame */
+.ps-minimal .p-emoji { display: none; }
+.ps-minimal .p-names { font-family: var(--fd), serif; color: var(--i); line-height: 1; }
+.ps-minimal .p-names i { font-family: var(--fs), cursive; color: var(--a); }
+.ps-minimal::after { content: ''; position: absolute; inset: 10px; z-index: -1; border: 1px solid color-mix(in srgb, var(--i) 25%, transparent); }
+/* Pichwai Lotus: lotuses rising at the bottom */
+.ps-pichwai::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 22%; z-index: -1; background: var(--a); opacity: .85;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 120'%3E%3Cpath d='M60 110 q-14 -26 0 -46 q14 20 0 46z M60 110 q-30 -14 -32 -36 q24 4 32 36z M60 110 q30 -14 32 -36 q-24 4 -32 36z M200 112 q-18 -34 0 -60 q18 26 0 60z M200 112 q-38 -18 -40 -46 q30 6 40 46z M200 112 q38 -18 40 -46 q-30 6 -40 46z M340 110 q-14 -26 0 -46 q14 20 0 46z M340 110 q-30 -14 -32 -36 q24 4 32 36z M340 110 q30 -14 32 -36 q-24 4 -32 36z'/%3E%3C/svg%3E") bottom / 100% 100% no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 120'%3E%3Cpath d='M60 110 q-14 -26 0 -46 q14 20 0 46z M60 110 q-30 -14 -32 -36 q24 4 32 36z M60 110 q30 -14 32 -36 q-24 4 -32 36z M200 112 q-18 -34 0 -60 q18 26 0 60z M200 112 q-38 -18 -40 -46 q30 6 40 46z M200 112 q38 -18 40 -46 q-30 6 -40 46z M340 110 q-14 -26 0 -46 q14 20 0 46z M340 110 q-30 -14 -32 -36 q24 4 32 36z M340 110 q30 -14 32 -36 q-24 4 -32 36z'/%3E%3C/svg%3E") bottom / 100% 100% no-repeat; }
+/* Filmy Retro: a frame of marquee bulbs, bold shadowed names */
+.ps-retro::after { content: ''; position: absolute; inset: 7px; z-index: -1; border-radius: 14px;
+  background: radial-gradient(circle, #ffd84a 0 2.5px, transparent 3px) 0 0 / 14px 14px; -webkit-mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); padding: 6px; }
+.ps-retro .p-names { text-shadow: 2px 2px 0 var(--a2), 4px 4px 0 rgba(0,0,0,.35); }
+/* Neon Night: glowing names */
+.ps-neon .p-names { color: #fff; text-shadow: 0 0 6px var(--a), 0 0 16px var(--a), 0 0 30px var(--a2); }
+/* Palace Night: a gold arch around the words */
+.ps-palace .p-body { padding: 26px 10px 14px; border: 1px solid color-mix(in srgb, var(--a) 60%, transparent); border-radius: 999px 999px 12px 12px; }
+/* Mehendi: lace edge top and bottom */
+.ps-mehendi::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 12px; z-index: -1; opacity: .6;
+  background: radial-gradient(circle at 50% 0, var(--a) 5px, transparent 6px) 0 0 / 16px 12px repeat-x; }

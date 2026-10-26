@@ -227,19 +227,29 @@
           <label>WhatsApp number for RSVP <small>(10-digit mobile)</small> <input name="rsvp" type="tel" inputmode="numeric" maxlength="15" placeholder="98765 43210" autocomplete="tel-national" data-mobile><small class="mobile-hint"></small></label>
           <label>Guest names for personal links <small>(one per line)</small> <textarea name="guests" rows="3" placeholder="Rahul Uncle&#10;Sharma Family"></textarea></label>
           <label class="os-check"><input type="checkbox" name="photo"> I'll send a photo on WhatsApp</label>
+          <label class="os-check"><input type="checkbox" name="xGallery"> I'll send more photos for a photo gallery (up to 8)</label>
+          <label class="os-check"><input type="checkbox" name="xMusic" checked> Background music (guests tap to play)</label>
+          <details class="os-special">
+            <summary>✍️ Your own wording <small>(optional: otherwise we use our sample text)</small></summary>
+            <label>Headline <input name="xTitle" maxlength="80" autocomplete="off" placeholder="e.g. Together with their families"></label>
+            <label>Line under the names <input name="xTagline" maxlength="120" autocomplete="off" placeholder="e.g. request the honour of your presence at their wedding"></label>
+          </details>
           <details class="os-special">
             <summary>✨ Make it special <small>(optional: your story, families, dress code, gifts)</small></summary>
             <p class="muted">Each part you fill becomes its own section on your invitation. Leave anything empty to skip it.</p>
-            <label>Your story <small>(one moment per line: when – what happened)</small>
-              <textarea name="xStory" rows="3" maxlength="900" placeholder="March 2023 – We met at a Diwali party in Jaipur&#10;January 2026 – The proposal at Nahargarh Fort"></textarea></label>
-            <label>Families <small>(one per line: side – names)</small>
-              <textarea name="xFamilies" rows="2" maxlength="500" placeholder="Bride's family – Mr. Rajeev & Mrs. Anjali Mehta&#10;Groom's family – Mr. Vikram & Mrs. Meera Sharma"></textarea></label>
+            <label>Your story <small>(one moment per line: when – title – a line about it)</small>
+              <textarea name="xStory" rows="3" maxlength="1500" placeholder="March 2023 – First meeting – A Diwali party in Jaipur&#10;January 2026 – The proposal – Sunrise at Nahargarh Fort"></textarea></label>
+            <label>Families <small>(one per line: side – parents – siblings)</small>
+              <textarea name="xFamilies" rows="2" maxlength="600" placeholder="Bride's family – Mr. Rajeev & Mrs. Anjali Mehta – With Ishaan & Sanya&#10;Groom's family – Mr. Vikram & Mrs. Meera Sharma"></textarea></label>
             <label>Dress code <small>(one per line: function – what to wear)</small>
               <textarea name="xAttire" rows="2" maxlength="400" placeholder="Haldi – Yellow and marigold&#10;Wedding – Maroon and gold"></textarea></label>
             <div class="os-pair">
               <label>UPI ID for gifts <input name="xUpi" maxlength="60" autocomplete="off" placeholder="name@okhdfc"></label>
               <label>Hashtag <input name="xHashtag" maxlength="40" autocomplete="off" placeholder="#DiyaKaAarav"></label>
             </div>
+            <label>Gift note <small>(shown with the UPI ID)</small> <input name="xGiftNote" maxlength="200" autocomplete="off" placeholder="Your presence is the greatest gift…"></label>
+            <label>Venue note <small>(parking, boats, timings)</small> <input name="xVenueNote" maxlength="200" autocomplete="off" placeholder="Parking at Gate 2. Boats every 15 minutes."></label>
+            <label>Thank-you line <small>(at the end of the card)</small> <input name="xThanks" maxlength="200" autocomplete="off" placeholder="Thank you for your love and blessings"></label>
           </details>
         </section>
         <section class="os-step" data-step="4" hidden>

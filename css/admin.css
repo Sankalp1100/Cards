@@ -273,3 +273,10 @@ body.logged-out .side, body.logged-out .admin-main { display: none; }
 .gal-thumb { position: relative; width: 74px; height: 74px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
 .gal-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .gal-thumb .x { position: absolute; top: 2px; right: 2px; width: 24px; height: 24px; padding: 0; font-size: .7rem; }
+
+/* Every order can be expanded to read everything the customer sent */
+.order-item { flex-wrap: wrap; }
+.order-details { flex: 1 0 100%; font-size: .85rem; }
+.order-details summary { cursor: pointer; color: var(--muted); width: max-content; }
+.order-details pre { margin: 8px 0 0; padding: 12px 14px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--line);
+  white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.6; }

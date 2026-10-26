@@ -347,6 +347,8 @@
       <div class="os-event" data-i="${i}">
         <input data-k="name" value="${esc(ev.name)}" placeholder="Function name" aria-label="Function name">
         <input data-k="date" type="datetime-local" min="${nowLocal()}" value="${esc(ev.date)}" aria-label="Date and time">
+        <input data-k="venue" value="${esc(ev.venue || '')}" maxlength="80" placeholder="Venue (optional)" aria-label="Venue">
+        <input data-k="dress" value="${esc(ev.dress || '')}" maxlength="60" placeholder="Dress code (optional)" aria-label="Dress code">
         <button type="button" class="x" data-del="${i}" aria-label="Remove">✕</button>
       </div>`).join('');
   }
@@ -366,7 +368,9 @@
       design: t ? t.no : '', type: ord.type, host1: v('host1'), host2: v('host2'), nick1: v('nick1'), nick2: v('nick2'), date: v('date'), venue: v('venue'), mapUrl: v('mapUrl'),
       events: ord.events.filter(ev => ev.name.trim()), message: v('message'), rsvp: v('rsvp'),
       guests: v('guests').split('\n').map(g => g.trim()).filter(Boolean), photo: of.elements.photo.checked,
-      ...Catalog.specialLines({ story: v('xStory'), families: v('xFamilies'), attire: v('xAttire') }), upi: v('xUpi'), hashtag: v('xHashtag')
+      ...Catalog.specialLines({ story: v('xStory'), families: v('xFamilies'), attire: v('xAttire') }), upi: v('xUpi'), hashtag: v('xHashtag'),
+      giftNote: v('xGiftNote'), venueNote: v('xVenueNote'), thanks: v('xThanks'), title: v('xTitle'), tagline: v('xTagline'),
+      gallery: of.elements.xGallery.checked, music: of.elements.xMusic.checked
     };
   }
 
@@ -503,7 +507,7 @@
       setTab('designs', { occasion: ord.type });
     } else if (occ) { ord.type = occ.dataset.type; renderOccasions(); }
     else if (add) {
-      ord.events.push({ name: add.dataset.add, date: of.elements.date.value, venue: '' });
+      ord.events.push({ name: add.dataset.add, date: of.elements.date.value, venue: '', dress: '' });
       renderEvents();
       renderOccasions();
       if (!add.dataset.add) $('#osEvents .os-event:last-child input').focus();

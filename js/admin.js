@@ -128,6 +128,14 @@
     renderOrders(code);
   }
 
+  // Everything the customer sent, written out the way the order message lists it (without the code line).
+  function orderDetails(code) {
+    const r = Catalog.readOrder(code);
+    if (!r || r.partial) return 'Only the design number is known for this order.';
+    const text = Catalog.orderMessage({ ...r.card, design: r.card.theme, guests: r.guests, photo: r.photo, gallery: r.gallery }, Catalog.entries());
+    return text.split('\n').slice(1).filter(l => l && !/^Order (code|no)/.test(l)).map(l => l.replace(/\*/g, '')).join('\n');
+  }
+
   function renderOrders(active) {
     const list = loadOrders().sort((a, b) => (a.done - b.done) || (b.received - a.received));
     const open = list.filter(o => !o.done).length;
@@ -144,6 +152,7 @@
           </button>
           <button type="button" class="btn-small" data-done="${esc(o.code)}" title="${o.done ? 'Mark as not done' : 'Mark as done'}">${o.done ? '↺' : '✓'}</button>
           <button type="button" class="btn-small danger" data-forget="${esc(o.code)}" aria-label="Delete order">✕</button>
+          <details class="order-details"><summary>View details</summary><pre>${esc(orderDetails(o.code))}</pre></details>
         </div>`;
     }).join('');
   }
@@ -201,6 +210,7 @@
     msg.textContent = `✅ Filled: ${who(state)} · ${PRESETS[state.type].label} · ${order.card.theme ? `design ${Templates.serial(state.theme)}` : 'no design chosen, pick one below'}` +
       (order.guests.length ? ` · ${order.guests.length} guest link${order.guests.length > 1 ? 's' : ''} ready to make` : '') +
       (order.photo ? ' · 📷 the customer will send a photo on WhatsApp: upload it under Extras.' : '') +
+      (order.gallery ? ' · 🖼️ gallery photos coming on WhatsApp: add them under Premium sections.' : '') +
       ' Check the headline and tagline, then Get links.';
     toast('Order filled in ✨');
   }

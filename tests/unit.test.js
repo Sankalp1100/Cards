@@ -551,26 +551,44 @@ test.describe('Catalog', () => {
         type: 'bday', title: PRESETS.bday.card.title, tagline: PRESETS.bday.card.tagline, music: true,
         host1: 'Neha', host2: '', nick1: 'Nehu 🌸', nick2: '', date: '2026-11-28T20:00', venue: 'Skybar, Bengaluru', mapUrl: '', message: 'Come!', rsvp: '919876543210',
         events: [{ name: '🎂 Cake Cutting', date: '2026-11-28T21:30', venue: '', dress: '' }],
-        story: [], families: [], attire: [], upi: '', hashtag: '', theme: 47
+        story: [], families: [], attire: [], upi: '', hashtag: '', giftNote: '', venueNote: '', thanks: '', theme: 47
       },
-      guests: ['Rahul Uncle', 'Priya Di'], photo: true
+      guests: ['Rahul Uncle', 'Priya Di'], photo: true, gallery: false
     });
   });
 
-  test('"Make it special" in the order form reaches the card: story, families, dress code, UPI, hashtag', () => {
+  test('"Make it special" lines are read as when – title – details, side – parents – siblings, function – what to wear', () => {
     const special = Catalog.specialLines({
-      story: 'March 2023 – We met in Jaipur\nJanuary 2026: The proposal\nJust a line',
-      families: "Bride's family – Mr. & Mrs. Mehta", attire: 'Haldi – Yellow\nSangeet'
+      story: 'March 2023 – First meeting – A Diwali party in Jaipur\nJanuary 2026: The proposal\nJust a line',
+      families: "Bride's family – Mr. & Mrs. Mehta – With Ishaan\nThe Sharma family", attire: 'Haldi – Yellow\nSangeet'
     });
-    assert.deepEqual(plain(special.story), [{ when: 'March 2023', title: 'We met in Jaipur' }, { when: 'January 2026', title: 'The proposal' }, { when: '', title: 'Just a line' }]);
+    assert.deepEqual(plain(special.story), [{ when: 'March 2023', title: 'First meeting', text: 'A Diwali party in Jaipur' },
+      { when: 'January 2026', title: 'The proposal', text: '' }, { when: '', title: 'Just a line', text: '' }]);
+    assert.deepEqual(plain(special.families), [{ side: "Bride's family", parents: 'Mr. & Mrs. Mehta', more: 'With Ishaan' }, { side: '', parents: 'The Sharma family', more: '' }]);
     assert.deepEqual(plain(special.attire), [{ name: 'Haldi', text: 'Yellow' }, { name: 'Sangeet', text: '' }]);
-    const msg = Catalog.orderMessage({ ...order, ...special, upi: 'neha@okicici', hashtag: '#Neha30' }, Catalog.entries(site, {}));
-    assert.match(msg, /Make it special: our story, families, dress code, gifts \(UPI\), hashtag #Neha30/);
-    const card = Catalog.readOrder(msg).card;
-    assert.equal(card.story[1].title, 'The proposal');
-    assert.equal(card.families[0].parents, 'Mr. & Mrs. Mehta');
-    assert.equal(card.upi, 'neha@okicici');
-    assert.equal(card.hashtag, '#Neha30');
+  });
+
+  test('every detail a customer gives reaches the panel when the order is pasted, and is readable in the message', () => {
+    const full = {
+      ...order, events: [{ name: '🌼 Haldi', date: '2026-11-27T10:00', venue: 'Poolside', dress: 'Yellow' }],
+      ...Catalog.specialLines({ story: '2001 – Met at college – Same bus every day', families: 'Her family – Mr. & Mrs. Rao – With Kiran', attire: 'Party – Gold' }),
+      upi: 'neha@okicici', hashtag: '#Neha30', giftNote: 'No gifts please', venueNote: 'Parking at gate 2', thanks: 'Love you all',
+      title: 'Party time', tagline: 'is turning thirty', gallery: true, music: false
+    };
+    const msg = Catalog.orderMessage(full, Catalog.entries(site, {}));
+    for (const line of ['Functions: Haldi (', 'at Poolside, wear Yellow', 'Headline: Party time', 'Line under the names: is turning thirty',
+      'Gallery: I\'ll send more photos', 'Music: no background music', 'Our story: 2001 - Met at college - Same bus every day',
+      'Families: Her family - Mr. & Mrs. Rao - With Kiran', 'Dress code: Party - Gold', 'UPI for gifts: neha@okicici', 'Gift note: No gifts please',
+      'Venue note: Parking at gate 2', 'Thank-you line: Love you all', 'Hashtag: #Neha30']) assert.ok(msg.includes(line), `message shows "${line}"`);
+    const r = Catalog.readOrder(msg), c = r.card;
+    assert.deepEqual(plain(c.events[0]), { name: '🌼 Haldi', date: '2026-11-27T10:00', venue: 'Poolside', dress: 'Yellow' });
+    assert.deepEqual(plain(c.story[0]), { when: '2001', title: 'Met at college', text: 'Same bus every day' });
+    assert.deepEqual(plain(c.families[0]), { side: 'Her family', parents: 'Mr. & Mrs. Rao', more: 'With Kiran' });
+    assert.equal(c.attire[0].text, 'Gold');
+    for (const [k, v] of Object.entries({ upi: 'neha@okicici', hashtag: '#Neha30', giftNote: 'No gifts please', venueNote: 'Parking at gate 2', thanks: 'Love you all',
+      title: 'Party time', tagline: 'is turning thirty', music: false })) assert.equal(c[k], v, k);
+    assert.equal(r.gallery, true);
+    assert.equal(r.photo, true);
   });
 
   test('premium sections are cleaned before they are shown (only safe colours, links and sizes)', () => {
