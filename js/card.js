@@ -340,7 +340,8 @@
       <section class="hero layout-${t.layout || 'classic'}">
         ${decor(t.decor)}
         ${heroLayout(t, d, when, {
-          visual: photo ? `<div class="photo"><img src="${esc(photo)}" alt=""></div>` : `<div class="ornament">${esc(t.emoji)}</div>`,
+          // Without a photo the design's emoji takes its place; the polaroid frame also shows the initials as a caption.
+          visual: photo ? `<div class="photo"><img src="${esc(photo)}" alt=""></div>` : `<div class="ornament">${esc(t.emoji)}<small class="orn-cap" aria-hidden="true">${esc(initials(d))}</small></div>`,
           title: `<p class="title fade" style="--d:.2s">${esc(d.title)}</p>`,
           names: `<h1 class="names">${names}</h1>${nickLine(d)}`,
           tagline: `<p class="tagline fade" style="--d:1.6s">${esc(d.tagline)}</p>`,
