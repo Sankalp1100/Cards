@@ -260,10 +260,41 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.waitFor(`document.body.classList.contains('opened')`, 5000);
     assert.equal(await page.eval(`document.querySelector('.actions .btn').textContent`), '💬 Order design #009', 'Order leads the row');
     assert.equal(await page.eval(`document.querySelector('.actions .order-this').getAttribute('href')`), 'index.html?order=9');
-    await page.eval(`document.querySelector('#shareBtn').click()`);
+    // Share shares the design (its occasion, number, live demo and the website)
+    await page.eval(`(() => { window.__shared = null; navigator.share = d => { window.__shared = d; return Promise.resolve(); }; document.querySelector('#shareBtn').click(); })()`);
+    await page.waitFor(`!!window.__shared`, 3000);
+    const shared = await page.eval(`window.__shared.text`);
+    assert.match(shared, /Kitty Party invitation · Design #009/);
+    assert.match(shared, /See it live:\n.*card\.html\?demo/);
+    assert.match(shared, /Get yours made on /);
+    assert.equal(await page.eval(`location.search`), '?demo&auto', 'sharing stays on the card');
+    // The other buttons lead to ordering this design
+    await page.eval(`document.querySelector('#calBtn').click()`);
     await page.waitFor(`location.pathname.endsWith('index.html') && location.search === '?order=9'`, 5000);
     await page.waitFor(`!document.querySelector('#orderSheet').hidden`, 3000);
     assert.equal(await page.eval(`document.querySelector('#orderForm [name=design]').value`), '9');
+  });
+
+  test('"Order design" on a sample opens the order form with that design chosen and shown first', async () => {
+    const t = Templates.get(283);
+    await page.goto(cardLink({ ...PRESETS[t.occasion].card, theme: 283 }, '?demo&auto'));
+    await page.waitFor(`document.body.classList.contains('opened')`, 5000);
+    await page.eval(`document.querySelector('.actions .order-this').click()`);
+    await page.waitFor(`location.pathname.endsWith('index.html') && document.querySelector('#orderSheet') && !document.querySelector('#orderSheet').hidden`, 8000);
+    assert.equal(await page.eval(`document.querySelector('#orderForm [name=design]').value`), '283');
+    assert.equal(await page.eval(`document.querySelector('#osOcc .chip.on').dataset.type`), t.occasion);
+    assert.equal(await page.eval(`document.querySelector('#osPicks [data-pick]').dataset.pick`), '283', 'the chosen design is first in the row');
+    assert.ok(await page.eval(`document.querySelector('#osPicks [data-pick="283"]').classList.contains('on')`), 'and highlighted');
+    assert.match(await page.eval(`document.querySelector('#osDesign').textContent`), /#283/);
+  });
+
+  test('a sample has a way back to all the designs; a real invitation does not', async () => {
+    await page.goto(cardLink({ ...PRESETS.wedding.card, theme: 1 }, '?demo&auto'));
+    await page.waitFor(`document.body.classList.contains('opened')`, 5000);
+    assert.equal(await page.eval(`document.querySelector('.pbar .home-link')?.getAttribute('href')`), 'index.html');
+    await page.goto(cardLink({ ...PRESETS.wedding.card, theme: 1 }, '?auto'));
+    await page.waitFor(`document.body.classList.contains('opened')`, 5000);
+    assert.equal(await page.eval(`!!document.querySelector('.home-link')`), false, 'guests never see it');
   });
 
   test('on a real invitation the buttons work normally (no order button)', async () => {

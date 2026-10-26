@@ -1151,3 +1151,10 @@ body.scrolled .scene-grid .sun { animation: none; opacity: .07; }
 @keyframes floatIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
 @keyframes dropIn { 0% { opacity: 0; transform: translateY(-80px) rotate(-25deg) scale(.4); } 100% { opacity: 1; transform: none; } }
 @keyframes blurIn { from { opacity: 0; transform: scale(1.5); } to { opacity: 1; transform: none; } }
+
+/* Sample cards (opened from the website): a way back to the designs, next to Menu. Real invitations never show it. */
+.pbar-right { display: flex; align-items: center; gap: 18px; }
+.home-link { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line);
+  font: 600 .72rem var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--ink); text-decoration: none; white-space: nowrap; }
+.home-link:hover { border-color: var(--accent); color: var(--accent); }
+@media (max-width: 380px) { .pbar-right { gap: 10px; } .home-link { padding: 0 10px; letter-spacing: .06em; } }

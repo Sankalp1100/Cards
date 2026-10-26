@@ -262,6 +262,7 @@
     sampleGuard = true;
     $('#card').addEventListener('click', e => {
       const b = e.target.closest('.actions .btn, .venue .btn, .rsvp .btn, .upi-pay');
+      if (b && b.id === 'shareBtn') return; // Share works on a sample too: it shares the design
       if (!b || b.classList.contains('order-this')) return;
       e.preventDefault();
       e.stopPropagation();
@@ -474,7 +475,8 @@
 
     $('#card').innerHTML = `
       <header class="pbar"><a class="mono" href="#top">${mono}</a>
-        <button class="menu-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="pmenu">Menu</button></header>
+        <span class="pbar-right">${params.has('demo') && !preview ? '<a class="home-link" href="index.html">← All designs</a>' : ''}
+        <button class="menu-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="pmenu">Menu</button></span></header>
       <nav class="pmenu" id="pmenu" aria-label="Sections" hidden>
         <button class="pmenu-x" id="menuClose" type="button" aria-label="Close menu">✕</button>
         ${menuLinks.map(([id, label], i) => `<a href="#${id}" style="--n:${i}">${esc(label)}</a>`).join('')}
@@ -700,9 +702,17 @@
   async function share() {
     const btn = $('#shareBtn');
     // Forward the general link, never this guest's personal one.
-    const url = shareLink();
+    let url = shareLink();
     // The occasion's invitation message with the link in it (never the guest's own name: it is being forwarded).
-    const text = Core.inviteText({ card: data, link: url });
+    let text = Core.inviteText({ card: data, link: url });
+    // A sample card (opened from the website) shares the design itself: its occasion, number and name,
+    // its live demo, and the website to order from.
+    if (params.has('demo')) {
+      const t = Templates.get(data.theme) || Templates.get(1), label = PRESETS[data.type]?.label || 'Celebration';
+      const site = safeUrl(SITE.url) || new URL('index.html', location.href).href;
+      url = location.href;
+      text = `✨ ${label} invitation · Design ${Templates.serial(t.no)} ${t.name}\n\nSee it live:\n${url}\n\nGet yours made on ${SITE.brand}:\n${site}`;
+    }
     if (navigator.share) {
       try { await navigator.share({ title: "You're invited", text }); return; } catch (e) { if (e.name === 'AbortError') return; }
     }

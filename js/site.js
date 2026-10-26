@@ -371,7 +371,8 @@
   // Small tappable swatches of this occasion's designs (trending first), so nobody needs to know a number.
   function renderPicks() {
     const picked = +of.elements.design.value;
-    const mine = designs.filter(d => d.occasion === ord.type);
+    // The chosen design comes first, so it is always in view and highlighted, whatever its number.
+    const mine = designs.filter(d => d.occasion === ord.type).sort((a, b) => (b.no === picked) - (a.no === picked));
     $('#osPicks').innerHTML = mine.slice(0, 12).map(d => {
       const v = d.vars;
       return `<button type="button" class="os-pick${d.no === picked ? ' on' : ''}" data-pick="${d.no}" title="${esc(d.name)}" aria-label="Design ${Templates.serial(d.no)} ${esc(d.name)}"
