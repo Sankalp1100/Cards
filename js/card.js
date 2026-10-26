@@ -439,7 +439,8 @@
       setTimeout(() => fx.burst(innerWidth * 0.8, innerHeight * 0.6, 70), 600);
     }, OPEN_MS[introKind] || 1500);
     const btn = $('#musicBtn');
-    btn.hidden = preview; // the builder's preview stays silent
+    // No music button when the invite has music switched off; the builder's preview stays silent.
+    btn.hidden = preview || data.music === false;
     if (data.music !== false && !preview && !params.has('auto') && music.start()) btn.classList.add('playing');
   }
 

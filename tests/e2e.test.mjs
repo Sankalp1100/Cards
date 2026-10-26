@@ -317,6 +317,14 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`!!document.querySelector('#rsvpBtn')`), false);
   });
 
+  test('the music button shows only when the invite has music on', async () => {
+    for (const music of [true, false]) {
+      await page.goto(cardLink({ ...PRESETS.wedding.card, music }));
+      await openEnvelope();
+      assert.equal(await page.eval(`document.querySelector('#musicBtn').hidden`), !music, `music ${music ? 'on' : 'off'}`);
+    }
+  });
+
   test('all 300 designs render without errors, with their decor and particles', async () => {
     for (const t of Templates.all) {
       await page.goto(cardLink({ ...PRESETS[t.occasion].card, theme: t.no }, '?preview&auto'), 0);
