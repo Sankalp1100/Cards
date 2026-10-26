@@ -40,7 +40,8 @@ It opens `http://localhost:5050/admin.html` in your browser. Keep that window op
 
 ### Catalog and settings (what the website shows)
 
-- **Catalog:** for each of the 300 designs: name, occasion, price, **On site** (show/hide), **🔥 Trending** (shown first with a badge). Search by number, filter, show/hide many at once.
+- **Catalog:** for each of the 300 designs: name, occasion, price, **On site** (show/hide), **🔥 Trending** (your own picks: always among the trending designs). Search by number, filter, show/hide many at once.
+- **Trending changes every day by itself:** every morning at 8:00 (India time) the website picks a fresh set of 10 trending designs, the same for every visitor all day: your own Trending picks plus designs drawn for the day from different occasions, in a new order. They are shown first, with a 🔥 badge, and in the Trending tab. No server or schedule is needed: the date decides.
 - **Settings:** live website address, brand, WhatsApp number for orders, Instagram, price for every design, currency.
 - **Auto-save:** every change is saved to the website by itself about 2 seconds after you stop typing (several quick edits become one save). It writes `js/config.js`, commits and pushes **only that file** to GitHub, and Vercel updates the live site in about a minute. The bar at the top shows *Saving…* then *✅ Saved*. This works when the panel is opened with `Start Admin.cmd`, or online once `GITHUB_TOKEN` is set in Vercel; otherwise changes stay on that device and **🚀 Publish** downloads `config.js`.
 - Opened without `npm run admin` (double-clicking `admin.html`), Publish downloads `config.js` instead: put it in the `js` folder and deploy.

@@ -15,7 +15,8 @@
 
   function applyCatalog() {
     allEntries = Catalog.entries();
-    designs = Catalog.visible(allEntries);
+    // Today's trending designs (they change by themselves every morning at 8:00 India time).
+    designs = Catalog.visible(Catalog.trendingToday(allEntries));
     occasions = Object.keys(PRESETS).filter(k => designs.some(d => d.occasion === k));
     document.querySelectorAll('.brand').forEach(el => { el.textContent = SITE.brand; });
     $('#social').innerHTML = SITE.instagram
@@ -65,9 +66,7 @@
   // ---------- Trending tab: ranked slides you swipe through, then the top pick of every occasion ----------
   const colors = d => { const v = d.vars; return `--a:${v['--accent']};--a2:${v['--accent2']};--b:${v['--bg']};--c:${v['--bg2']};--i:${v['--ink']}`; };
   function renderHot() {
-    let hot = designs.filter(d => d.featured);
-    if (hot.length < 3) hot = hot.concat(occasions.map(k => designs.find(d => d.occasion === k && !hot.includes(d))).filter(Boolean));
-    hot = hot.slice(0, 10);
+    const hot = designs.filter(d => d.featured).slice(0, Catalog.TRENDING_COUNT); // today's order
     $('#hotReel').innerHTML = hot.map((d, i) => {
       const p = PRESETS[d.occasion], demo = `card.html?demo#${Catalog.demoCode(d)}`;
       return `

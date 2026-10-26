@@ -17,9 +17,39 @@ const Catalog = {
     });
   },
 
-  // What customers see: hidden designs removed, trending first, then by number.
+  // What customers see: hidden designs removed, trending first (in today's order), then by number.
   visible(entries) {
-    return entries.filter(e => !e.hidden).sort((a, b) => (b.featured - a.featured) || (a.no - b.no));
+    return entries.filter(e => !e.hidden).sort((a, b) => (b.featured - a.featured) || ((a.hotRank ?? 99) - (b.hotRank ?? 99)) || (a.no - b.no));
+  },
+
+  // ---------- Trending today ----------
+  // The trending designs change by themselves every morning at 8:00 India time, the same for everyone (no
+  // server needed: the day decides). The owner's own Trending picks always stay; the rest of the ten are drawn
+  // for the day, one per occasion in turn, and all of them are shown in a fresh order each day.
+  TRENDING_COUNT: 10,
+  // Today's number: it moves on at 8:00 in India (UTC+5:30), not at midnight.
+  dayKey(now = Date.now()) {
+    return Math.floor((now + (5.5 - 8) * 3600e3) / 864e5);
+  },
+  // Entries with today's trending marked (featured, and hotRank for the order). Returns copies: the catalog
+  // settings themselves are never changed, so the panel still shows only the owner's own picks.
+  trendingToday(entries, now = Date.now()) {
+    let seed = Catalog.dayKey(now) * 2654435761 >>> 0;
+    const rnd = () => { seed = (seed + 0x6D2B79F5) >>> 0; let t = seed; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    const shuffle = list => { const a = list.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+    const shown = entries.filter(e => !e.hidden);
+    const picked = shown.filter(e => e.featured);
+    const byOcc = {};
+    for (const e of shown) if (!e.featured) (byOcc[e.occasion] = byOcc[e.occasion] || []).push(e);
+    const occs = shuffle(Object.keys(byOcc));
+    for (let round = 0; picked.length < Catalog.TRENDING_COUNT && occs.some(o => byOcc[o].length); round++) {
+      for (const o of occs) {
+        if (picked.length >= Catalog.TRENDING_COUNT || !byOcc[o].length) continue;
+        picked.push(byOcc[o].splice(Math.floor(rnd() * byOcc[o].length), 1)[0]);
+      }
+    }
+    const rank = new Map(shuffle(picked).map((e, i) => [e.no, i]));
+    return entries.map(e => rank.has(e.no) ? { ...e, featured: true, hotRank: rank.get(e.no) } : e);
   },
 
   // A number ("47", "#047") finds that one design; text matches the name or occasion.

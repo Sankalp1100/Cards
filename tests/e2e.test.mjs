@@ -39,13 +39,16 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`document.querySelectorAll('iframe').length`), 0, 'no embedded live cards (they made the page slow)');
     assert.match(await page.eval(`document.querySelector('#demoBtn').href`), /card\.html\?demo#/);
     assert.match(await page.eval(`document.querySelector('#showcase .tpl .serial').textContent`), /Design No\. #\d{3}/);
-    assert.equal(await page.eval(`document.querySelector('#showcase .tpl .opening').textContent`), '✉️ Envelope opening', '#001 opens with the envelope');
+    assert.equal(await page.eval(`document.querySelector('#showcase .tpl[data-no="1"] .opening').textContent`), '✉️ Envelope opening', '#001 opens with the envelope');
     noErrors();
   });
 
-  test('trending designs come first with a badge', async () => {
-    const first = await page.eval(`[...document.querySelectorAll('#showcase .tpl')].slice(0, 6).map(t => [t.dataset.no, !!t.querySelector('.p-badge')])`);
-    assert.deepEqual(first, [['1', true], ['7', true], ['9', true], ['10', true], ['13', true], ['22', true]]);
+  test("today's ten trending designs come first with a badge, the owner's picks among them", async () => {
+    const tiles = await page.eval(`[...document.querySelectorAll('#showcase .tpl')].slice(0, 11).map(t => [+t.dataset.no, !!t.querySelector('.p-badge')])`);
+    assert.ok(tiles.slice(0, 10).every(([, badge]) => badge), 'the first ten have the badge');
+    assert.equal(tiles[10][1], false, 'the eleventh does not');
+    const first = tiles.slice(0, 10).map(([no]) => no);
+    for (const no of [1, 7, 9, 10, 13, 22]) assert.ok(first.includes(no), `owner pick #${no} is trending`);
   });
 
   test('"Show more" loads the next page until all 300 are shown', async () => {
@@ -76,7 +79,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`document.querySelector('#catStatus').hidden`), true, 'Show all clears the filter');
     assert.equal(await page.eval(`document.querySelector('#tplFilters .chip.on').dataset.occ`), '');
     await page.eval(`document.querySelector('[data-occ="trending"]').click()`);
-    assert.equal(await page.eval(`document.querySelectorAll('#showcase .tpl').length`), 6);
+    assert.equal(await page.eval(`document.querySelectorAll('#showcase .tpl').length`), 10, "today's ten trending designs");
     await page.eval(`document.querySelector('[data-occ=""]').click()`);
   });
 
@@ -862,7 +865,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.waitFor(`document.body.dataset.tab === 'home' && !!document.querySelector('.hero').offsetParent`, 3000);
     await page.eval(`document.querySelector('.bottom-nav [data-trending]').click()`);
     await page.waitFor(`document.body.dataset.tab === 'trending' && !!document.querySelector('#hot').offsetParent`, 3000);
-    assert.equal(await page.eval(`document.querySelectorAll('#hotReel .hot-slide').length`), 6, 'Trending tab: its own ranked slides');
+    assert.equal(await page.eval(`document.querySelectorAll('#hotReel .hot-slide').length`), 10, "Trending tab: today's ten, as ranked slides");
     assert.equal(await page.eval(`!!document.querySelector('#templates').offsetParent`), false, 'not the Designs grid');
     assert.equal(await page.eval(`location.hash`), '#trending');
     assert.ok(await page.eval(`document.documentElement.scrollWidth <= innerWidth`), 'no sideways page scroll');

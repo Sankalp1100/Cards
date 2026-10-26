@@ -479,6 +479,30 @@ test.describe('Catalog', () => {
     assert.equal(v[1].no, 1);
   });
 
+  // 8:00 in India is 02:30 UTC.
+  const at = iso => Date.parse(iso);
+  test('trending today: ten designs, the owner\'s picks always in, spread over the occasions', () => {
+    const e = Catalog.entries(site, { 47: { featured: true }, 120: { featured: true }, 5: { hidden: true } });
+    const t = Catalog.trendingToday(e, at('2026-11-02T06:00:00Z'));
+    const hot = Catalog.visible(t).filter(x => x.featured);
+    assert.equal(hot.length, 10);
+    assert.ok(hot.some(x => x.no === 47) && hot.some(x => x.no === 120), 'owner picks stay');
+    assert.ok(!hot.some(x => x.no === 5), 'hidden designs never trend');
+    assert.equal(new Set(hot.filter(x => x.no !== 47 && x.no !== 120).map(x => x.occasion)).size, 8, 'the daily ones come from different occasions');
+    assert.deepEqual(plain(Catalog.visible(t).slice(0, 10).map(x => x.hotRank)), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 'trending first, in today\'s order');
+    assert.equal(e.filter(x => x.featured).length, 2, 'the catalog settings themselves are not changed');
+  });
+
+  test('trending today is the same all day and changes at 8:00 in the morning, India time', () => {
+    const e = Catalog.entries(site, {});
+    const pick = iso => Catalog.visible(Catalog.trendingToday(e, at(iso))).slice(0, 10).map(x => x.no).join(',');
+    const morning = pick('2026-11-02T02:30:00Z'); // 08:00 IST
+    assert.equal(pick('2026-11-02T18:00:00Z'), morning, 'same at 23:30 IST');
+    assert.equal(pick('2026-11-03T02:29:00Z'), morning, 'same at 07:59 IST the next day');
+    assert.notEqual(pick('2026-11-03T02:30:00Z'), morning, 'new set at 08:00 IST');
+    assert.notEqual(pick('2026-11-02T02:29:00Z'), morning, 'the day before ends at 07:59');
+  });
+
   test('the catalog can change how a design opens', () => {
     const e = Catalog.entries(site, { 47: { intro: 'scroll' }, 48: { intro: 'nope' } });
     assert.equal(e[46].intro, 'scroll');
