@@ -162,9 +162,12 @@ const Core = {
 
   // Google Fonts URL for just the families one theme uses (instead of every family on every card).
   fontsUrl(fonts) {
-    const weights = { 'Cinzel Decorative': '400;700', 'Cormorant Garamond': '400;600', 'Playfair Display': '400;700', 'Poppins': '300;500', 'Fredoka': '400;600', 'Lora': '400;600', 'Baloo 2': '400;600', 'Dancing Script': '400;700' };
+    const weights = { 'Cinzel Decorative': '400;700', 'Cormorant Garamond': 'ital,wght@0,400;0,600;1,400;1,500', 'Playfair Display': 'ital,wght@0,400;0,700;1,400', 'Poppins': '300;500', 'Fredoka': '400;600',
+      'Lora': '400;600', 'Baloo 2': '400;600', 'Dancing Script': '400;700', 'Jost': '300;400;500;600', 'Cinzel': '400;600', 'Unbounded': '400;600' };
     const families = [...new Set(Object.values(fonts).map(f => (f.match(/'([^']+)'/) || [])[1]).filter(Boolean))];
-    const q = families.map(f => `family=${f.replace(/ /g, '+')}${weights[f] ? `:wght@${weights[f]}` : ''}`).join('&');
+    // "ital,wght@…" also loads the italics (Cormorant and Playfair italics are part of the elegant styles).
+    const spec = w => (w.startsWith('ital') ? `:${w}` : `:wght@${w}`);
+    const q = families.map(f => `family=${f.replace(/ /g, '+')}${weights[f] ? spec(weights[f]) : ''}`).join('&');
     return `https://fonts.googleapis.com/css2?${q}&display=swap`;
   },
 

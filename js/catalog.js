@@ -161,7 +161,7 @@ const Catalog = {
   poster(e, tag, attrs) {
     const c = PRESETS[e.occasion].card, v = e.vars, d = Core.parseDate(c.date);
     const day = d ? String(d.getDate()).padStart(2, '0') : '♥', month = d ? d.toLocaleDateString('en-IN', { month: 'short' }) : '';
-    const look = `d-${e.decor} l-${e.layout || 'classic'} s-${e.scene || 'glow'} n-${e.flavor || e.nameStyle || 'shimmer'} f-${e.frame || 'ring'}`;
+    const look = `ps-${e.style || 'ivory'} d-${e.decor} l-${e.layout || 'classic'} s-${e.scene || 'glow'} n-${e.flavor || e.nameStyle || 'shimmer'} f-${e.frame || 'ring'}`;
     return `
       <${tag} class="poster ${look}" ${attrs} style="--a:${v['--accent']};--a2:${v['--accent2']};--b:${v['--bg']};--c:${v['--bg2']};--i:${v['--ink']};--fd:${e.fonts.display.replace(/'/g, '&quot;')};--fs:${e.fonts.script.replace(/'/g, '&quot;')}">
         <span class="p-scene" aria-hidden="true"></span>

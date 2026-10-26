@@ -136,6 +136,7 @@
 
   // What hangs across the top of the first screen. Each piece sways on its own (CSS), so it feels alive.
   function motifSVG(kind) {
+    if (kind === 'none') return '';
     const W = 400, sag = x => 6 + 26 * Math.sin(Math.PI * ((x % 200) / 200)); // the string dips in two loops
     const string = '<path class="m-str" d="M0 6 Q100 38 200 6 Q300 38 400 6"/>';
     const along = (n, f) => Array.from({ length: n }, (_, i) => { const x = (i + 1) * W / (n + 1); return f(x, sag(x), i); }).join('');
@@ -186,6 +187,14 @@
           Array.from({ length: 8 }, (_, i) => `<line class="va-ripple" style="--n:${i % 4}" x1="${20 + (i * 37) % 260}" y1="${132 + i * 7}" x2="${60 + (i * 37) % 260}" y2="${132 + i * 7}"/>`).join('');
     }
     return `<div class="venue-art va-${kind}" aria-hidden="true"><svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice">${s}</svg></div>`;
+  }
+
+  // Elegant styles show a gold medallion with the initials where the emoji would be: a ring of petals
+  // around a script monogram, slowly turning.
+  function emblemHTML(d) {
+    const petals = Array.from({ length: 24 }, (_, i) => `<ellipse cx="0" cy="-44" rx="3.2" ry="8" transform="rotate(${i * 15})"/>`).join('');
+    return `<div class="ornament emblem"><svg viewBox="-60 -60 120 120" aria-hidden="true"><g class="em-ring">${petals}</g><circle r="34"/><circle r="30" class="em-thin"/></svg>
+      <b>${esc(initials(d))}</b></div>`;
   }
 
   // The host's WhatsApp for RSVPs: a 10-digit mobile gets India's 91; longer numbers already carry a country code.
@@ -284,8 +293,8 @@
     const cls = [`theme-${t.no}`, t.flavor ? `flavor-${t.flavor}` : `ns-${t.nameStyle || 'shimmer'}`, `cs-${t.cardStyle || 'soft'}`,
       `fx-${t.nameFx || 'drop'}`, `pf-${t.frame || 'ring'}`, `rv-${t.reveal || 'up'}`, `ev-${t.events || 'timeline'}`, `cdn-${t.countdown || 'boxes'}`, `tt-${t.titles || 'flourish'}`,
       // Light or dark background, so metallic, holographic and glowing names stay readable on both.
-      `mood-${Core.luminance(t.vars['--bg']) > 0.4 ? 'light' : 'dark'}`];
-    document.body.className = document.body.className.replace(/\b(theme|flavor|ns|cs|fx|pf|rv|ev|cdn|tt|mood)-\S+/g, '').trim() + ' ' + cls.join(' ');
+      `mood-${Core.luminance(t.vars['--bg']) > 0.4 ? 'light' : 'dark'}`, `st-${t.style || 'ivory'}`];
+    document.body.className = document.body.className.replace(/\b(theme|flavor|ns|cs|fx|pf|rv|ev|cdn|tt|mood|st)-\S+/g, '').trim() + ' ' + cls.join(' ');
     renderScene(t.scene || 'glow');
     const meta = $('meta[name="theme-color"]') || document.head.appendChild(Object.assign(document.createElement('meta'), { name: 'theme-color' }));
     meta.content = t.vars['--bg'];
@@ -475,7 +484,7 @@
         ${decor(t.decor)}
         ${heroLayout(t, d, when, {
           // Without a photo the design's emoji takes its place; the polaroid frame also shows the initials as a caption.
-          visual: photo ? `<div class="photo"><img src="${esc(photo)}" alt=""></div>` : `<div class="ornament">${esc(t.emoji)}<small class="orn-cap" aria-hidden="true">${esc(initials(d))}</small></div>`,
+          visual: photo ? `<div class="photo"><img src="${esc(photo)}" alt=""></div>` : t.emblem ? emblemHTML(d) : `<div class="ornament">${esc(t.emoji)}<small class="orn-cap" aria-hidden="true">${esc(initials(d))}</small></div>`,
           title: `<p class="title fade" style="--d:.2s">${esc(d.title)}</p>`,
           names: `<h1 class="names">${names}</h1>${nickLine(d)}`,
           tagline: `<p class="tagline fade" style="--d:1.6s">${esc(d.tagline)}</p>`,

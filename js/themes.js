@@ -34,7 +34,7 @@ const COUNTDOWNS = ['boxes', 'rings', 'strip', 'minimal'];
 const TITLE_STYLES = ['flourish', 'bar', 'lines'];
 // The moving parts: the animated background behind the whole card, how the names arrive,
 // the frame around the photo (or emoji), and how each section appears while scrolling.
-const SCENES = ['glow', 'aurora', 'mesh', 'grain', 'bokeh', 'rays', 'waves', 'grid', 'holo', 'silk'];
+const SCENES = ['none', 'glow', 'aurora', 'mesh', 'grain', 'bokeh', 'rays', 'waves', 'grid', 'holo', 'silk'];
 const NAME_FX = ['drop', 'rise', 'blur', 'flip', 'stamp', 'scatter', 'type', 'swing'];
 const FRAMES = ['ring', 'arch', 'polaroid', 'blob', 'halo'];
 const REVEALS = ['up', 'zoom', 'flip', 'slide', 'blur', 'wipe'];
@@ -42,7 +42,7 @@ const REVEALS = ['up', 'zoom', 'flip', 'slide', 'blur', 'wipe'];
 const CLASHES = { sunburst: 'rays', deco: 'grid', mandala: 'rays', blobs: 'mesh' };
 
 // The premium page: what hangs across the top of the first screen, and how the venue is drawn.
-const MOTIFS = ['toran', 'bunting', 'lanterns', 'bells', 'diyas', 'garland'];
+const MOTIFS = ['none', 'toran', 'bunting', 'lanterns', 'bells', 'diyas', 'garland'];
 const VENUE_ARTS = ['palace', 'temple', 'garden', 'city', 'home'];
 // Per occasion: the motifs and venue drawings that suit it, and the words for the connector and the chapters.
 const OCCASION_STYLE = {
@@ -61,84 +61,84 @@ const OCCASION_STYLE = {
 // The original 12 hand-made designs are #001–#012. `key` keeps links made before numbering working.
 const CLASSICS = [
   {
-    key: 'royal', name: 'Royal Maharaja', emoji: '👑', occasion: 'wedding', decor: 'mandala', layout: 'classic', nameStyle: 'shimmer', cardStyle: 'soft', intro: 'envelope', scene: 'rays', nameFx: 'drop', frame: 'ring', reveal: 'up',
+    key: 'royal', style: 'palace', hue: 345, name: 'Royal Maharaja', emoji: '👑', occasion: 'wedding', decor: 'mandala', layout: 'classic', nameStyle: 'shimmer', cardStyle: 'soft', intro: 'envelope', scene: 'rays', nameFx: 'drop', frame: 'ring', reveal: 'up',
     vars: { '--bg': '#2b0a14', '--bg2': '#5c0f24', '--ink': '#fbeedd', '--muted': '#e8cfa9', '--accent': '#e9b949', '--accent2': '#ff8f3f', '--card': 'rgba(255,255,255,.06)', '--line': 'rgba(233,185,73,.25)' },
     fonts: FONT_SETS.regal,
     particles: { types: ['marigold', 'petal'], colors: ['#ff9f1c', '#ffbf3f', '#e63946', '#ffd166'], count: 38 },
     tempo: 0.3
   },
   {
-    key: 'floral', name: 'Blush Garden', emoji: '🌸', occasion: 'engagement', decor: 'florals', layout: 'arch', nameStyle: 'solid', cardStyle: 'pill', intro: 'cardflip', scene: 'mesh', nameFx: 'blur', frame: 'arch', reveal: 'zoom',
+    key: 'floral', style: 'bloom', hue: 340, name: 'Blush Garden', emoji: '🌸', occasion: 'engagement', decor: 'florals', layout: 'arch', nameStyle: 'solid', cardStyle: 'pill', intro: 'cardflip', scene: 'mesh', nameFx: 'blur', frame: 'arch', reveal: 'zoom',
     vars: { '--bg': '#fff6f4', '--bg2': '#ffe0e7', '--ink': '#5a2a3a', '--muted': '#8a5a6a', '--accent': '#c9577a', '--accent2': '#e8a87c', '--card': 'rgba(255,255,255,.65)', '--line': 'rgba(201,87,122,.22)' },
     fonts: FONT_SETS.garden,
     particles: { types: ['petal'], colors: ['#f7a8b8', '#f4c2c2', '#ffd6e0', '#ffffff', '#e8879c'], count: 45 },
     tempo: 0.32
   },
   {
-    key: 'midnight', name: 'Midnight Glam', emoji: '✨', occasion: 'anniversary', decor: 'stars', layout: 'monogram', nameStyle: 'outline', cardStyle: 'sharp', intro: 'curtains', scene: 'aurora', nameFx: 'flip', frame: 'halo', reveal: 'blur',
+    key: 'midnight', style: 'palace', hue: 245, name: 'Midnight Glam', emoji: '✨', occasion: 'anniversary', decor: 'stars', layout: 'monogram', nameStyle: 'outline', cardStyle: 'sharp', intro: 'curtains', scene: 'aurora', nameFx: 'flip', frame: 'halo', reveal: 'blur',
     vars: { '--bg': '#07071a', '--bg2': '#1d1446', '--ink': '#f3eefe', '--muted': '#b9b0d9', '--accent': '#e0c27a', '--accent2': '#c9a7ff', '--card': 'rgba(255,255,255,.06)', '--line': 'rgba(224,194,122,.25)' },
     fonts: FONT_SETS.regal,
     particles: { types: ['sparkle'], colors: ['#ffffff', '#e0c3fc', '#ffd700'], count: 90, fireworks: true },
     tempo: 0.28
   },
   {
-    key: 'haldi', name: 'Haldi Sunshine', emoji: '🌼', occasion: 'ceremony', decor: 'sunburst', layout: 'split', nameStyle: 'duo', cardStyle: 'soft', intro: 'scroll', scene: 'bokeh', nameFx: 'stamp', frame: 'polaroid', reveal: 'slide',
+    key: 'haldi', style: 'marigold', hue: 22, name: 'Haldi Sunshine', emoji: '🌼', occasion: 'ceremony', decor: 'sunburst', layout: 'split', nameStyle: 'duo', cardStyle: 'soft', intro: 'scroll', scene: 'bokeh', nameFx: 'stamp', frame: 'polaroid', reveal: 'slide',
     vars: { '--bg': '#fff7d6', '--bg2': '#ffe08a', '--ink': '#5b3200', '--muted': '#8a5a10', '--accent': '#d97706', '--accent2': '#e11d48', '--card': 'rgba(255,255,255,.55)', '--line': 'rgba(217,119,6,.25)' },
     fonts: { display: "'Playfair Display', serif", script: "'Great Vibes', cursive", body: "'Cormorant Garamond', serif" },
     particles: { types: ['marigold', 'petal'], colors: ['#ffb703', '#fb8500', '#ffd60a', '#ff7b00'], count: 40 },
     tempo: 0.26
   },
   {
-    key: 'mehendi', name: 'Mehendi Green', emoji: '🌿', occasion: 'wedding', decor: 'lace', layout: 'arch', nameStyle: 'shimmer', cardStyle: 'outline', intro: 'doors', scene: 'silk', nameFx: 'rise', frame: 'arch', reveal: 'wipe',
+    key: 'mehendi', style: 'mehendi', hue: 140, name: 'Mehendi Green', emoji: '🌿', occasion: 'wedding', decor: 'lace', layout: 'arch', nameStyle: 'shimmer', cardStyle: 'outline', intro: 'doors', scene: 'silk', nameFx: 'rise', frame: 'arch', reveal: 'wipe',
     vars: { '--bg': '#10261a', '--bg2': '#24513a', '--ink': '#f2efdc', '--muted': '#c9d6b4', '--accent': '#d4b46a', '--accent2': '#a7c957', '--card': 'rgba(255,255,255,.06)', '--line': 'rgba(212,180,106,.25)' },
     fonts: { display: "'Cinzel Decorative', serif", script: "'Parisienne', cursive", body: "'Cormorant Garamond', serif" },
     particles: { types: ['leaf', 'petal'], colors: ['#6a994e', '#a7c957', '#f2e8cf', '#bc4749'], count: 36 },
     tempo: 0.3
   },
   {
-    key: 'neon', name: 'Neon Love (Y2K)', emoji: '💖', occasion: 'bday', decor: 'blobs', layout: 'classic', nameStyle: 'solid', cardStyle: 'outline', intro: 'curtains', flavor: 'neon', scene: 'grid', nameFx: 'scatter', frame: 'halo', reveal: 'zoom',
+    key: 'neon', style: 'neon', hue: 330, name: 'Neon Love (Y2K)', emoji: '💖', occasion: 'bday', decor: 'blobs', layout: 'classic', nameStyle: 'solid', cardStyle: 'outline', intro: 'curtains', flavor: 'neon', scene: 'grid', nameFx: 'scatter', frame: 'halo', reveal: 'zoom',
     vars: { '--bg': '#0d0221', '--bg2': '#2a0a4a', '--ink': '#ffffff', '--muted': '#d1f7ff', '--accent': '#ff2a6d', '--accent2': '#05d9e8', '--card': 'rgba(5,217,232,.07)', '--line': 'rgba(255,42,109,.4)' },
     fonts: FONT_SETS.retro,
     particles: { types: ['heart', 'sparkle'], colors: ['#ff2a6d', '#05d9e8', '#d1f7ff', '#f9c80e'], count: 45, fireworks: true },
     tempo: 0.22
   },
   {
-    key: 'kids', name: 'Candy Party', emoji: '🎈', occasion: 'birthday', decor: 'blobs', layout: 'ticket', nameStyle: 'duo', cardStyle: 'pill', intro: 'giftbox', flavor: 'playful', scene: 'waves', nameFx: 'swing', frame: 'blob', reveal: 'flip',
+    key: 'kids', style: 'toybox', hue: 330, name: 'Candy Party', emoji: '🎈', occasion: 'birthday', decor: 'blobs', layout: 'ticket', nameStyle: 'duo', cardStyle: 'pill', intro: 'giftbox', flavor: 'playful', scene: 'waves', nameFx: 'swing', frame: 'blob', reveal: 'flip',
     vars: { '--bg': '#eaf8ff', '--bg2': '#ffe3f1', '--ink': '#2b2d6e', '--muted': '#5a5c9e', '--accent': '#ff4f9a', '--accent2': '#3bceac', '--card': 'rgba(255,255,255,.75)', '--line': 'rgba(94,96,206,.2)' },
     fonts: FONT_SETS.playful,
     particles: { types: ['balloon', 'confetti', 'confetti'], colors: ['#ff5fa2', '#ffd23f', '#3bceac', '#5e60ce', '#ff8c42'], count: 40 },
     tempo: 0.2
   },
   {
-    key: 'baby', name: 'Baby Cloud', emoji: '🍼', occasion: 'babyshower', decor: 'stars', layout: 'split', nameStyle: 'solid', cardStyle: 'pill', intro: 'giftbox', flavor: 'playful', scene: 'bokeh', nameFx: 'rise', frame: 'blob', reveal: 'up',
+    key: 'baby', style: 'toybox', hue: 215, name: 'Baby Cloud', emoji: '🍼', occasion: 'babyshower', decor: 'stars', layout: 'split', nameStyle: 'solid', cardStyle: 'pill', intro: 'giftbox', flavor: 'playful', scene: 'bokeh', nameFx: 'rise', frame: 'blob', reveal: 'up',
     vars: { '--bg': '#f2f7ff', '--bg2': '#fde8f1', '--ink': '#38456b', '--muted': '#6b7699', '--accent': '#7b9fe0', '--accent2': '#f29bbf', '--card': 'rgba(255,255,255,.7)', '--line': 'rgba(123,159,224,.25)' },
     fonts: { display: "'Fredoka', sans-serif", script: "'Parisienne', cursive", body: "'Poppins', sans-serif" },
     particles: { types: ['heart', 'sparkle', 'balloon'], colors: ['#a9c6ff', '#f9b9d2', '#fff1a8', '#c7f0db'], count: 38 },
     tempo: 0.3
   },
   {
-    key: 'disco', name: 'Disco Kitty', emoji: '🪩', occasion: 'kitty', decor: 'lights', layout: 'monogram', nameStyle: 'shimmer', cardStyle: 'sharp', intro: 'curtains', scene: 'holo', nameFx: 'stamp', frame: 'ring', reveal: 'flip',
+    key: 'disco', style: 'neon', hue: 300, name: 'Disco Kitty', emoji: '🪩', occasion: 'kitty', decor: 'lights', layout: 'monogram', nameStyle: 'shimmer', cardStyle: 'sharp', intro: 'curtains', scene: 'holo', nameFx: 'stamp', frame: 'ring', reveal: 'flip',
     vars: { '--bg': '#16041f', '--bg2': '#5b0e5e', '--ink': '#fff4fd', '--muted': '#f3c4ec', '--accent': '#ff4fd8', '--accent2': '#ffd400', '--card': 'rgba(255,79,216,.08)', '--line': 'rgba(255,79,216,.4)' },
     fonts: FONT_SETS.retro,
     particles: { types: ['sparkle', 'confetti'], colors: ['#ff4fd8', '#ffd400', '#7df9ff', '#ffffff'], count: 60, fireworks: true },
     tempo: 0.2
   },
   {
-    key: 'bollywood', name: 'Filmy Bollywood', emoji: '🎬', occasion: 'sangeet', decor: 'sunburst', layout: 'ticket', nameStyle: 'outline', cardStyle: 'sharp', intro: 'curtains', scene: 'rays', nameFx: 'type', frame: 'polaroid', reveal: 'slide',
+    key: 'bollywood', style: 'retro', hue: 8, name: 'Filmy Bollywood', emoji: '🎬', occasion: 'sangeet', decor: 'sunburst', layout: 'ticket', nameStyle: 'outline', cardStyle: 'sharp', intro: 'curtains', scene: 'rays', nameFx: 'type', frame: 'polaroid', reveal: 'slide',
     vars: { '--bg': '#140500', '--bg2': '#7a1a00', '--ink': '#fff3dc', '--muted': '#ffd59a', '--accent': '#ffcc00', '--accent2': '#ff3c00', '--card': 'rgba(255,204,0,.07)', '--line': 'rgba(255,204,0,.35)' },
     fonts: { display: "'Righteous', sans-serif", script: "'Great Vibes', cursive", body: "'Poppins', sans-serif" },
     particles: { types: ['marigold', 'sparkle'], colors: ['#ffcc00', '#ff7a00', '#ff3c00', '#fff1b8'], count: 45, fireworks: true },
     tempo: 0.22
   },
   {
-    key: 'sunset', name: 'Golden Hour', emoji: '🌅', occasion: 'bday', decor: 'lights', layout: 'split', nameStyle: 'duo', cardStyle: 'soft', intro: 'giftbox', scene: 'waves', nameFx: 'scatter', frame: 'halo', reveal: 'wipe',
+    key: 'sunset', style: 'bloom', hue: 20, name: 'Golden Hour', emoji: '🌅', occasion: 'bday', decor: 'lights', layout: 'split', nameStyle: 'duo', cardStyle: 'soft', intro: 'giftbox', scene: 'waves', nameFx: 'scatter', frame: 'halo', reveal: 'wipe',
     vars: { '--bg': '#2a1636', '--bg2': '#a33a4f', '--ink': '#fff1e6', '--muted': '#ffcfb3', '--accent': '#ffb86b', '--accent2': '#ff6b9d', '--card': 'rgba(255,255,255,.07)', '--line': 'rgba(255,184,107,.35)' },
     fonts: FONT_SETS.modern,
     particles: { types: ['balloon', 'confetti', 'sparkle'], colors: ['#ffb86b', '#ff6b9d', '#ffe29a', '#c38dff'], count: 42 },
     tempo: 0.24
   },
   {
-    key: 'lavender', name: 'Lavender Dream', emoji: '🪻', occasion: 'naming', decor: 'mandala', layout: 'arch', nameStyle: 'solid', cardStyle: 'outline', intro: 'scroll', scene: 'aurora', nameFx: 'blur', frame: 'arch', reveal: 'zoom',
+    key: 'lavender', style: 'bloom', hue: 270, name: 'Lavender Dream', emoji: '🪻', occasion: 'naming', decor: 'mandala', layout: 'arch', nameStyle: 'solid', cardStyle: 'outline', intro: 'scroll', scene: 'aurora', nameFx: 'blur', frame: 'arch', reveal: 'zoom',
     vars: { '--bg': '#f8f3ff', '--bg2': '#e4d6ff', '--ink': '#3b2a5a', '--muted': '#6e5a94', '--accent': '#8e6cd6', '--accent2': '#e88fbd', '--card': 'rgba(255,255,255,.65)', '--line': 'rgba(142,108,214,.25)' },
     fonts: FONT_SETS.garden,
     particles: { types: ['petal'], colors: ['#b79ced', '#d9c7ff', '#f4b6d2', '#ffffff'], count: 42 },
@@ -225,9 +225,8 @@ const HUES = [['Ruby', 350], ['Rose', 338], ['Coral', 10], ['Saffron', 26], ['Am
   ['Emerald', 140], ['Teal', 172], ['Aqua', 188], ['Sky', 202], ['Sapphire', 218], ['Cobalt', 230], ['Indigo', 245], ['Violet', 262],
   ['Lavender', 272], ['Orchid', 290], ['Magenta', 315], ['Berry', 328]];
 
-// Everything a guest sees change from one design to another. Two designs are compared by how many of these differ.
-const lookOf = t => [t.layout, t.decor, t.scene, t.nameFx, t.frame, t.reveal, t.events, t.countdown, t.titles,
-  t.flavor || t.nameStyle, t.cardStyle, t.fonts.display + t.fonts.script];
+// What tells two designs apart: the style, its layout, and the colours.
+const lookOf = t => [t.style, t.variant, t.vars['--bg'], t.vars['--accent']];
 
 function hslHex(h, s, l) {
   h = ((h % 360) + 360) % 360; s /= 100; l /= 100;
@@ -269,6 +268,149 @@ function palette(h, dark, gold, j) {
   };
 }
 
+// ---------- The 10 trending styles ----------
+// Every design is one hand-designed style in its own colour. A style fixes the whole art direction (fonts,
+// decoration, opening, how the story, functions and countdown look); the design's hue and one of the style's
+// layouts make it its own. `deep` darkens a colour until it reads well on the background.
+const deep = (h, s, bg, min, l = 44) => { while (contrast(hslHex(h, s, l), bg) < min && l > 4) l -= 2; return hslHex(h, s, l); };
+const pal = (vars, colors) => ({ vars, colors });
+const STYLES = {
+  ivory: {
+    label: 'Royal Ivory', emblem: true,
+    fonts: { display: "'Cormorant Garamond', serif", script: "'Pinyon Script', cursive", body: "'Jost', sans-serif" },
+    look: { nameStyle: 'solid', cardStyle: 'soft', nameFx: 'rise', frame: 'ring', reveal: 'up', events: 'cards', countdown: 'boxes', titles: 'flourish', scene: 'glow' },
+    variants: [{ layout: 'classic', decor: 'mandala' }, { layout: 'arch', decor: 'mandala' }, { layout: 'monogram', decor: 'frame' }],
+    motifs: ['toran', 'garland', 'bells'], intros: ['envelope', 'cardflip'], venues: ['palace', 'garden', 'temple'], particles: { types: ['petal'], count: 18 },
+    palette(h) {
+      const bg = hslHex(40, 55, 97), gold = hslHex(38, 62, 44), accent = deep(h, 60, bg, 4.5);
+      return pal({ '--bg': bg, '--bg2': hslHex(36, 50, 90), '--ink': deep(h, 55, bg, 9, 22), '--muted': hslHex(h, 22, 36), '--accent': accent, '--accent2': gold,
+        '--card': 'rgba(255,253,248,.85)', '--line': hexAlpha(gold, 0.38) }, [accent, gold, hslHex(h, 60, 72), hslHex(40, 80, 66)]);
+    }
+  },
+  palace: {
+    label: 'Palace Night', emblem: true,
+    fonts: { display: "'Cinzel', serif", script: "'Great Vibes', cursive", body: "'Cormorant Garamond', serif" },
+    look: { nameStyle: 'shimmer', cardStyle: 'outline', nameFx: 'blur', frame: 'arch', reveal: 'zoom', events: 'tickets', countdown: 'rings', titles: 'lines', scene: 'bokeh' },
+    variants: [{ layout: 'arch', decor: 'deco' }, { layout: 'classic', decor: 'lights' }, { layout: 'split', decor: 'stars' }],
+    motifs: ['lanterns', 'bells'], intros: ['doors', 'curtains'], venues: ['palace', 'city'], particles: { types: ['sparkle'], count: 28 },
+    palette(h) {
+      const gold = hslHex(42, 72, 62), a2 = hslHex(h, 65, 66);
+      return pal({ '--bg': hslHex(h, 55, 8), '--bg2': hslHex(h, 55, 17), '--ink': hslHex(42, 55, 93), '--muted': hslHex(40, 30, 76), '--accent': gold, '--accent2': a2,
+        '--card': 'rgba(255,255,255,.05)', '--line': hexAlpha(gold, 0.3) }, [gold, '#fff3c4', a2, '#ffffff']);
+    }
+  },
+  bloom: {
+    label: 'Bloom', emblem: true,
+    fonts: { display: "'Playfair Display', serif", script: "'Parisienne', cursive", body: "'Jost', sans-serif" },
+    look: { nameStyle: 'duo', cardStyle: 'pill', nameFx: 'blur', frame: 'arch', reveal: 'up', events: 'cards', countdown: 'rings', titles: 'bar', scene: 'aurora' },
+    variants: [{ layout: 'arch', decor: 'florals' }, { layout: 'classic', decor: 'florals' }, { layout: 'split', decor: 'blobs' }],
+    motifs: ['garland'], intros: ['cardflip', 'envelope'], venues: ['garden', 'home'], particles: { types: ['petal'], count: 22 },
+    palette(h) {
+      const bg = hslHex(h, 75, 97), accent = deep(h, 55, bg, 3.6, 50), a2 = hslHex(h + 35, 60, 62);
+      return pal({ '--bg': bg, '--bg2': hslHex(h + 25, 70, 91), '--ink': deep(h, 40, bg, 9, 24), '--muted': hslHex(h, 22, 40), '--accent': accent, '--accent2': a2,
+        '--card': 'rgba(255,255,255,.78)', '--line': hexAlpha(accent, 0.25) }, [hslHex(h, 70, 80), hslHex(h + 35, 70, 82), '#ffffff', hslHex(h, 60, 70)]);
+    }
+  },
+  minimal: {
+    label: 'Modern Minimal', emblem: false,
+    fonts: { display: "'DM Serif Display', serif", script: "'Pinyon Script', cursive", body: "'Jost', sans-serif" },
+    look: { nameStyle: 'solid', cardStyle: 'sharp', nameFx: 'rise', frame: 'ring', reveal: 'blur', events: 'chapters', countdown: 'minimal', titles: 'lines', scene: 'none' },
+    variants: [{ layout: 'editorial', decor: 'frame' }, { layout: 'classic', decor: 'frame' }, { layout: 'split', decor: 'frame' }],
+    motifs: ['none'], intros: ['cardflip', 'envelope'], venues: ['city', 'garden'], particles: { types: ['confetti'], count: 6 },
+    palette(h) {
+      const bg = hslHex(40, 20, 96), accent = deep(h, 45, bg, 5, 38);
+      return pal({ '--bg': bg, '--bg2': hslHex(40, 18, 91), '--ink': '#1e1b18', '--muted': hslHex(30, 8, 36), '--accent': accent, '--accent2': hslHex(h, 25, 58),
+        '--card': 'rgba(255,255,255,.6)', '--line': 'rgba(30,27,24,.16)' }, [accent, '#1e1b18', hslHex(h, 25, 58)]);
+    }
+  },
+  marigold: {
+    label: 'Marigold', emblem: true,
+    fonts: { display: "'Marcellus', serif", script: "'Alex Brush', cursive", body: "'Lora', serif" },
+    look: { nameStyle: 'solid', cardStyle: 'soft', nameFx: 'rise', frame: 'halo', reveal: 'up', events: 'timeline', countdown: 'boxes', titles: 'flourish', scene: 'glow' },
+    variants: [{ layout: 'classic', decor: 'sunburst' }, { layout: 'arch', decor: 'lace' }, { layout: 'ticket', decor: 'lace' }],
+    motifs: ['toran', 'diyas'], intros: ['scroll', 'doors'], venues: ['temple', 'home', 'palace'], particles: { types: ['marigold', 'petal'], count: 24 },
+    palette(h) {
+      const bg = hslHex(46, 95, 95), accent = deep(h, 70, bg, 4.5, 40), a2 = hslHex(28, 95, 52);
+      return pal({ '--bg': bg, '--bg2': hslHex(40, 95, 84), '--ink': deep(18, 70, bg, 9, 20), '--muted': hslHex(25, 40, 34), '--accent': accent, '--accent2': a2,
+        '--card': 'rgba(255,255,255,.72)', '--line': hexAlpha(a2, 0.35) }, ['#ffb703', '#fb8500', '#ffd60a', accent]);
+    }
+  },
+  mehendi: {
+    label: 'Mehendi', emblem: true,
+    fonts: { display: "'Marcellus', serif", script: "'Great Vibes', cursive", body: "'Cormorant Garamond', serif" },
+    look: { nameStyle: 'shimmer', cardStyle: 'soft', nameFx: 'blur', frame: 'arch', reveal: 'wipe', events: 'zigzag', countdown: 'strip', titles: 'flourish', scene: 'silk' },
+    variants: [{ layout: 'arch', decor: 'lace' }, { layout: 'classic', decor: 'florals' }, { layout: 'monogram', decor: 'lace' }],
+    motifs: ['bells', 'garland'], intros: ['doors', 'scroll'], venues: ['garden', 'palace'], particles: { types: ['leaf', 'petal'], count: 20 },
+    palette(h) {
+      // Henna greens from olive to deep teal, following the design's hue, so no two Mehendi designs share a green.
+      const g = 100 + Math.round(h / 360 * 84), gold = hslHex(43, 62, 60), a2 = hslHex(h, 60, 64);
+      return pal({ '--bg': hslHex(g, 45, 9), '--bg2': hslHex(g, 40, 18), '--ink': hslHex(45, 50, 92), '--muted': hslHex(80, 20, 76), '--accent': gold, '--accent2': a2,
+        '--card': 'rgba(255,255,255,.05)', '--line': hexAlpha(gold, 0.3) }, ['#6a994e', '#a7c957', '#f2e8cf', a2]);
+    }
+  },
+  pichwai: {
+    label: 'Pichwai Lotus', emblem: true,
+    fonts: { display: "'Gilda Display', serif", script: "'Pinyon Script', cursive", body: "'Jost', sans-serif" },
+    look: { nameStyle: 'solid', cardStyle: 'outline', nameFx: 'rise', frame: 'halo', reveal: 'zoom', events: 'cards', countdown: 'rings', titles: 'lines', scene: 'glow' },
+    variants: [{ layout: 'classic', decor: 'mandala' }, { layout: 'arch', decor: 'stars' }, { layout: 'split', decor: 'mandala' }],
+    motifs: ['bells', 'diyas'], intros: ['scroll', 'envelope'], venues: ['temple', 'palace'], particles: { types: ['petal'], count: 18 },
+    palette(h) {
+      const t = 175 + (h * 3) % 50, pink = hslHex(340 + h % 20, 75, 74), gold = hslHex(43, 70, 60);
+      return pal({ '--bg': hslHex(t, 55, 11), '--bg2': hslHex(t, 50, 21), '--ink': hslHex(40, 55, 92), '--muted': hslHex(t, 20, 76), '--accent': pink, '--accent2': gold,
+        '--card': 'rgba(255,255,255,.05)', '--line': hexAlpha(gold, 0.3) }, [pink, hslHex(340, 70, 85), gold, '#ffffff']);
+    }
+  },
+  retro: {
+    label: 'Filmy Retro', emblem: false,
+    fonts: { display: "'Righteous', sans-serif", script: "'Pacifico', cursive", body: "'Poppins', sans-serif" },
+    look: { nameStyle: 'solid', cardStyle: 'sharp', nameFx: 'stamp', frame: 'polaroid', reveal: 'slide', events: 'tickets', countdown: 'strip', titles: 'bar', scene: 'rays' },
+    variants: [{ layout: 'ticket', decor: 'lights' }, { layout: 'classic', decor: 'lights' }, { layout: 'monogram', decor: 'deco' }],
+    motifs: ['bunting', 'lanterns'], intros: ['curtains'], venues: ['city', 'palace'], particles: { types: ['confetti', 'sparkle'], count: 34, fireworks: true },
+    palette(h) {
+      const y = hslHex(46, 96, 56), a2 = hslHex(h, 85, 58);
+      return pal({ '--bg': hslHex(h, 70, 8), '--bg2': hslHex(h, 75, 19), '--ink': hslHex(45, 90, 93), '--muted': hslHex(40, 50, 78), '--accent': y, '--accent2': a2,
+        '--card': 'rgba(255,204,0,.06)', '--line': hexAlpha(y, 0.35) }, [y, a2, '#fff1b8', '#ff3c00']);
+    }
+  },
+  neon: {
+    label: 'Neon Night', emblem: false, flavor: 'neon',
+    fonts: { display: "'Unbounded', sans-serif", script: "'Yellowtail', cursive", body: "'Poppins', sans-serif" },
+    look: { nameStyle: 'glow', cardStyle: 'outline', nameFx: 'flip', frame: 'halo', reveal: 'zoom', events: 'cards', countdown: 'rings', titles: 'bar', scene: 'grid' },
+    variants: [{ layout: 'classic', decor: 'blobs' }, { layout: 'monogram', decor: 'stars' }, { layout: 'orbit', decor: 'lights' }],
+    motifs: ['lanterns', 'bunting'], intros: ['curtains', 'giftbox'], venues: ['city'], particles: { types: ['sparkle', 'confetti'], count: 32, fireworks: true },
+    palette(h) {
+      const a = hslHex(h, 95, 64), a2 = hslHex(h + 150, 95, 58);
+      return pal({ '--bg': hslHex(h, 65, 6), '--bg2': hslHex(h, 60, 15), '--ink': hslHex(h, 40, 95), '--muted': hslHex(h, 40, 82), '--accent': a, '--accent2': a2,
+        '--card': hexAlpha(a2, 0.06), '--line': hexAlpha(a, 0.4) }, [a, a2, '#ffffff', hslHex(h + 60, 95, 70)]);
+    }
+  },
+  toybox: {
+    label: 'Toybox', emblem: false, flavor: 'playful',
+    fonts: { display: "'Fredoka', sans-serif", script: "'Pacifico', cursive", body: "'Fredoka', sans-serif" },
+    look: { nameStyle: 'duo', cardStyle: 'pill', nameFx: 'swing', frame: 'blob', reveal: 'zoom', events: 'cards', countdown: 'boxes', titles: 'bar', scene: 'waves' },
+    variants: [{ layout: 'classic', decor: 'blobs' }, { layout: 'ticket', decor: 'stars' }, { layout: 'arch', decor: 'blobs' }],
+    motifs: ['bunting', 'garland'], intros: ['giftbox'], venues: ['garden', 'home'], particles: { types: ['balloon', 'confetti'], count: 26 },
+    palette(h) {
+      const bg = hslHex(h, 90, 96), accent = deep(h, 80, bg, 3.4, 50), a2 = hslHex(h + 150, 70, 45);
+      return pal({ '--bg': bg, '--bg2': hslHex(h + 60, 85, 91), '--ink': deep(240, 45, bg, 9, 26), '--muted': hslHex(240, 20, 42), '--accent': accent, '--accent2': a2,
+        '--card': 'rgba(255,255,255,.8)', '--line': hexAlpha(accent, 0.22) }, [hslHex(h, 85, 62), hslHex(h + 150, 75, 55), '#ffd23f', '#5e60ce', '#ff8c42']);
+    }
+  }
+};
+// Which styles suit each occasion (cycled, so neighbouring designs of an occasion are different styles).
+const OCCASION_STYLES = {
+  wedding: ['ivory', 'palace', 'mehendi', 'pichwai', 'bloom', 'minimal', 'marigold'],
+  engagement: ['bloom', 'ivory', 'minimal', 'palace'],
+  sangeet: ['retro', 'palace', 'neon', 'mehendi'],
+  kitty: ['neon', 'retro', 'bloom', 'minimal'],
+  bday: ['neon', 'minimal', 'retro', 'bloom'],
+  naming: ['ivory', 'bloom', 'pichwai', 'toybox'],
+  birthday: ['toybox', 'bloom', 'retro'],
+  babyshower: ['bloom', 'toybox', 'ivory', 'pichwai'],
+  ceremony: ['marigold', 'pichwai', 'ivory', 'mehendi', 'palace'],
+  anniversary: ['palace', 'ivory', 'minimal', 'pichwai']
+};
+
 function generated(occasion, j, c) {
   const r = RECIPES[occasion];
   const [hueName, h] = HUES[(j * 7 + c * 3) % HUES.length];
@@ -277,7 +419,7 @@ function generated(occasion, j, c) {
   const p = palette(h, dark, r.gold, j);
   const types = pick(r.particles, j + c);
   return {
-    name: `${hueName} ${r.nouns[j]}`, emoji: pick(r.emoji), occasion,
+    name: `${hueName} ${r.nouns[j]}`, emoji: pick(r.emoji), occasion, hue: h,
     decor: pick(r.decor, j + (j >> 2)), layout: LAYOUTS[(j + 2 * c) % LAYOUTS.length],
     nameStyle: NAME_STYLES[(j * 3 + c) % NAME_STYLES.length], cardStyle: CARD_STYLES[(j + (j >> 2) + c) % CARD_STYLES.length], intro: pick(r.intros, j + (j >> 1)),
     // Neon lettering is white light: it only works on a dark background.
@@ -300,52 +442,25 @@ const TEMPLATES = (() => {
       occasions.forEach((o, c) => { if (made[o] < need[o] && made[o] <= j) list.push(generated(o, made[o]++, c)); });
     }
   }
-  // If two designs ever ended up with the same layout, decor, fonts and styles, nudge the later one's styles.
-  const seen = new Set();
-  const sig = t => [t.layout, t.decor, t.nameStyle, t.cardStyle, JSON.stringify(t.fonts)].join('|');
-  list.forEach((t, i) => {
-    // Neighbours (#047, #048…) never share a layout.
-    if (i && t.layout === list[i - 1].layout) t.layout = LAYOUTS[(LAYOUTS.indexOf(t.layout) + 1) % LAYOUTS.length];
-    for (let k = 0; seen.has(sig(t)) && k < 16; k++) {
-      t.cardStyle = CARD_STYLES[(CARD_STYLES.indexOf(t.cardStyle) + 1) % CARD_STYLES.length];
-      if (k % 4 === 3) t.nameStyle = NAME_STYLES[(NAME_STYLES.indexOf(t.nameStyle) + 1) % NAME_STYLES.length];
-    }
-    seen.add(sig(t));
-  });
-  // The rest of the card differs too: how the functions are listed, the countdown, and the section titles.
-  // Neighbouring designs never list their functions the same way.
-  list.forEach((t, i) => {
-    t.events = EVENT_STYLES[(i * 3 + (i >> 2)) % EVENT_STYLES.length];
-    if (i && t.events === list[i - 1].events) t.events = EVENT_STYLES[(EVENT_STYLES.indexOf(t.events) + 1) % EVENT_STYLES.length];
-    t.countdown = COUNTDOWNS[(i * 5 + (i >> 3)) % COUNTDOWNS.length];
-    t.titles = TITLE_STYLES[(i + (i >> 2)) % TITLE_STYLES.length];
-  });
-  // Then the moving parts. Each design tries a few combinations and keeps the one least like the designs
-  // already made for its occasion (customers browse an occasion together) and its neighbour, and never
-  // repeats another design's complete look. The classics keep their hand-picked ones.
-  const looks = new Set(), mates = {};
-  let prev = null;
-  const differ = (a, b) => a.reduce((n, v, k) => n + (v !== b[k]), 0);
-  list.forEach((t, i) => {
-    const same = mates[t.occasion] = mates[t.occasion] || [];
-    const pool = RECIPES[t.occasion].scenes, n = same.length;
-    let best = null, score = -1;
-    for (let c = 0; c < (t.scene ? 1 : 24); c++) {
-      const pick = t.scene ? {} : {
-        scene: pool[(n * 3 + c) % pool.length], nameFx: NAME_FX[(i * 5 + c * 3 + (c >> 3)) % NAME_FX.length],
-        frame: FRAMES[(i * 2 + c + (c >> 2)) % FRAMES.length], reveal: REVEALS[(i + c * 5 + (c >> 1)) % REVEALS.length]
-      };
-      // A background never repeats the decor's own pattern (rays on a sunburst, a line grid on art-deco fans).
-      if (pick.scene && CLASHES[t.decor] === pick.scene) continue;
-      const l = lookOf({ ...t, ...pick });
-      if (!t.scene && looks.has(l.join('|'))) continue;
-      const s = same.reduce((m, o) => Math.min(m, differ(l, o)), 99) * 100 + (prev ? differ(l, prev) : 99);
-      if (s > score) { score = s; best = { pick, l }; }
-    }
-    Object.assign(t, best.pick);
-    looks.add(best.l.join('|'));
-    prev = best.l;
-    same.push(best.l);
+  // Each design takes its style (the classics keep their hand-picked one; the rest cycle through the styles that
+  // suit the occasion), its colours from its own hue, and one of the style's layouts. No two designs of an occasion
+  // share style, layout and hue.
+  const count = {}, last = {}, used = {};
+  list.forEach(t => {
+    const k = count[t.occasion] = (count[t.occasion] ?? -1) + 1, pool = OCCASION_STYLES[t.occasion];
+    let style = t.style || pool[k % pool.length];
+    // An occasion never shows the same style twice in a row (a classic may have taken this turn's style).
+    if (!t.style && style === last[t.occasion]) style = pool[(k + 1) % pool.length];
+    last[t.occasion] = style;
+    const st = STYLES[style], u = used[t.occasion] = used[t.occasion] || {};
+    // The style's least-used layout in this occasion, so its designs spread over all of them.
+    const v = st.variants.map((_, i) => i).sort((a, b) => (u[`${style}|${a}`] || 0) - (u[`${style}|${b}`] || 0) || a - b)[0];
+    u[`${style}|${v}`] = (u[`${style}|${v}`] || 0) + 1;
+    const p = st.palette(t.hue);
+    Object.assign(t, { style, variant: v, ...st.look, ...st.variants[v], flavor: st.flavor || '', vars: p.vars, fonts: st.fonts, emblem: st.emblem,
+      particles: { ...st.particles, colors: p.colors, fireworks: !!st.particles.fireworks },
+      motif: st.motifs[k % st.motifs.length], venueArt: st.venues[k % st.venues.length],
+      intro: t.key ? t.intro : st.intros[k % st.intros.length] }); // the classics keep their opening
   });
   // Every design gets its own song (js/music.js): chord progression, melody pattern, instrument and key.
   // Parties may get the playful pluck; weddings and ceremonies keep softer instruments. #001 keeps the original tune.
@@ -356,13 +471,6 @@ const TEMPLATES = (() => {
     while (songs.has(JSON.stringify(song))) song.key = (song.key + 1) % 12;
     songs.add(JSON.stringify(song));
     t.song = song;
-  });
-  // The premium page's motif and venue drawing, from what suits the occasion. Neighbours within an occasion differ.
-  const seenOcc = {};
-  list.forEach(t => {
-    const k = seenOcc[t.occasion] = (seenOcc[t.occasion] || 0) + 1, st = OCCASION_STYLE[t.occasion];
-    t.motif = st.motifs[k % st.motifs.length];
-    t.venueArt = st.venues[(k + (k >> 1)) % st.venues.length];
   });
   return list.map((t, i) => ({ no: i + 1, ...t }));
 })();
