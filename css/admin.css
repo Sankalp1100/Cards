@@ -296,3 +296,37 @@ body.logged-out .side, body.logged-out .admin-main { display: none; }
 .create-grid > * { min-width: 0; }
 @media (max-width: 900px) { .create-grid { grid-template-columns: minmax(0, 1fr); } }
 .admin .logo { padding-block: 9px; } /* taller tap area on phones */
+
+/* ---------- Video Studio ---------- */
+.studio { position: fixed; inset: 0; z-index: 210; display: flex; flex-direction: column; background: radial-gradient(circle at 20% 0%, #1d1238, #07060f 60%); }
+body.studio-open { overflow: hidden; }
+.st-head { display: flex; align-items: center; gap: 14px; padding: 14px 22px; border-bottom: 1px solid var(--line); }
+.st-head b { font-family: 'Syne', sans-serif; font-size: 1.25rem; white-space: nowrap; }
+.st-head .muted { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-body { flex: 1; min-height: 0; display: grid; grid-template-columns: auto minmax(300px, 430px); justify-content: center; gap: 30px; padding: 22px; overflow: auto; }
+.st-stage { position: sticky; top: 0; display: grid; gap: 12px; align-content: start; justify-items: center; }
+#stCanvas { display: block; height: min(72vh, 760px); width: auto; aspect-ratio: 9 / 16; border-radius: 22px; background: #000; box-shadow: 0 0 0 6px #111, 0 30px 80px rgba(0,0,0,.6); }
+.st-play { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 430px; }
+.st-play button { flex: none; width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--line); background: rgba(255,255,255,.06); color: var(--ink); font-size: .8rem; cursor: pointer; }
+.st-scrub { position: relative; flex: 1; height: 10px; border-radius: 99px; background: rgba(255,255,255,.12); cursor: pointer; }
+.st-scrub i { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: inherit; background: var(--grad); }
+#stTime { min-width: 84px; text-align: right; color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
+.st-scenes { justify-content: center; max-width: 460px; gap: 8px; }
+.st-scenes .chip, .st-side .chip { padding: 8px 13px; font-size: .84rem; }
+.st-side { display: grid; gap: 12px; align-content: start; padding-bottom: 30px; }
+.st-side h3 { font-family: 'Syne', sans-serif; font-size: 1rem; margin-top: 8px; }
+.st-looks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.st-look { position: relative; padding: 0; border: 2px solid var(--line); border-radius: 14px; overflow: hidden; background: #111; color: #fff; cursor: pointer; text-align: left; font: inherit; }
+.st-look canvas { display: block; width: 100%; aspect-ratio: 9 / 16; }
+.st-look span { position: absolute; inset: auto 0 0 0; padding: 22px 8px 7px; font-size: .74rem; font-weight: 700; line-height: 1.25; background: linear-gradient(transparent, rgba(0,0,0,.85)); }
+.st-look.on { border-color: var(--pink); box-shadow: 0 0 0 3px rgba(255,61,139,.35); }
+.st-check { display: flex; align-items: center; gap: 10px; }
+.st-check input { width: 20px; height: 20px; flex: none; accent-color: var(--pink); }
+.st-side video { width: 100%; max-height: 340px; border-radius: 14px; background: #000; }
+#stMake[disabled] { opacity: .6; cursor: progress; }
+@media (max-width: 860px) {
+  .st-head { padding: 10px 14px; }
+  .st-body { grid-template-columns: minmax(0, 1fr); gap: 18px; padding: 14px; }
+  .st-stage { position: static; }
+  #stCanvas { height: min(64vh, 640px); }
+}

@@ -720,3 +720,87 @@ test.describe('Server config check', () => {
     assert.throws(() => checkConfig(42));
   });
 });
+
+test.describe('Video Studio', () => {
+  const ctx = vm.createContext({ TextEncoder, TextDecoder, btoa, atob, URL, URLSearchParams, console });
+  for (const f of ['config.js', 'themes.js', 'codec.js', 'core.js', 'studio.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', f), 'utf8'), ctx, { filename: f });
+  const Studio = vm.runInContext('Studio', ctx);
+  const card = extra => ({ ...plain(PRESETS.wedding.card), ...extra });
+  const story = (c, o = {}) => Studio.timeline(c, { ...Studio.defaults(c), ...o });
+  const texts = (s, c, o = {}) => Studio.lines(s, c, { ...Studio.defaults(c), ...o }).map(l => l.s || l.t);
+
+  test('the story: opening, invitation, the functions, save the date, closing', () => {
+    const c = card({ families: [] });
+    const { scenes, total } = story(c, { events: 'each' });
+    assert.deepEqual(plain(scenes.map(s => s.k)), ['open', 'invite', 'event', 'event', 'event', 'event', 'event', 'date', 'end']);
+    assert.equal(total, scenes.reduce((a, s) => a + s.d, 0));
+    scenes.forEach((s, i) => assert.equal(s.t0, scenes.slice(0, i).reduce((a, x) => a + x.d, 0)));
+    assert.deepEqual(plain(story(c, { events: 'list' }).scenes.map(s => s.k)), ['open', 'invite', 'events', 'date', 'end']);
+    assert.deepEqual(plain(story(c, { events: 'none' }).scenes.map(s => s.k)), ['open', 'invite', 'date', 'end']);
+    assert.equal(Studio.defaults(c).events, 'list', 'more than three functions go on one page by default');
+    assert.equal(Studio.defaults(card({ events: c.events.slice(0, 2) })).events, 'each');
+    assert.equal(story(card({ events: Array(9).fill({ name: 'Puja' }) }), { events: 'each' }).scenes.filter(s => s.k === 'event').length, 6, 'at most six');
+    assert.deepEqual(plain(story(card({ date: '', venue: '', events: [] })).scenes.map(s => s.k)), ['open', 'invite', 'end'], 'no date and no venue: no save-the-date');
+  });
+
+  test('parents go under the right names: by what the family side says, else in order', () => {
+    const fam = [{ side: "Groom's family", parents: 'Mr. & Mrs. Singh' }, { side: "Bride's family", parents: 'Mr. & Mrs. Bhatia' }];
+    assert.deepEqual(plain(Studio.parents(card({ families: fam }))), ['D/o Mr. & Mrs. Bhatia', 'S/o Mr. & Mrs. Singh']);
+    assert.deepEqual(plain(Studio.parents(card({ families: [{ side: 'A', parents: 'P1' }, { side: 'B', parents: 'P2' }] }))), ['D/o P1', 'S/o P2']);
+    assert.deepEqual(plain(Studio.parents(card({ families: [{ side: 'x', parents: '  ' }] }))), ['', '']);
+    assert.deepEqual(plain(Studio.parents({ ...plain(PRESETS.bday.card), families: fam })), ['', ''], 'only weddings and engagements');
+  });
+
+  test('the invitation says the names, the parents and "Weds"; the blessing and the line can be changed', () => {
+    const c = card({ host1: 'Saumya', host2: 'Gaurav', families: [{ side: 'Bride', parents: 'Mr. Sunil Bhatia' }] });
+    const s = { k: 'invite' };
+    const t = texts(s, c);
+    for (const want of ['ॐ', '|| Shree Ganeshay Namah ||', 'Request your gracious presence', 'Saumya', 'D/o Mr. Sunil Bhatia', 'Gaurav']) assert.ok(t.includes(want), want);
+    assert.equal(Studio.lines(s, c, Studio.defaults(c)).find(l => l.t === 'div').word, 'Weds');
+    assert.ok(!texts(s, c, { blessing: false }).includes('ॐ'));
+    assert.ok(!texts(s, c, { parents: false }).includes('D/o Mr. Sunil Bhatia'));
+    assert.deepEqual(plain(texts(s, c, { inviteLine: 'Line one\nLine two', blessing: false }).slice(0, 2)), ['Line one', 'Line two']);
+    assert.equal(Studio.defaults(plain(PRESETS.kitty.card)).blessing, false, 'no blessing for a kitty party');
+    assert.ok(!texts(s, { ...plain(PRESETS.bday.card), host2: '' }).includes('div'), 'one name: no "&" divider');
+  });
+
+  test('functions show the icon apart, and a time only when one was given', () => {
+    const c = card();
+    const ev = texts({ k: 'event', e: { name: '🌼 Haldi', date: '2026-12-10T10:00', venue: 'Lawn', dress: 'Yellow' } }, c);
+    assert.ok(ev.includes('Haldi') && ev.includes('🌼') && ev.includes('10:00 AM onwards') && ev.includes('Thursday, 10th December 2026') && ev.includes('Dress code · Yellow'));
+    const noTime = texts({ k: 'event', e: { name: 'Haldi', date: '2026-12-10' } }, c);
+    assert.ok(!noTime.some(x => /onwards/.test(x)) && noTime.includes('Thursday, 10th December 2026'));
+    assert.deepEqual(plain(Studio.splitIcon('🥂 Reception')), { icon: '🥂', name: 'Reception' });
+    assert.deepEqual(plain(Studio.splitIcon('Reception')), { icon: '', name: 'Reception' });
+    const cal = Studio.lines({ k: 'date' }, card({ date: '2026-12-12' }), Studio.defaults(card())).find(l => l.t === 'cal');
+    assert.equal(cal.timed, false, 'date only: the calendar shows no time');
+  });
+
+  test('the closing has the families, one # on the hashtag, the RSVP number and the signature', () => {
+    const c = card({ hashtag: '##GauSa', rsvp: '98765 43210', families: [{ parents: 'Mr. & Mrs. Bhatia' }] });
+    const t = texts({ k: 'end' }, c);
+    assert.ok(t.includes('#GauSa') && t.includes('RSVP · +91 98765 43210') && t.includes('Mr. & Mrs. Bhatia') && t.includes('Awaiting your presence'));
+    assert.equal(t[t.length - 1], 'sig', '"Designed by" closes every video');
+    assert.equal(Studio.phone('12345'), '');
+  });
+
+  test('ordinals', () => {
+    assert.deepEqual(plain([1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 26, 101, 111].map(n => Studio.ordinal(n))),
+      ['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '23rd', '26th', '101st', '111th']);
+  });
+
+  test('six complete looks, each with its own scene, colours, fonts and tune', () => {
+    const looks = Object.entries(Studio.LOOKS);
+    assert.equal(looks.length, 6);
+    for (const [id, L] of looks) {
+      assert.ok(L.name && L.note, id);
+      for (const k of ['names', 'ink', 'ink2', 'accent', 'gold']) assert.match(L.col[k], /^#[0-9a-f]{6}$/i, `${id} ${k}`);
+      assert.equal(L.mono.length, 2);
+      assert.ok(L.font.script && L.font.serif);
+      assert.ok(L.zone[0] < L.zone[1] && L.zone[1] <= 1920 && L.zone[2] <= 1080, id);
+      for (const f of ['back', 'anim', 'fx', 'crest']) assert.equal(typeof L[f], 'function', `${id}.${f}`);
+      assert.ok(['royal', 'romantic', 'festive'].includes(L.music), id);
+    }
+    assert.equal(new Set(looks.map(([, L]) => L.font.script + L.col.names)).size, 6, 'no two looks alike');
+  });
+});

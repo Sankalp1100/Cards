@@ -769,6 +769,197 @@
     toast('Video downloaded 🎬');
   }
 
+  // ---------- Video Studio ----------
+  // Story videos painted on a canvas (js/studio.js), on their own full screen: pick a look, the words and the music,
+  // watch it, then record it straight from the canvas as an MP4 (no screen sharing, so it also works on a phone).
+  const SONGS = {
+    royal: [{ prog: 4, pattern: 4, voice: 'bells', key: -3 }, .32],
+    romantic: [{ prog: 2, pattern: 2, voice: 'harp', key: 2 }, .26],
+    festive: [{ prog: 7, pattern: 3, voice: 'pluck', key: 0 }, .2]
+  };
+  const STUDIO_KEY = 'weddingcard.studio';
+  const stCanvas = $('#stCanvas');
+  const st = { player: null, card: null, opt: null, t: 0, playing: true, last: 0, raf: 0, rec: null };
+  const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  const stStatus = (text, progress) => {
+    $('#stStatus').textContent = text;
+    $('#stRecBar').style.width = progress == null ? '0' : `${Math.round(progress * 100)}%`;
+  };
+
+  async function openStudio() {
+    if (!cardReady()) return;
+    st.card = clone(state);
+    let look = 'vrindavan';
+    try { look = Studio.LOOKS[localStorage.getItem(STUDIO_KEY)] ? localStorage.getItem(STUDIO_KEY) : look; } catch (e) { /* private mode */ }
+    st.opt = { ...Studio.defaults(st.card), look };
+    $('#stWho').textContent = `${who(st.card)} · ${occasion(st.card).label}`;
+    $('#stBless').checked = st.opt.blessing;
+    $('#stBlessText').value = st.opt.blessingText;
+    $('#stInvite').value = st.opt.inviteLine;
+    $('#stParents').checked = st.opt.parents;
+    $('#stVideo').hidden = $('#stDownload').hidden = true;
+    stStatus('Watch it on the left, then make the video. It records in real time, so keep this tab open.');
+    $('#studio').hidden = false;
+    document.body.classList.add('studio-open');
+    await Studio.fontsReady();
+    st.player = st.player || new Studio.Player(stCanvas);
+    st.t = 0;
+    st.playing = true;
+    refreshStudio();
+    renderLooks();
+    cancelAnimationFrame(st.raf);
+    st.last = performance.now();
+    st.raf = requestAnimationFrame(studioFrame);
+  }
+  function closeStudio() {
+    if (st.rec) return toast('Please wait: the video is still recording');
+    cancelAnimationFrame(st.raf);
+    $('#studio').hidden = true;
+    document.body.classList.remove('studio-open');
+    const v = $('#stVideo');
+    if (v.src) { URL.revokeObjectURL(v.src); v.removeAttribute('src'); }
+  }
+
+  // Applies the chosen options; the preview keeps its place.
+  function refreshStudio() {
+    st.player.set(st.card, st.opt, cfg.site);
+    st.t = Math.min(st.t, st.player.total - .05);
+    $('#stScenes').innerHTML = st.player.tl.scenes.map((s, i) =>
+      `<button type="button" class="chip" data-scene="${i}">${esc(Studio.sceneName(s))}</button>`).join('');
+    document.querySelectorAll('#stEvents [data-ev]').forEach(b => b.classList.toggle('on', b.dataset.ev === st.opt.events));
+    document.querySelectorAll('#stMusic [data-music]').forEach(b => b.classList.toggle('on', b.dataset.music === st.opt.music));
+    document.querySelectorAll('#stLooks [data-look]').forEach(b => b.classList.toggle('on', b.dataset.look === st.opt.look));
+  }
+
+  // The look buttons show each look's painted scene (drawn one by one, so the screen never freezes).
+  function renderLooks() {
+    const box = $('#stLooks');
+    if (box.children.length) return;
+    box.innerHTML = Object.entries(Studio.LOOKS).map(([id, L]) =>
+      `<button type="button" class="st-look${id === st.opt.look ? ' on' : ''}" data-look="${id}" title="${esc(L.note)}"><canvas width="135" height="240"></canvas><span>${esc(L.name)}</span></button>`).join('');
+    [...box.querySelectorAll('[data-look]')].forEach((b, i) => setTimeout(() => {
+      b.querySelector('canvas').getContext('2d').drawImage(Studio.sceneLayer(b.dataset.look), 0, 0, 135, 240);
+    }, 120 + i * 90));
+  }
+
+  function studioFrame(now) {
+    const p = st.player, dt = Math.max(0, Math.min(.1, (now - st.last) / 1000));
+    st.last = now;
+    if (st.rec) st.t = Math.max(0, now - st.rec.t0) / 1000;
+    else if (st.playing) st.t = (st.t + dt) % p.total;
+    const scene = p.draw(st.t);
+    $('#stBar').style.width = `${Math.min(100, st.t / p.total * 100)}%`;
+    $('#stTime').textContent = `${mmss(st.t)} / ${mmss(p.total)}`;
+    const on = p.tl.scenes.indexOf(scene);
+    document.querySelectorAll('#stScenes [data-scene]').forEach(b => b.classList.toggle('on', +b.dataset.scene === on));
+    if (st.rec && st.t >= p.total) st.rec.done();
+    st.raf = requestAnimationFrame(studioFrame);
+  }
+
+  document.querySelectorAll('[data-studio]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); openStudio(); }));
+  $('#stClose').addEventListener('click', closeStudio);
+  $('#stPlay').addEventListener('click', () => {
+    st.playing = !st.playing;
+    $('#stPlay').textContent = st.playing ? '❚❚' : '▶';
+    $('#stPlay').setAttribute('aria-label', st.playing ? 'Pause' : 'Play');
+  });
+  $('#stScrub').addEventListener('click', e => {
+    if (st.rec) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    st.t = Math.max(0, Math.min(.999, (e.clientX - r.left) / r.width)) * st.player.total;
+  });
+  $('#stScenes').addEventListener('click', e => {
+    const b = e.target.closest('[data-scene]');
+    if (b && !st.rec) st.t = st.player.tl.scenes[+b.dataset.scene].t0 + .01;
+  });
+  $('#stLooks').addEventListener('click', e => {
+    const b = e.target.closest('[data-look]');
+    if (!b || st.rec) return;
+    st.opt.look = b.dataset.look;
+    try { localStorage.setItem(STUDIO_KEY, st.opt.look); } catch (err) { /* private mode */ }
+    refreshStudio();
+  });
+  $('#stEvents').addEventListener('click', e => {
+    const b = e.target.closest('[data-ev]');
+    if (b && !st.rec) { st.opt.events = b.dataset.ev; refreshStudio(); }
+  });
+  $('#stMusic').addEventListener('click', e => {
+    const b = e.target.closest('[data-music]');
+    if (b && !st.rec) { st.opt.music = b.dataset.music; refreshStudio(); }
+  });
+  [['stBless', 'blessing', 'checked'], ['stBlessText', 'blessingText', 'value'], ['stInvite', 'inviteLine', 'value'], ['stParents', 'parents', 'checked']]
+    .forEach(([id, key, prop]) => $('#' + id).addEventListener('input', e => {
+      if (st.rec) return;
+      st.opt[key] = e.target[prop];
+      refreshStudio();
+    }));
+
+  function studioSong() {
+    const m = st.opt.music;
+    if (m === 'none') return null;
+    if (m === 'card') return [design().song, design().tempo];
+    return SONGS[m === 'look' ? Studio.LOOKS[st.opt.look].music : m] || null;
+  }
+
+  $('#stMake').addEventListener('click', async () => {
+    if (!(window.MediaRecorder && stCanvas.captureStream)) return stStatus('This browser cannot make videos. Please use Chrome, Edge or Safari.');
+    const btn = $('#stMake');
+    btn.disabled = true;
+    $('#stVideo').hidden = $('#stDownload').hidden = true;
+    let box = null;
+    try {
+      const stream = stCanvas.captureStream(30), song = studioSong();
+      if (song) {
+        box = new MusicBox(song[1], song[0]);
+        if (box.start()) {
+          const dest = box.ctx.createMediaStreamDestination();
+          box.master.connect(dest);
+          dest.stream.getAudioTracks().forEach(tr => stream.addTrack(tr));
+        }
+      }
+      const mimeType = VIDEO_TYPES.find(t => MediaRecorder.isTypeSupported(t)) || '';
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 5e6 } : { videoBitsPerSecond: 5e6 });
+      const chunks = [];
+      recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+      const stopped = new Promise(r => { recorder.onstop = r; });
+      const total = st.player.total;
+      await new Promise(resolve => {
+        st.rec = { t0: performance.now(), done: resolve };
+        recorder.start(500);
+        const tick = setInterval(() => {
+          if (!st.rec) return clearInterval(tick);
+          stStatus(`🔴 Recording… ${Math.floor(st.t)}s of ${Math.round(total)}s. Keep this tab open.`, Math.min(.99, st.t / total));
+        }, 250);
+      });
+      st.rec = null;
+      recorder.stop();
+      await stopped;
+      const type = recorder.mimeType || mimeType || 'video/webm';
+      let blob = new Blob(chunks, { type });
+      // Browsers record a 'fragmented' MP4 that WhatsApp treats as a broken document: rebuild it as a standard MP4.
+      if (type.includes('mp4')) {
+        try { blob = new Blob([MP4Fix.defragment(new Uint8Array(await blob.arrayBuffer()))], { type: 'video/mp4' }); } catch (e) { /* keep it as recorded */ }
+      }
+      const ext = type.includes('mp4') ? 'mp4' : 'webm';
+      const name = `${who(st.card)} ${Studio.LOOKS[st.opt.look].name} video.${ext}`.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ');
+      const url = URL.createObjectURL(blob);
+      const v = $('#stVideo');
+      if (v.src) URL.revokeObjectURL(v.src);
+      Object.assign(v, { src: url, hidden: false });
+      Object.assign($('#stDownload'), { href: url, download: name, hidden: false });
+      $('#stDownload').click();
+      stStatus(`✅ Saved "${name}" (${(blob.size / 1048576).toFixed(1)} MB) to your Downloads.` +
+        (ext === 'webm' ? ' This browser can only make WebM, which WhatsApp does not accept: please update Chrome to get MP4.' : ''), 1);
+      toast('Video downloaded 🎬');
+    } catch (e) {
+      st.rec = null;
+      stStatus(`Could not make the video: ${e.message}. Please try again.`);
+    } finally {
+      if (box) { box.stop(); box.ctx.close(); }
+      btn.disabled = false;
+    }
+  });
+
   // ---------- Link history ----------
   // Logged in: kept in the database (the same on your phone and PC). Offline: in this browser.
   let linksCache = [];

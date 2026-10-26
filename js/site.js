@@ -339,6 +339,7 @@
     of.elements.design.value = e ? e.no : '';
     of.elements.date.type = 'datetime-local';
     of.elements.date.min = nowLocal(); // past dates can't be picked
+    dateHint(of.elements.date);
     $('#osDone').hidden = true;
     $('.os-foot').hidden = false;
     $('#osDots').hidden = $('#osStepNo').hidden = false;
@@ -382,7 +383,7 @@
     $('#osEvents').innerHTML = ord.events.map((ev, i) => `
       <div class="os-event" data-i="${i}">
         <input data-k="name" value="${esc(ev.name)}" placeholder="Function name" aria-label="Function name">
-        <input data-k="date" type="datetime-local" min="${nowLocal()}" value="${esc(ev.date)}" aria-label="Date and time">
+        <span class="dt${ev.date ? '' : ' empty'}" data-ph="Date &amp; time"><input data-k="date" type="datetime-local" min="${nowLocal()}" value="${esc(ev.date)}" aria-label="Date and time"></span>
         <input data-k="venue" value="${esc(ev.venue || '')}" maxlength="80" placeholder="Venue (optional)" aria-label="Venue">
         <input data-k="dress" value="${esc(ev.dress || '')}" maxlength="60" placeholder="Dress code (optional)" aria-label="Dress code">
         <button type="button" class="x" data-del="${i}" aria-label="Remove">✕</button>
@@ -403,6 +404,13 @@
     box.type = noTime ? 'date' : 'datetime-local';
     box.min = noTime ? nowLocal().slice(0, 10) : nowLocal();
     box.value = noTime ? day : day ? day + 'T19:00' : '';
+    box.closest('.dt').dataset.ph = noTime ? 'Tap to choose the date' : 'Tap to choose date & time';
+    dateHint(box);
+  }
+  // Safari on iPhone leaves an empty date box blank, so a hint sits in it until a date is picked.
+  function dateHint(box) {
+    const wrap = box.closest('.dt');
+    if (wrap) wrap.classList.toggle('empty', !box.value);
   }
 
   function collect() {
@@ -575,6 +583,7 @@
     input.classList.add('shake');
     navigator.vibrate?.([30, 40, 30]);
   });
+  ['input', 'change'].forEach(ev => of.addEventListener(ev, e => { if (e.target.closest('.dt')) dateHint(e.target); }));
   of.addEventListener('input', e => {
     const row = e.target.closest('.os-event');
     if (row) ord.events[row.dataset.i][e.target.dataset.k] = e.target.value;

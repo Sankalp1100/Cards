@@ -791,6 +791,58 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       fs.rmSync(dir, { recursive: true, force: true });
     });
 
+    test('Video Studio: its own screen, six painted looks, the story as scenes, and an MP4 made from the canvas', async () => {
+      const fs = await import('node:fs'), os = await import('node:os');
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wc-studio-'));
+      await page.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: dir });
+      await page.viewport(1300, 900);
+      await page.goto(origin + '/admin.html?offline', 1000);
+      await page.eval(`document.querySelector('#studioBtn').click()`);
+      await page.waitFor(`!document.querySelector('#studio').hidden && document.querySelectorAll('#stScenes [data-scene]').length > 0`, 8000);
+      assert.equal(await page.eval(`document.querySelectorAll('#stLooks [data-look]').length`), 6);
+      assert.match(await page.eval(`document.querySelector('#stWho').textContent`), /Diya & Aarav · Wedding/);
+      // The preview is painted (many colours, not a blank canvas) and plays
+      const colours = `(() => { const c = document.querySelector('#stCanvas'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, s = new Set(); for (let i = 0; i < d.length; i += 4 * 997) s.add(d[i] >> 4 << 8 | d[i + 1] >> 4 << 4 | d[i + 2] >> 4); return s.size; })()`;
+      assert.ok(await page.eval(colours) > 40, 'the scene is painted');
+      const t1 = await page.eval(`document.querySelector('#stTime').textContent`);
+      await sleep(1200);
+      assert.notEqual(await page.eval(`document.querySelector('#stTime').textContent`), t1, 'the preview plays');
+      // Scenes follow the options
+      assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stScenes .chip')].map(b => b.textContent)`), ['Opening', 'Invitation', 'Functions', 'Save the date', 'Closing']);
+      await page.eval(`document.querySelector('[data-ev="each"]').click()`);
+      assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stScenes .chip')].map(b => b.textContent)`), ['Opening', 'Invitation', 'Haldi', 'Mehendi', 'Sangeet', 'Pheras', 'Reception', 'Save the date', 'Closing']);
+      await page.eval(`document.querySelector('#stScenes [data-scene="3"]').click()`);
+      await sleep(300);
+      assert.equal(await page.eval(`document.querySelector('#stScenes .chip.on').textContent`), 'Mehendi', 'a scene button jumps there');
+      await page.eval(`document.querySelector('[data-look="lotusnight"]').click()`);
+      assert.equal(await page.eval(`document.querySelector('#stLooks .on').dataset.look`), 'lotusnight');
+      // Phones: nothing sticks out sideways
+      await page.viewport(390, 844);
+      await sleep(300);
+      assert.equal(await page.eval(`document.querySelector('.st-body').scrollWidth <= document.querySelector('.st-body').clientWidth`), true);
+      await page.viewport(1300, 900);
+      // Make the video (functions left out, so it is short)
+      await page.eval(`document.querySelector('[data-ev="none"]').click()`);
+      assert.match(await page.eval(`document.querySelector('#stTime').textContent`), /\/ 0:26$/, 'opening, invitation, save the date, closing');
+      await page.eval(`document.querySelector('#stMake').click()`);
+      await page.waitFor(`/Recording/.test(document.querySelector('#stStatus').textContent)`, 5000);
+      await page.eval(`document.querySelector('#stClose').click()`);
+      assert.equal(await page.eval(`document.querySelector('#studio').hidden`), false, 'it cannot be closed while recording');
+      await page.waitFor(`/Saved|Could not/.test(document.querySelector('#stStatus').textContent)`, 60000);
+      assert.match(await page.eval(`document.querySelector('#stStatus').textContent`), /Saved "Diya & Aarav Lotus Night video\.mp4"/);
+      const dur = await page.eval(`new Promise(r => { const v = document.querySelector('#stVideo'); v.readyState ? r(v.duration) : v.onloadedmetadata = () => r(v.duration); })`);
+      assert.ok(dur > 24 && dur < 28, `video is ${dur}s`);
+      assert.deepEqual(await page.eval(`[document.querySelector('#stVideo').videoWidth, document.querySelector('#stVideo').videoHeight]`), [1080, 1920]);
+      for (let i = 0; i < 20 && !fs.readdirSync(dir).some(f => f.endsWith('.mp4')); i++) await sleep(250);
+      const file = fs.readdirSync(dir).find(f => f.endsWith('.mp4'));
+      assert.ok(file && fs.statSync(path.join(dir, file)).size > 100000, 'MP4 saved to Downloads');
+      assert.ok(!fs.readFileSync(path.join(dir, file)).toString('latin1').includes('moof'), 'a standard MP4 that WhatsApp accepts');
+      await page.eval(`document.querySelector('#stClose').click()`);
+      assert.equal(await page.eval(`document.querySelector('#studio').hidden`), true);
+      noErrors();
+      fs.rmSync(dir, { recursive: true, force: true });
+    });
+
     test('refuses publishing from another website', async () => {
       const res = await fetch(origin + '/api/publish', { method: 'POST', headers: { Origin: 'https://evil.example' }, body: '{}' });
       assert.equal(res.status, 403);

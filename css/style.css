@@ -372,7 +372,7 @@ body.sheet-open { overflow: hidden; }
   .order-sheet { place-items: end stretch; padding: 0; }
   .os-box { width: 100%; max-height: 92dvh; border-radius: 26px 26px 0 0; animation: osSheet .35s cubic-bezier(.2,.9,.3,1); }
   .os-event { grid-template-columns: 1fr auto; }
-  .os-event input[data-k="date"] { grid-column: 1; grid-row: 2; }
+  .os-event .dt { grid-column: 1; grid-row: 2; }
 }
 @keyframes osSheet { from { transform: translateY(100%); } }
 
@@ -1050,3 +1050,38 @@ body[data-tab="designs"] :is(.styles-sec, .faq), body[data-tab="trending"] :is(.
 .tpl-meta small { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 8px; }
 #showcase.one-occ .tpl-occ { display: none; }
 #showcase.one-occ .tpl-meta small:not(:has(.price)) { display: none; }
+
+/* iPhone Safari */
+/* Date boxes: Safari gives them a fixed native width that spilled past the form; this keeps them inside. */
+.dt { position: relative; display: block; min-width: 0; }
+input[type="date"], input[type="datetime-local"] {
+  -webkit-appearance: none; appearance: none; display: block; width: 100%; max-width: 100%; min-width: 0; min-height: 48px; text-align: left; color-scheme: dark;
+}
+.os-event input[type="date"], .os-event input[type="datetime-local"] { min-height: 42px; }
+input::-webkit-date-and-time-value { text-align: left; }
+/* An empty date box shows a hint (Safari shows nothing at all) until it is tapped */
+.dt.empty:not(:focus-within) input { color: transparent; }
+.dt.empty:not(:focus-within)::after {
+  content: attr(data-ph) "  📅"; position: absolute; left: 15px; right: 12px; top: 50%; transform: translateY(-50%);
+  color: #6f6a8c; font-size: .95rem; pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.os-event .dt.empty:not(:focus-within)::after { left: 11px; font-size: .86rem; }
+/* Tick boxes drawn by us, so Safari doesn't show a big white native box */
+.os-check input[type="checkbox"] {
+  -webkit-appearance: none; appearance: none; width: 22px; height: 22px; min-height: 0; padding: 0; flex: none; border-radius: 7px;
+  border: 2px solid rgba(255,255,255,.35); background: rgba(255,255,255,.04) center / 14px no-repeat; cursor: pointer; transition: background-color .2s, border-color .2s;
+}
+.os-check input[type="checkbox"]:checked {
+  border-color: transparent; background-color: var(--pink);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3.2 3L13 4.5' fill='none' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+/* Trending dots: the tap area is the padded <i>, the round dot is drawn inside it (Safari drew the old one square) */
+.hot-dots i { width: auto; height: auto; padding: 8px 4px; background: none; border-radius: 0; -webkit-tap-highlight-color: transparent; }
+.hot-dots i::before { content: ''; display: block; width: 7px; height: 7px; border-radius: 99px; background: rgba(255,255,255,.2); transition: width .3s, background .3s; }
+.hot-dots i.on { width: auto; background: none; }
+.hot-dots i.on::before { width: 22px; background: var(--grad); }
+/* Keyboard open on iPhone: Safari's floating "Done" bar sits below the visible area, so the form's colour carries on
+   underneath it instead of the page showing through the gap */
+@media (max-width: 640px) {
+  .order-sheet::after { content: ''; position: absolute; left: 0; right: 0; top: calc(100% - 1px); height: 70vh; background: #13102a; pointer-events: none; }
+}

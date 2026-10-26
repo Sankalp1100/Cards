@@ -25,6 +25,7 @@
       <a href="#create">✨ <span>Create<em> invite</em></span></a>
       <a href="#designs">🎨 <span>Designs</span></a>
       <a href="#generate">🔗 <span><em>Get </em>Links</span></a>
+      <a href="#studio" data-studio>🎬 <span><em>Video </em>Studio</span></a>
       <a href="#links">📋 <span><em>My </em>History</span> <b id="linkCount">0</b></a>
       <a href="#catalog">🗂️ <span>Catalog</span></a>
       <a href="#settings">⚙️ <span>Settings</span></a>
@@ -187,9 +188,10 @@
           </label>
           <div class="link-actions">
             <button type="button" class="btn-glow" id="generate-btn">⚡ Get links</button>
-            <button type="button" class="btn-line" id="videoBtn">🎬 Download video</button>
+            <button type="button" class="btn-line" id="studioBtn" data-studio>✨ Video Studio</button>
+            <button type="button" class="btn-line" id="videoBtn">🎬 Card video</button>
           </div>
-          <small>The video plays the whole invitation with music, ready for WhatsApp status or Instagram. It is only saved to this PC.</small>
+          <small><b>Video Studio</b>: a story video (monogram, invitation, functions, save the date) in six painted looks. <b>Card video</b>: films the card itself. Both have music, are ready for WhatsApp and Instagram, and are only saved to this device.</small>
         </div>
         <div>
           <div class="results-head" id="resultsHead" hidden>
@@ -297,6 +299,55 @@
     </div>
   </div>
 
+  <!-- Video Studio: its own full screen, away from the card form -->
+  <div class="studio" id="studio" hidden>
+    <header class="st-head">
+      <b>🎬 Video Studio</b>
+      <span class="muted" id="stWho"></span>
+      <button type="button" class="btn-small" id="stClose">✕ Close</button>
+    </header>
+    <div class="st-body">
+      <div class="st-stage">
+        <canvas id="stCanvas" aria-label="Video preview"></canvas>
+        <div class="st-play">
+          <button type="button" id="stPlay" aria-label="Pause">❚❚</button>
+          <div class="st-scrub" id="stScrub"><i id="stBar"></i></div>
+          <span id="stTime">0:00</span>
+        </div>
+        <div class="chips st-scenes" id="stScenes"></div>
+      </div>
+      <div class="st-side">
+        <h3>1 · Pick a look</h3>
+        <div class="st-looks" id="stLooks"></div>
+        <h3>2 · Words</h3>
+        <label class="st-check"><input type="checkbox" id="stBless"> Blessing at the top</label>
+        <input id="stBlessText" maxlength="60" aria-label="Blessing line">
+        <label>Invitation line <textarea id="stInvite" rows="2" maxlength="120"></textarea></label>
+        <label class="st-check"><input type="checkbox" id="stParents"> Parents’ names under the couple (from Families)</label>
+        <h3>3 · Functions</h3>
+        <div class="chips" id="stEvents">
+          <button type="button" class="chip" data-ev="each">One by one</button>
+          <button type="button" class="chip" data-ev="list">All on one page</button>
+          <button type="button" class="chip" data-ev="none">Leave out</button>
+        </div>
+        <h3>4 · Music</h3>
+        <div class="chips" id="stMusic">
+          <button type="button" class="chip" data-music="look">The look’s tune</button>
+          <button type="button" class="chip" data-music="royal">Royal</button>
+          <button type="button" class="chip" data-music="romantic">Romantic</button>
+          <button type="button" class="chip" data-music="festive">Festive</button>
+          <button type="button" class="chip" data-music="card">The card’s tune</button>
+          <button type="button" class="chip" data-music="none">No music</button>
+        </div>
+        <button type="button" class="btn-glow" id="stMake">🎬 Make video</button>
+        <p class="muted" id="stStatus">Watch it on the left, then make the video. It records in real time, so keep this tab open.</p>
+        <div class="rec-progress"><i id="stRecBar"></i></div>
+        <video id="stVideo" controls playsinline hidden></video>
+        <a class="btn-small go" id="stDownload" hidden>⬇ Download again</a>
+      </div>
+    </div>
+  </div>
+
   <!-- Login (when connected to the database) -->
   <div class="login-screen" id="loginScreen" hidden>
     <form class="login-box" id="loginForm" autocomplete="on" novalidate>
@@ -322,6 +373,7 @@
   <script src="js/db.js"></script>
   <script src="js/music.js"></script>
   <script src="js/mp4fix.js"></script>
+  <script src="js/studio.js"></script>
   <script src="js/admin.js"></script>
 </body>
 </html>
