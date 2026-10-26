@@ -35,31 +35,33 @@
   <nav class="nav">
     <a class="logo" href="#top">💌 <span class="brand">CardAlbum</span></a>
     <div class="nav-links">
-      <a href="#templates">Templates</a>
+      <a href="#styles">Styles</a>
+      <a href="#templates">Designs</a>
       <a href="#how">How it works</a>
+      <a href="#faq">FAQ</a>
     </div>
     <a class="nav-cta" data-order href="#order">Order now</a>
   </nav>
 
   <header class="hero" id="top">
-    <p class="pill">✨ No app. No login. Just one magic link.</p>
-    <h1 class="mega">
-      <span class="line">Invites that</span>
-      <span class="line">go <em class="gradient-text">viral</em></span>
-      <span class="line script">at every function</span>
-    </h1>
-    <p class="sub">Weddings, haldi, sangeet, kitty parties, birthdays, baby showers and griha pravesh. We design your animated invitation, you share one link on WhatsApp, and every guest gets the full show.</p>
-    <div class="hero-ctas">
-      <a class="btn-glow" data-order href="#order">💬 Order on WhatsApp</a>
-      <a class="btn-line" id="demoBtn" href="card.html" target="_blank" rel="noopener">▶ See a live demo</a>
+    <div class="hero-text">
+      <p class="pill">✨ No app. No login. Just one magic link.</p>
+      <h1 class="mega">
+        <span class="line">Invites that</span>
+        <span class="line">go <em class="gradient-text">viral</em></span>
+        <span class="line script">at every function</span>
+      </h1>
+      <p class="sub">A complete invitation website in one WhatsApp link: your story, every function, the venue, RSVP, gifts and a countdown. Made for weddings, haldi, sangeet, kitty parties, birthdays, baby showers and pujas.</p>
+      <div class="hero-ctas">
+        <a class="btn-glow" data-order href="#order">💬 Order on WhatsApp</a>
+        <a class="btn-line" id="demoBtn" href="card.html" target="_blank" rel="noopener">▶ See a live demo</a>
+      </div>
+      <ul class="trust" aria-label="At a glance">
+        <li><b>300</b> designs</li><li><b>10</b> trending styles</li><li><b>1</b> link for all guests</li>
+      </ul>
     </div>
-
-    <div class="floating-cards" aria-hidden="true">
-      <div class="fcard c1"><span>👑</span><b>Diya &amp; Aarav</b><small>#001 · Royal Maharaja</small></div>
-      <div class="fcard c2"><span>🎈</span><b>Kabir turns 5</b><small>#007 · Candy Party</small></div>
-      <div class="fcard c3"><span>🪩</span><b>Kitty Night</b><small>#009 · Disco Kitty</small></div>
-      <div class="fcard c4"><span>🌼</span><b>Haldi Day</b><small>#004 · Haldi Sunshine</small></div>
-    </div>
+    <!-- Three real designs in phone frames (posters drawn by js/site.js), floating with the mouse -->
+    <div class="floating-cards hero-phones" id="heroPhones" aria-hidden="true"></div>
   </header>
 
   <div class="marquee-wrap" aria-hidden="true"><div class="marquee">
@@ -69,12 +71,31 @@
     </div>
   </div></div>
 
-  <section class="bento">
-    <div class="tile big"><span class="tile-emoji">✉️</span><h3>An envelope that opens</h3><p>A wax seal with your initials, a 3D flap that unfolds, then a confetti blast. Your guests will remember it.</p></div>
-    <div class="tile"><span class="tile-emoji">🎆</span><h3>Fireworks &amp; petals</h3><p>Marigolds, rose petals, balloons, neon hearts. Every design has its own magic.</p></div>
-    <div class="tile"><span class="tile-emoji">📸</span><h3>Your photo</h3><p>Couple, baby or birthday star, framed in a glowing ring.</p></div>
-    <div class="tile"><span class="tile-emoji">🎵</span><h3>Music</h3><p>A soft music-box tune plays when the envelope opens.</p></div>
-    <div class="tile wide"><span class="tile-emoji">🙋</span><h3>A personal link for every guest</h3><p>Each guest's envelope says <em>“Dear Rahul Uncle”</em>. RSVP on WhatsApp, Google Maps directions, Save the Date and a live countdown in every card.</p></div>
+  <!-- The 10 trending styles, one real design each (drawn by js/site.js) -->
+  <section class="styles-sec" id="styles">
+    <div class="sec-intro">
+      <p class="eyebrow">New collection</p>
+      <h2 class="section-h">10 trending <span class="gradient-text">styles</span></h2>
+      <p class="muted">Every design is one of these looks in its own colours. Tap one to open its live demo.</p>
+    </div>
+    <div class="style-reel" id="styleReel"></div>
+  </section>
+
+  <section class="bento" id="features">
+    <div class="sec-intro wide-intro">
+      <p class="eyebrow">Inside every invitation</p>
+      <h2 class="section-h">A whole wedding website, <span class="gradient-text">in one link</span></h2>
+    </div>
+    <div class="tile big"><span class="tile-emoji">✉️</span><h3>An opening they'll film</h3><p>An envelope, palace doors, curtains, a royal scroll, a gift box or a folding card, over turning gold mandalas. Then the names arrive.</p></div>
+    <div class="tile"><span class="tile-emoji">💞</span><h3>Your story</h3><p>How you met, the first date, the proposal: a timeline that draws itself as guests scroll.</p></div>
+    <div class="tile"><span class="tile-emoji">📅</span><h3>Every function</h3><p>Haldi, mehendi, sangeet, pheras: date, time, venue and dress code for each.</p></div>
+    <div class="tile"><span class="tile-emoji">🏰</span><h3>The venue, drawn</h3><p>A little illustration of the place, with Google Maps directions in one tap.</p></div>
+    <div class="tile"><span class="tile-emoji">💬</span><h3>RSVP on WhatsApp</h3><p>Guests fill in name, guests and meal, and the reply lands in your WhatsApp.</p></div>
+    <div class="tile"><span class="tile-emoji">🖼️</span><h3>Photo gallery</h3><p>Up to 8 photos that open full screen, plus your couple photo on the cover.</p></div>
+    <div class="tile"><span class="tile-emoji">👗</span><h3>Dress code</h3><p>What to wear for each function, with the colours shown as swatches.</p></div>
+    <div class="tile"><span class="tile-emoji">🎁</span><h3>Gifts by UPI</h3><p>Your UPI ID to copy, or open a UPI app straight from the card.</p></div>
+    <div class="tile wide"><span class="tile-emoji">🙋</span><h3>A personal link for every guest</h3><p>Each guest is greeted by name: <em>“Dear Rahul Uncle”</em>. Save the date, a live countdown and music they can switch on.</p></div>
+    <div class="tile"><span class="tile-emoji">🎬</span><h3>A video for your WhatsApp status</h3><p>A short MP4 of your invitation, stopping on every date and venue, ready to post.</p></div>
   </section>
 
   <section class="showcase" id="templates">
@@ -116,6 +137,18 @@
       <div class="stepcard"><b>2</b><span>💬</span><h3>Send your details</h3><p>Names, dates, venue, functions and a photo, all on WhatsApp.</p></div>
       <div class="stepcard"><b>3</b><span>🔗</span><h3>Get your magic link</h3><p>We send you a ready link, plus personal links for each guest if you want them.</p></div>
       <div class="stepcard"><b>4</b><span>🚀</span><h3>Share &amp; celebrate</h3><p>Forward it on WhatsApp. No app, no download. It opens on every phone.</p></div>
+    </div>
+  </section>
+
+  <section class="faq" id="faq">
+    <h2 class="section-h">Questions, <span class="gradient-text">answered</span></h2>
+    <div class="faq-list">
+      <details><summary>Do my guests need to download anything?</summary><p>No. The invitation is a link that opens in any phone's browser, on Android and iPhone, straight from WhatsApp.</p></details>
+      <details><summary>Can I see a design before ordering?</summary><p>Yes. Every design has a live demo: tap <b>Live demo</b> under it to open the real animated invitation with sample names.</p></details>
+      <details><summary>What do I need to send?</summary><p>Names, the date and venue. Everything else is optional: functions, your story, families, photos, dress code, UPI for gifts. The order form asks for it step by step.</p></details>
+      <details><summary>The time isn't fixed yet. Can I still order?</summary><p>Yes. Tick <b>Time not decided yet</b> and the invitation shows only the date.</p></details>
+      <details><summary>Can every guest get their own link?</summary><p>Yes. Send a list of names and each guest gets a link that greets them by name.</p></details>
+      <details><summary>Can I get a video for my WhatsApp status?</summary><p>Yes. We can send an MP4 of your invitation that stops on every date and venue.</p></details>
     </div>
   </section>
 

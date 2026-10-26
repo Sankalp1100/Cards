@@ -32,6 +32,34 @@
       return `<button type="button" class="occ-tile" data-pick="${k}"><span>${PRESETS[k].icon}</span><b>${esc(PRESETS[k].label)}</b><small>${n} designs</small></button>`;
     }).join('');
     renderHot();
+    renderStyles();
+  }
+
+  // ---------- Hero phones and the 10 styles ----------
+  // One line about each style, for the styles row.
+  const STYLE_NOTES = {
+    ivory: 'Ivory paper, gold monogram, italic names', palace: 'Velvet night, gold arches, glowing lanterns',
+    bloom: 'Watercolour pastels and flower corners', minimal: 'Big serif names, hairlines, lots of space',
+    marigold: 'Sunshine yellow, marigold garlands', mehendi: 'Henna green and gold lace',
+    pichwai: 'Temple teal with pink lotuses', retro: 'Bollywood marquee lights and tickets',
+    neon: 'Glowing neon on a synthwave night', toybox: 'Candy colours, balloons and bunting'
+  };
+  // The first design of a style that customers can see, a wedding one when there is one.
+  const firstOf = s => designs.filter(d => d.style === s).sort((a, b) => (b.occasion === 'wedding') - (a.occasion === 'wedding') || a.no - b.no)[0];
+  const demoLink = d => `card.html?demo#${Catalog.demoCode(d)}`;
+  function renderStyles() {
+    const styles = Object.keys(STYLES).filter(firstOf);
+    // Hero: three contrasting styles in phone frames.
+    $('#heroPhones').innerHTML = ['palace', 'ivory', 'neon'].filter(firstOf).map((s, i) =>
+      `<div class="hphone h${i + 1}"><i class="hp-notch"></i>${Catalog.poster(firstOf(s), 'div', '')}</div>`).join('');
+    $('#styleReel').innerHTML = styles.map(s => {
+      const d = firstOf(s), n = designs.filter(x => x.style === s).length;
+      const occ = [...new Set(designs.filter(x => x.style === s).map(x => PRESETS[x.occasion].label))].slice(0, 3).join(' · ');
+      return `<article class="style-card">
+        ${Catalog.poster(d, 'a', `href="${demoLink(d)}" target="_blank" rel="noopener" aria-label="Live demo of the ${esc(STYLES[s].label)} style: design ${Templates.serial(d.no)}"`)}
+        <h3>${esc(STYLES[s].label)}</h3><p>${esc(STYLE_NOTES[s] || '')}</p><small>${n} designs · ${esc(occ)}</small>
+      </article>`;
+    }).join('');
   }
 
   // ---------- Trending tab: ranked slides you swipe through, then the top pick of every occasion ----------
