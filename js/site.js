@@ -461,7 +461,7 @@
   });
   $('#osBack').addEventListener('click', () => goTo(Math.max(0, step - 1)));
   $('#osClose').addEventListener('click', closeOrder);
-  sheet.addEventListener('click', e => { if (e.target === sheet) closeOrder(); });
+  // A tap on the dark space around the form does not close it (the customer would lose what they typed): only the ✕ does.
   addEventListener('keydown', e => { if (e.key === 'Escape' && !sheet.hidden) closeOrder(); });
   // After sending: a celebration screen while WhatsApp opens.
   $('#osSend').addEventListener('click', () => {

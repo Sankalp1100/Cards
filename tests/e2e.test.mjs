@@ -192,6 +192,14 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     noErrors();
   });
 
+  test('order form: a tap on the space around it keeps it open; only the ✕ closes it', async () => {
+    await page.eval(`document.querySelector('[data-order]').click()`);
+    await page.eval(`document.querySelector('#orderSheet').click()`);
+    assert.equal(await page.eval(`document.querySelector('#orderSheet').hidden`), false, 'still open after a tap outside');
+    await page.eval(`document.querySelector('#osClose').click()`);
+    assert.equal(await page.eval(`document.querySelector('#orderSheet').hidden`), true, 'the ✕ closes it');
+  });
+
   test('order form: without a business WhatsApp number it says ordering is not set up', async () => {
     await page.eval(`SITE.whatsapp = ''`);
     await page.eval(`document.querySelector('[data-order]').click()`);
