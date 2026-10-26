@@ -777,7 +777,6 @@
     romantic: [{ prog: 2, pattern: 2, voice: 'harp', key: 2 }, .26],
     festive: [{ prog: 7, pattern: 3, voice: 'pluck', key: 0 }, .2]
   };
-  const STUDIO_KEY = 'weddingcard.studio';
   const stCanvas = $('#stCanvas');
   const st = { player: null, card: null, opt: null, t: 0, playing: true, last: 0, raf: 0, rec: null };
   const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -786,17 +785,39 @@
     $('#stRecBar').style.width = progress == null ? '0' : `${Math.round(progress * 100)}%`;
   };
 
-  async function openStudio() {
-    if (!cardReady()) return;
-    st.card = clone(state);
-    let look = 'vrindavan';
-    try { look = Studio.LOOKS[localStorage.getItem(STUDIO_KEY)] ? localStorage.getItem(STUDIO_KEY) : look; } catch (e) { /* private mode */ }
-    st.opt = { ...Studio.defaults(st.card), look };
+  // The customer orders that carry their details (the website's order form sends everything in the code).
+  const studioOrders = () => loadOrders().filter(o => { const r = Catalog.readOrder(o.code); return r && !r.partial && r.card.host1; })
+    .sort((a, b) => (a.done - b.done) || (b.received - a.received));
+
+  // Loads a card into the Studio (the one in the editor, or an order's), with fresh words for its occasion.
+  function studioLoad(card) {
+    st.card = card;
+    const auto = Studio.defaults(st.card);
+    // The look the occasion suits, unless one was picked by hand in this visit
+    const look = st.picked && st.opt ? st.opt.look : auto.look;
+    st.opt = { ...auto, look, music: st.opt ? st.opt.music : 'look' };
     $('#stWho').textContent = `${who(st.card)} · ${occasion(st.card).label}`;
     $('#stBless').checked = st.opt.blessing;
     $('#stBlessText').value = st.opt.blessingText;
     $('#stInvite').value = st.opt.inviteLine;
     $('#stParents').checked = st.opt.parents;
+    st.t = 0;
+    if (st.player) refreshStudio();
+  }
+  function orderCard(code) {
+    const r = Catalog.readOrder(code);
+    return { ...Core.blankCard(), ...r.card, theme: r.card.theme || design().no };
+  }
+
+  async function openStudio() {
+    st.picked = false;
+    const orders = studioOrders();
+    if (!state.host1 && !orders.length) return cardReady();
+    if (state.host1 && !cardReady()) return;
+    $('#stOrder').innerHTML = (state.host1 ? `<option value="">✏️ The invite in the editor: ${esc(who(state))}</option>` : '') +
+      orders.map(o => `<option value="${esc(o.code)}">${o.done ? '✓ ' : '🆕 '}${esc(o.name)} · ${esc(occasion(o).label)}${Catalog.refOf(o.code) ? ` · ${Catalog.refOf(o.code)}` : ''}</option>`).join('');
+    $('#stOrderRow').hidden = !orders.length;
+    studioLoad(state.host1 ? clone(state) : orderCard(orders[0].code));
     $('#stVideo').hidden = $('#stDownload').hidden = true;
     stStatus('Watch it on the left, then make the video. It records in real time, so keep this tab open.');
     $('#studio').hidden = false;
@@ -828,18 +849,21 @@
       `<button type="button" class="chip" data-scene="${i}">${esc(Studio.sceneName(s))}</button>`).join('');
     document.querySelectorAll('#stEvents [data-ev]').forEach(b => b.classList.toggle('on', b.dataset.ev === st.opt.events));
     document.querySelectorAll('#stMusic [data-music]').forEach(b => b.classList.toggle('on', b.dataset.music === st.opt.music));
-    document.querySelectorAll('#stLooks [data-look]').forEach(b => b.classList.toggle('on', b.dataset.look === st.opt.look));
+    const scene = Studio.LOOKS[st.opt.look].scene;
+    document.querySelectorAll('#stLooks [data-look]').forEach(b => b.classList.toggle('on', b.dataset.look === scene));
+    $('#stMoods').innerHTML = Object.entries(Studio.LOOKS).filter(([, L]) => L.scene === scene)
+      .map(([id, L]) => `<button type="button" class="chip${id === st.opt.look ? ' on' : ''}" data-look="${id}">${esc(L.mood)}</button>`).join('');
   }
 
-  // The look buttons show each look's painted scene (drawn one by one, so the screen never freezes).
+  // The ten scenes as buttons with their painted picture (drawn one by one, so the screen never freezes);
+  // the chosen scene's three moods show as chips under them.
   function renderLooks() {
     const box = $('#stLooks');
     if (box.children.length) return;
-    box.innerHTML = Object.entries(Studio.LOOKS).map(([id, L]) =>
-      `<button type="button" class="st-look${id === st.opt.look ? ' on' : ''}" data-look="${id}" title="${esc(L.note)}"><canvas width="135" height="240"></canvas><span>${esc(L.name)}</span></button>`).join('');
-    [...box.querySelectorAll('[data-look]')].forEach((b, i) => setTimeout(() => {
-      b.querySelector('canvas').getContext('2d').drawImage(Studio.sceneLayer(b.dataset.look), 0, 0, 135, 240);
-    }, 120 + i * 90));
+    box.innerHTML = Studio.SCENES.map(id => { const L = Studio.LOOKS[id];
+      return `<button type="button" class="st-look" data-look="${id}" title="${esc(L.note)}"><canvas width="135" height="240"></canvas><span>${esc(L.name)}</span></button>`; }).join('');
+    [...box.querySelectorAll('[data-look]')].forEach((b, i) => setTimeout(() => Studio.thumb(b.dataset.look, b.querySelector('canvas')), 150 + i * 120));
+    refreshStudio();
   }
 
   function studioFrame(now) {
@@ -872,13 +896,15 @@
     const b = e.target.closest('[data-scene]');
     if (b && !st.rec) st.t = st.player.tl.scenes[+b.dataset.scene].t0 + .01;
   });
-  $('#stLooks').addEventListener('click', e => {
+  const pickLook = e => {
     const b = e.target.closest('[data-look]');
     if (!b || st.rec) return;
     st.opt.look = b.dataset.look;
-    try { localStorage.setItem(STUDIO_KEY, st.opt.look); } catch (err) { /* private mode */ }
+    st.picked = true;
     refreshStudio();
-  });
+  };
+  $('#stLooks').addEventListener('click', pickLook);
+  $('#stMoods').addEventListener('click', pickLook);
   $('#stEvents').addEventListener('click', e => {
     const b = e.target.closest('[data-ev]');
     if (b && !st.rec) { st.opt.events = b.dataset.ev; refreshStudio(); }
@@ -901,10 +927,26 @@
     return SONGS[m === 'look' ? Studio.LOOKS[st.opt.look].music : m] || null;
   }
 
-  $('#stMake').addEventListener('click', async () => {
+  $('#stOrder').addEventListener('change', e => {
+    if (st.rec) return;
+    studioLoad(e.target.value ? orderCard(e.target.value) : clone(state));
+  });
+  // One tap: take the chosen order's details and make the video straight away.
+  $('#stAuto').addEventListener('click', () => {
+    if (st.rec) return;
+    const code = $('#stOrder').value;
+    studioLoad(code ? orderCard(code) : clone(state));
+    const when = Core.parseDate(st.card.date);
+    if (when && when < new Date(new Date().toDateString())) return stStatus('⚠️ This order’s date has already passed. Please check the date with the customer first.');
+    makeStudioVideo();
+  });
+
+  $('#stMake').addEventListener('click', () => makeStudioVideo());
+  async function makeStudioVideo() {
+    if (st.rec) return;
     if (!(window.MediaRecorder && stCanvas.captureStream)) return stStatus('This browser cannot make videos. Please use Chrome, Edge or Safari.');
     const btn = $('#stMake');
-    btn.disabled = true;
+    btn.disabled = $('#stAuto').disabled = true;
     $('#stVideo').hidden = $('#stDownload').hidden = true;
     let box = null;
     try {
@@ -956,9 +998,9 @@
       stStatus(`Could not make the video: ${e.message}. Please try again.`);
     } finally {
       if (box) { box.stop(); box.ctx.close(); }
-      btn.disabled = false;
+      btn.disabled = $('#stAuto').disabled = false;
     }
-  });
+  }
 
   // ---------- Link history ----------
   // Logged in: kept in the database (the same on your phone and PC). Offline: in this browser.

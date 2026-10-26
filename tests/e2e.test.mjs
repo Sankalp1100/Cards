@@ -411,7 +411,21 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
   });
 
   test('all 300 designs render without errors, with their decor and particles', async () => {
-    for (const t of Templates.all) {
+    // Its own browser, fresh every 75 designs: one tab loading 300 animated pages in a row wore Chrome out and
+    // it stopped answering (around the 150th), although every design opens fine on its own.
+    const main = page;
+    try {
+      for (const [i, t] of Templates.all.entries()) {
+        if (i % 75 === 0) { if (page !== main) await page.close(); page = await launch(); await page.viewport(420, 860); }
+        await checkDesign(t);
+      }
+    } finally {
+      if (page !== main) await page.close();
+      page = main;
+    }
+  });
+  async function checkDesign(t) {
+    {
       await page.goto(cardLink({ ...PRESETS[t.occasion].card, theme: t.no }, '?preview&auto'), 0);
       await page.waitFor(`document.body.classList.contains('theme-${t.no}') && document.body.classList.contains('opened')`, 5000);
       assert.ok(await page.eval(`!!document.querySelector('#envelope.intro-${t.intro} .intro-tap')`), `#${t.no} opening ${t.intro}`);
@@ -425,7 +439,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
         .catch(() => assert.fail(`#${t.no} names not visible after the ${t.nameFx} entrance`));
       assert.deepEqual(page.errors, [], `errors in design #${t.no}`);
     }
-  });
+  }
 
   test('malicious content is shown as text and dangerous links are blocked', async () => {
     const evil = {
@@ -791,7 +805,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       fs.rmSync(dir, { recursive: true, force: true });
     });
 
-    test('Video Studio: its own screen, six painted looks, the story as scenes, and an MP4 made from the canvas', async () => {
+    test('Video Studio: its own screen, 30 looks, the story as scenes, and an MP4 made by itself from a customer order', async () => {
       const fs = await import('node:fs'), os = await import('node:os');
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wc-studio-'));
       await page.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: dir });
@@ -799,7 +813,9 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       await page.goto(origin + '/admin.html?offline', 1000);
       await page.eval(`document.querySelector('#studioBtn').click()`);
       await page.waitFor(`!document.querySelector('#studio').hidden && document.querySelectorAll('#stScenes [data-scene]').length > 0`, 8000);
-      assert.equal(await page.eval(`document.querySelectorAll('#stLooks [data-look]').length`), 6);
+      assert.equal(await page.eval(`document.querySelectorAll('#stLooks [data-look]').length`), 10, 'ten scenes');
+      assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stMoods .chip')].map(b => b.textContent)`), ['Morning', 'Golden Hour', 'Moonlit'], 'three moods each');
+      assert.equal(await page.eval(`document.querySelector('#stOrderRow').hidden`), true, 'no orders yet: no order picker');
       assert.match(await page.eval(`document.querySelector('#stWho').textContent`), /Diya & Aarav · Wedding/);
       // The preview is painted (many colours, not a blank canvas) and plays
       const colours = `(() => { const c = document.querySelector('#stCanvas'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, s = new Set(); for (let i = 0; i < d.length; i += 4 * 997) s.add(d[i] >> 4 << 8 | d[i + 1] >> 4 << 4 | d[i + 2] >> 4); return s.size; })()`;
@@ -814,22 +830,33 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       await page.eval(`document.querySelector('#stScenes [data-scene="3"]').click()`);
       await sleep(300);
       assert.equal(await page.eval(`document.querySelector('#stScenes .chip.on').textContent`), 'Mehendi', 'a scene button jumps there');
-      await page.eval(`document.querySelector('[data-look="lotusnight"]').click()`);
+      await page.eval(`document.querySelector('#stLooks [data-look="lotusnight"]').click()`);
       assert.equal(await page.eval(`document.querySelector('#stLooks .on').dataset.look`), 'lotusnight');
+      await page.eval(`document.querySelector('#stMoods [data-look="lotusnight-dawn"]').click()`);
+      assert.equal(await page.eval(`document.querySelector('#stMoods .on').textContent`), 'Dawn');
       // Phones: nothing sticks out sideways
       await page.viewport(390, 844);
       await sleep(300);
       assert.equal(await page.eval(`document.querySelector('.st-body').scrollWidth <= document.querySelector('.st-body').clientWidth`), true);
       await page.viewport(1300, 900);
-      // Make the video (functions left out, so it is short)
-      await page.eval(`document.querySelector('[data-ev="none"]').click()`);
-      assert.match(await page.eval(`document.querySelector('#stTime').textContent`), /\/ 0:26$/, 'opening, invitation, save the date, closing');
-      await page.eval(`document.querySelector('#stMake').click()`);
+      // A customer's order (a birthday, as the website sends it): picked in the Studio, it makes the video by itself
+      await page.eval(`document.querySelector('#stClose').click()`);
+      await page.eval(`(() => { const card = { ...PRESETS.bday.card, theme: 11, events: [] };
+        document.querySelector('#orderPaste').value = Catalog.orderMessage({ ...card, design: 11, guests: [], photo: false, gallery: false }, Catalog.entries());
+        document.querySelector('#orderFill').click(); })()`);
+      await page.eval(`document.querySelector('#clearBtn').click()`);
+      await page.eval(`document.querySelector('#studioBtn').click()`);
+      await page.waitFor(`!document.querySelector('#studio').hidden && !document.querySelector('#stOrderRow').hidden`, 8000);
+      assert.match(await page.eval(`document.querySelector('#stOrder').selectedOptions[0].textContent`), /Neha · Birthday/, 'an empty editor starts on the newest order');
+      assert.match(await page.eval(`document.querySelector('#stWho').textContent`), /Neha · Birthday/);
+      assert.equal(await page.eval(`document.querySelector('#stLooks .on').dataset.look`), 'party', 'a birthday starts on the party scene');
+      await page.eval(`document.querySelector('#stAuto').click()`);
       await page.waitFor(`/Recording/.test(document.querySelector('#stStatus').textContent)`, 5000);
+      assert.match(await page.eval(`document.querySelector('#stTime').textContent`), /\/ 0:26$/, 'opening, invitation, save the date, closing');
       await page.eval(`document.querySelector('#stClose').click()`);
       assert.equal(await page.eval(`document.querySelector('#studio').hidden`), false, 'it cannot be closed while recording');
       await page.waitFor(`/Saved|Could not/.test(document.querySelector('#stStatus').textContent)`, 60000);
-      assert.match(await page.eval(`document.querySelector('#stStatus').textContent`), /Saved "Diya & Aarav Lotus Night video\.mp4"/);
+      assert.match(await page.eval(`document.querySelector('#stStatus').textContent`), /Saved "Neha Confetti Party video\.mp4"/);
       const dur = await page.eval(`new Promise(r => { const v = document.querySelector('#stVideo'); v.readyState ? r(v.duration) : v.onloadedmetadata = () => r(v.duration); })`);
       assert.ok(dur > 24 && dur < 28, `video is ${dur}s`);
       assert.deepEqual(await page.eval(`[document.querySelector('#stVideo').videoWidth, document.querySelector('#stVideo').videoHeight]`), [1080, 1920]);

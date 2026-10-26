@@ -597,10 +597,7 @@ body:not(.pf-ring) .photo, body:not(.pf-ring) .photo img { animation: none; }
 .ed-num { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-family: var(--display); font-weight: 700; line-height: 1; white-space: nowrap; pointer-events: none;
   font-size: clamp(9rem, 50vmin, 28rem); color: transparent; -webkit-text-stroke: 1.5px var(--accent); opacity: .2; }
 .ed-num i { font-style: normal; color: var(--accent2); -webkit-text-stroke: 0; }
-.ed-side { position: absolute; left: 6px; top: 50%; writing-mode: vertical-rl; transform: translateY(-50%) rotate(180deg); font-family: var(--display); font-size: .62rem;
-  letter-spacing: .5em; text-transform: uppercase; color: var(--muted); opacity: .75; pointer-events: none; }
 .opened .ed-num { animation: edIn 1.8s cubic-bezier(.2,.8,.2,1) both; }
-.opened .ed-side { animation: floatIn 1.2s ease 1s both; }
 /* Orbit: a ring of text turning around the photo */
 .orbit { position: relative; width: 250px; height: 250px; display: grid; place-items: center; }
 .orbit-ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; animation: spinPlain 26s linear infinite; }
@@ -1158,3 +1155,27 @@ body.scrolled .scene-grid .sun { animation: none; opacity: .07; }
   font: 600 .72rem var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--ink); text-decoration: none; white-space: nowrap; }
 .home-link:hover { border-color: var(--accent); color: var(--accent); }
 @media (max-width: 380px) { .pbar-right { gap: 10px; } .home-link { padding: 0 10px; letter-spacing: .06em; } }
+
+/* Monogram seal: the initials sit well inside a fine double ring, with a turning ring of dots */
+body .hero .ornament.emblem { margin-bottom: 12px; }
+.emblem .em-dots { fill: var(--em, var(--accent)); stroke: none; }
+.emblem .em-marks { fill: var(--em, var(--accent)); stroke: none; }
+.emblem b { display: flex; align-items: center; justify-content: center; max-width: 82px; padding: .1em .08em .18em; white-space: nowrap; letter-spacing: 0; }
+.emblem b.one { font-size: 2.7rem; }
+.emblem b.two { font-size: 1.75rem; }
+.emblem b i { font-style: normal; font-size: .6em; margin: 0 .08em; opacity: .8; }
+
+/* Script names: room under the first name for its tails (y, g, j), so they never touch the line below */
+.names .amp { margin: .55em 0 .25em; }
+.layout-editorial .names .amp { margin: .15em 0; }
+
+/* Sample bar: a clear label and one tidy button in every style, and it never covers the first screen's button */
+.demo-bar { border: 1px solid rgba(255,255,255,.12); }
+.demo-bar span { display: grid; justify-items: start; line-height: 1.15; }
+.demo-bar span small { font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.6); }
+.demo-bar span b { font-size: 1rem; color: #fff; }
+body .demo-bar a.btn:not(.ghost) { border-radius: 999px; background: #fff; color: #14101f; box-shadow: none; border: 0; }
+body.has-demo-bar .hero { padding-bottom: 110px; }
+/* The sample bar slides in once the guest scrolls, so the first screen (and its button) is never covered */
+.demo-bar { transition: transform .4s cubic-bezier(.2,.9,.3,1), opacity .3s; }
+body.has-demo-bar:not(.scrolled) .demo-bar { transform: translateY(160%); opacity: 0; pointer-events: none; }

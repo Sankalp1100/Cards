@@ -189,12 +189,15 @@
     return `<div class="venue-art va-${kind}" aria-hidden="true"><svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice">${s}</svg></div>`;
   }
 
-  // Elegant styles show a gold medallion with the initials where the emoji would be: a ring of petals
-  // around a script monogram, slowly turning.
+  // Elegant styles show a monogram seal where the emoji would be: the initials inside a fine double ring,
+  // with a slowly turning ring of dots and four small diamonds.
   function emblemHTML(d) {
-    const petals = Array.from({ length: 24 }, (_, i) => `<ellipse cx="0" cy="-44" rx="3.2" ry="8" transform="rotate(${i * 15})"/>`).join('');
-    return `<div class="ornament emblem"><svg viewBox="-60 -60 120 120" aria-hidden="true"><g class="em-ring">${petals}</g><circle r="34"/><circle r="30" class="em-thin"/></svg>
-      <b>${esc(initials(d))}</b></div>`;
+    const dots = Array.from({ length: 48 }, (_, i) => `<circle r="1" cx="0" cy="-46" transform="rotate(${i * 7.5})"/>`).join('');
+    const marks = [0, 90, 180, 270].map(a => `<path d="M0 -57 L3 -52 L0 -47 L-3 -52Z" transform="rotate(${a})"/>`).join('');
+    const [a, b] = initials(d).split('&');
+    return `<div class="ornament emblem"><svg viewBox="-60 -60 120 120" aria-hidden="true"><circle r="52"/><circle r="55.5" class="em-thin"/>
+      <g class="em-ring em-dots">${dots}</g><g class="em-marks">${marks}</g><circle r="40"/><circle r="37" class="em-thin"/></svg>
+      <b class="${b ? 'two' : 'one'}">${esc(a)}${b ? `<i>&amp;</i>${esc(b)}` : ''}</b></div>`;
   }
 
   // The host's WhatsApp for RSVPs: a 10-digit mobile gets India's 91; longer numbers already carry a country code.
@@ -238,8 +241,7 @@
       // Editorial: a magazine cover, with the date as giant outlined numbers and a line of text up the side.
       case 'editorial': {
         const big = when ? `${String(when.getDate()).padStart(2, '0')}<i>.</i>${String(when.getMonth() + 1).padStart(2, '0')}` : '♥';
-        const side = `${PRESETS[d.type]?.label || 'Celebration'} · ${when ? when.getFullYear() : 'Save the date'}`;
-        return `<div class="ed-num" aria-hidden="true">${big}</div><p class="ed-side" aria-hidden="true">${esc(side)}</p>${p.visual}${text}${p.date}${p.hint}`;
+        return `<div class="ed-num" aria-hidden="true">${big}</div>${p.visual}${text}${p.date}${p.hint}`;
       }
       // Orbit: a ring of text slowly turning around the photo.
       case 'orbit': {
@@ -276,8 +278,8 @@
     const serial = Templates.serial(t.no);
     const bar = Object.assign(document.createElement('aside'), { id: 'demoBar', className: 'demo-bar' });
     // Opens the website's order form with this design filled in.
-    bar.innerHTML = `<span>Sample of design <b>${serial}</b></span>
-      <a class="btn" href="index.html?order=${t.no}">💬 Order ${serial}</a>`;
+    bar.innerHTML = `<span><small>Sample design</small><b>${serial}</b></span>
+      <a class="btn" href="index.html?order=${t.no}">Order ${serial}</a>`;
     document.body.appendChild(bar);
     document.body.classList.add('has-demo-bar'); // leaves room so the bar never covers the footer
   }

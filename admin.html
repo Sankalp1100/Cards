@@ -317,8 +317,15 @@
         <div class="chips st-scenes" id="stScenes"></div>
       </div>
       <div class="st-side">
-        <h3>1 · Pick a look</h3>
+        <div class="st-order" id="stOrderRow" hidden>
+          <h3>0 · From an order</h3>
+          <select id="stOrder" aria-label="Whose video"></select>
+          <button type="button" class="btn-glow" id="stAuto">⚡ Make video from this order</button>
+          <small class="muted">Picks up the customer’s names, parents, functions, date and venue from their order, then makes the video by itself.</small>
+        </div>
+        <h3>1 · Pick a scene and its mood <small class="muted">(10 scenes × 3 moods)</small></h3>
         <div class="st-looks" id="stLooks"></div>
+        <div class="chips st-moods" id="stMoods" aria-label="Mood"></div>
         <h3>2 · Words</h3>
         <label class="st-check"><input type="checkbox" id="stBless"> Blessing at the top</label>
         <input id="stBlessText" maxlength="60" aria-label="Blessing line">

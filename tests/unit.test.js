@@ -789,18 +789,29 @@ test.describe('Video Studio', () => {
       ['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '23rd', '26th', '101st', '111th']);
   });
 
-  test('six complete looks, each with its own scene, colours, fonts and tune', () => {
+  test('30 complete looks: ten painted scenes, each in three moods', () => {
     const looks = Object.entries(Studio.LOOKS);
-    assert.equal(looks.length, 6);
+    assert.equal(looks.length, 30);
+    assert.equal(Studio.SCENES.length, 10);
+    for (const scene of Studio.SCENES) assert.equal(looks.filter(([, L]) => L.scene === scene).length, 3, scene);
     for (const [id, L] of looks) {
-      assert.ok(L.name && L.note, id);
+      assert.ok(L.name && L.note && L.mood, id);
       for (const k of ['names', 'ink', 'ink2', 'accent', 'gold']) assert.match(L.col[k], /^#[0-9a-f]{6}$/i, `${id} ${k}`);
       assert.equal(L.mono.length, 2);
       assert.ok(L.font.script && L.font.serif);
       assert.ok(L.zone[0] < L.zone[1] && L.zone[1] <= 1920 && L.zone[2] <= 1080, id);
       for (const f of ['back', 'anim', 'fx', 'crest']) assert.equal(typeof L[f], 'function', `${id}.${f}`);
       assert.ok(['royal', 'romantic', 'festive'].includes(L.music), id);
+      for (const [op] of L.tint || []) assert.ok(['multiply', 'soft-light', 'screen', 'color'].includes(op), id);
     }
-    assert.equal(new Set(looks.map(([, L]) => L.font.script + L.col.names)).size, 6, 'no two looks alike');
+    assert.equal(new Set(looks.map(([, L]) => Studio.lookName(L))).size, 30, 'every look has its own name');
+  });
+
+  test('each occasion starts on a look that suits it', () => {
+    const look = type => Studio.defaults(plain(PRESETS[type].card)).look;
+    assert.equal(look('wedding'), 'vrindavan');
+    assert.equal(Studio.LOOKS[look('bday')].scene, 'party');
+    assert.equal(Studio.LOOKS[look('ceremony')].scene, 'temple');
+    for (const type of Object.keys(PRESETS)) assert.ok(Studio.LOOKS[look(type)], type);
   });
 });

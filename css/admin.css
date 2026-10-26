@@ -330,3 +330,11 @@ body.studio-open { overflow: hidden; }
   .st-stage { position: static; }
   #stCanvas { height: min(64vh, 640px); }
 }
+.st-order { display: grid; gap: 10px; padding: 14px; border-radius: 18px; border: 1px solid var(--line); background: rgba(255,255,255,.04); }
+.st-order h3 { margin-top: 0; }
+.st-order select { width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: #13102a; color: var(--ink); font: 500 .95rem 'Space Grotesk', sans-serif; }
+#stAuto[disabled] { opacity: .6; cursor: progress; }
+.st-looks { grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.st-look span { font-size: .66rem; padding: 18px 6px 6px; }
+@media (max-width: 860px) { .st-looks { grid-template-columns: repeat(3, 1fr); } }
+.st-moods { gap: 8px; }

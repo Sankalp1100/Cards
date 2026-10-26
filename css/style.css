@@ -1085,3 +1085,10 @@ input::-webkit-date-and-time-value { text-align: left; }
 @media (max-width: 640px) {
   .order-sheet::after { content: ''; position: absolute; left: 0; right: 0; top: calc(100% - 1px); height: 70vh; background: #13102a; pointer-events: none; }
 }
+/* Order form occasions: two even columns (three were too narrow in the pop-up, so names wrapped) */
+.os-occ { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.os-occ .chip { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Big headings: a little air between the two lines */
+.section-h { line-height: 1.08; }
+/* "What are you celebrating?": five a row on a computer, so the ten occasions make two full rows */
+@media (min-width: 900px) { .occ-picker { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
