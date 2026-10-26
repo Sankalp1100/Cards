@@ -18,27 +18,54 @@ const Core = {
   // Every field a card can have, all empty. Used as the base when loading a saved link
   // so values from a preset never leak into fields the link left out.
   blankCard() {
-    return { type: 'wedding', theme: 1, title: '', host1: '', host2: '', nick1: '', nick2: '', tagline: '', date: '', venue: '', message: '', photo: '', mapUrl: '', rsvp: '', events: [], music: true };
+    return { type: 'wedding', theme: 1, title: '', host1: '', host2: '', nick1: '', nick2: '', tagline: '', date: '', venue: '', message: '', photo: '', mapUrl: '', rsvp: '', events: [], music: true,
+      story: [], families: [], attire: [], gallery: [], venueNote: '', upi: '', giftNote: '', hashtag: '', thanks: '', rsvpForm: true };
   },
 
-  // Drop empty values (and functions without a name) so the link stays short.
+  // The premium sections' lists, and the field that must be filled for an entry to count.
+  LISTS: { events: 'name', story: 'title', families: 'parents', attire: 'name' },
+
+  // Drop empty values (and list entries without their main field) so the link stays short.
   compact(card) {
     const out = {};
     for (const [k, v] of Object.entries(card)) {
-      if (k === 'events') {
-        const ev = (v || []).filter(e => e && e.name && e.name.trim()).map(e => {
+      if (Core.LISTS[k]) {
+        const list = (Array.isArray(v) ? v : []).filter(e => e && typeof e[Core.LISTS[k]] === 'string' && e[Core.LISTS[k]].trim()).map(e => {
           const o = {};
           for (const [ek, evv] of Object.entries(e)) if (evv) o[ek] = evv;
           return o;
         });
-        if (ev.length) out.events = ev;
+        if (list.length) out[k] = list;
+      } else if (k === 'gallery') {
+        const g = (Array.isArray(v) ? v : []).filter(s => typeof s === 'string' && s);
+        if (g.length) out.gallery = g;
+      } else if (k === 'rsvpForm') {
+        if (v === false) out.rsvpForm = false; // on unless switched off
       } else if (v !== '' && v != null) out[k] = v;
     }
     return out;
   },
 
+  // Everything the premium sections show, read safely from a decoded link: only strings of sane length,
+  // at most a few entries, colours only as #rrggbb, photos only as http(s) or inline images.
+  extras(d) {
+    const str = (v, n) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
+    const list = (v, max, f) => (Array.isArray(v) ? v : []).filter(e => e && typeof e === 'object').slice(0, max).map(f);
+    const story = list(d.story, 8, e => ({ when: str(e.when, 40), title: str(e.title, 60), text: str(e.text, 300) })).filter(e => e.title);
+    const families = list(d.families, 4, e => ({ side: str(e.side, 40), parents: str(e.parents, 120), more: str(e.more, 160) })).filter(e => e.parents);
+    const attire = list(d.attire, 8, e => ({ name: str(e.name, 40), text: str(e.text, 100),
+      colors: str(e.colors, 80).split(',').map(c => c.trim()).filter(c => /^#[0-9a-f]{6}$/i.test(c)).slice(0, 4) })).filter(e => e.name);
+    const gallery = (Array.isArray(d.gallery) ? d.gallery : []).slice(0, 8).map(u => Core.safeUrl(u, true)).filter(Boolean);
+    return {
+      story, families, attire, gallery,
+      venueNote: str(d.venueNote, 200), upi: str(d.upi, 60).replace(/[^\w.@-]/g, ''), giftNote: str(d.giftNote, 200),
+      hashtag: str(d.hashtag, 40).replace(/\s+/g, ''), thanks: str(d.thanks, 200), rsvpForm: d.rsvpForm !== false
+    };
+  },
+
   // Decoded link data must be a plain object; anything else means a broken link.
   isCard(d) {
+    // (The premium sections are checked field by field when shown: Core.extras.)
     return !!d && typeof d === 'object' && !Array.isArray(d) && (d.events === undefined || Array.isArray(d.events));
   },
 

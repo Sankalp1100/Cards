@@ -225,7 +225,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`document.body.classList.contains('locked')`), true, 'page scroll locked before opening');
     await openEnvelope();
     assert.equal(await page.eval(`document.body.classList.contains('locked')`), false);
-    assert.equal(await page.eval(`document.querySelector('.names').textContent.replace(/\\s+/g, '')`), 'Diya&Aarav');
+    assert.equal(await page.eval(`document.querySelector('.names').textContent.replace(/\\s+/g, '')`), 'DiyawedsAarav', 'a wedding joins the names with "weds"');
     assert.equal(await page.eval(`document.querySelectorAll('.event').length`), 5);
     assert.equal(await page.eval(`document.querySelectorAll('.cd-cell').length`), 4);
     assert.match(await page.eval(`document.querySelector('#calBtn').href`), /calendar\.google\.com.*dates=20261212T193000%2F20261212T233000/);

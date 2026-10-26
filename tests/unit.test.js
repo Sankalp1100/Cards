@@ -562,10 +562,41 @@ test.describe('Catalog', () => {
       card: {
         type: 'bday', title: PRESETS.bday.card.title, tagline: PRESETS.bday.card.tagline, music: true,
         host1: 'Neha', host2: '', nick1: 'Nehu 🌸', nick2: '', date: '2026-11-28T20:00', venue: 'Skybar, Bengaluru', mapUrl: '', message: 'Come!', rsvp: '919876543210',
-        events: [{ name: '🎂 Cake Cutting', date: '2026-11-28T21:30', venue: '', dress: '' }], theme: 47
+        events: [{ name: '🎂 Cake Cutting', date: '2026-11-28T21:30', venue: '', dress: '' }],
+        story: [], families: [], attire: [], upi: '', hashtag: '', theme: 47
       },
       guests: ['Rahul Uncle', 'Priya Di'], photo: true
     });
+  });
+
+  test('"Make it special" in the order form reaches the card: story, families, dress code, UPI, hashtag', () => {
+    const special = Catalog.specialLines({
+      story: 'March 2023 – We met in Jaipur\nJanuary 2026: The proposal\nJust a line',
+      families: "Bride's family – Mr. & Mrs. Mehta", attire: 'Haldi – Yellow\nSangeet'
+    });
+    assert.deepEqual(plain(special.story), [{ when: 'March 2023', title: 'We met in Jaipur' }, { when: 'January 2026', title: 'The proposal' }, { when: '', title: 'Just a line' }]);
+    assert.deepEqual(plain(special.attire), [{ name: 'Haldi', text: 'Yellow' }, { name: 'Sangeet', text: '' }]);
+    const msg = Catalog.orderMessage({ ...order, ...special, upi: 'neha@okicici', hashtag: '#Neha30' }, Catalog.entries(site, {}));
+    assert.match(msg, /Make it special: our story, families, dress code, gifts \(UPI\), hashtag #Neha30/);
+    const card = Catalog.readOrder(msg).card;
+    assert.equal(card.story[1].title, 'The proposal');
+    assert.equal(card.families[0].parents, 'Mr. & Mrs. Mehta');
+    assert.equal(card.upi, 'neha@okicici');
+    assert.equal(card.hashtag, '#Neha30');
+  });
+
+  test('premium sections are cleaned before they are shown (only safe colours, links and sizes)', () => {
+    const x = Core.extras({
+      story: [{ title: 'x'.repeat(500), when: 5 }, 'junk', null], gallery: ['javascript:alert(1)', 'https://a.com/p.jpg', 'data:text/html,hi'],
+      attire: [{ name: 'Haldi', colors: '#ffcc00, red, #12345, url(x)' }], upi: 'a b<script>@ok', rsvpForm: false
+    });
+    assert.equal(x.story.length, 1);
+    assert.equal(x.story[0].title.length, 60);
+    assert.equal(x.story[0].when, '');
+    assert.deepEqual(plain(x.gallery), ['https://a.com/p.jpg']);
+    assert.deepEqual(plain(x.attire[0].colors), ['#ffcc00']);
+    assert.equal(x.upi, 'abscript@ok');
+    assert.equal(x.rsvpForm, false);
   });
 
   test('the code survives WhatsApp for Windows mangling the message', () => {

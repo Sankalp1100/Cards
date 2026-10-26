@@ -41,6 +41,23 @@ const REVEALS = ['up', 'zoom', 'flip', 'slide', 'blur', 'wipe'];
 // Backgrounds that would only repeat a decor's pattern.
 const CLASHES = { sunburst: 'rays', deco: 'grid', mandala: 'rays', blobs: 'mesh' };
 
+// The premium page: what hangs across the top of the first screen, and how the venue is drawn.
+const MOTIFS = ['toran', 'bunting', 'lanterns', 'bells', 'diyas', 'garland'];
+const VENUE_ARTS = ['palace', 'temple', 'garden', 'city', 'home'];
+// Per occasion: the motifs and venue drawings that suit it, and the words for the connector and the chapters.
+const OCCASION_STYLE = {
+  wedding: { motifs: ['toran', 'garland', 'bells', 'lanterns', 'diyas'], venues: ['palace', 'garden', 'temple'], join: 'weds', story: 'Our Story', fests: 'Shubh Muhurat' },
+  engagement: { motifs: ['garland', 'lanterns', 'toran', 'bunting'], venues: ['garden', 'palace', 'city'], join: '&', story: 'Our Story', fests: 'The Celebration' },
+  sangeet: { motifs: ['bunting', 'lanterns', 'toran', 'garland'], venues: ['palace', 'city', 'garden'], join: '&', story: 'Our Story', fests: 'The Line-up' },
+  kitty: { motifs: ['bunting', 'lanterns', 'garland'], venues: ['city', 'garden', 'home'], join: '&', story: 'Our Club', fests: 'The Plan' },
+  bday: { motifs: ['bunting', 'lanterns', 'garland'], venues: ['city', 'garden', 'home'], join: '&', story: 'Through the Years', fests: 'The Plan' },
+  naming: { motifs: ['garland', 'bells', 'lanterns', 'diyas'], venues: ['home', 'temple', 'garden'], join: '&', story: 'Our Little Journey', fests: 'The Ceremony' },
+  birthday: { motifs: ['bunting', 'garland', 'lanterns'], venues: ['garden', 'home', 'city'], join: '&', story: 'Growing Up', fests: 'The Fun' },
+  babyshower: { motifs: ['bunting', 'garland', 'lanterns', 'bells'], venues: ['home', 'garden', 'palace'], join: '&', story: 'Our Little Journey', fests: 'The Ceremony' },
+  ceremony: { motifs: ['toran', 'bells', 'diyas', 'garland'], venues: ['temple', 'home', 'palace'], join: '&', story: 'Our Home', fests: 'Shubh Muhurat' },
+  anniversary: { motifs: ['lanterns', 'garland', 'toran', 'bells'], venues: ['palace', 'garden', 'city'], join: '&', story: 'Our Journey', fests: 'The Evening' }
+};
+
 // The original 12 hand-made designs are #001–#012. `key` keeps links made before numbering working.
 const CLASSICS = [
   {
@@ -340,6 +357,13 @@ const TEMPLATES = (() => {
     songs.add(JSON.stringify(song));
     t.song = song;
   });
+  // The premium page's motif and venue drawing, from what suits the occasion. Neighbours within an occasion differ.
+  const seenOcc = {};
+  list.forEach(t => {
+    const k = seenOcc[t.occasion] = (seenOcc[t.occasion] || 0) + 1, st = OCCASION_STYLE[t.occasion];
+    t.motif = st.motifs[k % st.motifs.length];
+    t.venueArt = st.venues[(k + (k >> 1)) % st.venues.length];
+  });
   return list.map((t, i) => ({ no: i + 1, ...t }));
 })();
 
@@ -507,5 +531,96 @@ const PRESETS = {
       ],
       music: true
     }
+  }
+};
+
+// Sample text for the premium sections, per occasion. Website demos and the panel's "Sample text" use it;
+// a new invite never starts with it, so nobody's card shows an invented love story by accident.
+const EXTRAS = {
+  wedding: {
+    story: [
+      { when: 'March 2023', title: 'First Meeting', text: 'A cousin’s Diwali party in Jaipur. One shared plate of jalebi, and neither of them left early.' },
+      { when: 'August 2023', title: 'First Date', text: 'Rain on Marine Drive, two cutting chais, and a conversation that ran past midnight.' },
+      { when: 'January 2026', title: 'The Proposal', text: 'Sunrise at Nahargarh Fort, with a ring hidden in a box of kaju katli.' }
+    ],
+    families: [
+      { side: 'Bride’s Family', parents: 'Mr. Rajeev & Mrs. Anjali Mehta', more: 'With Ishaan & Sanya' },
+      { side: 'Groom’s Family', parents: 'Mr. Vikram & Mrs. Meera Sharma', more: 'With Rohan & Priya' }
+    ],
+    attire: [
+      { name: 'Haldi', text: 'Sunshine yellow and marigold', colors: '#f4c430,#ffb347,#fff1c1' },
+      { name: 'Sangeet', text: 'Jewel tones and shimmer', colors: '#1f6f6b,#7a1f5c,#c9a050' },
+      { name: 'Wedding', text: 'Royal maroon, gold and ivory', colors: '#6b0f24,#c9a050,#fbf6ec' }
+    ],
+    venueNote: 'Boats to the palace leave the jetty every 15 minutes from 6:30 pm.',
+    upi: 'diya.aarav@okhdfc', giftNote: 'Your presence is the greatest gift. If you wish to bless us further, you can send it here.',
+    hashtag: '#DiyaKaAarav', thanks: 'For your love, your blessings, and for being part of our forever.'
+  },
+  engagement: {
+    story: [
+      { when: 'June 2024', title: 'Hello', text: 'A wrong table at a friend’s birthday dinner. They stayed for dessert.' },
+      { when: 'September 2026', title: 'The Question', text: 'A picnic at Lodhi Garden, a nervous speech, and a very happy yes.' }
+    ],
+    families: [
+      { side: 'Her Family', parents: 'Mr. Sanjay & Mrs. Ritu Kapoor', more: 'With Aditi' },
+      { side: 'His Family', parents: 'Mr. Anil & Mrs. Kavita Malhotra', more: 'With Kunal' }
+    ],
+    attire: [{ name: 'Ring Ceremony', text: 'Pastels and pearls', colors: '#f7c6d0,#c9e4de,#fff4e0' }],
+    hashtag: '#AnanyaSaidYes', thanks: 'Thank you for celebrating the start of our forever with us.'
+  },
+  sangeet: {
+    story: [{ when: 'Every family function', title: 'The Dance Floor', text: 'Our families have been dancing at each other’s weddings for years. Now it is our turn.' }],
+    attire: [{ name: 'Sangeet', text: 'Bollywood glam, sequins welcome', colors: '#ff2a6d,#ffcc00,#7a1f5c' }],
+    hashtag: '#ShaadiKaSangeet', thanks: 'Bring your best moves. We will bring the dhol.'
+  },
+  kitty: {
+    story: [{ when: 'Since 2019', title: 'Glam Girls', text: 'Twelve friends, one WhatsApp group, and a party every month without fail.' }],
+    attire: [{ name: 'Disco Night', text: 'Sequins, metallics and big hair', colors: '#ff4fd8,#ffd400,#7df9ff' }],
+    hashtag: '#GlamGirlsKitty', thanks: 'Come for the tambola, stay for the gossip.'
+  },
+  bday: {
+    story: [
+      { when: '1996', title: 'Hello World', text: 'Arrived three weeks early and has been in a hurry ever since.' },
+      { when: '2026', title: 'Thirty & Fabulous', text: 'Thirty years of stories. Tonight we add one more.' }
+    ],
+    attire: [{ name: 'The Party', text: 'Glam evening wear, a touch of gold', colors: '#ffb86b,#ff6b9d,#1b1b2f' }],
+    hashtag: '#NehaTurns30', thanks: 'Thank you for making every year better.'
+  },
+  naming: {
+    story: [
+      { when: 'November 2026', title: 'Our Little Star', text: 'She arrived on a starry Sunday morning and changed everything.' },
+      { when: 'January 2027', title: 'Her Name', text: 'Chosen with love by both grandmothers, after a lot of friendly debate.' }
+    ],
+    families: [{ side: 'Grandparents', parents: 'Mr. & Mrs. Sharma · Mr. & Mrs. Iyer', more: 'With all our love' }],
+    hashtag: '#WelcomeLittleSharma', thanks: 'Your blessings mean the world to our little one.'
+  },
+  birthday: {
+    story: [
+      { when: 'Age 1', title: 'First Steps', text: 'Straight towards the cake, of course.' },
+      { when: 'Age 5', title: 'Big Boy Now', text: 'Loves dinosaurs, magic tricks and very loud songs.' }
+    ],
+    attire: [{ name: 'Party Theme', text: 'Superheroes and capes', colors: '#e63946,#1d3557,#ffd23f' }],
+    hashtag: '#KabirTurns5', thanks: 'Thank you for coming to Kabir’s big day!'
+  },
+  babyshower: {
+    story: [{ when: 'Spring 2027', title: 'Coming Soon', text: 'A tiny new member of the family is on the way, and we cannot wait.' }],
+    families: [{ side: 'With Love', parents: 'The Sharma & Iyer families', more: 'Grandparents-to-be' }],
+    attire: [{ name: 'Godh Bharai', text: 'Soft pastels', colors: '#f9b9d2,#a9c6ff,#fff1a8' }],
+    hashtag: '#BabySharmaOnTheWay', thanks: 'Your blessings mean the world to us and our little one.'
+  },
+  ceremony: {
+    story: [{ when: '2026', title: 'Our New Home', text: 'Years of saving and dreaming. Now a home, ready for your blessings.' }],
+    families: [{ side: 'With Blessings', parents: 'Shri Ramesh & Smt. Sunita Sharma', more: 'With Amit, Pooja & family' }],
+    attire: [{ name: 'Puja', text: 'Traditional, in bright festive colours', colors: '#d97706,#e11d48,#fff7d6' }],
+    hashtag: '#SharmaGrihaPravesh', thanks: 'Thank you for blessing our new beginning.'
+  },
+  anniversary: {
+    story: [
+      { when: '2001', title: 'The Wedding', text: 'A December wedding in Lucknow, and a promise made for life.' },
+      { when: '2026', title: 'Twenty-Five Years', text: 'Two children, four cities and countless chai-time conversations later.' }
+    ],
+    families: [{ side: 'Hosted by', parents: 'Aryan & Kavya', more: 'Their proud children' }],
+    attire: [{ name: 'The Evening', text: 'Silver and black', colors: '#c0c0c0,#1b1b1b,#e0c27a' }],
+    hashtag: '#MeeraRaj25', thanks: 'Thank you for being part of our story.'
   }
 };

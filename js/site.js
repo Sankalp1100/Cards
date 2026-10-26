@@ -365,7 +365,8 @@
     return {
       design: t ? t.no : '', type: ord.type, host1: v('host1'), host2: v('host2'), nick1: v('nick1'), nick2: v('nick2'), date: v('date'), venue: v('venue'), mapUrl: v('mapUrl'),
       events: ord.events.filter(ev => ev.name.trim()), message: v('message'), rsvp: v('rsvp'),
-      guests: v('guests').split('\n').map(g => g.trim()).filter(Boolean), photo: of.elements.photo.checked
+      guests: v('guests').split('\n').map(g => g.trim()).filter(Boolean), photo: of.elements.photo.checked,
+      ...Catalog.specialLines({ story: v('xStory'), families: v('xFamilies'), attire: v('xAttire') }), upi: v('xUpi'), hashtag: v('xHashtag')
     };
   }
 

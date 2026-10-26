@@ -134,6 +134,60 @@
     }[kind] || '';
   }
 
+  // What hangs across the top of the first screen. Each piece sways on its own (CSS), so it feels alive.
+  function motifSVG(kind) {
+    const W = 400, sag = x => 6 + 26 * Math.sin(Math.PI * ((x % 200) / 200)); // the string dips in two loops
+    const string = '<path class="m-str" d="M0 6 Q100 38 200 6 Q300 38 400 6"/>';
+    const along = (n, f) => Array.from({ length: n }, (_, i) => { const x = (i + 1) * W / (n + 1); return f(x, sag(x), i); }).join('');
+    let inner = '';
+    switch (kind) {
+      case 'bunting': inner = string + along(14, (x, y, i) =>
+        `<path class="m-sway m-f${i % 3}" style="--n:${i}" d="M${x - 11} ${y} L${x + 11} ${y} L${x} ${y + 24} Z"/>`); break;
+      case 'lanterns': inner = string + along(7, (x, y, i) => { const h = 22 + (i % 3) * 14; return `<g class="m-sway" style="--n:${i}">
+        <line class="m-str" x1="${x}" y1="${y}" x2="${x}" y2="${y + h}"/><rect class="m-cap" x="${x - 6}" y="${y + h}" width="12" height="4" rx="1"/>
+        <rect class="m-lamp" x="${x - 10}" y="${y + h + 4}" width="20" height="26" rx="9"/><rect class="m-cap" x="${x - 6}" y="${y + h + 30}" width="12" height="3" rx="1"/></g>`; }); break;
+      case 'bells': inner = string + along(7, (x, y, i) => { const h = 18 + (i % 2) * 14; return `<g class="m-sway" style="--n:${i}">
+        <line class="m-str" x1="${x}" y1="${y}" x2="${x}" y2="${y + h}"/><path class="m-bell" d="M${x - 10} ${y + h + 22} Q${x - 10} ${y + h} ${x} ${y + h} Q${x + 10} ${y + h} ${x + 10} ${y + h + 22} Z"/>
+        <circle class="m-cap" cx="${x}" cy="${y + h + 25}" r="3"/></g>`; }); break;
+      case 'diyas': inner = '<path class="m-str" d="M0 40 H400"/>' + along(9, x => `<g style="--n:${x % 7}">
+        <ellipse class="m-flame" cx="${x}" cy="27" rx="3.6" ry="7"/><path class="m-diya" d="M${x - 13} 34 Q${x} 48 ${x + 13} 34 Z"/></g>`); break;
+      case 'garland': inner = string + along(26, (x, y, i) =>
+        `<g class="m-flower m-f${i % 3}" transform="translate(${x} ${y + 3})">${[0, 72, 144, 216, 288].map(a => `<ellipse cx="0" cy="-4" rx="2.6" ry="4" transform="rotate(${a})"/>`).join('')}<circle class="m-heart" r="2"/></g>`); break;
+      default: inner = string + along(15, (x, y, i) => { const len = 22 + (i % 3) * 10; return `<g class="m-sway" style="--n:${i}">
+        <line class="m-str" x1="${x}" y1="${y}" x2="${x}" y2="${y + len}"/>${[0, 1, 2].map(k => `<circle cx="${x}" cy="${y + 6 + k * (len / 3)}" r="${k === 2 ? 4.5 : 3.4}" class="${k === 2 ? 'm-red' : 'm-gold'}"/>`).join('')}
+        <path class="m-leaf" d="M${x} ${y + len + 4} q-4 6 0 12 q4 -6 0 -12"/></g>`; }); // toran: marigold strands and a mango leaf
+    }
+    return `<div class="motif motif-${kind}" aria-hidden="true"><svg viewBox="0 0 ${W} 80" preserveAspectRatio="none">${inner}</svg></div>`;
+  }
+
+  // The venue as a little illustration above its name: a palace on a lake, a temple, a garden pavilion,
+  // a city skyline or a home, with glowing windows and moving water or twinkling lights.
+  function venueArtSVG(kind) {
+    const win = (xs, y) => xs.map((x, i) => `<rect class="va-win" style="--n:${i % 5}" x="${x}" y="${y}" width="5" height="8" rx="2.5"/>`).join('');
+    let s = '<circle class="va-moon" cx="262" cy="40" r="15"/>';
+    switch (kind) {
+      case 'temple':
+        s += '<path class="va-body" d="M90 150 V120 h20 v-20 h12 l18 -58 l18 58 h12 v20 h20 v30 Z"/><path class="va-body" d="M190 150 v-24 l12 -26 l12 26 v24 Z"/>' +
+          '<path class="va-flag" d="M140 42 v-16 l16 6 l-16 6"/><rect class="va-ground" x="0" y="150" width="320" height="50"/>' + win([128, 147], 126); break;
+      case 'garden':
+        s += '<rect class="va-ground" x="0" y="150" width="320" height="50"/><path class="va-body" d="M120 150 v-36 h80 v36 Z M110 114 q50 -40 100 0 Z"/>' +
+          '<circle class="va-tree" cx="60" cy="122" r="26"/><circle class="va-tree" cx="262" cy="118" r="30"/><path class="va-str" d="M10 70 Q90 100 160 76 Q230 100 310 70"/>' +
+          Array.from({ length: 12 }, (_, i) => `<circle class="va-bulb" style="--n:${i % 5}" cx="${20 + i * 25}" cy="${78 + (i % 4) * 4}" r="2.6"/>`).join(''); break;
+      case 'city':
+        s += '<path class="va-body" d="M10 150 V96 h30 v54 h8 V70 h34 v80 h10 V108 h26 v42 h10 V58 h40 v92 h8 V90 h30 v60 h10 V80 h36 v70 h22 V112 h30 v38 Z"/>' +
+          win([56, 66, 120, 130, 140, 196, 206, 254, 264], 92) + win([18, 28, 98, 168, 178, 228, 288], 120) + '<rect class="va-ground" x="0" y="150" width="320" height="50"/>'; break;
+      case 'home':
+        s += '<rect class="va-ground" x="0" y="150" width="320" height="50"/><path class="va-body" d="M100 150 V100 l60 -44 l60 44 v50 Z"/><rect class="va-door" x="150" y="118" width="20" height="32" rx="10"/>' +
+          win([116, 192], 108) + '<path class="va-str" d="M100 100 Q160 120 220 100"/>' + Array.from({ length: 9 }, (_, i) => `<circle class="va-bulb" style="--n:${i % 5}" cx="${106 + i * 14}" cy="${104 + Math.sin(i / 8 * Math.PI) * 8}" r="2.6"/>`).join(''); break;
+      default: // palace on a lake, with its reflection and moving ripples
+        s += '<path class="va-body" d="M30 120 V92 h20 v-10 q10 -18 20 0 v10 h30 v-22 q18 -30 36 0 v22 h30 v-34 q24 -40 48 0 v34 h30 v-10 q10 -18 20 0 v10 h26 v28 Z"/>' +
+          win(Array.from({ length: 18 }, (_, i) => 40 + i * 14), 102) + '<rect class="va-water" x="0" y="120" width="320" height="80"/>' +
+          '<path class="va-body va-reflect" d="M30 120 V148 h20 v10 q10 18 20 0 v-10 h30 v22 q18 30 36 0 v-22 h30 v34 q24 40 48 0 v-34 h30 v10 q10 18 20 0 v-10 h26 v-28 Z"/>' +
+          Array.from({ length: 8 }, (_, i) => `<line class="va-ripple" style="--n:${i % 4}" x1="${20 + (i * 37) % 260}" y1="${132 + i * 7}" x2="${60 + (i * 37) % 260}" y2="${132 + i * 7}"/>`).join('');
+    }
+    return `<div class="venue-art va-${kind}" aria-hidden="true"><svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice">${s}</svg></div>`;
+  }
+
   // The host's WhatsApp for RSVPs: a 10-digit mobile gets India's 91; longer numbers already carry a country code.
   function rsvpNumber(d) {
     const digits = Core.waNumber(d.rsvp);
@@ -198,7 +252,7 @@
     if (sampleGuard) return;
     sampleGuard = true;
     $('#card').addEventListener('click', e => {
-      const b = e.target.closest('.actions .btn, .venue .btn');
+      const b = e.target.closest('.actions .btn, .venue .btn, .rsvp .btn, .upi-pay');
       if (!b || b.classList.contains('order-this')) return;
       e.preventDefault();
       e.stopPropagation();
@@ -298,14 +352,17 @@
     const screen = $('#envelope');
     screen.className = `envelope-screen intro-${introKind}`;
     screen.innerHTML = `
+      <div class="intro-mandala a" aria-hidden="true">${mandalaSVG()}</div><div class="intro-mandala b" aria-hidden="true">${mandalaSVG()}</div>
       <div class="env-wrap">
-        ${guest ? `<p class="env-to">Dear <b>${esc(guest)}</b>,</p>` : ''}
+        <p class="env-kicker">${esc(PRESETS[d.type]?.label || 'You are invited')}</p>
+        ${guest ? `<p class="env-to">Dear <b>${esc(guest)}</b>,</p>` : '<p class="env-to">You’re Invited</p>'}
         <div class="intro-tap" role="button" tabindex="0" aria-label="Open invitation">${introMarkup(introKind, d, t)}</div>
-        <p class="env-hint">Tap to open your invitation</p>
+        <button class="btn open-btn" type="button">Open invitation</button>
       </div>`;
     const tap = $('.intro-tap');
     tap.addEventListener('click', openCard);
     tap.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openCard(); });
+    $('.open-btn').addEventListener('click', openCard);
   }
 
   function eventCard(e, i) {
@@ -332,12 +389,89 @@
     const events = (d.events || []).filter(e => e && e.name);
     const photo = safeUrl(d.photo, true);
     const mapUrl = safeUrl(d.mapUrl) || (d.venue ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d.venue)}` : '');
+    const style = OCCASION_STYLE[d.type] || OCCASION_STYLE.wedding;
+    const x = Core.extras(d);
     const names = d.host2
-      ? `<span class="name">${letters(d.host1 || '')}</span><span class="amp">&amp;</span><span class="name">${letters(d.host2)}</span>`
+      ? `<span class="name">${letters(d.host1 || '')}</span><span class="amp">${esc(style.join)}</span><span class="name">${letters(d.host2)}</span>`
       : `<span class="name">${letters(d.host1 || '')}</span>`;
+    // A chapter heading: a small gold label over the title.
+    // (" plain" when the whole section already glides in, so the heading does not animate twice.)
+    const head = (kicker, title, cls = '') => `<div class="sec-head${cls === ' plain' ? '' : ' reveal'}"><p class="kicker">${esc(kicker)}</p><h2 class="section-title">${esc(title)}</h2></div>`;
+    const sections = [];
+    const add = (id, label, html) => { if (html) sections.push({ id, label, html }); };
+
+    add('story', 'Our Story', x.story.length && `
+      <section class="story" id="story">${head('How it began', style.story)}
+        <div class="story-list"><i class="story-thread" aria-hidden="true"><b></b></i>
+          ${x.story.map((m, i) => `<article class="moment pcard reveal" style="--i:${i}">${m.when ? `<p class="kicker">${esc(m.when)}</p>` : ''}<h3>${esc(m.title)}</h3>${m.text ? `<p>${esc(m.text)}</p>` : ''}</article>`).join('')}
+        </div>
+      </section>`);
+    add('fests', 'Celebrations', events.length && `
+      <section class="events" id="fests">${head(style.fests, 'The Celebrations')}
+        <div class="timeline">${events.map(eventCard).join('')}</div>
+      </section>`);
+    add('venue', 'Venue', d.venue && `
+      <section class="venue reveal" id="venue">${head('Where we celebrate', 'The Venue', ' plain')}
+        <div class="venue-card pcard">${venueArtSVG(t.venueArt || 'palace')}
+          <div class="venue-body"><div class="venue-pin">📍</div><p class="venue-name">${esc(d.venue)}</p>
+            ${x.venueNote ? `<p class="venue-note">${esc(x.venueNote)}</p>` : ''}
+            <a class="btn ghost" href="${esc(mapUrl)}" target="_blank" rel="noopener">Get directions</a></div>
+        </div>
+      </section>`);
+    add('families', 'Families', x.families.length && `
+      <section class="families" id="families">${head('Our roots', 'With Love, Our Families')}
+        <div class="fam-grid">${x.families.map((f, i) => `<article class="fam pcard reveal" style="--i:${i}"><div class="fam-mark" aria-hidden="true">${mandalaSVG()}</div>
+          ${f.side ? `<h3>${esc(f.side)}</h3>` : ''}<p class="fam-parents">${esc(f.parents)}</p>${f.more ? `<p>${esc(f.more)}</p>` : ''}</article>`).join('')}</div>
+      </section>`);
+    add('gallery', 'Gallery', x.gallery.length && `
+      <section class="gallery" id="gallery">${head('Memories', 'Moments')}
+        <div class="gal-grid">${x.gallery.map((src, i) => `<button type="button" class="gal-item reveal" style="--i:${i}" data-gal="${i}" aria-label="Open photo ${i + 1}"><img src="${esc(src)}" alt="" loading="lazy"></button>`).join('')}</div>
+      </section>`);
+    add('attire', 'Dress Code', x.attire.length && `
+      <section class="attire" id="attire">${head('What to wear', 'Dress in Splendour')}
+        <div class="attire-list">${x.attire.map((a, i) => `<article class="dress-card pcard reveal" style="--i:${i}"><div><p class="kicker">${esc(a.name)}</p>${a.text ? `<h3>${esc(a.text)}</h3>` : ''}</div>
+          ${a.colors.length ? `<div class="swatches" aria-label="Colours">${a.colors.map((c, k) => `<i style="--s:${c};--k:${k}"></i>`).join('')}</div>` : ''}</article>`).join('')}</div>
+      </section>`);
+    add('gifts', 'Blessings', x.upi && `
+      <section class="gifts reveal" id="gifts">${head('Blessings', 'With Gratitude', ' plain')}
+        <div class="gift-card pcard"><p class="gift-note">${esc(x.giftNote || 'Your presence is the greatest gift. If you wish to bless us further, you can send it here.')}</p>
+          <div class="upi-row"><span class="upi-label">UPI</span><code class="upi-id">${esc(x.upi)}</code><button type="button" class="upi-copy" data-copy-upi>Copy</button></div>
+          <a class="btn ghost upi-pay" href="upi://pay?pa=${encodeURIComponent(x.upi)}&amp;pn=${encodeURIComponent(Core.who(d))}&amp;cu=INR">Open a UPI app</a>
+        </div>
+      </section>`);
+    add('rsvp', 'RSVP', rsvpNumber(d) && `
+      <section class="rsvp reveal" id="rsvp">${head('Kindly reply', 'Will You Join Us?', ' plain')}
+        <form class="rsvp-form pcard" id="rsvpForm" autocomplete="off">
+          ${x.rsvpForm ? `
+          <label>Your name<input name="who" maxlength="60" value="${esc(guest || '')}" placeholder="Your name"></label>
+          <div class="rsvp-pills" role="radiogroup" aria-label="Will you attend?">
+            <label><input type="radio" name="att" value="yes" checked><span>Joyfully accepting</span></label>
+            <label><input type="radio" name="att" value="no"><span>Regretfully declining</span></label>
+          </div>
+          <div class="rsvp-row">
+            <label>Guests<select name="guests">${[1, 2, 3, 4, 5, 6].map(n => `<option${n === 2 ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
+            <label>Meal<select name="meal"><option>Vegetarian</option><option>Jain</option><option>Non-vegetarian</option></select></label>
+          </div>
+          <label>Message <small>(optional)</small><input name="note" maxlength="140" placeholder="Wishes for the hosts"></label>` : ''}
+          <a class="btn" id="rsvpBtn" target="_blank" rel="noopener">💬 RSVP on WhatsApp</a>
+        </form>
+      </section>`);
+
+    // The bar shows initials for a couple, a short name in full, and the first letters of a long name ("GGKC").
+    const one = String(d.host1 || '').trim(), words = one.split(/\s+/).filter(Boolean);
+    const mono = d.host2 ? `${esc(graphemes(one || '?')[0])} <i>&amp;</i> ${esc(graphemes(d.host2)[0])}`
+      : esc(one.length <= 12 ? one : words.map(w => graphemes(w)[0]).join('').slice(0, 5));
+    const menuLinks = [['top', 'Home'], ...(when ? [['details', 'Countdown']] : []), ...sections.map(s => [s.id, s.label])];
 
     $('#card').innerHTML = `
-      <section class="hero layout-${t.layout || 'classic'}">
+      <header class="pbar"><a class="mono" href="#top">${mono}</a>
+        <button class="menu-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="pmenu">Menu</button></header>
+      <nav class="pmenu" id="pmenu" aria-label="Sections" hidden>
+        <button class="pmenu-x" id="menuClose" type="button" aria-label="Close menu">✕</button>
+        ${menuLinks.map(([id, label], i) => `<a href="#${id}" style="--n:${i}">${esc(label)}</a>`).join('')}
+      </nav>
+      <section class="hero layout-${t.layout || 'classic'}" id="top">
+        ${motifSVG(t.motif || 'toran')}
         ${decor(t.decor)}
         ${heroLayout(t, d, when, {
           // Without a photo the design's emoji takes its place; the polaroid frame also shows the initials as a caption.
@@ -346,14 +480,13 @@
           names: `<h1 class="names">${names}</h1>${nickLine(d)}`,
           tagline: `<p class="tagline fade" style="--d:1.6s">${esc(d.tagline)}</p>`,
           date: when ? `<div class="date-badge fade" style="--d:2s"><span>${esc(fmtDate(when))}</span><b>${esc(fmtTime(when))}</b></div>` : '',
-          hint: '<a class="scroll-hint fade" style="--d:2.6s" href="#details" aria-label="Scroll down">⌄</a>'
+          hint: `<a class="btn view-btn fade" style="--d:2.4s" href="#details">View invitation</a><a class="scroll-hint fade" style="--d:2.8s" href="#details" aria-label="Scroll down">⌄</a>`
         })}
       </section>
 
       <div id="details"></div>
       ${when ? `
-      <section class="countdown reveal">
-        <h2 class="section-title">Counting down</h2>
+      <section class="countdown reveal">${head('The big day', 'Counting down', ' plain')}
         <div class="cd-grid" id="cd">
           ${['Days', 'Hours', 'Minutes', 'Seconds'].map(u => `<div class="cd-cell"><b data-u="${u}">00</b><span>${u}</span></div>`).join('')}
         </div>
@@ -361,30 +494,23 @@
 
       ${d.message ? `<section class="message reveal"><span class="quote">“</span><p>${esc(d.message)}</p></section>` : ''}
 
-      ${events.length ? `
-      <section class="events">
-        <h2 class="section-title reveal">The Celebrations</h2>
-        <div class="timeline">${events.map(eventCard).join('')}</div>
-      </section>` : ''}
-
-      ${d.venue ? `
-      <section class="venue reveal">
-        <h2 class="section-title">Venue</h2>
-        <div class="venue-pin">📍</div>
-        <p class="venue-name">${esc(d.venue)}</p>
-        <a class="btn ghost" href="${esc(mapUrl)}" target="_blank" rel="noopener">Get directions</a>
-      </section>` : ''}
+      ${sections.map(s => s.html).join('')}
 
       <section class="actions reveal">
         ${when ? `<a class="btn" id="calBtn" target="_blank" rel="noopener">📅 Save the date</a>` : ''}
-        ${rsvpNumber(d) ? `<a class="btn" id="rsvpBtn" target="_blank" rel="noopener">💬 RSVP on WhatsApp</a>` : ''}
         <button class="btn ghost" id="shareBtn" type="button">🔗 Share</button>
       </section>
 
-      <footer>
-        Loved this invitation? <a href="index.html">Get one for your celebration</a> 💌<br><small>${esc(SITE.brand)}</small>
+      <footer class="finale">
+        <div class="finale-mandala" aria-hidden="true">${mandalaSVG()}</div>
+        <p class="thanks reveal">Thank you</p>
+        <p class="thanks-note">${esc(x.thanks || 'For your love, your blessings, and for being part of our celebration.')}</p>
+        ${x.hashtag ? `<p class="hashtag">${esc(x.hashtag.startsWith('#') ? x.hashtag : '#' + x.hashtag)}</p>` : ''}
+        <p class="finale-names">${esc(Core.who(d))}${when ? ` · ${esc(when.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }))}` : ''}</p>
+        <p class="sell">Loved this invitation? <a href="index.html">Get one for your celebration</a> 💌<br><small>${esc(SITE.brand)}</small></p>
         <p class="signature reveal"><small>Designed by</small><span>${esc(SITE.designer || 'Sankalp')}</span></p>
-      </footer>`;
+      </footer>
+      <div class="lightbox" id="lightbox" hidden><button type="button" class="lb-x" aria-label="Close photo">✕</button><img alt=""></div>`;
 
     const who = Core.who(d);
     const inviteUrl = shareLink();
@@ -399,11 +525,23 @@
       $('#calBtn').href = cal.href;
     }
     if (rsvpNumber(d)) {
-      const num = rsvpNumber(d);
-      const msg = `Hi! ${guest ? guest + ' here. ' : ''}Thank you for the invitation to ${who}'s celebration. I'll be there! 🎉`;
-      $('#rsvpBtn').href = `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+      // The reply link always carries what the guest has filled in so far.
+      const num = rsvpNumber(d), form = $('#rsvpForm');
+      const rsvpLink = () => {
+        const f = form.elements, name = (f.who && f.who.value.trim()) || guest;
+        let msg = `Hi! ${name ? name + ' here. ' : ''}Thank you for the invitation to ${who}'s celebration. `;
+        if (f.att && f.att.value === 'no') msg += 'Sadly I can’t make it, but sending all my love. 🙏';
+        else msg += `I'll be there! 🎉${f.guests ? `\nGuests: ${f.guests.value}\nMeal: ${f.meal.value}` : ''}`;
+        if (f.note && f.note.value.trim()) msg += `\nMessage: ${f.note.value.trim()}`;
+        $('#rsvpBtn').href = `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+      };
+      rsvpLink();
+      form.addEventListener('input', rsvpLink);
+      form.addEventListener('change', rsvpLink);
+      form.addEventListener('submit', e => e.preventDefault());
     }
     $('#shareBtn').addEventListener('click', share);
+    setupPremium();
     sampleActions(t);
 
     startCountdown(when);
@@ -424,6 +562,43 @@
       renderEnvelope(d, t);
       if (params.has('auto')) setTimeout(openCard, 700);
     }
+  }
+
+  // The premium page's moving parts: the menu, the photo viewer, copying the UPI ID, and the story thread.
+  let threadRaf = 0;
+  function setupPremium() {
+    const menu = $('#pmenu'), btn = $('#menuBtn');
+    const setMenu = on => { menu.hidden = !on; requestAnimationFrame(() => menu.classList.toggle('on', on)); btn.setAttribute('aria-expanded', on); };
+    btn.addEventListener('click', () => setMenu(true));
+    $('#menuClose').addEventListener('click', () => setMenu(false));
+    menu.addEventListener('click', e => { if (e.target.tagName === 'A') setMenu(false); });
+
+    // One click handler for the whole card (the card is redrawn in the panel's preview; this must not stack up).
+    if (!setupPremium.clicks) {
+      setupPremium.clicks = true;
+      $('#card').addEventListener('click', e => {
+        const lb = $('#lightbox'), item = e.target.closest('[data-gal]');
+        if (item) { lb.querySelector('img').src = item.querySelector('img').src; lb.hidden = false; return; }
+        if (e.target.closest('#lightbox')) lb.hidden = true;
+        const copyBtn = e.target.closest('[data-copy-upi]');
+        if (copyBtn) {
+          const id = $('.upi-id').textContent;
+          (navigator.clipboard ? navigator.clipboard.writeText(id) : Promise.reject()).then(() => { copyBtn.textContent = 'Copied ✓'; })
+            .catch(() => { getSelection().selectAllChildren($('.upi-id')); copyBtn.textContent = 'Selected'; });
+        }
+      });
+    }
+
+    const list = $('.story-list');
+    if (!list) return;
+    const grow = () => {
+      threadRaf = 0;
+      const r = list.getBoundingClientRect();
+      list.style.setProperty('--p', Math.max(0, Math.min(1, (innerHeight * 0.75 - r.top) / r.height)).toFixed(3));
+    };
+    if (!setupPremium.wired) { setupPremium.wired = true; addEventListener('scroll', () => { if (!threadRaf) threadRaf = requestAnimationFrame(() => { setupPremium.grow && setupPremium.grow(); }); }, { passive: true }); }
+    setupPremium.grow = grow;
+    grow();
   }
 
   function openCard() {

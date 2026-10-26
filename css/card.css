@@ -765,3 +765,194 @@ footer .signature::after { display: none; }
   background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--accent) 45%, #fff), color-mix(in srgb, var(--accent2) 55%, var(--bg2)) 90%) content-box, #fffdf8; }
 .pf-polaroid .orn-cap { display: block; position: absolute; left: 0; right: 0; bottom: 6px; font: 400 1.25rem/1 var(--script); color: #6b3b22; text-align: center; }
 .pf-polaroid .split-visual .ornament { font-size: 3rem; }
+
+/* ==========================================================================
+   Premium page (every design): turning mandalas behind the opening, a sticky monogram bar with a menu,
+   a hanging motif over the names, gold-labelled chapters (story, celebrations, venue drawing, families,
+   gallery, dress code, gifts, RSVP form) and a thank-you finale. Built only from the design's own colours.
+   ========================================================================== */
+
+/* ---------- Opening ---------- */
+.envelope-screen { overflow: hidden; }
+.intro-mandala { position: absolute; width: 140vmin; aspect-ratio: 1; pointer-events: none; opacity: .2; }
+.intro-mandala svg { width: 100%; height: 100%; fill: none; stroke: var(--accent); stroke-width: .5; }
+.intro-mandala.a { left: -60vmin; top: -62vmin; animation: spinPlain 120s linear infinite; }
+.intro-mandala.b { right: -62vmin; bottom: -66vmin; animation: spinPlainR 150s linear infinite; }
+.env-wrap { position: relative; text-align: center; }
+.env-kicker { font: 600 .72rem var(--body); letter-spacing: .4em; text-transform: uppercase; color: var(--accent); animation: floatIn 1s .1s both; }
+.env-to { font-size: clamp(2.4rem, 11vw, 3.4rem); line-height: 1.15; padding: 0 .2em .15em; }
+.open-btn { margin-top: 4px; animation: floatIn 1s .5s both, glowPulseBtn 2.6s ease-in-out 1.5s infinite; }
+.open .open-btn, .open .env-kicker, .open .env-to { opacity: 0; transition: opacity .4s; }
+
+/* ---------- Sticky monogram bar and the menu ---------- */
+.pbar { position: sticky; top: 0; z-index: 30; display: flex; justify-content: space-between; align-items: center;
+  padding: 12px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
+  background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line); }
+.mono { font: 500 1.05rem var(--display); letter-spacing: .28em; color: var(--ink); text-decoration: none; text-transform: uppercase; }
+.mono i { font-style: normal; color: var(--accent); }
+.menu-btn { border: 0; background: none; cursor: pointer; font: 600 .74rem var(--body); letter-spacing: .3em; text-transform: uppercase; color: var(--ink); padding: 6px 2px; }
+.pmenu { position: fixed; inset: 0; z-index: 75; display: grid; place-content: center; gap: 4px; text-align: center; padding: 60px 16px;
+  background: color-mix(in srgb, var(--bg) 94%, #000); clip-path: circle(0 at calc(100% - 36px) 28px); transition: clip-path .7s cubic-bezier(.7,0,.2,1); }
+.pmenu.on { clip-path: circle(150% at calc(100% - 36px) 28px); }
+.pmenu a { font: italic 400 clamp(1.7rem, 7vw, 2.2rem)/1.5 var(--display); color: var(--ink); text-decoration: none; opacity: 0; transform: translateY(14px); transition: opacity .4s, transform .4s, color .2s; }
+.pmenu.on a { opacity: 1; transform: none; transition-delay: calc(var(--n) * 45ms + .25s); }
+.pmenu a:hover { color: var(--accent); }
+.pmenu-x { position: absolute; top: 14px; right: 16px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--accent); background: none; color: var(--accent); font-size: 1rem; cursor: pointer; }
+
+/* ---------- Hanging motif across the top of the first screen ---------- */
+.hero { padding-top: 100px; }
+.motif { position: absolute; top: 0; left: 0; right: 0; height: 84px; z-index: 1; pointer-events: none; }
+.motif svg { width: 100%; height: 100%; overflow: visible; }
+.m-str { fill: none; stroke: color-mix(in srgb, var(--ink) 35%, transparent); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.m-sway { transform-box: fill-box; transform-origin: 50% 0; animation: mSway 3.6s ease-in-out calc(var(--n) * -.35s) infinite; }
+.m-f0 { fill: var(--accent); } .m-f1 { fill: var(--accent2); } .m-f2 { fill: color-mix(in srgb, var(--accent) 45%, #fff); }
+.m-gold { fill: #f2a31b; } .m-red { fill: #c8432d; } .m-leaf { fill: #4f7a2c; }
+.m-cap { fill: color-mix(in srgb, var(--accent) 55%, #3a2410); }
+.m-lamp { fill: var(--accent2); filter: drop-shadow(0 0 6px var(--accent2)); animation: mGlow 2.8s ease-in-out calc(var(--n) * -.5s) infinite; }
+.m-bell { fill: color-mix(in srgb, var(--accent) 80%, #6b4a10); }
+.m-diya { fill: color-mix(in srgb, var(--accent) 55%, #6b2a0a); }
+.m-flame { fill: #ffb52e; filter: drop-shadow(0 0 5px #ff9d00); transform-box: fill-box; transform-origin: 50% 100%; animation: mFlame 1.4s ease-in-out calc(var(--n) * -.2s) infinite alternate; }
+.m-flower ellipse { fill: inherit; } .m-flower { animation: mGlow 3s ease-in-out infinite; }
+.m-heart { fill: #fff3c4; }
+.opened .motif { animation: mDrop 1.2s cubic-bezier(.2,.9,.3,1.2) both; }
+.view-btn { margin-top: 14px; }
+
+/* ---------- Chapters ---------- */
+section:not(.hero) { padding-top: 64px; }
+.sec-head { display: grid; gap: 6px; justify-items: center; margin-bottom: 26px; }
+.sec-head .section-title { margin-bottom: 0; }
+.kicker { font: 600 .68rem var(--body); letter-spacing: .36em; text-transform: uppercase; color: var(--accent); }
+.pcard { position: relative; border-radius: 22px; border: 1px solid var(--line); background: var(--card);
+  box-shadow: 0 18px 40px -22px color-mix(in srgb, var(--ink) 40%, transparent); }
+.cs-sharp .pcard { border-radius: 4px; }
+.cs-pill .pcard { border-radius: 32px; }
+
+/* Story: a thread that draws itself as you scroll */
+.story-list { position: relative; display: grid; gap: 20px; text-align: left; padding-left: 34px; }
+.story-thread { position: absolute; left: 10px; top: 8px; bottom: 8px; width: 2px; background: var(--line); }
+.story-thread b { position: absolute; inset: 0; background: linear-gradient(var(--accent), var(--accent2)); transform-origin: top; transform: scaleY(var(--p, 0)); }
+.moment { padding: 20px 22px; }
+.moment::before { content: ''; position: absolute; left: -31px; top: 26px; width: 14px; height: 14px; border-radius: 50%; background: var(--bg); border: 2px solid var(--accent); transition: background .4s .3s, box-shadow .4s .3s; }
+.moment.in::before { background: var(--accent); box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 18%, transparent); }
+.moment h3 { font: 400 1.6rem/1.2 var(--display); color: var(--ink); margin: 4px 0; }
+.moment p:not(.kicker) { font-size: 1rem; color: var(--muted); }
+
+/* Venue: a drawing of the place */
+.venue-card { overflow: hidden; text-align: center; }
+.venue-art { position: relative; aspect-ratio: 16 / 9; max-width: 100%;
+  background: linear-gradient(color-mix(in srgb, var(--accent2) 30%, #1d1030), color-mix(in srgb, var(--accent2) 55%, #4a1a35) 58%, color-mix(in srgb, var(--accent) 65%, #ffd9a0)); }
+.venue-art svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.va-body, .va-ground { fill: color-mix(in srgb, var(--accent2) 15%, #1a0c16); }
+.va-reflect { opacity: .35; }
+.va-water { fill: color-mix(in srgb, var(--accent2) 25%, #1d1030); opacity: .9; }
+.va-moon { fill: #ffe7b3; opacity: .9; }
+.va-win { fill: #ffd98a; animation: vaTwinkle 3s ease-in-out calc(var(--n) * -.6s) infinite; }
+.va-door { fill: #ffcf6e; }
+.va-flag { fill: var(--accent); }
+.va-tree { fill: color-mix(in srgb, #2f5a3a 70%, var(--accent2)); }
+.va-str { fill: none; stroke: rgba(255, 230, 180, .5); stroke-width: 1; }
+.va-bulb { fill: #ffe08a; filter: drop-shadow(0 0 4px #ffd36b); animation: vaTwinkle 2.2s ease-in-out calc(var(--n) * -.4s) infinite; }
+.va-ripple { stroke: rgba(255, 220, 160, .55); stroke-width: 1.2; animation: vaRipple 4s ease-in-out calc(var(--n) * -1s) infinite; }
+.venue-body { display: grid; justify-items: center; gap: 6px; padding: 20px 20px 24px; }
+.venue-body .venue-pin { margin-top: -44px; font-size: 2.2rem; }
+.venue-name { margin: 0; }
+.venue-note { font-size: .95rem; color: var(--muted); max-width: 36ch; margin-bottom: 8px; }
+
+/* Families */
+.fam-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 18px; }
+.fam { display: grid; justify-items: center; gap: 8px; padding: 24px 20px; }
+.fam-mark { width: 60px; height: 60px; }
+.fam-mark svg { width: 100%; height: 100%; fill: none; stroke: var(--accent); stroke-width: 1; animation: spinPlain 60s linear infinite; }
+.fam h3 { font: 400 1.55rem var(--display); color: var(--ink); }
+.fam p { color: var(--muted); font-size: 1rem; line-height: 1.5; }
+.fam .fam-parents { color: var(--ink); font-size: 1.1rem; }
+
+/* Gallery, with a full-screen viewer */
+.gal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 150px; gap: 12px; }
+@media (min-width: 640px) { .gal-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 190px; } }
+.gal-item { padding: 0; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; cursor: zoom-in; background: var(--card); }
+.gal-item:nth-child(3n + 1) { grid-row: span 2; }
+.gal-item img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s ease; }
+.gal-item:hover img { transform: scale(1.06); }
+.lightbox { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 20px; background: rgba(5, 3, 8, .9); cursor: zoom-out; }
+.lightbox img { max-width: 100%; max-height: 86vh; border-radius: 14px; box-shadow: 0 30px 80px rgba(0,0,0,.6); animation: popIn .4s ease both; }
+.lb-x { position: absolute; top: 16px; right: 16px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255,255,255,.4); background: none; color: #fff; font-size: 1rem; cursor: pointer; }
+
+/* Dress code with colour swatches */
+.attire-list { display: grid; gap: 14px; }
+.dress-card { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 14px; padding: 18px 20px; text-align: left; }
+.dress-card h3 { font: 400 1.35rem/1.25 var(--display); color: var(--ink); margin-top: 2px; }
+.swatches { display: flex; padding-left: 8px; }
+.swatches i { width: 32px; height: 32px; border-radius: 50%; margin-left: -8px; background: var(--s); border: 2px solid var(--bg); box-shadow: 0 4px 10px -4px rgba(0,0,0,.4); transition: transform .35s cubic-bezier(.3,1.5,.5,1); }
+.dress-card.in .swatches i { transform: translateY(-4px); transition-delay: calc(var(--k) * 90ms + .4s); }
+
+/* Gifts */
+.gift-card { display: grid; justify-items: center; gap: 14px; padding: 24px 20px; }
+.gift-note { font: italic 400 1.2rem/1.5 var(--display); color: var(--ink); max-width: 32ch; }
+.upi-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; padding: 8px 8px 8px 16px; border-radius: 999px; border: 1px dashed var(--accent); max-width: 100%; }
+.upi-label { font: 700 .66rem var(--body); letter-spacing: .2em; color: var(--accent); }
+.upi-id { font: 500 1rem var(--body); color: var(--ink); user-select: all; overflow-wrap: anywhere; }
+.upi-copy { border: 0; border-radius: 999px; padding: 8px 14px; cursor: pointer; font: 700 .7rem var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--bg); background: var(--accent); }
+
+/* RSVP form: the reply goes to WhatsApp with everything filled in */
+.rsvp-form { display: grid; gap: 14px; padding: 22px 20px; text-align: left; }
+.rsvp-form label { display: grid; gap: 6px; font: 600 .66rem var(--body); letter-spacing: .24em; text-transform: uppercase; color: var(--muted); }
+.rsvp-form label small { letter-spacing: 0; text-transform: none; font-weight: 400; }
+.rsvp-form input:not([type=radio]), .rsvp-form select { font: 400 1rem var(--body); color: var(--ink); padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 70%, transparent); width: 100%; min-width: 0; }
+.rsvp-form input:focus, .rsvp-form select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.rsvp-pills { display: flex; flex-wrap: wrap; gap: 10px; }
+.rsvp-pills label { flex: 1 1 140px; position: relative; display: block; cursor: pointer; letter-spacing: .04em; text-transform: none; font: 500 .95rem var(--body); color: var(--ink); }
+.rsvp-pills input { position: absolute; opacity: 0; pointer-events: none; }
+.rsvp-pills span { display: block; padding: 12px; border-radius: 14px; border: 1px solid var(--line); text-align: center; transition: background .25s, color .25s; }
+.rsvp-pills input:checked + span { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.rsvp-pills input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rsvp-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.rsvp-form .btn { justify-self: center; margin-top: 4px; }
+
+/* Thank-you finale */
+footer.finale { position: relative; overflow: hidden; margin-top: 70px; padding: 70px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px, env(safe-area-inset-left, 0px));
+  background: radial-gradient(120% 70% at 50% 0, color-mix(in srgb, var(--accent2) 40%, #2a0a1a), #12060d); color: #f3e6d8; text-align: center; }
+.finale-mandala { position: absolute; left: 50%; top: 50%; width: 120vmin; max-width: 760px; aspect-ratio: 1; transform: translate(-50%, -50%); opacity: .14; pointer-events: none; }
+.finale-mandala svg { width: 100%; height: 100%; fill: none; stroke: color-mix(in srgb, var(--accent) 60%, #fff); stroke-width: .5; animation: spinPlain 160s linear infinite; }
+.finale > :not(.finale-mandala) { position: relative; } /* the mandala stays absolute, behind the words */
+.thanks { font: 400 clamp(3.2rem, 14vw, 4.6rem)/1.15 var(--script); color: color-mix(in srgb, var(--accent) 70%, #fff); padding-bottom: .1em; }
+.thanks-note { max-width: 34ch; margin: 4px auto 0; font-size: 1.05rem; color: #e8d6c4; }
+.hashtag { margin-top: 16px; font: 600 .9rem var(--body); letter-spacing: .18em; color: color-mix(in srgb, var(--accent) 75%, #fff); }
+.finale-names { margin-top: 22px; font: 500 .7rem var(--body); letter-spacing: .3em; text-transform: uppercase; color: #cdb7a3; }
+.finale .sell { margin-top: 26px; font-size: .9rem; color: #d8c4b2; }
+.finale .sell a { color: #fff3e2; }
+.finale .signature small { color: #cdb7a3; }
+body.has-demo-bar footer.finale { padding-bottom: 130px; }
+
+@keyframes mSway { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+@keyframes mGlow { 50% { opacity: .65; } }
+@keyframes mFlame { from { transform: scaleY(.85) rotate(-4deg); } to { transform: scaleY(1.12) rotate(4deg); } }
+@keyframes mDrop { from { transform: translateY(-60px); opacity: 0; } }
+@keyframes vaTwinkle { 50% { opacity: .4; } }
+@keyframes vaRipple { 50% { transform: translateX(14px); opacity: .25; } }
+@keyframes glowPulseBtn { 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 18%, transparent), 0 8px 24px color-mix(in srgb, var(--accent) 40%, transparent); } }
+
+/* Anything switched off with the hidden attribute stays hidden, whatever its display style (menu, photo viewer) */
+[hidden] { display: none !important; }
+
+/* Readable chapters: the design's display face is for headings only. Long text, card titles and notes use
+   the body face (Cinzel Decorative and friends are all-capitals and tire the eye in sentences). */
+.moment h3, .dress-card h3, .fam h3, .gift-note, .venue-note { font-family: var(--body); text-transform: none; letter-spacing: normal; }
+.moment h3, .fam h3 { font-weight: 600; font-size: 1.35rem; }
+.dress-card h3 { font-weight: 500; font-size: 1.15rem; }
+.gift-note { font-style: italic; font-size: 1.1rem; }
+/* "weds" between the names, in the flowing script */
+.names .amp { font-family: var(--script); text-transform: none; letter-spacing: 0; font-size: .5em; line-height: 1.2; }
+
+/* The finale sizes to its content (the old footer padding left a tall empty band above "Thank you"),
+   and light designs get a soft, light finale instead of a near-black one. */
+footer.finale { min-height: 0; padding-top: 60px; }
+footer.finale .finale-mandala { top: 0; transform: translate(-50%, -40%); }
+.mood-light footer.finale { background: radial-gradient(120% 70% at 50% 0, color-mix(in srgb, var(--accent) 22%, var(--bg2)), var(--bg2)); color: var(--ink); }
+.mood-light .thanks { color: var(--accent); }
+.mood-light .thanks-note, .mood-light .finale .sell, .mood-light .finale-names, .mood-light .finale .signature small { color: var(--muted); }
+.mood-light .finale .sell a { color: var(--ink); }
+.mood-light .hashtag { color: var(--accent); }
+.mood-light .finale-mandala svg { stroke: var(--accent); }

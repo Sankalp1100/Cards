@@ -5,7 +5,14 @@
   const { esc, compact, who } = Core;
   const clone = o => JSON.parse(JSON.stringify(o));
   const form = $('#form'), frame = $('#preview');
-  const FIELDS = ['title', 'host1', 'host2', 'nick1', 'nick2', 'tagline', 'date', 'venue', 'message', 'photo', 'mapUrl', 'rsvp', 'intro'];
+  const FIELDS = ['title', 'host1', 'host2', 'nick1', 'nick2', 'tagline', 'date', 'venue', 'message', 'photo', 'mapUrl', 'rsvp', 'intro',
+    'upi', 'hashtag', 'giftNote', 'venueNote', 'thanks'];
+  // The premium sections' list editors: each entry's fields, with their placeholders.
+  const XLISTS = {
+    story: [['when', 'When, e.g. March 2023', 40], ['title', 'Title, e.g. First Meeting', 60], ['text', 'A line or two', 300]],
+    families: [['side', 'e.g. Bride’s Family', 40], ['parents', 'Parents, e.g. Mr. & Mrs. Mehta', 120], ['more', 'Siblings / more (optional)', 160]],
+    attire: [['name', 'Function, e.g. Haldi', 40], ['text', 'e.g. Sunshine yellow', 100], ['colors', '#f4c430,#ffb347', 80]]
+  };
   const SITE_KEYS = ['url', 'brand', 'designer', 'whatsapp', 'instagram', 'price', 'currency'];
   const STORE_KEY = 'weddingcard.links', DRAFT_KEY = 'weddingcard.config';
   const GALLERY_PAGE = 40;
@@ -313,6 +320,67 @@
     updatePreview(true);
   });
 
+  // ---------- Premium sections ----------
+  function renderXLists() {
+    for (const [key, fields] of Object.entries(XLISTS)) {
+      $(`[data-list="${key}"]`).innerHTML = (state[key] || []).map((e, i) => `
+        <div class="xrow" data-xl="${key}" data-i="${i}">
+          ${fields.map(([f, ph, max]) => f === 'text' && key === 'story'
+            ? `<textarea data-xk="${f}" rows="2" maxlength="${max}" placeholder="${esc(ph)}">${esc(e[f] || '')}</textarea>`
+            : `<input data-xk="${f}" maxlength="${max}" placeholder="${esc(ph)}" value="${esc(e[f] || '')}">`).join('')}
+          <button type="button" class="x" data-xdel="${key}" data-i="${i}" aria-label="Remove">✕</button>
+        </div>`).join('');
+    }
+    renderGallery2();
+  }
+  function renderGallery2() {
+    const g = state.gallery || [];
+    $('#galEdit').innerHTML = g.map((src, i) => `<div class="gal-thumb"><img src="${esc(src)}" alt=""><button type="button" class="x" data-galdel="${i}" aria-label="Remove photo">✕</button></div>`).join('');
+    $('#galInfo').textContent = g.length ? `${g.length}/8 photos · ${Math.round(g.join('').length / 1024)} KB in the link` : '';
+  }
+  // Gallery photos: shrunk harder than the main photo (several fit in one link), keeping their shape.
+  function compressGalleryPhoto(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, 360 / Math.max(img.width, img.height));
+        const cv = Object.assign(document.createElement('canvas'), { width: Math.round(img.width * scale), height: Math.round(img.height * scale) });
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        URL.revokeObjectURL(img.src);
+        let out = cv.toDataURL('image/webp', 0.5);
+        if (!out.startsWith('data:image/webp')) out = cv.toDataURL('image/jpeg', 0.55);
+        resolve(out);
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  }
+  $('#galFile').addEventListener('change', async e => {
+    const files = [...e.target.files];
+    e.target.value = '';
+    state.gallery = state.gallery || [];
+    for (const f of files) {
+      if (state.gallery.length >= 8) { toast('The gallery holds up to 8 photos'); break; }
+      try { state.gallery.push(await compressGalleryPhoto(f)); } catch (err) { toast('Could not read one of the images'); }
+    }
+    touched = true;
+    renderGallery2();
+    updatePreview(true);
+  });
+  form.addEventListener('click', e => {
+    const add = e.target.closest('[data-add]'), del = e.target.closest('[data-xdel]'), gdel = e.target.closest('[data-galdel]');
+    if (add) {
+      const key = add.dataset.add;
+      (state[key] = state[key] || []).push(Object.fromEntries(XLISTS[key].map(([f]) => [f, ''])));
+      renderXLists();
+      $(`[data-list="${key}"] .xrow:last-child [data-xk]`).focus();
+    } else if (del) { state[del.dataset.xdel].splice(+del.dataset.i, 1); renderXLists(); }
+    else if (gdel) { state.gallery.splice(+gdel.dataset.galdel, 1); renderGallery2(); }
+    else return;
+    touched = true;
+    updatePreview();
+  });
+
   function fillForm() {
     const sample = occasion(state).card;
     for (const f of FIELDS) {
@@ -324,6 +392,8 @@
     showMobileHint(form.elements.rsvp);
     renderPhoto();
     form.elements.music.checked = state.music !== false;
+    form.elements.rsvpForm.checked = state.rsvpForm !== false;
+    renderXLists();
     const labels = occasion(state).labels;
     $('#lbl1').textContent = labels[0];
     $('#lbl2').textContent = labels[1];
@@ -346,7 +416,9 @@
   form.addEventListener('input', e => {
     const t = e.target;
     if (t.closest('.event-row')) state.events[t.closest('.event-row').dataset.i][t.dataset.k] = t.value;
+    else if (t.closest('.xrow')) { const r = t.closest('.xrow'); state[r.dataset.xl][r.dataset.i][t.dataset.xk] = t.value; }
     else if (t.name === 'music') state.music = t.checked;
+    else if (t.name === 'rsvpForm') state.rsvpForm = t.checked;
     else if (FIELDS.includes(t.name)) state[t.name] = t.value;
     else return;
     touched = true;
@@ -391,7 +463,8 @@
   });
 
   $('#sampleBtn').addEventListener('click', () => {
-    state = { ...clone(occasion(state).card), theme: state.theme };
+    // The sample text includes example premium sections, so the preview shows the whole page.
+    state = { ...Core.blankCard(), ...clone(occasion(state).card), ...clone(EXTRAS[state.type] || {}), theme: state.theme };
     touched = false;
     fillForm();
     updatePreview(true);

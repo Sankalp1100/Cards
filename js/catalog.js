@@ -74,8 +74,24 @@ const Catalog = {
     add(Core.mobile(order.rsvp), `• RSVP number: ${Core.mobile(order.rsvp)}`);
     add(guests.length, `• Guests (${guests.length}): ${guests.join(', ')}`);
     add(order.photo, `• Photo: I'll send it in this chat`);
+    // "Make it special": named here so the owner sees it; the order code carries the details.
+    const special = [['story', 'our story'], ['families', 'families'], ['attire', 'dress code']].filter(([k]) => (order[k] || []).length).map(([, l]) => l)
+      .concat(plain(order.upi) ? ['gifts (UPI)'] : [], plain(order.hashtag) ? [`hashtag ${plain(order.hashtag)}`] : []);
+    add(special.length, `• Make it special: ${special.join(', ')}`);
     lines.push('', ref ? `Order no: ${ref}` : `Order code (please keep): ${Catalog.orderCode(order)}`);
     return lines.join('\n');
+  },
+
+  // "Make it special" in the order form: one entry per line, "left – right" (a dash, en dash or colon splits it).
+  // Story lines become { when, title }, family lines { side, parents }, dress lines { name, text }.
+  specialLines({ story = '', families = '', attire = '' }) {
+    const rows = s => String(s).split('\n').map(l => l.trim()).filter(Boolean).slice(0, 8)
+      .map(l => { const m = l.match(/^(.*?)\s*[–—:-]\s+(.+)$/); return m ? [m[1].trim(), m[2].trim()] : ['', l]; });
+    return {
+      story: rows(story).map(([when, title]) => ({ when: when.slice(0, 40), title: title.slice(0, 60) })),
+      families: rows(families).map(([side, parents]) => ({ side: side.slice(0, 40), parents: parents.slice(0, 120) })),
+      attire: rows(attire).map(([name, text]) => name ? { name: name.slice(0, 40), text: text.slice(0, 100) } : { name: text.slice(0, 40), text: '' })
+    };
   },
 
   // Optional Google Maps location: only plain http(s) links are kept.
@@ -99,7 +115,8 @@ const Catalog = {
     const o = Core.compact({
       design: order.design || '', type: order.type, host1: order.host1, host2: order.host2, nick1: order.nick1, nick2: order.nick2, date: order.date, venue: order.venue, mapUrl: Catalog.mapLink(order.mapUrl),
       events: (order.events || []).map(ev => ({ name: ev.name, date: ev.date, venue: ev.venue })), message: order.message,
-      rsvp: Core.mobile(order.rsvp), guests: (order.guests || []).map(g => String(g).trim()).filter(Boolean).join('\n'), photo: order.photo ? 1 : ''
+      rsvp: Core.mobile(order.rsvp), guests: (order.guests || []).map(g => String(g).trim()).filter(Boolean).join('\n'), photo: order.photo ? 1 : '',
+      story: order.story, families: order.families, attire: order.attire, upi: order.upi, hashtag: order.hashtag
     });
     return Catalog.ORDER_TAG + Codec.encode(o);
   },
@@ -122,6 +139,10 @@ const Catalog = {
       events: (o.events || []).filter(ev => ev && typeof ev.name === 'string' && ev.name.trim()).slice(0, 15)
         .map(ev => ({ name: str(ev.name), date: str(ev.date), venue: str(ev.venue), dress: '' }))
     };
+    // "Make it special" sections, cleaned the same way the card cleans them.
+    const x = Core.extras(o);
+    Object.assign(card, { story: x.story, families: x.families, upi: x.upi, hashtag: x.hashtag,
+      attire: x.attire.map(a => ({ name: a.name, text: a.text, colors: a.colors.join(',') })) });
     const t = Templates.get(o.design);
     if (t) card.theme = t.no;
     const guests = (typeof o.guests === 'string' ? o.guests : '').split('\n').map(g => g.trim().slice(0, 60)).filter(Boolean).slice(0, 500);
@@ -132,7 +153,7 @@ const Catalog = {
   // A catalog-chosen opening travels in the link, so the card never needs the database.
   demoCode(e) {
     const intro = e.intro && e.intro !== (Templates.get(e.no) || {}).intro ? e.intro : '';
-    return Codec.encode(Core.compact({ ...PRESETS[e.occasion].card, theme: e.no, intro }));
+    return Codec.encode(Core.compact({ ...PRESETS[e.occasion].card, ...(EXTRAS[e.occasion] || {}), theme: e.no, intro }));
   },
 
   // Lightweight poster (plain HTML/CSS, no iframe). `tag`/`attrs` let each page make it a link or a button.

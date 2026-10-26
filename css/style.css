@@ -803,3 +803,11 @@ body.admin::before { display: none; }
 /* The design tiles in the order form scroll sideways without a visible scrollbar */
 .os-picks { scrollbar-width: none; }
 .os-picks::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+/* Order form: labels sit above their hint, with breathing room */
+.os-special { display: grid; gap: 12px; padding: 12px 14px; border-radius: 16px; border: 1px dashed var(--line); }
+.os-special summary { cursor: pointer; font-weight: 700; }
+.os-special summary small { font-weight: 400; color: var(--muted); }
+.os-special[open] summary { margin-bottom: 4px; }
+.os-special label { display: grid; gap: 6px; }
+.os-special label small { color: var(--muted); }

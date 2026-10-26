@@ -131,6 +131,38 @@
             <label>Opening animation <small>(how the invitation opens)</small> <select name="intro" id="introSelect"></select></label>
             <label class="switch"><input type="checkbox" name="music"> <span></span> Background music</label>
           </fieldset>
+
+          <fieldset class="premium-fields">
+            <legend>Premium sections <small>(each one shows only when filled)</small></legend>
+            <p class="hint">“Sample text” fills these with examples. Leave anything empty to hide that section.</p>
+
+            <h4>💞 Story <small>(moments, in order)</small></h4>
+            <div class="xlist" data-list="story"></div>
+            <button type="button" class="btn-small" data-add="story">+ Add moment</button>
+
+            <h4>👨‍👩‍👧 Families</h4>
+            <div class="xlist" data-list="families"></div>
+            <button type="button" class="btn-small" data-add="families">+ Add family</button>
+
+            <h4>👗 Dress code <small>(colours as #hex, comma separated)</small></h4>
+            <div class="xlist" data-list="attire"></div>
+            <button type="button" class="btn-small" data-add="attire">+ Add dress code</button>
+
+            <h4>🖼️ Photo gallery <small>(up to 8, shrunk to fit the link)</small></h4>
+            <div class="gal-edit" id="galEdit"></div>
+            <label class="btn-small upload">⬆ Add photos<input type="file" id="galFile" accept="image/*" multiple hidden></label>
+            <small id="galInfo"></small>
+
+            <h4>🎁 Gifts, venue and finale</h4>
+            <div class="row">
+              <label>UPI ID for gifts <small>(optional)</small> <input name="upi" maxlength="60" placeholder="name@okhdfc"></label>
+              <label>Hashtag <small>(optional)</small> <input name="hashtag" maxlength="40" placeholder="#DiyaKaAarav"></label>
+            </div>
+            <label>Gift note <input name="giftNote" maxlength="200" placeholder="Your presence is the greatest gift…"></label>
+            <label>Venue note <small>(parking, boats, timings)</small> <input name="venueNote" maxlength="200" placeholder="Boats leave the jetty every 15 minutes from 6:30 pm."></label>
+            <label>Thank-you line <input name="thanks" maxlength="200" placeholder="For your love, your blessings…"></label>
+            <label class="switch"><input type="checkbox" name="rsvpForm"> <span></span> RSVP form (name, guests, meal) before WhatsApp</label>
+          </fieldset>
         </form>
 
         <aside class="preview-col">
