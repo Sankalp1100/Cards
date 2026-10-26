@@ -38,6 +38,8 @@ const SCENES = ['glow', 'aurora', 'mesh', 'grain', 'bokeh', 'rays', 'waves', 'gr
 const NAME_FX = ['drop', 'rise', 'blur', 'flip', 'stamp', 'scatter', 'type', 'swing'];
 const FRAMES = ['ring', 'arch', 'polaroid', 'blob', 'halo'];
 const REVEALS = ['up', 'zoom', 'flip', 'slide', 'blur', 'wipe'];
+// Backgrounds that would only repeat a decor's pattern.
+const CLASHES = { sunburst: 'rays', deco: 'grid', mandala: 'rays', blobs: 'mesh' };
 
 // The original 12 hand-made designs are #001–#012. `key` keeps links made before numbering working.
 const CLASSICS = [
@@ -316,6 +318,8 @@ const TEMPLATES = (() => {
         scene: pool[(n * 3 + c) % pool.length], nameFx: NAME_FX[(i * 5 + c * 3 + (c >> 3)) % NAME_FX.length],
         frame: FRAMES[(i * 2 + c + (c >> 2)) % FRAMES.length], reveal: REVEALS[(i + c * 5 + (c >> 1)) % REVEALS.length]
       };
+      // A background never repeats the decor's own pattern (rays on a sunburst, a line grid on art-deco fans).
+      if (pick.scene && CLASHES[t.decor] === pick.scene) continue;
       const l = lookOf({ ...t, ...pick });
       if (!t.scene && looks.has(l.join('|'))) continue;
       const s = same.reduce((m, o) => Math.min(m, differ(l, o)), 99) * 100 + (prev ? differ(l, prev) : 99);
