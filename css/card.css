@@ -1137,3 +1137,17 @@ body.scrolled .scene-grid .sun { animation: none; opacity: .07; }
   .demo-bar { left: 10px; right: 72px; bottom: 12px; padding: 5px 5px 5px 14px; font-size: .78rem; }
   .demo-bar .btn { padding: 8px 14px; font-size: .78rem; }
 }
+
+/* ---------- Smoothness on phones ---------- */
+/* No live frosted-glass blur: it is recalculated on every frame behind moving backgrounds. A solid tint looks
+   the same at a glance and costs nothing. */
+.pbar { backdrop-filter: none; -webkit-backdrop-filter: none; background: color-mix(in srgb, var(--bg) 94%, transparent); }
+.date-badge { backdrop-filter: none; -webkit-backdrop-filter: none; }
+/* The names' shimmer, glow or wiggle plays twice after opening and then rests (looping forever repainted
+   every letter on every frame). */
+.opened .names .ch { animation-iteration-count: 1, 2; }
+/* Entrances without blur filters (a blur on every letter made the opening stutter on phones):
+   the same fade, rise and grow, drawn cheaply. */
+@keyframes floatIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
+@keyframes dropIn { 0% { opacity: 0; transform: translateY(-80px) rotate(-25deg) scale(.4); } 100% { opacity: 1; transform: none; } }
+@keyframes blurIn { from { opacity: 0; transform: scale(1.5); } to { opacity: 1; transform: none; } }

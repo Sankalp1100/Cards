@@ -295,3 +295,4 @@ body.logged-out .side, body.logged-out .admin-main { display: none; }
 /* Small phones: the form and preview columns shrink to the screen instead of to their contents */
 .create-grid > * { min-width: 0; }
 @media (max-width: 900px) { .create-grid { grid-template-columns: minmax(0, 1fr); } }
+.admin .logo { padding-block: 9px; } /* taller tap area on phones */
