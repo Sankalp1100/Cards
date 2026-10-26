@@ -775,3 +775,7 @@ body[data-tab="trending"] :is(.hero, .marquee-wrap, .bento, #templates, .how, #o
   .l-ticket .p-body { padding: 10px 8px; }
   .l-arch .p-body { padding: 24px 8px 10px; }
 }
+
+/* Gradient poster names: room for the tails of g, y and f (see card.css) */
+.p-names { padding: .1em .1em .25em; margin: -.1em 0 -.25em; }
+.sig-name b { padding: .15em .05em .3em; margin: -.15em -.02em -.3em; }

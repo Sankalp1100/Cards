@@ -720,3 +720,11 @@ body[class] .reveal.in { transform: none; filter: none; }
 
 /* Sections that slide or grow in while waiting to appear must never widen the page on a phone */
 main { overflow-x: hidden; overflow-x: clip; }
+
+/* Gradient-filled letters only paint inside their own box, and script fonts (Pacifico, Great Vibes…) hang
+   their g, y, f tails and swashes outside it. Give every letter extra paint room above and below, then take
+   the same room back with negative margins, so the tails are filled and the layout does not move. */
+.names .ch { padding: .18em .06em .32em; margin: -.18em -.02em -.32em; }
+.signature span { padding-bottom: .3em; margin-bottom: -.3em; }
+/* ...and leave room under the names so those tails never touch the line below */
+.names { padding-bottom: .14em; }
