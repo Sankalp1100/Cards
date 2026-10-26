@@ -796,3 +796,6 @@ body[data-tab="trending"] :is(.hero, .marquee-wrap, .bento, #templates, .how, #o
 /* Pop-up panels (demo picker, order form): no visible scrollbar; they still scroll by touch, wheel and trackpad */
 .os-body { scrollbar-width: none; }
 .os-body::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+/* The solid band behind the website's floating top bar is for the website only: on the admin panel it covered the heading */
+body.admin::before { display: none; }
