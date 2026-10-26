@@ -260,7 +260,9 @@ function generated(occasion, j, c) {
   return {
     name: `${hueName} ${r.nouns[j]}`, emoji: pick(r.emoji), occasion,
     decor: pick(r.decor, j + (j >> 2)), layout: LAYOUTS[(j + 2 * c) % LAYOUTS.length],
-    nameStyle: NAME_STYLES[(j * 3 + c) % NAME_STYLES.length], cardStyle: CARD_STYLES[(j + (j >> 2) + c) % CARD_STYLES.length], intro: pick(r.intros, j + (j >> 1)), flavor: r.flavor ? pick(r.flavor) : '',
+    nameStyle: NAME_STYLES[(j * 3 + c) % NAME_STYLES.length], cardStyle: CARD_STYLES[(j + (j >> 2) + c) % CARD_STYLES.length], intro: pick(r.intros, j + (j >> 1)),
+    // Neon lettering is white light: it only works on a dark background.
+    flavor: r.flavor && !(pick(r.flavor) === 'neon' && !dark) ? pick(r.flavor) : '',
     vars: p.vars, fonts: FONT_SETS[pick(r.fonts, j + (j >> 1))],
     particles: { types, colors: p.colors, count: r.count, fireworks: !!(r.fireworks && dark) },
     tempo: r.tempo

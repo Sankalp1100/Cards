@@ -697,7 +697,7 @@ body[class] .reveal.in { transform: none; filter: none; }
 @keyframes aurora { 0% { transform: translateX(-16vw) rotate(-12deg) scaleY(.7); } 100% { transform: translateX(16vw) rotate(10deg) scaleY(1.25); } }
 @keyframes meshMove { to { transform: translate(var(--x), var(--y)) scale(1.18); } }
 @keyframes grain { 0% { transform: translate(0, 0); } 20% { transform: translate(-30px, 20px); } 40% { transform: translate(20px, -30px); } 60% { transform: translate(-20px, -10px); } 80% { transform: translate(30px, 30px); } }
-@keyframes bokeh { 0% { opacity: 0; transform: translateY(0) scale(var(--s)); } 15%, 80% { opacity: .38; } 100% { opacity: 0; transform: translate(6vw, -135vh) scale(var(--s)); } }
+@keyframes bokeh { 0% { opacity: 0; transform: translateY(0) scale(var(--s)); } 15%, 80% { opacity: .24; } 100% { opacity: 0; transform: translate(6vw, -135vh) scale(var(--s)); } }
 @keyframes waveX { to { transform: translateX(-50%); } }
 @keyframes gridRun { to { transform: translateY(50px); } }
 @keyframes silk { to { transform: translateX(180px) skewX(-6deg); } }
@@ -728,3 +728,26 @@ main { overflow-x: hidden; overflow-x: clip; }
 .signature span { padding-bottom: .3em; margin-bottom: -.3em; }
 /* ...and leave room under the names so those tails never touch the line below */
 .names { padding-bottom: .14em; }
+
+/* Petals, balloons and confetti fall over the opening screen, but behind the words once the card is open,
+   so they never cover the names. */
+.opened #fx { z-index: 1; }
+
+/* Light backgrounds: deeper metallic, holographic and glow finishes, so the names stay readable */
+.mood-light.ns-chrome .names .ch {
+  background: linear-gradient(110deg, transparent 40%, rgba(255,255,255,.85) 50%, transparent 60%) 0 0 / 300% 100%,
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 70%, #000) 0%, var(--accent) 42%, color-mix(in srgb, var(--accent) 45%, #000) 52%, var(--accent) 62%, color-mix(in srgb, var(--accent) 75%, #000) 100%);
+  -webkit-background-clip: text; background-clip: text; }
+.mood-light.ns-holo .names .ch {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 55%, #c8127f), color-mix(in srgb, var(--accent) 55%, #1662c4), color-mix(in srgb, var(--accent) 55%, #0f8a52),
+    color-mix(in srgb, var(--accent) 55%, #b35c00), color-mix(in srgb, var(--accent) 55%, #c8127f)) 0 0 / 400% 100%;
+  -webkit-background-clip: text; background-clip: text; }
+.mood-light.ns-glow .names .ch { text-shadow: 0 2px 0 color-mix(in srgb, var(--accent) 25%, transparent), 0 0 .35em color-mix(in srgb, var(--accent) 35%, transparent); }
+.mood-light.ns-glow .names .ch { --loop: none; }
+.mood-light .names { filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--ink) 18%, transparent)); }
+
+/* The designer's signature: small, in the bottom-right corner, never the main event */
+footer .signature { display: flex; align-items: baseline; justify-content: flex-end; gap: 6px; width: max-content; max-width: 100%; margin: 18px 0 30px auto; padding-right: 4px; }
+footer .signature small { font-size: .52rem; letter-spacing: .25em; opacity: .8; }
+footer .signature span { font-size: 1.45rem; line-height: 1.3; padding: 0 .15em .25em; margin-bottom: -.25em; }
+footer .signature::after { display: none; }

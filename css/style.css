@@ -779,3 +779,16 @@ body[data-tab="trending"] :is(.hero, .marquee-wrap, .bento, #templates, .how, #o
 /* Gradient poster names: room for the tails of g, y and f (see card.css) */
 .p-names { padding: .1em .1em .25em; margin: -.1em 0 -.25em; }
 .sig-name b { padding: .15em .05em .3em; margin: -.15em -.02em -.3em; }
+
+/* Live demo picker: the chosen occasion's designs as tappable tiles, then a number box */
+.ds-body { display: grid; gap: 12px; padding-bottom: 20px; }
+.ds-h { font-weight: 700; font-size: .9rem; color: var(--ink); }
+.ds-picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 10px; }
+.ds-picks .os-pick { position: relative; width: auto; height: 118px; padding: 6px 4px; text-decoration: none; }
+.ds-picks .os-pick small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 .62rem 'Space Grotesk', sans-serif; color: var(--i, #fff); opacity: .85; }
+.ds-picks .os-pick i { position: absolute; top: 4px; right: 6px; font-style: normal; font-size: .8rem; }
+.ds-picks .os-pick:hover { border-color: #fff; }
+.ds-num { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
+.ds-num label { flex: 1 1 180px; display: grid; gap: 6px; font-size: .85rem; color: var(--muted); }
+.ds-num .btn-glow { padding: 12px 22px; }
+.ds-msg { min-height: 1.2em; font-size: .85rem; color: #ff8fab; }

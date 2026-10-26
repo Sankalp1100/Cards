@@ -165,6 +165,53 @@
 
   if (designs[0]) $('#demoBtn').href = `card.html?demo#${Catalog.demoCode(designs[0])}`;
 
+  // ---------- Live demo picker ----------
+  // "See a live demo" asks which design: pick an occasion, then tap one of its designs, or type a number.
+  // (The button's own link still plays the first design if scripts are slow.)
+  const demoSheet = $('#demoSheet');
+  let demoOcc = 'wedding';
+  const demoHref = d => `card.html?demo#${Catalog.demoCode(d)}`;
+  function renderDemoPicker() {
+    $('#dsOcc').innerHTML = Object.entries(PRESETS).map(([k, p]) =>
+      `<button type="button" class="chip${k === demoOcc ? ' on' : ''}" data-docc="${k}">${p.icon} ${esc(p.label)}</button>`).join('');
+    $('#dsPicks').innerHTML = designs.filter(d => d.occasion === demoOcc).map(d => {
+      const v = d.vars;
+      return `<a class="os-pick" href="${demoHref(d)}" target="_blank" rel="noopener" title="${esc(d.name)}" aria-label="Live demo: design ${Templates.serial(d.no)} ${esc(d.name)}"
+        style="--a:${v['--accent']};--a2:${v['--accent2']};--b:${v['--bg']};--c:${v['--bg2']};--i:${v['--ink']}">${d.featured ? '<i>🔥</i>' : ''}<span>${d.emoji}</span><b>${Templates.serial(d.no)}</b><small>${esc(d.name)}</small></a>`;
+    }).join('');
+  }
+  function closeDemo() {
+    demoSheet.hidden = true;
+    document.body.classList.remove('sheet-open');
+  }
+  $('#demoBtn').addEventListener('click', e => {
+    e.preventDefault();
+    $('#dsMsg').textContent = '';
+    $('#dsNum').reset();
+    renderDemoPicker();
+    demoSheet.hidden = false;
+    document.body.classList.add('sheet-open');
+  });
+  $('#dsOcc').addEventListener('click', e => {
+    const b = e.target.closest('[data-docc]');
+    if (!b) return;
+    demoOcc = b.dataset.docc;
+    renderDemoPicker();
+  });
+  $('#dsNum').addEventListener('submit', e => {
+    e.preventDefault();
+    const t = Templates.get(e.target.elements.no.value);
+    const d = t && designs.find(x => x.no === t.no);
+    if (!d) { $('#dsMsg').textContent = 'There is no design with that number. Pick one above.'; return; }
+    window.open(demoHref(d), '_blank', 'noopener');
+  });
+  $('#dsNum').elements.no.addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, ''); $('#dsMsg').textContent = ''; });
+  // A design opened from the picker closes it, so the page is ready when the customer comes back.
+  $('#dsPicks').addEventListener('click', e => { if (e.target.closest('a')) setTimeout(closeDemo, 300); });
+  $('#dsClose').addEventListener('click', closeDemo);
+  demoSheet.addEventListener('click', e => { if (e.target === demoSheet) closeDemo(); });
+  addEventListener('keydown', e => { if (e.key === 'Escape' && !demoSheet.hidden) closeDemo(); });
+
   // ---------- Motion ----------
   // Cursor glow + parallax, one update per frame. The variables live on the cards' container only:
   // setting them on <html> made the browser restyle the whole page on every mouse move.

@@ -87,7 +87,11 @@ const DB = (() => {
         this.select('site_settings', 'select=data&id=eq.1', opts),
         this.select('catalog', 'select=design_no,data', opts)
       ]);
-      return { site: (settings[0] && settings[0].data) || {}, catalog: Object.fromEntries(rows.map(r => [r.design_no, r.data])) };
+      const site = { ...((settings[0] && settings[0].data) || {}) };
+      // The brand was renamed from "Wedding Card" to "CardAlbum"; settings saved before that still say the old name.
+      // (The admin then saves the new name back with its next change.)
+      if (site.brand === 'Wedding Card') site.brand = 'CardAlbum';
+      return { site, catalog: Object.fromEntries(rows.map(r => [r.design_no, r.data])) };
     }
   };
 })();

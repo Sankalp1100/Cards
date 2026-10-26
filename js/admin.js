@@ -1092,6 +1092,7 @@
       const live = await DB.loadCatalog({ timeout: 8000 });
       published = normalize({ site: { ...SITE, ...live.site }, catalog: live.catalog });
       cfg = loadDraft() || clone(published);
+      if (cfg.site.brand === 'Wedding Card') cfg.site.brand = 'CardAlbum'; // a draft from before the rename
     } catch (e) {
       toast(`Could not load the catalog: ${friendly(e.message)}`);
     }

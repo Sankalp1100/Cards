@@ -127,6 +127,12 @@ const Core = {
     return url.href;
   },
 
+  // How bright a #rrggbb colour looks, 0 (black) to 1 (white).
+  luminance(hex) {
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(String(hex).slice(i, i + 2), 16) / 255);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b || 0;
+  },
+
   // Google Fonts URL for just the families one theme uses (instead of every family on every card).
   fontsUrl(fonts) {
     const weights = { 'Cinzel Decorative': '400;700', 'Cormorant Garamond': '400;600', 'Playfair Display': '400;700', 'Poppins': '300;500', 'Fredoka': '400;600', 'Lora': '400;600', 'Baloo 2': '400;600', 'Dancing Script': '400;700' };

@@ -157,6 +157,27 @@
     <a href="#how" data-sec="how"><i>✨</i><span>How</span></a>
   </nav>
 
+  <!-- Live demo picker: choose an occasion and a design (or type its number) to play its sample card -->
+  <div class="order-sheet" id="demoSheet" hidden>
+    <div class="os-box" role="dialog" aria-modal="true" aria-labelledby="dsTitle">
+      <header class="os-head">
+        <b id="dsTitle">Which design do you want to see?</b>
+        <button type="button" class="os-x" id="dsClose" aria-label="Close">✕</button>
+      </header>
+      <div class="os-body ds-body">
+        <p class="ds-h">1. What are you celebrating?</p>
+        <div class="os-occ" id="dsOcc"></div>
+        <p class="ds-h">2. Tap a design to play its live demo</p>
+        <div class="ds-picks" id="dsPicks"></div>
+        <form class="ds-num" id="dsNum" autocomplete="off">
+          <label>Or type a design number <input name="no" inputmode="numeric" maxlength="3" placeholder="e.g. 47"></label>
+          <button class="btn-glow" type="submit">▶ Play</button>
+        </form>
+        <p class="ds-msg" id="dsMsg" aria-live="polite"></p>
+      </div>
+    </div>
+  </div>
+
   <!-- Order form: collects the details step by step, then sends one complete WhatsApp message -->
   <div class="order-sheet" id="orderSheet" hidden>
     <div class="os-box" role="dialog" aria-modal="true" aria-labelledby="osTitle">

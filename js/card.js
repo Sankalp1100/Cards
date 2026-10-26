@@ -228,8 +228,10 @@
     if ($('#themeFonts').getAttribute('href') !== fonts) $('#themeFonts').href = fonts;
     // Name style only applies without a flavour (neon and playful have their own lettering).
     const cls = [`theme-${t.no}`, t.flavor ? `flavor-${t.flavor}` : `ns-${t.nameStyle || 'shimmer'}`, `cs-${t.cardStyle || 'soft'}`,
-      `fx-${t.nameFx || 'drop'}`, `pf-${t.frame || 'ring'}`, `rv-${t.reveal || 'up'}`, `ev-${t.events || 'timeline'}`, `cdn-${t.countdown || 'boxes'}`, `tt-${t.titles || 'flourish'}`];
-    document.body.className = document.body.className.replace(/\b(theme|flavor|ns|cs|fx|pf|rv|ev|cdn|tt)-\S+/g, '').trim() + ' ' + cls.join(' ');
+      `fx-${t.nameFx || 'drop'}`, `pf-${t.frame || 'ring'}`, `rv-${t.reveal || 'up'}`, `ev-${t.events || 'timeline'}`, `cdn-${t.countdown || 'boxes'}`, `tt-${t.titles || 'flourish'}`,
+      // Light or dark background, so metallic, holographic and glowing names stay readable on both.
+      `mood-${Core.luminance(t.vars['--bg']) > 0.4 ? 'light' : 'dark'}`];
+    document.body.className = document.body.className.replace(/\b(theme|flavor|ns|cs|fx|pf|rv|ev|cdn|tt|mood)-\S+/g, '').trim() + ' ' + cls.join(' ');
     renderScene(t.scene || 'glow');
     const meta = $('meta[name="theme-color"]') || document.head.appendChild(Object.assign(document.createElement('meta'), { name: 'theme-color' }));
     meta.content = t.vars['--bg'];
@@ -379,8 +381,8 @@
       </section>
 
       <footer>
-        <p class="signature reveal"><small>Designed with ♥ by</small><span>${esc(SITE.designer || 'Sankalp')}</span></p>
         Loved this invitation? <a href="index.html">Get one for your celebration</a> 💌<br><small>${esc(SITE.brand)}</small>
+        <p class="signature reveal"><small>Designed by</small><span>${esc(SITE.designer || 'Sankalp')}</span></p>
       </footer>`;
 
     const who = Core.who(d);

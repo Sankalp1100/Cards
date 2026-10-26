@@ -327,6 +327,9 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       assert.ok(await page.eval(`!!document.querySelector('${decor}')`), `#${t.no} decor ${t.decor}`);
       assert.ok(await page.eval(`!!document.querySelector('#scene.scene-${t.scene}') && ['fx-${t.nameFx}', 'pf-${t.frame}', 'rv-${t.reveal}', 'ev-${t.events}', 'cdn-${t.countdown}', 'tt-${t.titles}'].every(c => document.body.classList.contains(c))`), `#${t.no} animated look`);
       assert.match(await page.eval(`document.querySelector('footer .signature').textContent`), /Sankalp/, `#${t.no} signed`);
+      // Once the entrance animations end, every letter of the names is visible.
+      assert.ok(await page.eval(`(document.getAnimations().forEach(a => { const x = a.effect && a.effect.getComputedTiming(); if (x && x.iterations === 1) a.finish(); }),
+        [...document.querySelectorAll('.names .ch')].every(c => +getComputedStyle(c).opacity > .9))`), `#${t.no} names visible after the ${t.nameFx} entrance`);
       assert.deepEqual(page.errors, [], `errors in design #${t.no}`);
     }
   });
