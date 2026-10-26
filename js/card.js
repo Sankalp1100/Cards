@@ -511,11 +511,17 @@
         <button class="btn ghost" id="shareBtn" type="button">🔗 Share</button>
       </section>
 
-      <footer class="finale">
+<footer class="finale">
         <div class="finale-mandala" aria-hidden="true">${mandalaSVG()}</div>
         <p class="thanks reveal">Thank you</p>
         <p class="thanks-note">${esc(x.thanks || 'For your love, your blessings, and for being part of our celebration.')}</p>
         ${x.hashtag ? `<p class="hashtag">${esc(x.hashtag.startsWith('#') ? x.hashtag : '#' + x.hashtag)}</p>` : ''}
+        ${record ? `
+      <div class="video-link">
+        <p class="kicker">Open your invitation</p>
+        <p class="vl-url">${esc((safeUrl(params.get('link')) || 'https://cardalbum.vercel.app/').replace(/^https?:\/\//, ''))}</p>
+        <p class="vl-note">RSVP, directions and save the date are inside the link</p>
+      </div>` : ''}
         <p class="finale-names">${esc(Core.who(d))}${when ? ` · ${esc(when.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }))}` : ''}</p>
         <p class="sell">Loved this invitation? <a href="index.html">Get one for your celebration</a> 💌<br><small>${esc(SITE.brand)}</small></p>
         <p class="signature reveal"><small>Designed by</small><span>${esc(SITE.designer || 'Sankalp')}</span></p>
@@ -729,11 +735,12 @@
     Promise.race([Promise.all(fonts).then(() => document.fonts.ready), wait(5000)]).then(() => tell('ready'));
     addEventListener('message', async e => {
       if (!e.data || e.data.wcRecord !== 'start') return;
-      await wait(1200);
+      await wait(600);
       openCard();
-      await wait((OPEN_MS[introKind] || 1500) + 3500);
+      await wait((OPEN_MS[introKind] || 1500) + 3000);
+      // A calm, even scroll (about 300px a second): fast scrolling over a long page looked jerky in the video.
       const el = document.scrollingElement, end = el.scrollHeight - innerHeight;
-      const ms = Math.min(14000, Math.max(6000, end * 6));
+      const ms = Math.min(32000, Math.max(6000, end * 3.4));
       const t0 = performance.now();
       await new Promise(done => {
         const step = now => {
@@ -761,5 +768,5 @@
   addEventListener('hashchange', () => { if (!document.getElementById(location.hash.slice(1))) show(); });
   addEventListener('resize', () => fitNames());
   show();
-  if (record) setupRecording();
+  if (record) { document.body.classList.add('recording'); setupRecording(); }
 })();

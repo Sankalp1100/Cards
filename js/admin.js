@@ -683,7 +683,11 @@
     $('#recVideo').hidden = true;
     $('#recDownload').hidden = true;
     $('#recModal').hidden = false;
-    recFrame.src = 'card.html?record#' + code({ music: false });
+    // The video ends on the invitation's link as text (buttons cannot be tapped in a video): the common link if
+    // links were made, else the latest one, else the website's address.
+    const made = lastResults.find(r => !r.guest) || lastResults[0];
+    const link = made ? made.url : (cfg.site.url || 'https://cardalbum.vercel.app/');
+    recFrame.src = `card.html?record&link=${encodeURIComponent(link)}#` + code({ music: false });
   }
 
   function closeRecorder() {
@@ -706,7 +710,8 @@
     recStatus('Chrome will ask to share this tab: click "Allow" (or "Share"). Only the card is recorded.');
     try {
       // Has to run straight from the click.
-      recStream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30, width: { ideal: 3840 }, height: { ideal: 2160 }, resizeMode: 'none' }, audio: false, preferCurrentTab: true, selfBrowserSurface: 'include', surfaceSwitching: 'exclude' });
+      // Full HD at a steady 30 frames: 4K made the computer drop frames, so the video stuttered.
+      recStream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: 30, max: 30 }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false, preferCurrentTab: true, selfBrowserSurface: 'include', surfaceSwitching: 'exclude' });
     } catch (e) {
       recStatus('Video cancelled. Click "Download video" again and choose Allow.');
       return;
@@ -739,11 +744,11 @@
     recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
     const stopped = new Promise(r => { recorder.onstop = r; });
 
-    const t0 = Date.now(), expected = 23000;
+    const t0 = Date.now(), expected = 40000;
     const tick = setInterval(() => recStatus(`🔴 Recording… ${Math.round((Date.now() - t0) / 1000)}s. Keep this window open.`, Math.min(0.97, (Date.now() - t0) / expected)), 250);
     recorder.start(500);
     recFrame.contentWindow.postMessage({ wcRecord: 'start' }, '*');
-    try { await recWait('done', 60000); }
+    try { await recWait('done', 75000); }
     finally {
       clearInterval(tick);
       if (recorder.state !== 'inactive') recorder.stop();
