@@ -862,12 +862,15 @@
     if (box.children.length) return;
     box.innerHTML = Studio.SCENES.map(id => { const L = Studio.LOOKS[id];
       return `<button type="button" class="st-look" data-look="${id}" title="${esc(L.note)}"><canvas width="135" height="240"></canvas><span>${esc(L.name)}</span></button>`; }).join('');
-    [...box.querySelectorAll('[data-look]')].forEach((b, i) => setTimeout(() => Studio.thumb(b.dataset.look, b.querySelector('canvas')), 150 + i * 120));
+    // Painted after the preview has started, one at a time in idle moments, so the preview never stalls
+    const idle = fn => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 800 }) : setTimeout(fn, 60));
+    [...box.querySelectorAll('[data-look]')].forEach((b, i) => setTimeout(() => idle(() => Studio.thumb(b.dataset.look, b.querySelector('canvas'))), 1200 + i * 250));
     refreshStudio();
   }
 
   function studioFrame(now) {
-    const p = st.player, dt = Math.max(0, Math.min(.1, (now - st.last) / 1000));
+    // The preview keeps real time, even when a frame comes late (only a long pause, like a hidden tab, is skipped)
+    const p = st.player, dt = Math.max(0, Math.min(.5, (now - st.last) / 1000));
     st.last = now;
     if (st.rec) st.t = Math.max(0, now - st.rec.t0) / 1000;
     else if (st.playing) st.t = (st.t + dt) % p.total;

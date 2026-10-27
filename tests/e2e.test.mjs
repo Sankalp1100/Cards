@@ -828,7 +828,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       const colours = `(() => { const c = document.querySelector('#stCanvas'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, s = new Set(); for (let i = 0; i < d.length; i += 4 * 997) s.add(d[i] >> 4 << 8 | d[i + 1] >> 4 << 4 | d[i + 2] >> 4); return s.size; })()`;
       assert.ok(await page.eval(colours) > 40, 'the scene is painted');
       const t1 = await page.eval(`document.querySelector('#stTime').textContent`);
-      await sleep(1200);
+      await page.waitFor(`document.querySelector('#stTime').textContent !== ${JSON.stringify(t1)}`, 4000).catch(() => {});
       assert.notEqual(await page.eval(`document.querySelector('#stTime').textContent`), t1, 'the preview plays');
       // Scenes follow the options
       assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stScenes .chip')].map(b => b.textContent)`), ['Opening', 'Invitation', 'Functions', 'Save the date', 'Closing']);
