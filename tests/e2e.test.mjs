@@ -812,7 +812,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       fs.rmSync(dir, { recursive: true, force: true });
     });
 
-    test('Video Studio: its own screen, 100 looks, the story as scenes, and an MP4 made by itself from a customer order', async () => {
+    test('Video Studio: its own screen, 200 looks, the story as scenes, and an MP4 made by itself from a customer order', async () => {
       const fs = await import('node:fs'), os = await import('node:os');
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wc-studio-'));
       await page.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: dir });
@@ -820,7 +820,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       await page.goto(origin + '/admin.html?offline', 1000);
       await page.eval(`document.querySelector('#studioBtn').click()`);
       await page.waitFor(`!document.querySelector('#studio').hidden && document.querySelectorAll('#stScenes [data-scene]').length > 0`, 8000);
-      assert.equal(await page.eval(`document.querySelectorAll('#stLooks [data-look]').length`), 10, 'ten scenes');
+      assert.equal(await page.eval(`document.querySelectorAll('#stLooks [data-look]').length`), 20, 'twenty scenes');
       assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stMoods .chip')].map(b => b.textContent)`), ['Morning', 'Golden Hour', 'Moonlit', 'Rose Blush', 'Mint Fresh', 'Lavender Dream', 'Vintage Sepia', 'Royal Night', 'Emerald', 'Sunset Coral'], 'ten moods each');
       assert.equal(await page.eval(`document.querySelector('#stOrderRow').hidden`), true, 'no orders yet: no order picker');
       assert.match(await page.eval(`document.querySelector('#stWho').textContent`), /Diya & Aarav · Wedding/);

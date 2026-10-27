@@ -789,10 +789,10 @@ test.describe('Video Studio', () => {
       ['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '23rd', '26th', '101st', '111th']);
   });
 
-  test('100 complete looks: ten painted scenes, each in ten moods', () => {
+  test('200 complete looks: twenty painted scenes, each in ten moods', () => {
     const looks = Object.entries(Studio.LOOKS);
-    assert.equal(looks.length, 100);
-    assert.equal(Studio.SCENES.length, 10);
+    assert.equal(looks.length, 200);
+    assert.equal(Studio.SCENES.length, 20);
     for (const scene of Studio.SCENES) assert.equal(looks.filter(([, L]) => L.scene === scene).length, 10, scene);
     for (const [id, L] of looks) {
       assert.ok(L.name && L.note && L.mood, id);
@@ -804,7 +804,7 @@ test.describe('Video Studio', () => {
       assert.ok(['royal', 'romantic', 'festive'].includes(L.music), id);
       for (const [op] of L.tint || []) assert.ok(['multiply', 'soft-light', 'screen', 'color'].includes(op), id);
     }
-    assert.equal(new Set(looks.map(([, L]) => Studio.lookName(L))).size, 100, 'every look has its own name');
+    assert.equal(new Set(looks.map(([, L]) => Studio.lookName(L))).size, 200, 'every look has its own name');
   });
 
   test('each occasion starts on a look that suits it', () => {

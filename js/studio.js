@@ -647,7 +647,152 @@ const Studio = (() => {
     }
   }
 
-  // ---------- The looks: ten painted scenes, each in three moods (30 in all) ----------
+  // ---------- Drawing helpers for the second ten scenes ----------
+  function palm(c, x, y, h, lean, R) {
+    const at = u => [x + lean * h * .35 * u * u, y - h * u];
+    c.lineCap = 'round';
+    for (let i = 0; i < 18; i++) {
+      const [ax, ay] = at(i / 18), [bx, by] = at((i + 1) / 18);
+      c.lineWidth = 26 - i / 18 * 12; c.strokeStyle = i % 2 ? '#8a6a44' : '#6e5232';
+      c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, by); c.stroke();
+    }
+    const [tx, ty] = at(1);
+    for (let i = 0; i < 9; i++) {
+      const a = -Math.PI / 2 + (i - 4) * .4 + (R() - .5) * .1, len = h * (.48 + R() * .15);
+      c.save(); c.translate(tx, ty); c.rotate(a);
+      c.strokeStyle = '#2f6b2a'; c.lineWidth = 4; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(len * .5, -len * .18, len, len * .25); c.stroke();
+      for (let k = 2; k < 16; k++) {
+        const u = k / 16, px = len * u, py = -len * .18 * Math.sin(u * Math.PI) + len * .25 * u * u;
+        for (const d of [-1, 1]) leaf(c, px, py, len * .24 * (1 - u * .5), len * .03, d * (1.2 - u * .3) + .35, k % 2 ? '#3f8a35' : '#2e6f2a', false);
+      }
+      c.restore();
+    }
+  }
+  function gull(c, x, y, s, flap) {
+    c.strokeStyle = 'rgba(60,45,60,.75)'; c.lineWidth = 3.5; c.lineCap = 'round';
+    const f = Math.sin(flap) * s * .35;
+    c.beginPath(); c.moveTo(x - s, y + f * .4); c.quadraticCurveTo(x - s * .5, y - s * .5 - f, x, y); c.quadraticCurveTo(x + s * .5, y - s * .5 - f, x + s, y + f * .4); c.stroke();
+  }
+  function range(c, R, y, h, n, col, snow) {
+    const pts = [];
+    c.fillStyle = col; c.beginPath(); c.moveTo(0, H); c.lineTo(0, y);
+    for (let i = 0; i <= n; i++) { const px = i / n * W, py = y - (i % 2 ? h * (.6 + R() * .4) : h * R() * .2); pts.push([px, py]); c.lineTo(px, py); }
+    c.lineTo(W, H); c.closePath(); c.fill();
+    if (!snow) return;
+    c.fillStyle = snow;
+    pts.forEach(([px, py], i) => {
+      if (i % 2 === 0 || !pts[i + 1]) return;
+      const [lx, ly] = pts[i - 1], [rx, ry] = pts[i + 1], k = .3;
+      c.beginPath(); c.moveTo(px, py); c.lineTo(px + (lx - px) * k, py + (ly - py) * k);
+      c.lineTo(px + (lx - px) * k * .45, py + (ly - py) * k * .75); c.lineTo(px, py + (ly - py) * k * .55);
+      c.lineTo(px + (rx - px) * k * .45, py + (ry - py) * k * .75); c.lineTo(px + (rx - px) * k, py + (ry - py) * k); c.closePath(); c.fill();
+    });
+  }
+  function pine(c, x, y, h, col) {
+    c.fillStyle = '#4a3420'; c.fillRect(x - h * .03, y - h * .12, h * .06, h * .12);
+    c.fillStyle = col;
+    for (let k = 0; k < 4; k++) {
+      const top = y - h * (.35 + k * .2), w = h * (.36 - k * .07);
+      c.beginPath(); c.moveTo(x, top - h * .28); c.lineTo(x + w, top + h * .1); c.lineTo(x - w, top + h * .1); c.closePath(); c.fill();
+    }
+  }
+  function flagLine(c, x0, x1, y, sag, t, cols) {
+    const pt = u => [x0 + (x1 - x0) * u, y + Math.sin(u * Math.PI) * sag];
+    c.strokeStyle = 'rgba(80,60,40,.7)'; c.lineWidth = 2;
+    c.beginPath(); for (let i = 0; i <= 30; i++) { const [px, py] = pt(i / 30); i ? c.lineTo(px, py) : c.moveTo(px, py); } c.stroke();
+    const n = Math.round((x1 - x0) / 52);
+    for (let i = 0; i < n; i++) {
+      const [px, py] = pt((i + .5) / n), sk = Math.sin(t * 3 + i) * 6;
+      c.fillStyle = cols[i % cols.length];
+      c.beginPath(); c.moveTo(px - 18, py); c.lineTo(px + 18, py); c.lineTo(px + 18 + sk, py + 46); c.lineTo(px - 18 + sk, py + 46); c.closePath(); c.fill();
+    }
+  }
+  function paperLantern(c, x, y, r, col, lit) {
+    c.strokeStyle = 'rgba(40,30,20,.5)'; c.lineWidth = 2; c.beginPath(); c.moveTo(x, y - r * 2.2); c.lineTo(x, y - r); c.stroke();
+    if (lit) glow(c, x, y, r * 2.6, `rgba(255,190,110,${(.35 * lit).toFixed(2)})`);
+    const g = c.createRadialGradient(x - r * .3, y - r * .3, r * .1, x, y, r);
+    g.addColorStop(0, '#fff6dc'); g.addColorStop(.6, col); g.addColorStop(1, 'rgba(120,50,30,.9)');
+    c.fillStyle = g; c.beginPath(); c.ellipse(x, y, r, r * .92, 0, 0, TAU); c.fill();
+    c.strokeStyle = 'rgba(120,60,30,.35)'; c.lineWidth = 1.5;
+    for (let k = -2; k <= 2; k++) { c.beginPath(); c.ellipse(x, y, Math.abs(k) * r * .3 + 1, r * .92, 0, 0, TAU); c.stroke(); }
+    c.fillStyle = '#3a2a1a'; c.fillRect(x - r * .3, y - r * .98, r * .6, r * .14); c.fillRect(x - r * .3, y + r * .84, r * .6, r * .14);
+  }
+  function bulbs(c, x0, x1, y, sag, t, n, cols, seed) {
+    const pt = u => [x0 + (x1 - x0) * u, y + Math.sin(u * Math.PI) * sag];
+    c.strokeStyle = 'rgba(30,30,30,.55)'; c.lineWidth = 2;
+    c.beginPath(); for (let i = 0; i <= 30; i++) { const [px, py] = pt(i / 30); i ? c.lineTo(px, py) : c.moveTo(px, py); } c.stroke();
+    for (let i = 0; i < n; i++) {
+      const [px, py] = pt((i + .5) / n), a = .55 + .45 * Math.abs(Math.sin(t * 2 + i * 1.7 + seed));
+      const col = cols[i % cols.length];
+      glow(c, px, py + 8, 26, col.replace('A', (a * .55).toFixed(2)));
+      c.fillStyle = col.replace('A', a.toFixed(2)); c.beginPath(); c.ellipse(px, py + 8, 5, 7, 0, 0, TAU); c.fill();
+    }
+  }
+  function pillar(c, x, y0, y1, w) {
+    c.fillStyle = brass(c, x - w / 2, x + w / 2); c.fillRect(x - w / 2, y0, w, y1 - y0);
+    c.fillStyle = brass(c, x - w * .8, x + w * .8);
+    for (const y of [y0, y1 - w * .5]) c.fillRect(x - w * .8, y, w * 1.6, w * .5);
+    c.strokeStyle = 'rgba(110,70,10,.45)'; c.lineWidth = 2;
+    for (let y = y0 + w; y < y1 - w; y += w * 1.4) { c.beginPath(); c.moveTo(x - w / 2, y); c.lineTo(x + w / 2, y); c.stroke(); blossom(c, x, y + w * .7, w * .32, 'rgba(160,110,30,.7)', 'rgba(255,240,190,.9)', 0, 6, true); }
+  }
+  function drape(c, x0, y0, x1, y1, col) {
+    const g = c.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, col); g.addColorStop(1, col.replace(/[\d.]+\)$/, '.15)'));
+    c.fillStyle = g; c.beginPath(); c.moveTo(x0, y0); c.quadraticCurveTo((x0 + x1) / 2, y0 + (y1 - y0) * .55, x1, y0);
+    c.lineTo(x1, y0 + 30); c.quadraticCurveTo((x0 + x1) / 2, y0 + (y1 - y0) * .55 + 60, x0, y0 + 30); c.closePath(); c.fill();
+  }
+  function havan(c, x, y, s, t) {
+    c.fillStyle = '#a0522d'; c.beginPath(); c.moveTo(x - s, y); c.lineTo(x + s, y); c.lineTo(x + s * .8, y - s * .5); c.lineTo(x - s * .8, y - s * .5); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(255,220,180,.5)'; c.lineWidth = 2;
+    for (let k = 1; k < 3; k++) { c.beginPath(); c.moveTo(x - s + k * s * .1, y - k * s * .17); c.lineTo(x + s - k * s * .1, y - k * s * .17); c.stroke(); }
+    [-.4, 0, .4].forEach((dx, i) => flame(c, x + dx * s, y - s * .5, s * (i === 1 ? .9 : .6), t, i * 3));
+  }
+  function sunflower(c, x, y, r, rot) {
+    c.save(); c.translate(x, y); c.rotate(rot);
+    for (let ring = 0; ring < 2; ring++) for (let i = 0; i < 16; i++) {
+      c.save(); c.rotate(i / 16 * TAU + ring * .2); c.fillStyle = ring ? '#ffc93c' : '#f4a51c';
+      c.beginPath(); c.moveTo(0, -r * .4); c.quadraticCurveTo(r * .18, -r * .75, 0, -r); c.quadraticCurveTo(-r * .18, -r * .75, 0, -r * .4); c.fill(); c.restore();
+    }
+    const g = c.createRadialGradient(0, 0, 0, 0, 0, r * .45); g.addColorStop(0, '#5a3210'); g.addColorStop(1, '#3a1e08');
+    c.fillStyle = g; c.beginPath(); c.arc(0, 0, r * .42, 0, TAU); c.fill();
+    c.fillStyle = 'rgba(255,200,90,.35)'; for (let i = 0; i < 30; i++) { const a = i * 2.4, d = Math.sqrt(i / 30) * r * .38; c.beginPath(); c.arc(Math.cos(a) * d, Math.sin(a) * d, r * .025, 0, TAU); c.fill(); }
+    c.restore();
+  }
+  function cloud(c, x, y, s, col = '#ffffff') {
+    c.fillStyle = col;
+    [[0, 0, .5], [-.45, .12, .36], [.45, .1, .4], [-.2, -.22, .38], [.22, -.25, .34], [-.75, .22, .24], [.8, .22, .26]].forEach(([dx, dy, r]) => {
+      c.beginPath(); c.arc(x + dx * s, y + dy * s, r * s, 0, TAU); c.fill();
+    });
+  }
+  function discoBall(c, x, y, r, t) {
+    c.strokeStyle = 'rgba(220,220,240,.7)'; c.lineWidth = 2; c.beginPath(); c.moveTo(x, 0); c.lineTo(x, y - r); c.stroke();
+    c.save(); c.beginPath(); c.arc(x, y, r, 0, TAU); c.clip();
+    const n = 12;
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+      const v = (Math.sin(i * 1.3 + j * .7 + t * 2) + 1) / 2;
+      c.fillStyle = `hsl(${250 + v * 60},${15 + v * 40}%,${45 + v * 45}%)`;
+      c.fillRect(x - r + j * 2 * r / n + 1, y - r + i * 2 * r / n + 1, 2 * r / n - 2, 2 * r / n - 2);
+    }
+    const g = c.createRadialGradient(x - r * .3, y - r * .3, r * .1, x, y, r); g.addColorStop(0, 'rgba(255,255,255,.35)'); g.addColorStop(1, 'rgba(0,0,0,.45)');
+    c.fillStyle = g; c.fillRect(x - r, y - r, r * 2, r * 2); c.restore();
+  }
+  function lovebird(c, x, y, s, dir, col) {
+    c.save(); c.translate(x, y); c.scale(dir, 1);
+    c.fillStyle = col; c.beginPath(); c.ellipse(0, 0, s * .5, s * .32, -.2, 0, TAU); c.fill();
+    c.beginPath(); c.arc(s * .42, -s * .22, s * .2, 0, TAU); c.fill();
+    c.beginPath(); c.moveTo(-s * .4, 0); c.lineTo(-s * .85, s * .12); c.lineTo(-s * .45, s * .16); c.fill();
+    c.fillStyle = 'rgba(0,0,0,.15)'; c.beginPath(); c.ellipse(-s * .05, -s * .02, s * .28, s * .16, -.3, 0, TAU); c.fill();
+    c.fillStyle = '#f6a623'; c.beginPath(); c.moveTo(s * .6, -s * .24); c.lineTo(s * .74, -s * .18); c.lineTo(s * .6, -s * .14); c.fill();
+    c.fillStyle = '#222'; c.beginPath(); c.arc(s * .48, -s * .26, s * .035, 0, TAU); c.fill();
+    c.restore();
+  }
+  function burst(c, x, y, p, col, n = 28, size = 120) {
+    for (let i = 0; i < n; i++) {
+      const a = i / n * TAU, d = ease(p) * size;
+      c.fillStyle = `rgba(${col},${(1 - p).toFixed(2)})`; c.beginPath(); c.arc(x + Math.cos(a) * d, y + Math.sin(a) * d + p * p * 30, 4, 0, TAU); c.fill();
+    }
+  }
+
+  // ---------- The looks: twenty painted scenes, each in ten moods (200 in all) ----------
   const LOOKS = {
     vrindavan: {
       name: 'Vrindavan Garden', mood: 'Morning', note: 'Forest light, peacock, flute & feather',
@@ -1181,6 +1326,305 @@ const Studio = (() => {
           col: { names: '#ffffff', ink: '#ffffff', ink2: '#fff3e0', accent: '#7a2a00', gold: '#fff3c4' }, shadow: ['rgba(120,40,0,.55)', 14] }
       ]
     }
+,
+
+    beach: {
+      name: 'Beach Sunset', mood: 'Golden Shore', note: 'Sea at sunset, palms, gulls and fairy lights',
+      col: { names: '#b83a4b', ink: '#4a2a2a', ink2: '#6a4040', accent: '#c25a2a', gold: '#c08a3a' },
+      mono: [['#ff9a8b', '#c2185b'], ['#ffc46b', '#d9772a']],
+      font: { script: 'Great Vibes', serif: 'Gilda Display' }, zone: [300, 1060, 840], shadow: ['rgba(255,244,230,.9)', 14], music: 'romantic',
+      back(c, R, m) {
+        sky(c, m.sky || [[0, '#ffb39a'], [.35, '#ffd2a8'], [.6, '#ffe7c0']], 0, 1160);
+        glow(c, 540, 1150, 520, 'rgba(255,230,170,.75)');
+        c.fillStyle = '#fff1c8'; c.beginPath(); c.arc(540, 1160, 140, Math.PI, 0); c.fill();
+        sky(c, [[0, '#4a86c8'], [1, '#2a5d9a']], 1160, 1520);
+        for (let i = 0; i < 60; i++) { const y = 1170 + R() * 330, w = 30 + R() * 180 * (1 - (y - 1160) / 400); c.fillStyle = `rgba(255,225,170,${(.5 - (y - 1160) / 800).toFixed(2)})`; c.fillRect(540 - w / 2 + (R() - .5) * 120, y, w, 3); }
+        const sg = c.createLinearGradient(0, 1500, 0, H); sg.addColorStop(0, '#f6dcaa'); sg.addColorStop(1, '#e0b97e');
+        c.fillStyle = sg; c.beginPath(); c.moveTo(0, 1540); c.quadraticCurveTo(540, 1470, W, 1540); c.lineTo(W, H); c.lineTo(0, H); c.fill();
+        c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 6; c.beginPath(); c.moveTo(0, 1545); c.quadraticCurveTo(540, 1475, W, 1545); c.stroke();
+        for (let i = 0; i < 14; i++) { const x = 80 + R() * 920, y = 1640 + R() * 240; c.fillStyle = R() > .5 ? '#f4a3a3' : '#fff3e0'; c.beginPath(); c.ellipse(x, y, 10, 7, R() * 3, 0, TAU); c.fill(); }
+        palm(c, 40, 1760, 520, .35, R); palm(c, 1040, 1780, 470, -.35, R);
+        glow(c, 540, 720, 480, 'rgba(255,248,236,.55)');
+      },
+      anim(c, t) {
+        for (let i = 0; i < 4; i++) { const x = ((t * (30 + i * 8) + i * 300) % (W + 200)) - 100; gull(c, x, 260 + i * 70 + Math.sin(t + i) * 12, 22, t * 5 + i); }
+        for (let i = 0; i < 5; i++) { const y = 1190 + i * 60, dx = Math.sin(t * 1.5 + i) * 20; c.fillStyle = 'rgba(255,240,200,.25)'; c.fillRect(470 + dx, y, 140 - i * 14, 3); }
+        bulbs(c, -20, 1100, 40, 110, t, 18, ['rgba(255,236,170,A)'], 1);
+      },
+      fx(c, t) { motes(c, t, 14, 'rgba(255,240,200,A)', 91, 10); },
+      crest(c, x, y) {
+        c.strokeStyle = this.col.gold; c.lineWidth = 4;
+        c.beginPath(); c.arc(x, y + 170, 60, Math.PI, 0); c.stroke();
+        for (let k = 0; k < 9; k++) { const a = Math.PI + k / 8 * Math.PI; c.beginPath(); c.moveTo(x + Math.cos(a) * 74, y + 170 + Math.sin(a) * 74); c.lineTo(x + Math.cos(a) * 96, y + 170 + Math.sin(a) * 96); c.stroke(); }
+        for (let k = 0; k < 2; k++) { c.beginPath(); for (let i = 0; i <= 20; i++) { const px = x - 110 + i * 11, py = y + 190 + k * 18 + Math.sin(i * .9) * 6; i ? c.lineTo(px, py) : c.moveTo(px, py); } c.stroke(); }
+      }
+    },
+
+    himalaya: {
+      name: 'Himalayan Mandap', mood: 'Snow Peaks', note: 'Snowy mountains, pines, prayer flags',
+      col: { names: '#7a2e3a', ink: '#2c3a4a', ink2: '#4a5a6a', accent: '#2f6b5a', gold: '#a8782a' },
+      mono: [['#d9617a', '#7a2e3a'], ['#5fa8a0', '#2f6b5a']],
+      font: { script: 'Parisienne', serif: 'Marcellus' }, zone: [420, 1380, 820], shadow: ['rgba(250,252,255,.9)', 14], music: 'romantic',
+      back(c, R, m) {
+        sky(c, m.sky || [[0, '#bcd7f0'], [.45, '#e8f0f6'], [1, '#f6f1e6']]);
+        range(c, R, 900, 380, 8, '#9fb6cf', '#ffffff');
+        c.fillStyle = 'rgba(236,242,248,.45)'; c.fillRect(0, 500, W, 700);
+        range(c, R, 1180, 260, 10, '#7e98b3', '#f4f8fc');
+        c.fillStyle = 'rgba(236,242,248,.35)'; c.fillRect(0, 900, W, 500);
+        for (let i = 0; i < 40; i++) pine(c, R() * W, 1400 + R() * 60, 140 + R() * 80, `hsl(${150 + R() * 20},30%,${22 + R() * 10}%)`);
+        const mg = c.createLinearGradient(0, 1450, 0, H); mg.addColorStop(0, '#8fb27a'); mg.addColorStop(1, '#5d8a4a');
+        c.fillStyle = mg; c.fillRect(0, 1460, W, H - 1460);
+        for (let i = 0; i < 14; i++) pine(c, i % 2 ? 30 + R() * 160 : W - 30 - R() * 160, 1700 + R() * 200, 260 + R() * 120, `hsl(${145 + R() * 20},35%,${18 + R() * 8}%)`);
+        const mx = 540, my = 1840;
+        c.fillStyle = '#7a4a24'; for (const dx of [-170, 170]) c.fillRect(mx + dx - 9, my - 230, 18, 230);
+        c.fillStyle = '#8a5a2e'; c.beginPath(); c.moveTo(mx - 220, my - 230); c.lineTo(mx + 220, my - 230); c.lineTo(mx + 150, my - 300); c.lineTo(mx - 150, my - 300); c.closePath(); c.fill();
+        for (let i = 0; i <= 12; i++) { const u = i / 12; marigold(c, mx - 180 + u * 360, my - 220 + Math.sin(u * Math.PI) * 40, 12, i % 2 ? 38 : 28); }
+        glow(c, 540, 880, 520, 'rgba(250,252,255,.7)');
+      },
+      anim(c, t) {
+        flagLine(c, -20, 560, 70, 120, t, ['#1e5bd8', '#ffffff', '#d62828', '#2a9d4a', '#f4c20d']);
+        flagLine(c, 520, 1100, 70, 120, t + 1, ['#1e5bd8', '#ffffff', '#d62828', '#2a9d4a', '#f4c20d']);
+        for (let i = 0; i < 3; i++) cloud(c, ((t * 12 + i * 420) % (W + 400)) - 200, 360 + i * 110, 60, 'rgba(255,255,255,.55)');
+      },
+      fx(c, t) { petals(c, t, 12, ['#ffffff', '#f4c20d', '#ffb3c6'], 101, .8); },
+      crest(c, x, y) {
+        c.fillStyle = this.col.accent; c.beginPath(); c.moveTo(x - 110, y + 200); c.lineTo(x - 30, y + 90); c.lineTo(x + 10, y + 140); c.lineTo(x + 50, y + 100); c.lineTo(x + 110, y + 200); c.closePath(); c.fill();
+        c.fillStyle = '#fff'; c.beginPath(); c.moveTo(x - 30, y + 90); c.lineTo(x - 48, y + 115); c.lineTo(x - 14, y + 112); c.closePath(); c.fill();
+        glow(c, x + 70, y + 70, 40, 'rgba(255,200,90,.7)'); c.fillStyle = '#ffc94d'; c.beginPath(); c.arc(x + 70, y + 70, 18, 0, TAU); c.fill();
+      }
+    },
+
+    lights: {
+      name: 'Fairy-light Garden', mood: 'Twilight', note: 'String lights and paper lanterns over a lawn at night',
+      col: { names: '#ffe2a0', ink: '#f6efdc', ink2: '#d9d0b8', accent: '#9fe0c0', gold: '#f2c46a' },
+      mono: [['#fff0c0', '#e8b44a'], ['#c8f5e0', '#5fc7a0']],
+      font: { script: 'Great Vibes', serif: 'Gilda Display' }, zone: [400, 1360, 820], shadow: ['rgba(5,15,20,.85)', 16], music: 'romantic',
+      back(c, R, m) {
+        sky(c, m.sky || [[0, '#0b1a2a'], [.6, '#143246'], [1, '#1d3d3a']]);
+        for (let i = 0; i < 90; i++) { c.fillStyle = `rgba(255,255,255,${(R() * .6).toFixed(2)})`; c.beginPath(); c.arc(R() * W, R() * 700, 1 + R() * 1.6, 0, TAU); c.fill(); }
+        for (const side of [0, 1]) for (let k = 0; k < 3; k++) foliage(c, R, side ? W - 60 - k * 40 : 60 + k * 40, 500 + k * 380, 220, 300, 500, 150, 10 + k * 3, 46, 30);
+        const lg = c.createLinearGradient(0, 1500, 0, H); lg.addColorStop(0, '#1f4a36'); lg.addColorStop(1, '#0f2a1e');
+        c.fillStyle = lg; c.fillRect(0, 1500, W, H - 1500);
+        for (let i = 0; i < 30; i++) glow(c, R() * W, 1500 + R() * 400, 30 + R() * 60, 'rgba(255,210,140,.08)');
+        glow(c, 540, 880, 460, 'rgba(10,25,30,.35)');
+      },
+      anim(c, t) {
+        const cols = ['rgba(255,230,160,A)', 'rgba(255,200,140,A)', 'rgba(255,245,210,A)'];
+        bulbs(c, -40, 1120, 40, 160, t, 20, cols, 0);
+        bulbs(c, -40, 1120, 200, 120, t, 18, cols, 2);
+        bulbs(c, -40, 1120, 1450, -60, t, 18, cols, 4);
+        [[150, 320, '#ffb36b'], [930, 300, '#ff8ab0'], [300, 470, '#ffd27a'], [780, 460, '#9fe0c0'], [120, 1300, '#ffd27a'], [960, 1320, '#ffb36b']]
+          .forEach(([x, y, col], i) => paperLantern(c, x + Math.sin(t + i) * 5, y, 46, col, .7 + .3 * Math.sin(t * 3 + i)));
+      },
+      fx(c, t) { motes(c, t, 26, 'rgba(255,230,150,A)', 111, 14); },
+      crest(c, x, y, t) { paperLantern(c, x, y + 160, 60, '#ffb36b', .8 + .2 * Math.sin(t * 3)); }
+    },
+
+    mandap: {
+      name: 'Floral Mandap', mood: 'Blush Drapes', note: 'Gold pillars, sheer drapes, garlands and the sacred fire',
+      col: { names: '#a21f45', ink: '#4a2232', ink2: '#6a3a4a', accent: '#b8862b', gold: '#b8862b' },
+      mono: [['#f06292', '#a21f45'], ['#f2c46a', '#a8782a']],
+      font: { script: 'Pinyon Script', serif: 'Marcellus' }, zone: [470, 1420, 600], shadow: ['rgba(255,248,246,.92)', 12], music: 'royal',
+      back(c, R, m) {
+        sky(c, m.sky || [[0, '#fbe9ea'], [.6, '#fdf4ef'], [1, '#f3d9cf']]);
+        glow(c, 540, 900, 600, 'rgba(255,255,255,.7)');
+        const fl = c.createLinearGradient(0, 1600, 0, H); fl.addColorStop(0, '#f1d5c6'); fl.addColorStop(1, '#ddb39e');
+        c.fillStyle = fl; c.fillRect(0, 1600, W, H - 1600);
+        for (let i = 0; i < 120; i++) { c.fillStyle = ['#e85d75', '#ffffff', '#f6b93b', '#f48fb1'][i % 4]; c.beginPath(); c.ellipse(240 + R() * 600, 1700 + R() * 200, 8, 5, R() * 3, 0, TAU); c.fill(); }
+        pillar(c, 170, 300, 1700, 46); pillar(c, 910, 300, 1700, 46);
+        c.fillStyle = brass(c, 100, 980); c.beginPath(); c.moveTo(80, 300); c.lineTo(1000, 300); c.lineTo(1000, 260); c.quadraticCurveTo(540, 120, 80, 260); c.closePath(); c.fill();
+        for (let x = 100; x < 990; x += 40) { c.fillStyle = '#c99a3a'; c.beginPath(); c.arc(x, 300, 20, 0, Math.PI); c.fill(); }
+        drape(c, 80, 300, 540, 760, m.drape || 'rgba(255,214,226,.85)'); drape(c, 540, 300, 1000, 760, m.drape || 'rgba(255,214,226,.85)');
+        for (const x of [130, 950]) { c.fillStyle = m.drape || 'rgba(255,214,226,.85)'; c.beginPath(); c.moveTo(x - 40, 300); c.quadraticCurveTo(x + 30, 900, x - 10, 1650); c.lineTo(x + 50, 1650); c.quadraticCurveTo(x + 70, 900, x + 40, 300); c.closePath(); c.fill(); }
+        for (let i = 0; i <= 22; i++) { const u = i / 22, x = 90 + u * 900, y = 330 + Math.sin(u * Math.PI) * 60; rose(c, x, y, 18, i % 2 ? '#fff3f0' : '#f9c1cf', i % 2 ? '#e7b9b0' : '#d84a74', i); }
+        for (const x of [230, 340, 740, 850]) for (let k = 0; k < 9; k++) blossom(c, x, 380 + k * 38 + (x % 3) * 10, 11, k % 2 ? '#ffffff' : '#f48fb1', '#fff', k, 5, true);
+      },
+      anim(c, t) { havan(c, 540, 1690, 90, t); },
+      fx(c, t) { petals(c, t, 18, ['#e85d75', '#ffffff', '#f48fb1'], 121); sparks(c, t, 8, '#e8c46a', 19); },
+      crest(c, x, y) { kalash(c, x, y + 200, 190); }
+    },
+
+    galaxy: {
+      name: 'Starry Galaxy', mood: 'Milky Way', note: 'Deep space, the Milky Way and shooting stars',
+      col: { names: '#f5d0ff', ink: '#f2eeff', ink2: '#cfc6ec', accent: '#9fd8ff', gold: '#e8d38a' },
+      mono: [['#ffd6ff', '#c27aff'], ['#c8eeff', '#6ab8ff']],
+      font: { script: 'Pinyon Script', serif: 'Cinzel' }, zone: [400, 1400, 860], shadow: ['rgba(5,3,20,.85)', 16], music: 'romantic',
+      back(c, R, m) {
+        sky(c, m.sky || [[0, '#05041a'], [.5, '#120a35'], [1, '#1f0c3a']]);
+        c.save(); c.globalCompositeOperation = 'screen';
+        for (let i = 0; i < 26; i++) { const u = R(), x = u * W, y = 300 + u * 1300 + (R() - .5) * 260; glow(c, x, y, 120 + R() * 200, i % 3 ? 'rgba(120,80,220,.18)' : 'rgba(255,110,190,.14)'); }
+        c.restore();
+        for (let i = 0; i < 900; i++) {
+          const u = R(), band = R() < .6, x = band ? u * W + (R() - .5) * 200 : R() * W, y = band ? 300 + u * 1300 + (R() - .5) * 260 : R() * H;
+          c.fillStyle = `rgba(255,255,255,${(.2 + R() * .8).toFixed(2)})`; c.fillRect(x, y, R() < .1 ? 2.5 : 1.5, R() < .1 ? 2.5 : 1.5);
+        }
+        c.fillStyle = '#f6efd6'; c.beginPath(); c.arc(860, 260, 70, 0, TAU); c.fill();
+        c.fillStyle = m.sky ? m.sky[0][1] : '#05041a'; c.beginPath(); c.arc(890, 240, 64, 0, TAU); c.fill();
+        glow(c, 540, 900, 520, 'rgba(5,3,20,.4)');
+      },
+      anim(c, t) {
+        for (let i = 0; i < 50; i++) { const x = (i * 197) % W, y = (i * 389) % H, a = Math.max(0, Math.sin(t * 2 + i)); c.fillStyle = `rgba(255,255,255,${a.toFixed(2)})`; c.beginPath(); c.arc(x, y, 2.2, 0, TAU); c.fill(); }
+        for (let k = 0; k < 2; k++) {
+          const cyc = 4.5, p = ((t + k * 2.2) % cyc) / .9; if (p > 1) continue;
+          const R = rng(Math.floor((t + k * 2.2) / cyc) * 13 + k), x = 200 + R() * 700, y = 100 + R() * 500;
+          const g = c.createLinearGradient(x, y, x - 220 * p, y + 120 * p); g.addColorStop(0, `rgba(255,255,255,${(1 - p).toFixed(2)})`); g.addColorStop(1, 'rgba(255,255,255,0)');
+          c.strokeStyle = g; c.lineWidth = 3; c.beginPath(); c.moveTo(x + 260 * p, y - 140 * p); c.lineTo(x, y); c.stroke();
+        }
+      },
+      fx(c, t) { sparks(c, t, 18, '#ffffff', 131); },
+      crest(c, x, y) {
+        const pts = [[0, 70], [-60, 10], [-50, -30], [-20, -40], [0, -15], [20, -40], [50, -30], [60, 10], [0, 70]].map(([dx, dy]) => [x + dx, y + 130 + dy]);
+        c.strokeStyle = 'rgba(200,220,255,.7)'; c.lineWidth = 2; c.beginPath(); pts.forEach(([px, py], i) => i ? c.lineTo(px, py) : c.moveTo(px, py)); c.stroke();
+        pts.forEach(([px, py]) => { glow(c, px, py, 16, 'rgba(255,255,255,.8)'); c.fillStyle = '#fff'; c.beginPath(); c.arc(px, py, 4, 0, TAU); c.fill(); });
+      }
+    },
+
+    haldi: {
+      name: 'Haldi Sunshine', mood: 'Sunflower', note: 'Sunflowers, yellow garlands and haldi bowls',
+      col: { names: '#b3541e', ink: '#5a3a0a', ink2: '#7a5520', accent: '#2f7a3a', gold: '#b8862b' },
+      mono: [['#ffb347', '#d9661e'], ['#7cc576', '#2f7a3a']],
+      font: { script: 'Alex Brush', serif: 'Gilda Display' }, zone: [430, 1420, 780], shadow: ['rgba(255,250,224,.95)', 14], music: 'festive',
+      back(c, R, m) {
+        sky(c, m.sky || [[0, '#fff7c2'], [.5, '#ffe680'], [1, '#ffcf3a']]);
+        c.save(); c.globalAlpha = .18; c.translate(540, 900);
+        for (let i = 0; i < 24; i++) { c.rotate(TAU / 24); c.fillStyle = i % 2 ? '#fff' : '#ffd84d'; c.beginPath(); c.moveTo(0, 0); c.lineTo(-90, -1400); c.lineTo(90, -1400); c.closePath(); c.fill(); }
+        c.restore();
+        c.fillStyle = '#7a4a1a'; c.fillRect(0, 34, W, 8);
+        for (let x = 10; x < W; x += 36) leaf(c, x, 42, 70, 18, Math.PI / 2 + (x % 72 ? .12 : -.12), x % 72 ? '#2e7d32' : '#4caf50');
+        for (const [x, n] of [[70, 24], [150, 16], [930, 16], [1010, 24]]) for (let i = 0; i < n; i++) marigold(c, x, 110 + i * 30, 16, i % 2 ? 46 : 40);
+        for (const [cx, cy, d] of [[110, 1700, 1], [970, 1700, -1]]) {
+          for (let i = 0; i < 6; i++) leaf(c, cx, cy + 60, 160, 44, -Math.PI / 2 + (i - 2.5) * .45 * d, '#3f8a35');
+          sunflower(c, cx, cy, 110, 0); sunflower(c, cx + d * 130, cy + 90, 80, .4); sunflower(c, cx - d * 30, cy + 180, 70, .9);
+        }
+        for (const [x, s] of [[400, 70], [680, 70]]) {
+          c.fillStyle = brass(c, x - s, x + s); c.beginPath(); c.ellipse(x, 1830, s, s * .45, 0, 0, Math.PI); c.fill();
+          c.fillStyle = '#f2b705'; c.beginPath(); c.ellipse(x, 1830, s * .9, s * .2, 0, 0, TAU); c.fill();
+          for (let k = 0; k < 6; k++) marigold(c, x - s * .7 + k * s * .28, 1822, 9, 30 + k % 2 * 10);
+        }
+        glow(c, 540, 900, 480, 'rgba(255,252,232,.8)');
+      },
+      anim(c, t) { for (let i = 0; i < 5; i++) butterfly(c, 200 + i * 170 + Math.sin(t * .6 + i) * 60, 1250 + Math.sin(t * .9 + i * 2) * 120, 22, t * 9 + i, i % 2 ? '#ff8c42' : '#ffffff'); },
+      fx(c, t) { petals(c, t, 22, ['#ffc107', '#ff9800', '#ffffff'], 141); },
+      crest(c, x, y) { sunflower(c, x, y + 140, 70, 0); for (const d of [-1, 1]) marigold(c, x + d * 95, y + 165, 26, 38); }
+    },
+
+    clouds: {
+      name: 'Dreamy Clouds', mood: 'Pastel Sky', note: 'Pastel clouds, a moon and hanging stars',
+      col: { names: '#6b5bd6', ink: '#3e3a6a', ink2: '#5e5a8a', accent: '#e86a9a', gold: '#d8a84a' },
+      mono: [['#a99bff', '#6b5bd6'], ['#ffb3cf', '#e86a9a']],
+      font: { script: 'Parisienne', serif: 'Fredoka' }, zone: [460, 1420, 800], shadow: ['rgba(255,255,255,.95)', 14], music: 'romantic',
+      back(c, R, m) {
+        sky(c, m.sky || [[0, '#cfe4ff'], [.55, '#f1e6ff'], [1, '#ffe1ee']]);
+        c.save(); c.globalAlpha = .22; c.lineWidth = 28;
+        ['#ff8fa3', '#ffc36b', '#fff17a', '#8fe39b', '#7fc8ff', '#b39bff'].forEach((col, i) => { c.strokeStyle = col; c.beginPath(); c.arc(540, 1500, 700 - i * 28, Math.PI, 0); c.stroke(); });
+        c.restore();
+        cloud(c, 160, 1650, 150); cloud(c, 900, 1700, 170); cloud(c, 520, 1830, 210); cloud(c, 60, 1880, 140); cloud(c, 1050, 1880, 150);
+        cloud(c, 200, 300, 80, 'rgba(255,255,255,.85)'); cloud(c, 880, 420, 90, 'rgba(255,255,255,.85)');
+        c.fillStyle = '#fff6c8'; c.beginPath(); c.arc(860, 250, 70, 0, TAU); c.fill();
+        c.fillStyle = m.sky ? m.sky[0][1] : '#cfe4ff'; c.beginPath(); c.arc(890, 230, 62, 0, TAU); c.fill();
+        glow(c, 540, 900, 460, 'rgba(255,255,255,.6)');
+      },
+      anim(c, t) {
+        [[140, 150, '#ffd166'], [280, 260, '#ff9fbf'], [800, 180, '#a99bff'], [960, 330, '#ffd166']].forEach(([x, len, col], i) => {
+          const sw = Math.sin(t * 1.4 + i) * .12;
+          c.save(); c.translate(x, 0); c.rotate(sw); c.strokeStyle = 'rgba(120,110,160,.5)'; c.lineWidth = 2; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, len); c.stroke();
+          c.translate(0, len + 26); c.rotate(t * .5 + i); c.fillStyle = col; c.beginPath();
+          for (let k = 0; k < 10; k++) { const r = k % 2 ? 12 : 28, a = k / 10 * TAU - Math.PI / 2; k ? c.lineTo(Math.cos(a) * r, Math.sin(a) * r) : c.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+          c.closePath(); c.fill(); c.restore();
+        });
+        for (let i = 0; i < 2; i++) cloud(c, ((t * 10 + i * 600) % (W + 400)) - 200, 600 + i * 300, 50, 'rgba(255,255,255,.6)');
+      },
+      fx(c, t) { sparks(c, t, 16, '#ffffff', 151); },
+      crest(c, x, y) {
+        c.save(); c.beginPath(); c.arc(x, y + 140, 60, 0, TAU); c.clip();
+        c.fillStyle = '#ffe9a0'; c.beginPath(); c.arc(x, y + 140, 60, 0, TAU); c.arc(x + 28, y + 122, 52, 0, TAU); c.fill('evenodd'); c.restore();
+        cloud(c, x - 20, y + 200, 40);
+      }
+    },
+
+    disco: {
+      name: 'Disco Night', mood: 'Neon Pink', note: 'Disco ball, sweeping spotlights and a glowing dance floor',
+      col: { names: '#ff7ae0', ink: '#ffffff', ink2: '#e6dcff', accent: '#5ef0ff', gold: '#ffd36e' },
+      mono: [['#ffa8f0', '#ff3fd0'], ['#a8f6ff', '#2ad6ff']],
+      font: { script: 'Pacifico', serif: 'Fredoka' }, zone: [470, 1380, 860], shadow: ['rgba(20,0,40,.85)', 18], music: 'festive',
+      back(c, R, m) {
+        sky(c, m.sky || [[0, '#0a0418'], [.6, '#1c0838'], [1, '#2a0a3a']]);
+        c.strokeStyle = 'rgba(255,80,220,.6)'; c.lineWidth = 4; c.shadowColor = '#ff4fd8'; c.shadowBlur = 20; c.strokeRect(50, 230, W - 100, 1260);
+        c.strokeStyle = 'rgba(80,230,255,.5)'; c.shadowColor = '#3ad6ff'; c.strokeRect(70, 250, W - 140, 1220); c.shadowBlur = 0;
+        for (let i = 0; i < 8; i++) for (let j = 0; j < 7; j++) {
+          const y0 = 1520 + i * (8 + i * 4), y1 = y0 + 8 + i * 4 - 2, sp = (k, y) => 540 + (k - 3.5) * (60 + (y - 1520) * .9);
+          c.fillStyle = `hsla(${(i * 47 + j * 83) % 360},80%,55%,.55)`;
+          c.beginPath(); c.moveTo(sp(j, y0), y0); c.lineTo(sp(j + 1, y0), y0); c.lineTo(sp(j + 1, y1), y1); c.lineTo(sp(j, y1), y1); c.closePath(); c.fill();
+        }
+        glow(c, 540, 880, 460, 'rgba(15,0,30,.4)');
+      },
+      anim(c, t) {
+        c.save(); c.globalCompositeOperation = 'lighter';
+        [['255,80,220', -1], ['80,220,255', 1], ['255,220,90', -.4]].forEach(([col, d], i) => {
+          const a = Math.sin(t * .8 + i * 2) * .5 * d;
+          c.save(); c.translate(540 + (i - 1) * 380, 0); c.rotate(a);
+          const g = c.createLinearGradient(0, 0, 0, 1700); g.addColorStop(0, `rgba(${col},.35)`); g.addColorStop(1, `rgba(${col},0)`);
+          c.fillStyle = g; c.beginPath(); c.moveTo(-14, 0); c.lineTo(14, 0); c.lineTo(160, 1700); c.lineTo(-160, 1700); c.fill(); c.restore();
+        });
+        c.restore();
+        discoBall(c, 540, 150, 70, t);
+      },
+      fx(c, t) { confetti(c, t, 30, ['#ff4fd8', '#5ef0ff', '#ffd36e', '#ffffff'], 161); sparks(c, t, 14, '#ffffff', 23); },
+      crest(c, x, y, t) { discoBall(c, x, y + 140, 54, t); }
+    },
+
+    diwali: {
+      name: 'Diwali Lights', mood: 'Festive Night', note: 'Steps of diyas, sky lanterns and fireworks',
+      col: { names: '#ffd27a', ink: '#fff2dc', ink2: '#f0d9b5', accent: '#ff9f6b', gold: '#f2c14e' },
+      mono: [['#ffe29a', '#f2a900'], ['#ffb38a', '#ff6a3c']],
+      font: { script: 'Great Vibes', serif: 'Gilda Display' }, zone: [380, 1340, 840], shadow: ['rgba(25,5,25,.85)', 16], music: 'festive',
+      back(c, R, m) {
+        sky(c, m.sky || [[0, '#14092e'], [.6, '#3a0f3a'], [1, '#5a1626']]);
+        for (let i = 0; i < 120; i++) { c.fillStyle = `rgba(255,240,220,${(R() * .5).toFixed(2)})`; c.beginPath(); c.arc(R() * W, R() * 900, 1 + R() * 1.4, 0, TAU); c.fill(); }
+        for (let k = 0; k < 3; k++) { c.fillStyle = `hsl(20,35%,${22 - k * 5}%)`; c.fillRect(0, 1560 + k * 120, W, 120); c.fillStyle = 'rgba(255,200,140,.15)'; c.fillRect(0, 1560 + k * 120, W, 6); }
+        rangoli(c, 540, 1920, 180);
+        glow(c, 540, 860, 480, 'rgba(25,5,25,.35)');
+      },
+      anim(c, t) {
+        for (let k = 0; k < 3; k++) for (let i = 0; i < 9; i++) { const x = 70 + i * 117 + (k % 2) * 58; if (k === 2 && Math.abs(x - 540) < 200) continue; diya(c, x, 1580 + k * 120, 30, t + i + k); }
+        for (let i = 0; i < 7; i++) {
+          const R = rng(300 + i), x0 = R() * W, sp = 18 + R() * 20, s = 18 + R() * 12, y = 1500 - ((t * sp + R() * 1500) % 1600), x = x0 + Math.sin(t * .5 + i) * 30;
+          glow(c, x, y, s * 3, 'rgba(255,170,80,.35)');
+          c.fillStyle = '#ffb35c'; c.beginPath(); c.moveTo(x - s * .55, y - s); c.lineTo(x + s * .55, y - s); c.lineTo(x + s * .4, y + s); c.lineTo(x - s * .4, y + s); c.closePath(); c.fill();
+        }
+        for (let k = 0; k < 2; k++) {
+          const cyc = 3, n = Math.floor((t + k * 1.5) / cyc), p = ((t + k * 1.5) % cyc) / 1.5;
+          if (p <= 1) { const R = rng(n * 5 + k); burst(c, 150 + R() * 780, 140 + R() * 220, p, R() > .5 ? '255,214,120' : '255,120,170'); }
+        }
+      },
+      fx(c, t) { sparks(c, t, 16, '#ffd77a', 171); },
+      crest(c, x, y, t) { diya(c, x, y + 170, 90, t); }
+    },
+
+    rosegarden: {
+      name: 'Rose Garden', mood: 'Spring', note: 'A rose arbour, lawn and lovebirds',
+      col: { names: '#b02a4a', ink: '#3a2a2a', ink2: '#5a4040', accent: '#3f7a3a', gold: '#b8862b' },
+      mono: [['#f06a8a', '#b02a4a'], ['#7cc576', '#3f7a3a']],
+      font: { script: 'Parisienne', serif: 'Gilda Display' }, zone: [470, 1420, 640], shadow: ['rgba(255,252,246,.92)', 12], music: 'romantic',
+      back(c, R, m) {
+        sky(c, m.sky || [[0, '#e8f4e6'], [.6, '#f8f6ee'], [1, '#e2eed8']]);
+        glow(c, 540, 900, 560, 'rgba(255,255,250,.8)');
+        const lg = c.createLinearGradient(0, 1560, 0, H); lg.addColorStop(0, '#a8cc8a'); lg.addColorStop(1, '#6e9e56');
+        c.fillStyle = lg; c.beginPath(); c.moveTo(0, 1600); c.quadraticCurveTo(540, 1540, W, 1600); c.lineTo(W, H); c.lineTo(0, H); c.fill();
+        const pts = archPts(160, 920, 760, 300, 60);
+        for (const [x, y] of [...pts, ...Array.from({ length: 24 }, (_, i) => [160, 760 + i * 40]), ...Array.from({ length: 24 }, (_, i) => [920, 760 + i * 40])]) {
+          for (let k = 0; k < 4; k++) leaf(c, x + (R() - .5) * 50, y + (R() - .5) * 50, 40 + R() * 20, 14, R() * TAU, `hsl(${100 + R() * 25},${40 + R() * 15}%,${28 + R() * 14}%)`, false);
+          if (R() < .35) rose(c, x + (R() - .5) * 40, y + (R() - .5) * 40, 20 + R() * 10, R() > .5 ? '#ffd6e0' : '#ff8fab', R() > .5 ? '#e05a7a' : '#c0304f', R() * 6);
+        }
+        for (const side of [0, 1]) for (let i = 0; i < 8; i++) { const x = side ? W - 40 - R() * 180 : 40 + R() * 180, y = 1640 + R() * 220; foliage(c, R, x, y, 60, 40, 30, 110, 30, 30); rose(c, x, y - 20, 22, '#ffd6e0', '#e05a7a', R() * 6); }
+        c.strokeStyle = '#6a4a2a'; c.lineWidth = 8; c.beginPath(); c.moveTo(0, 220); c.quadraticCurveTo(160, 200, 300, 240); c.stroke();
+        foliage(c, R, 80, 200, 140, 60, 90, 105, 32, 34);
+        lovebird(c, 190, 205, 46, 1, '#5fbf6a'); lovebird(c, 255, 212, 46, -1, '#ff8a5c');
+      },
+      anim(c, t) { butterfly(c, 380 + Math.sin(t * .5) * 180, 1300 + Math.sin(t * .8) * 100, 26, t * 9, '#ffb3c6'); butterfly(c, 720 + Math.cos(t * .4) * 150, 1180 + Math.sin(t * .7) * 90, 22, t * 10, '#fff'); },
+      fx(c, t) { petals(c, t, 18, ['#ff8fab', '#ffd6e0', '#e05a7a'], 181); },
+      crest(c, x, y) { lovebird(c, x - 34, y + 150, 56, 1, '#5fbf6a'); lovebird(c, x + 34, y + 156, 56, -1, '#ff8a5c'); blossom(c, x, y + 108, 16, '#e05a7a', '#fff', 0); }
+    }
 
   };
   // The moods: each scene's own colours first, then two more (light, tint and text colours), as looks of their own.
@@ -1192,8 +1636,8 @@ const Studio = (() => {
       LOOKS[`${id}-${md.key}`] = { ...B, ...md, scene: id, m: { ...(B.m || {}), ...(md.m || {}) }, col: { ...B.col, ...(md.col || {}) } };
     }
   }
-  // Seven more moods for every scene from a shared set (light, tint and text colours), so each scene has ten
-  // and there are 100 looks. Each scene gets a different mix, and its script font changes from mood to mood.
+  // More moods for every scene from a shared set (light, tint and text colours), so each scene has ten
+  // (200 looks in all). Each scene gets a different mix, and its script font changes from mood to mood.
   const LIGHT_TEXT = { names: '#ffd98a', ink: '#f6efdc', ink2: '#ddd2b4', accent: '#f4c6a8', gold: '#e8c46a' };
   const MOOD_SET = [
     { key: 'golden', mood: 'Golden Hour', tint: [['soft-light', ['#ffb347', '#ff6f61'], .7], ['multiply', '#ffe0b2', .3]], names: ['#a3203f', '#ffd27a'] },
@@ -1213,8 +1657,9 @@ const Studio = (() => {
   const SCRIPTS = ['Great Vibes', 'Parisienne', 'Pinyon Script', 'Alex Brush'];
   SCENES.forEach((id, si) => {
     const B = LOOKS[id], dark = +(B.shadow[0].match(/\d+/) || [0])[0] < 200, have = new Set([B.mood, ...(B.moods || []).map(md => md.mood)]);
+    const need = 9 - (B.moods || []).length;
     let added = 0;
-    for (let k = 0; k < MOOD_SET.length && added < 7; k++) {
+    for (let k = 0; k < MOOD_SET.length && added < need; k++) {
       const md = MOOD_SET[(si * 3 + k) % MOOD_SET.length];
       // A night mood over a scene that is already dark only made it murky
       if (have.has(md.mood) || LOOKS[`${id}-${md.key}`] || (md.dark && dark)) continue;
@@ -1228,7 +1673,7 @@ const Studio = (() => {
   });
   const lookName = L => `${L.name} · ${L.mood}`;
   // A look for the occasion, the first time (parties get the party scene, pujas the temple, and so on).
-  const OCCASION_LOOK = { bday: 'party', birthday: 'party', kitty: 'party-neon', ceremony: 'temple', naming: 'temple-sandal', sangeet: 'mehendi', babyshower: 'blush', anniversary: 'palace', engagement: 'jharokha' };
+  const OCCASION_LOOK = { bday: 'party', birthday: 'party', kitty: 'disco', ceremony: 'temple', naming: 'clouds', sangeet: 'mehendi', babyshower: 'clouds', anniversary: 'galaxy', engagement: 'jharokha' };
 
   // ---------- Layout and text ----------
   const fontOf = (L, f, z) => f === 'script' ? `${z}px "${L.font.script}"` : f === 'italic' ? `italic ${z}px "Cormorant Garamond"`
@@ -1391,8 +1836,12 @@ const Studio = (() => {
   }
   // A small picture of a look for its button (painted, shrunk, and the big one let go).
   function thumb(id, canvas) {
-    const big = layers.get(id) || paint(id);
-    canvas.getContext('2d').drawImage(big, 0, 0, canvas.width, canvas.height);
+    const big = layers.get(id) || paint(id), tmp = document.createElement('canvas');
+    tmp.width = W; tmp.height = H;
+    const c = tmp.getContext('2d');
+    c.drawImage(big, 0, 0);
+    LOOKS[id].anim(c, 2.5); // with its moving parts too (the disco ball, the diyas, the lanterns)
+    canvas.getContext('2d').drawImage(tmp, 0, 0, canvas.width, canvas.height);
   }
 
   class Player {
