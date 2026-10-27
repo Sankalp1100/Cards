@@ -1845,7 +1845,8 @@ const Studio = (() => {
   }
 
   class Player {
-    constructor(canvas) { this.cv = canvas; this.c = canvas.getContext('2d'); canvas.width = W; canvas.height = H; }
+    // `k` draws smaller (0.5 = 540×960, for previews on the website's phones); the video itself is made at 1.
+    constructor(canvas, k = 1) { this.cv = canvas; this.k = k; this.c = canvas.getContext('2d'); canvas.width = Math.round(W * k); canvas.height = Math.round(H * k); }
     set(card, opt, site = {}) {
       this.card = card; this.opt = opt; this.L = LOOKS[opt.look] || LOOKS.vrindavan;
       this.tl = timeline(card, opt); this.cache = new Map();
@@ -1861,7 +1862,8 @@ const Studio = (() => {
       const { c, L, tl } = this, { scenes, total } = tl;
       t = clamp(t, 0, total - .001);
       const idx = scenes.findIndex(s => t < s.t0 + s.d), s = scenes[idx < 0 ? scenes.length - 1 : idx], p = t - s.t0, last = s === scenes[scenes.length - 1];
-      c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+      c.setTransform(this.k, 0, 0, this.k, 0, 0);
+      c.save(); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
       const intro = ease(t / 4.5), z = 1.2 - .16 * intro + .05 * (t / total);
       c.translate(W / 2 + Math.sin(t * .15) * 10, H / 2 + (1 - intro) * -50); c.scale(z, z); c.translate(-W / 2, -H / 2);
       c.drawImage(this.layer, 0, 0); L.anim(c, t);
@@ -1895,7 +1897,15 @@ const Studio = (() => {
     return Promise.all([...want.map(f => document.fonts.load(f)), document.fonts.load('40px "Yatra One"', 'ॐ')]).catch(() => {});
   }
 
-  return { W, H, LOOKS, SCENES, lookName, thumb, defaults, timeline, lines, parents, splitIcon, ordinal, phone, sceneName, sceneLayer, Player, fontsReady };
+  // The website's sample video for a scene: the occasion it suits, with sample names (and parents, for weddings).
+  const SAMPLE_OCC = { party: 'bday', clouds: 'babyshower', disco: 'kitty', galaxy: 'anniversary', temple: 'ceremony', diwali: 'ceremony', haldi: 'wedding', mehendi: 'sangeet' };
+  function sample(scene) {
+    const type = SAMPLE_OCC[scene] || 'wedding', card = JSON.parse(JSON.stringify(PRESETS[type].card));
+    if (type === 'wedding') card.families = [{ side: 'Bride’s family', parents: 'Mr. & Mrs. Sharma' }, { side: 'Groom’s family', parents: 'Mr. & Mrs. Mehta' }];
+    return card;
+  }
+
+  return { W, H, LOOKS, SCENES, lookName, thumb, sample, defaults, timeline, lines, parents, splitIcon, ordinal, phone, sceneName, sceneLayer, Player, fontsReady };
 })();
 
 if (typeof module !== 'undefined') module.exports = Studio;

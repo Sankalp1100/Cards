@@ -132,7 +132,8 @@
   function orderDetails(code) {
     const r = Catalog.readOrder(code);
     if (!r || r.partial) return 'Only the design number is known for this order.';
-    const text = Catalog.orderMessage({ ...r.card, design: r.card.theme, guests: r.guests, photo: r.photo, gallery: r.gallery }, Catalog.entries());
+    const video = Studio.LOOKS[r.video] ? Studio.lookName(Studio.LOOKS[r.video]) : '';
+    const text = Catalog.orderMessage({ ...r.card, design: r.card.theme, guests: r.guests, photo: r.photo, gallery: r.gallery, video: video && r.video, videoName: video }, Catalog.entries());
     return text.split('\n').slice(1).filter(l => l && !/^Order (code|no)/.test(l)).map(l => l.replace(/\*/g, '')).join('\n');
   }
 
@@ -790,11 +791,12 @@
     .sort((a, b) => (a.done - b.done) || (b.received - a.received));
 
   // Loads a card into the Studio (the one in the editor, or an order's), with fresh words for its occasion.
-  function studioLoad(card) {
+  // `video`: the look the customer chose on the website, if any (it wins over the occasion's look).
+  function studioLoad(card, video) {
     st.card = card;
     const auto = Studio.defaults(st.card);
     // The look the occasion suits, unless one was picked by hand in this visit
-    const look = st.picked && st.opt ? st.opt.look : auto.look;
+    const look = Studio.LOOKS[video] ? video : st.picked && st.opt ? st.opt.look : auto.look;
     st.opt = { ...auto, look, music: st.opt ? st.opt.music : 'look' };
     $('#stWho').textContent = `${who(st.card)} · ${occasion(st.card).label}`;
     $('#stBless').checked = st.opt.blessing;
@@ -804,6 +806,7 @@
     st.t = 0;
     if (st.player) refreshStudio();
   }
+  const orderVideo = code => (code && (Catalog.readOrder(code) || {}).video) || '';
   function orderCard(code) {
     const r = Catalog.readOrder(code);
     return { ...Core.blankCard(), ...r.card, theme: r.card.theme || design().no };
@@ -817,7 +820,7 @@
     $('#stOrder').innerHTML = (state.host1 ? `<option value="">✏️ The invite in the editor: ${esc(who(state))}</option>` : '') +
       orders.map(o => `<option value="${esc(o.code)}">${o.done ? '✓ ' : '🆕 '}${esc(o.name)} · ${esc(occasion(o).label)}${Catalog.refOf(o.code) ? ` · ${Catalog.refOf(o.code)}` : ''}</option>`).join('');
     $('#stOrderRow').hidden = !orders.length;
-    studioLoad(state.host1 ? clone(state) : orderCard(orders[0].code));
+    studioLoad(state.host1 ? clone(state) : orderCard(orders[0].code), state.host1 ? '' : orderVideo(orders[0].code));
     $('#stVideo').hidden = $('#stDownload').hidden = true;
     stStatus('Watch it on the left, then make the video. It records in real time, so keep this tab open.');
     $('#studio').hidden = false;
@@ -932,13 +935,13 @@
 
   $('#stOrder').addEventListener('change', e => {
     if (st.rec) return;
-    studioLoad(e.target.value ? orderCard(e.target.value) : clone(state));
+    studioLoad(e.target.value ? orderCard(e.target.value) : clone(state), orderVideo(e.target.value));
   });
   // One tap: take the chosen order's details and make the video straight away.
   $('#stAuto').addEventListener('click', () => {
     if (st.rec) return;
     const code = $('#stOrder').value;
-    studioLoad(code ? orderCard(code) : clone(state));
+    studioLoad(code ? orderCard(code) : clone(state), orderVideo(code));
     const when = Core.parseDate(st.card.date);
     if (when && when < new Date(new Date().toDateString())) return stStatus('⚠️ This order’s date has already passed. Please check the date with the customer first.');
     makeStudioVideo();

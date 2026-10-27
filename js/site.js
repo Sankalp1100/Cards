@@ -286,9 +286,11 @@
     const chip = $(`#tplFilters [data-occ="${occ}"]`);
     if (chip && !chip.classList.contains('on')) chip.click(); // rebuilds the grid, so the cards deal in again
   };
+  const videosTab = $('.bottom-nav [data-videos]');
   function mark(sec) {
     tabs.forEach(a => a.classList.toggle('on', a.dataset.sec === sec));
     trendingTab.classList.toggle('on', sec === 'trending');
+    videosTab.classList.toggle('on', sec === 'videos');
   }
   function setTab(tab, { push = true, trending = false, occasion = '' } = {}) {
     const was = document.body.dataset.tab;
@@ -304,37 +306,138 @@
       $('#hotReel').scrollLeft = 0;
       mark('trending');
     }
+    if (tab === 'videos') {
+      scrollTo({ top: 0, behavior: 'instant' });
+      mark('videos');
+    }
     if (push && tab !== was) history.pushState({ tab }, '', tab === 'home' ? location.pathname + location.search : '#' + tab);
   }
   document.querySelector('.bottom-nav').addEventListener('click', e => {
-    const a = e.target.closest('[data-sec], [data-trending]');
+    const a = e.target.closest('[data-sec], [data-trending], [data-videos]');
     if (!a) return;
     e.preventDefault();
     if (a.hasAttribute('data-trending')) return setTab('trending');
+    if (a.hasAttribute('data-videos')) return setTab('videos');
     if (a.dataset.sec === 'templates') return setTab('designs');
     setTab('home');
     requestAnimationFrame(() => document.getElementById(a.dataset.sec).scrollIntoView({ behavior: 'smooth' }));
   });
   $('#seeAll').addEventListener('click', () => setTab('designs'));
-  const tabOfHash = () => ({ '#designs': 'designs', '#trending': 'trending' })[location.hash] || 'home';
+  const tabOfHash = () => ({ '#designs': 'designs', '#trending': 'trending', '#videos': 'videos' })[location.hash] || 'home';
+  // Other "Videos" links (top bar, hero): the Videos tab on phones, a scroll down on a computer
+  const phoneTabs = () => !!$('.bottom-nav').offsetParent;
+  document.addEventListener('click', e => {
+    const a = e.target.closest('[data-videos]:not(.bottom-nav *), [data-video-go]');
+    if (!a) return;
+    if (a.hasAttribute('data-video-go') && !sheet.hidden) closeOrder();
+    if (phoneTabs()) { e.preventDefault(); setTab('videos'); }
+    else if (a.hasAttribute('data-video-go')) { e.preventDefault(); $('#videos').scrollIntoView({ behavior: 'smooth' }); }
+  });
   addEventListener('popstate', e => setTab(e.state?.tab || tabOfHash(), { push: false }));
   document.body.dataset.tab = tabOfHash();
   if (tabOfHash() === 'trending') mark('trending');
+  if (tabOfHash() === 'videos') mark('videos');
 
   // On the Home tab, highlight the section in view.
   const tabIO = new IntersectionObserver(entries => entries.forEach(en => {
     if (en.isIntersecting && document.body.dataset.tab === 'home') mark(en.target.id);
   }), { rootMargin: '-45% 0px -50% 0px' });
-  ['top', 'templates', 'how'].forEach(id => tabIO.observe(document.getElementById(id)));
+  ['top', 'templates', 'videos'].forEach(id => tabIO.observe(document.getElementById(id)));
+  // ---------- Story videos: the Video Studio's twenty scenes ----------
+  // Each shows a picture (img/videos); a tap plays it with sample names. js/studio.js loads only then.
+  const VIDEO_SCENES = [
+    ['vrindavan', 'Vrindavan Garden', 'Weddings'], ['jharokha', 'Royal Jharokha', 'Weddings'], ['lotusnight', 'Lotus Night', 'Weddings'],
+    ['marigold', 'Marigold Mandap', 'Weddings, pujas'], ['palace', 'Palace Dusk', 'Receptions'], ['blush', 'Blush Floral', 'Engagements'],
+    ['temple', 'Temple Gateway', 'Pujas, griha pravesh'], ['haveli', 'Haveli Doors', 'Weddings'], ['mehendi', 'Mehendi Mandala', 'Mehendi, sangeet'],
+    ['party', 'Confetti Party', 'Birthdays'], ['beach', 'Beach Sunset', 'Destination weddings'], ['himalaya', 'Himalayan Mandap', 'Destination weddings'],
+    ['lights', 'Fairy-light Garden', 'Receptions'], ['mandap', 'Floral Mandap', 'Pheras'], ['galaxy', 'Starry Galaxy', 'Anniversaries'],
+    ['haldi', 'Haldi Sunshine', 'Haldi'], ['clouds', 'Dreamy Clouds', 'Baby showers, naming'], ['disco', 'Disco Night', 'Kitty parties'],
+    ['diwali', 'Diwali Lights', 'Pujas, Diwali'], ['rosegarden', 'Rose Garden', 'Weddings, anniversaries']
+  ];
+  $('#vidsGrid').innerHTML = VIDEO_SCENES.map(([id, name, hint]) => `
+    <button type="button" class="vid-tile" data-scene="${id}" aria-label="Play the ${esc(name)} story video">
+      <img src="img/videos/${id}.jpg" alt="" loading="lazy" decoding="async" width="360" height="640">
+      <span class="vid-play" aria-hidden="true">▶</span>
+      <span class="vid-cap"><b>${esc(name)}</b><small>${esc(hint)} · 10 moods</small></span>
+    </button>`).join('');
+
+  let studioScript = null;
+  const loadStudio = () => studioScript || (studioScript = new Promise((resolve, reject) => {
+    const s = Object.assign(document.createElement('script'), { src: 'js/studio.js', onload: resolve, onerror: () => { studioScript = null; reject(new Error('offline')); } });
+    document.head.appendChild(s);
+  }));
+  const vid = { player: null, card: null, scene: '', look: '', t: 0, last: 0, raf: 0 };
+
+  async function openVideo(scene) {
+    const [, name, hint] = VIDEO_SCENES.find(v => v[0] === scene) || VIDEO_SCENES[0];
+    vid.scene = scene;
+    $('#vidTitle').textContent = name;
+    $('#vidKicker').textContent = `Story video · ${hint}`;
+    $('#vidNote').textContent = '';
+    $('#vidMoods').innerHTML = '';
+    $('#vidWait').hidden = false;
+    $('#vidWait').textContent = 'Loading the video…';
+    $('#vidSheet').hidden = false;
+    document.body.classList.add('sheet-open');
+    try { await loadStudio(); await Studio.fontsReady(); }
+    catch (e) { $('#vidWait').textContent = 'The video could not load. Please check your internet and try again.'; return; }
+    if ($('#vidSheet').hidden || vid.scene !== scene) return; // closed, or another scene picked, while it loaded
+    // Phones draw it smaller (it looks the same, and plays smoothly)
+    vid.player = vid.player || new Studio.Player($('#vidCanvas'), matchMedia('(max-width: 640px)').matches ? .5 : .75);
+    vid.card = Studio.sample(scene);
+    $('#vidMoods').innerHTML = Object.entries(Studio.LOOKS).filter(([, L]) => L.scene === scene)
+      .map(([id, L]) => `<button type="button" class="chip" data-look="${id}">${esc(L.mood)}</button>`).join('');
+    vid.t = 0;
+    pickMood(scene);
+    $('#vidWait').hidden = true;
+    cancelAnimationFrame(vid.raf);
+    vid.last = performance.now();
+    vid.raf = requestAnimationFrame(videoFrame);
+  }
+  function pickMood(id) {
+    vid.look = id;
+    const L = Studio.LOOKS[id];
+    vid.player.set(vid.card, { ...Studio.defaults(vid.card), look: id }, SITE);
+    vid.t = Math.min(vid.t, vid.player.total - .05);
+    $('#vidNote').textContent = `${L.mood} mood · ${L.note}`;
+    document.querySelectorAll('#vidMoods [data-look]').forEach(b => b.classList.toggle('on', b.dataset.look === id));
+  }
+  function videoFrame(now) {
+    const p = vid.player;
+    vid.t = (vid.t + Math.max(0, Math.min(.5, (now - vid.last) / 1000))) % p.total;
+    vid.last = now;
+    p.draw(vid.t);
+    $('#vidBar').style.width = `${vid.t / p.total * 100}%`;
+    vid.raf = requestAnimationFrame(videoFrame);
+  }
+  function closeVideo() {
+    cancelAnimationFrame(vid.raf);
+    vid.scene = '';
+    $('#vidSheet').hidden = true;
+    document.body.classList.remove('sheet-open');
+  }
+  $('#vidsGrid').addEventListener('click', e => { const b = e.target.closest('[data-scene]'); if (b) openVideo(b.dataset.scene); });
+  $('#vidMoods').addEventListener('click', e => { const b = e.target.closest('[data-look]'); if (b) pickMood(b.dataset.look); });
+  $('#vidClose').addEventListener('click', closeVideo);
+  addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#vidSheet').hidden) closeVideo(); });
+  // Order this video: the order form opens with the video look chosen (and the occasion it was shown for)
+  $('#vidOrder').addEventListener('click', () => {
+    if (!vid.look) return;
+    const video = { id: vid.look, name: Studio.lookName(Studio.LOOKS[vid.look]), type: vid.card.type };
+    closeVideo();
+    openOrder('', video);
+  });
+
   // ---------- Order form ----------
   const sheet = $('#orderSheet'), of = $('#orderForm'), STEPS = 5;
   let step = 0, ord = null;
 
   let orderRef = ''; // the short order number shown in the WhatsApp message
-  function openOrder(design) {
+  // `video`: a story video look chosen under Videos ({ id, name, type }), ordered with the invitation.
+  function openOrder(design, video = null) {
     orderRef = '';
     const e = Templates.get(design) ? allEntries[Templates.get(design).no - 1] : null;
-    ord = { design: e ? e.no : '', type: e ? e.occasion : 'wedding', events: [] };
+    ord = { design: e ? e.no : '', type: e ? e.occasion : video ? video.type : 'wedding', events: [], video };
     of.reset();
     of.elements.design.value = e ? e.no : '';
     of.elements.date.type = 'datetime-local';
@@ -346,6 +449,7 @@
     renderOccasions();
     renderEvents();
     showDesign();
+    showVideo();
     goTo(0);
     sheet.hidden = false;
     document.body.classList.add('sheet-open');
@@ -422,8 +526,15 @@
       guests: v('guests').split('\n').map(g => g.trim()).filter(Boolean), photo: of.elements.photo.checked,
       ...Catalog.specialLines({ story: v('xStory'), families: v('xFamilies'), attire: v('xAttire') }), upi: v('xUpi'), hashtag: v('xHashtag'),
       giftNote: v('xGiftNote'), venueNote: v('xVenueNote'), thanks: v('xThanks'), title: v('xTitle'), tagline: v('xTagline'),
-      gallery: of.elements.xGallery.checked, music: of.elements.xMusic.checked
+      gallery: of.elements.xGallery.checked, music: of.elements.xMusic.checked,
+      video: ord.video ? ord.video.id : '', videoName: ord.video ? ord.video.name : ''
     };
+  }
+  // The story video in the order (or a nudge to pick one)
+  function showVideo() {
+    $('#osVideo').innerHTML = ord.video
+      ? `🎬 Story video: <b>${esc(ord.video.name)}</b> <button type="button" class="os-unvideo" data-unvideo aria-label="Remove the video">✕</button>`
+      : 'Want a story video for WhatsApp too? <a href="#videos" data-video-go>See the 200 video looks →</a>';
   }
 
   // What each step needs before moving on.
@@ -548,6 +659,7 @@
   }
 
   of.addEventListener('click', e => {
+    if (e.target.closest('[data-unvideo]')) { ord.video = null; showVideo(); return; }
     const occ = e.target.closest('[data-type]'), add = e.target.closest('[data-add]'), del = e.target.closest('[data-del]');
     const pick = e.target.closest('[data-pick]'), browse = e.target.closest('[data-browse]');
     if (pick) {

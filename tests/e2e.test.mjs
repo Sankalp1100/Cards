@@ -990,6 +990,30 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`getComputedStyle(document.querySelector('.see-all-wrap')).display`), 'none');
   });
 
+  test('story videos: 20 scenes; a tap plays one in its ten moods; "Order this video" puts it in the order', async () => {
+    await page.viewport(390, 844);
+    await page.goto(base + 'index.html');
+    await page.eval(`document.querySelector('.bottom-nav [data-videos]').click()`);
+    assert.equal(await page.eval(`document.body.dataset.tab`), 'videos');
+    assert.equal(await page.eval(`document.querySelectorAll('#vidsGrid .vid-tile').length`), 20);
+    assert.equal(await page.eval(`!!document.querySelector('.hero').offsetParent`), false, 'the Videos tab shows only the videos');
+    await page.eval(`document.querySelector('[data-scene="party"]').click()`);
+    await page.waitFor(`document.querySelector('#vidWait').hidden`, 15000);
+    assert.equal(await page.eval(`document.querySelectorAll('#vidMoods .chip').length`), 10, 'ten moods');
+    const bar = await page.eval(`document.querySelector('#vidBar').style.width`);
+    await page.waitFor(`document.querySelector('#vidBar').style.width !== ${JSON.stringify(bar)}`, 4000);
+    await page.eval(`document.querySelector('#vidMoods .chip:nth-child(3)').click()`);
+    const mood = await page.eval(`document.querySelector('#vidMoods .on').textContent`);
+    await page.eval(`document.querySelector('#vidOrder').click()`);
+    assert.equal(await page.eval(`document.querySelector('#vidSheet').hidden`), true);
+    assert.equal(await page.eval(`document.querySelector('#orderSheet').hidden`), false);
+    assert.ok((await page.eval(`document.querySelector('#osVideo').textContent`)).includes(`Confetti Party · ${mood}`), 'the order shows the chosen video');
+    assert.equal(await page.eval(`document.querySelector('#osOcc .chip.on').dataset.type`), 'bday', 'for the occasion it was shown with');
+    await page.eval(`document.querySelector('#osClose').click()`);
+    noErrors();
+    await page.viewport(420, 860);
+  });
+
   test('mobile: the sample bar and music button do not overlap', async () => {
     await page.viewport(360, 740);
     await page.goto(cardLink({ ...PRESETS.wedding.card, theme: 13 }, '?demo'));

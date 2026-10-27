@@ -110,6 +110,7 @@ const Catalog = {
     add(order.photo, `• Photo: I'll send it in this chat`);
     add(order.gallery, `• Gallery: I'll send more photos in this chat`);
     add(order.music === false, `• Music: no background music`);
+    add(order.video, `• Video invitation: ${plain(order.videoName || order.video)}`);
     // Every "Make it special" detail, written out so the owner can read the whole order here.
     const list = (k, f) => (order[k] || []).map(f).filter(Boolean).join('; ');
     add((order.story || []).length, `• Our story: ${list('story', s => [s.when, s.title, s.text].map(plain).filter(Boolean).join(' - '))}`);
@@ -156,6 +157,11 @@ const Catalog = {
     return m ? 'WC-' + m[1].toUpperCase() : '';
   },
 
+  // A video look's id as the Video Studio names it ("beach", "beach-golden"), or '' for anything else.
+  videoId(v) {
+    return typeof v === 'string' && /^[a-z]{3,12}(-[a-z]{3,12})?$/.test(v) ? v : '';
+  },
+
   orderCode(order) {
     const o = Core.compact({
       design: order.design || '', type: order.type, host1: order.host1, host2: order.host2, nick1: order.nick1, nick2: order.nick2, date: order.date, venue: order.venue, mapUrl: Catalog.mapLink(order.mapUrl),
@@ -163,7 +169,8 @@ const Catalog = {
       rsvp: Core.mobile(order.rsvp), guests: (order.guests || []).map(g => String(g).trim()).filter(Boolean).join('\n'), photo: order.photo ? 1 : '',
       story: order.story, families: order.families, attire: order.attire, upi: order.upi, hashtag: order.hashtag,
       giftNote: order.giftNote, venueNote: order.venueNote, thanks: order.thanks, title: order.title, tagline: order.tagline,
-      morePhotos: order.gallery ? 1 : '', music: order.music === false ? false : '' // ("gallery" is the card's photo list)
+      morePhotos: order.gallery ? 1 : '', music: order.music === false ? false : '', // ("gallery" is the card's photo list)
+      video: Catalog.videoId(order.video)
     });
     return Catalog.ORDER_TAG + Codec.encode(o);
   },
@@ -194,7 +201,7 @@ const Catalog = {
     const t = Templates.get(o.design);
     if (t) card.theme = t.no;
     const guests = (typeof o.guests === 'string' ? o.guests : '').split('\n').map(g => g.trim().slice(0, 60)).filter(Boolean).slice(0, 500);
-    return { card, guests, photo: !!o.photo, gallery: !!o.morePhotos };
+    return { card, guests, photo: !!o.photo, gallery: !!o.morePhotos, video: Catalog.videoId(o.video) };
   },
 
   // The sample card for a design, using the sample text of its occasion.

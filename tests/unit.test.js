@@ -589,7 +589,7 @@ test.describe('Catalog', () => {
         events: [{ name: '🎂 Cake Cutting', date: '2026-11-28T21:30', venue: '', dress: '' }],
         story: [], families: [], attire: [], upi: '', hashtag: '', giftNote: '', venueNote: '', thanks: '', theme: 47
       },
-      guests: ['Rahul Uncle', 'Priya Di'], photo: true, gallery: false
+      guests: ['Rahul Uncle', 'Priya Di'], photo: true, gallery: false, video: ''
     });
   });
 
@@ -813,5 +813,30 @@ test.describe('Video Studio', () => {
     assert.equal(Studio.LOOKS[look('bday')].scene, 'party');
     assert.equal(Studio.LOOKS[look('ceremony')].scene, 'temple');
     for (const type of Object.keys(PRESETS)) assert.ok(Studio.LOOKS[look(type)], type);
+  });
+});
+
+test.describe('Story videos on the website', () => {
+  test('an order carries the chosen video look, and the message names it', () => {
+    const order = { ...plain(PRESETS.wedding.card), design: 1, guests: [], video: 'beach-golden', videoName: 'Beach Sunset · Golden Hour' };
+    const msg = Catalog.orderMessage(order, Catalog.entries());
+    assert.match(msg, /• Video invitation: Beach Sunset · Golden Hour/);
+    assert.equal(Catalog.readOrder(msg).video, 'beach-golden', 'the order code keeps the look');
+    assert.equal(Catalog.readOrder(Catalog.orderMessage({ ...order, video: '' }, Catalog.entries())).video, '', 'no video chosen');
+    assert.equal(Catalog.videoId('<script>'), '');
+    assert.equal(Catalog.videoId('beach'), 'beach');
+  });
+
+  test('the website lists every Video Studio scene, each with its picture', () => {
+    const ctx = vm.createContext({ TextEncoder, TextDecoder, btoa, atob, URL, URLSearchParams, console });
+    for (const f of ['config.js', 'themes.js', 'codec.js', 'core.js', 'studio.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', f), 'utf8'), ctx, { filename: f });
+    const Studio = vm.runInContext('Studio', ctx);
+    const site = fs.readFileSync(path.join(ROOT, 'js', 'site.js'), 'utf8');
+    const listed = [...site.slice(site.indexOf('const VIDEO_SCENES'), site.indexOf('];', site.indexOf('const VIDEO_SCENES'))).matchAll(/\['(\w+)', '([^']+)'/g)];
+    assert.deepEqual(listed.map(m => m[1]), plain(Studio.SCENES));
+    for (const [, id, name] of listed) {
+      assert.equal(name, Studio.LOOKS[id].name, id);
+      assert.ok(fs.statSync(path.join(ROOT, 'img', 'videos', id + '.jpg')).size > 5000, `img/videos/${id}.jpg`);
+    }
   });
 });

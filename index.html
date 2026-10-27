@@ -39,6 +39,7 @@
     <div class="nav-links">
       <a href="#styles">Styles</a>
       <a href="#templates">Designs</a>
+      <a href="#videos" data-videos>Videos</a>
       <a href="#how">How it works</a>
       <a href="#faq">FAQ</a>
     </div>
@@ -48,6 +49,7 @@
   <header class="hero" id="top">
     <div class="hero-text">
       <p class="pill">✨ No app. No login. Just one magic link.</p>
+      <a class="pill pill-new" href="#videos" data-videos>🎬 New: story videos for WhatsApp, <b>200 looks</b> →</a>
       <h1 class="mega">
         <span class="line">Invites that</span>
         <span class="line">go <em class="gradient-text">viral</em></span>
@@ -59,7 +61,7 @@
         <a class="btn-line" id="demoBtn" href="card.html" target="_blank" rel="noopener">▶ See a live demo</a>
       </div>
       <ul class="trust" aria-label="At a glance">
-        <li><b>300</b> designs</li><li><b>10</b> trending styles</li><li><b>1</b> link for all guests</li>
+        <li><b>300</b> designs</li><li><b>200</b> video looks</li><li><b>1</b> link for all guests</li>
       </ul>
     </div>
     <!-- Three real designs in phone frames (posters drawn by js/site.js), floating with the mouse -->
@@ -132,6 +134,16 @@
     <div class="hot-occ" id="hotOcc"></div>
   </section>
 
+  <!-- Story videos: the Video Studio's 20 scenes (pictures in img/videos), each playable with sample names -->
+  <section class="vids" id="videos">
+    <div class="vids-head">
+      <p class="eyebrow">New · Video invitations</p>
+      <h2 class="section-h">Story <span class="gradient-text">videos</span></h2>
+      <p class="muted">A painted 30-second video for WhatsApp status and Instagram: your names, every function, the date and the venue, with music. <b>20 scenes, each in 10 moods: 200 looks.</b> Tap one to watch it.</p>
+    </div>
+    <div class="vids-grid" id="vidsGrid"></div>
+  </section>
+
   <section class="how" id="how">
     <h2 class="section-h">How it <span class="gradient-text">works</span></h2>
     <div class="steps">
@@ -150,7 +162,7 @@
       <details><summary>What do I need to send?</summary><p>Names, the date and venue. Everything else is optional: functions, your story, families, photos, dress code, UPI for gifts. The order form asks for it step by step.</p></details>
       <details><summary>The time isn't fixed yet. Can I still order?</summary><p>Yes. Tick <b>Time not decided yet</b> and the invitation shows only the date.</p></details>
       <details><summary>Can every guest get their own link?</summary><p>Yes. Send a list of names and each guest gets a link that greets them by name.</p></details>
-      <details><summary>Can I get a video for my WhatsApp status?</summary><p>Yes. We can send an MP4 of your invitation that stops on every date and venue.</p></details>
+      <details><summary>Can I get a video for my WhatsApp status?</summary><p>Yes. Pick one of the 200 looks under <b>Story videos</b> and tap <b>Order this video</b>: we make it with your names, functions, date and venue. We can also send a video of your invitation card itself.</p></details>
     </div>
   </section>
 
@@ -189,8 +201,26 @@
     <a href="#templates" data-sec="templates"><i>🎨</i><span>Designs</span></a>
     <a class="bn-order" data-order href="#order"><i>💬</i><span>Order</span></a>
     <a href="#templates" data-trending><i>🔥</i><span>Trending</span></a>
-    <a href="#how" data-sec="how"><i>✨</i><span>How</span></a>
+    <a href="#videos" data-videos><i>🎬</i><span>Videos</span></a>
   </nav>
+
+  <!-- Story video player: one scene with sample names, its ten moods, and "Order this video" -->
+  <div class="vid-sheet" id="vidSheet" hidden>
+    <div class="vid-box" role="dialog" aria-modal="true" aria-labelledby="vidTitle">
+      <div class="vid-stage"><canvas id="vidCanvas" aria-label="Video preview"></canvas><p class="vid-wait" id="vidWait">Loading the video…</p></div>
+      <div class="vid-side">
+        <button type="button" class="os-x vid-x" id="vidClose" aria-label="Close">✕</button>
+        <p class="eyebrow" id="vidKicker">Story video</p>
+        <h3 id="vidTitle"></h3>
+        <p class="muted" id="vidNote"></p>
+        <p class="vid-h">Pick a mood</p>
+        <div class="chips vid-moods" id="vidMoods"></div>
+        <div class="vid-bar"><i id="vidBar"></i></div>
+        <button type="button" class="btn-glow" id="vidOrder">💬 Order this video</button>
+        <small class="muted">Sample names shown. Yours is made with your own names, functions, date and venue, with music, as an MP4.</small>
+      </div>
+    </div>
+  </div>
 
   <!-- Live demo picker: choose an occasion and a design (or type its number) to play its sample card -->
   <div class="order-sheet" id="demoSheet" hidden>
@@ -230,6 +260,7 @@
           <div class="os-picks" id="osPicks"></div>
           <label class="os-num">Or type a design number <input name="design" inputmode="numeric" maxlength="3" placeholder="e.g. 47"></label>
           <p class="os-design" id="osDesign"></p>
+          <p class="os-video" id="osVideo"></p>
         </section>
         <section class="os-step" data-step="1" hidden>
           <h3>Who and when?</h3>
