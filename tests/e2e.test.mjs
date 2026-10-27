@@ -268,9 +268,16 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.waitFor(`!!window.__shared`, 3000);
     const shared = await page.eval(`window.__shared.text`);
     assert.match(shared, /Kitty Party invitation · Design #009/);
-    assert.match(shared, /See it live:\n.*card\.html\?demo/);
+    assert.match(shared, /See it live:\nhttps:\/\/\S+\/d\?n=9\n/, 'a short link to the sample');
+    assert.ok(shared.length < 260, 'the whole message stays short');
     assert.match(shared, /Get yours made on /);
     assert.equal(await page.eval(`location.search`), '?demo&auto', 'sharing stays on the card');
+    // The short link opens that design's sample
+    await page.goto(base + 'card.html?n=9&auto');
+    await page.waitFor(`document.body.classList.contains('opened')`, 5000);
+    assert.ok(await page.eval(`document.body.classList.contains('theme-9') && !!document.querySelector('#demoBar')`), '?n=9 is the sample of #009');
+    await page.goto(cardLink({ ...PRESETS.kitty.card, theme: 9 }, '?demo&auto'));
+    await page.waitFor(`document.body.classList.contains('opened')`, 5000);
     // The other buttons lead to ordering this design
     await page.eval(`document.querySelector('#calBtn').click()`);
     await page.waitFor(`location.pathname.endsWith('index.html') && location.search === '?order=9'`, 5000);
@@ -805,7 +812,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       fs.rmSync(dir, { recursive: true, force: true });
     });
 
-    test('Video Studio: its own screen, 30 looks, the story as scenes, and an MP4 made by itself from a customer order', async () => {
+    test('Video Studio: its own screen, 100 looks, the story as scenes, and an MP4 made by itself from a customer order', async () => {
       const fs = await import('node:fs'), os = await import('node:os');
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wc-studio-'));
       await page.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: dir });
@@ -814,7 +821,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       await page.eval(`document.querySelector('#studioBtn').click()`);
       await page.waitFor(`!document.querySelector('#studio').hidden && document.querySelectorAll('#stScenes [data-scene]').length > 0`, 8000);
       assert.equal(await page.eval(`document.querySelectorAll('#stLooks [data-look]').length`), 10, 'ten scenes');
-      assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stMoods .chip')].map(b => b.textContent)`), ['Morning', 'Golden Hour', 'Moonlit'], 'three moods each');
+      assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stMoods .chip')].map(b => b.textContent)`), ['Morning', 'Golden Hour', 'Moonlit', 'Rose Blush', 'Mint Fresh', 'Lavender Dream', 'Vintage Sepia', 'Royal Night', 'Emerald', 'Sunset Coral'], 'ten moods each');
       assert.equal(await page.eval(`document.querySelector('#stOrderRow').hidden`), true, 'no orders yet: no order picker');
       assert.match(await page.eval(`document.querySelector('#stWho').textContent`), /Diya & Aarav · Wedding/);
       // The preview is painted (many colours, not a blank canvas) and plays

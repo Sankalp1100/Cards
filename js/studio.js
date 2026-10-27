@@ -1192,6 +1192,40 @@ const Studio = (() => {
       LOOKS[`${id}-${md.key}`] = { ...B, ...md, scene: id, m: { ...(B.m || {}), ...(md.m || {}) }, col: { ...B.col, ...(md.col || {}) } };
     }
   }
+  // Seven more moods for every scene from a shared set (light, tint and text colours), so each scene has ten
+  // and there are 100 looks. Each scene gets a different mix, and its script font changes from mood to mood.
+  const LIGHT_TEXT = { names: '#ffd98a', ink: '#f6efdc', ink2: '#ddd2b4', accent: '#f4c6a8', gold: '#e8c46a' };
+  const MOOD_SET = [
+    { key: 'golden', mood: 'Golden Hour', tint: [['soft-light', ['#ffb347', '#ff6f61'], .7], ['multiply', '#ffe0b2', .3]], names: ['#a3203f', '#ffd27a'] },
+    { key: 'moonlit', mood: 'Moonlit', tint: [['multiply', ['#33417f', '#121b45'], .8]], dark: true },
+    { key: 'roseblush', mood: 'Rose Blush', tint: [['multiply', '#f9c9d6', .55]], names: ['#b0245a', '#ffc2d6'] },
+    { key: 'mint', mood: 'Mint Fresh', tint: [['soft-light', '#4fd1c5', .6], ['multiply', '#d8f5ee', .35]], names: ['#1f6f5c', '#b8f5e4'] },
+    { key: 'lavender', mood: 'Lavender Dream', tint: [['multiply', '#d9c8f5', .55], ['soft-light', '#8a6ad8', .35]], names: ['#5a3a9a', '#e2d2ff'] },
+    { key: 'sepia', mood: 'Vintage Sepia', tint: [['color', '#a0703a', .55], ['multiply', '#f2e2c4', .3]], names: ['#7a3b12', '#f6d8a8'] },
+    { key: 'royalnight', mood: 'Royal Night', tint: [['multiply', ['#25306a', '#101638'], .82]], dark: true },
+    { key: 'emerald', mood: 'Emerald', tint: [['color', '#0f7a62', .5], ['multiply', '#cfe8dc', .25]], names: ['#0f5a46', '#bdf0d8'] },
+    { key: 'coral', mood: 'Sunset Coral', tint: [['soft-light', ['#ff8a5c', '#ff4f7a'], .75]], names: ['#a8233a', '#ffd0b8'] },
+    { key: 'ivory', mood: 'Ivory Gold', tint: [['color', '#d4b06a', .35], ['screen', '#fff6e0', .2]], names: ['#8a5a12', '#ffe3a3'] },
+    { key: 'midnight', mood: 'Midnight Blue', tint: [['multiply', ['#1a2f6a', '#0a1230'], .85]], dark: true },
+    { key: 'peacock', mood: 'Peacock Teal', tint: [['multiply', '#7fc8c8', .5], ['soft-light', '#0f6a7a', .4]], names: ['#0f4a5a', '#b8eef0'] },
+    { key: 'monsoon', mood: 'Monsoon', tint: [['multiply', '#9fb3b8', .55], ['soft-light', '#3a5a6a', .3]], names: ['#2a4a5a', '#d0e6f0'] }
+  ];
+  const SCRIPTS = ['Great Vibes', 'Parisienne', 'Pinyon Script', 'Alex Brush'];
+  SCENES.forEach((id, si) => {
+    const B = LOOKS[id], dark = +(B.shadow[0].match(/\d+/) || [0])[0] < 200, have = new Set([B.mood, ...(B.moods || []).map(md => md.mood)]);
+    let added = 0;
+    for (let k = 0; k < MOOD_SET.length && added < 7; k++) {
+      const md = MOOD_SET[(si * 3 + k) % MOOD_SET.length];
+      // A night mood over a scene that is already dark only made it murky
+      if (have.has(md.mood) || LOOKS[`${id}-${md.key}`] || (md.dark && dark)) continue;
+      const toDark = md.dark && !dark, onDark = dark || md.dark;
+      const col = toDark ? { ...LIGHT_TEXT } : { ...B.col, ...(md.names ? { names: md.names[onDark ? 1 : 0] } : {}) };
+      const font = id === 'party' ? B.font : { ...B.font, script: SCRIPTS[(si + added + 1) % SCRIPTS.length] };
+      LOOKS[`${id}-${md.key}`] = { ...B, key: md.key, mood: md.mood, tint: md.tint, scene: id, m: { ...(B.m || {}) }, col, font,
+        ...(toDark ? { shadow: ['rgba(5,10,35,.85)', 16], mono: [['#ffe9b0', '#e0b04a'], ['#ffd0dc', '#e8799d']] } : {}) };
+      added++;
+    }
+  });
   const lookName = L => `${L.name} · ${L.mood}`;
   // A look for the occasion, the first time (parties get the party scene, pujas the temple, and so on).
   const OCCASION_LOOK = { bday: 'party', birthday: 'party', kitty: 'party-neon', ceremony: 'temple', naming: 'temple-sandal', sangeet: 'mehendi', babyshower: 'blush', anniversary: 'palace', engagement: 'jharokha' };
