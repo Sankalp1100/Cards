@@ -812,7 +812,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       fs.rmSync(dir, { recursive: true, force: true });
     });
 
-    test('Video Studio: its own screen, 200 looks, the story as scenes, and an MP4 made by itself from a customer order', async () => {
+    test('Video Studio: its own screen, 300 looks, the story as scenes, and an MP4 made by itself from a customer order', async () => {
       const fs = await import('node:fs'), os = await import('node:os');
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wc-studio-'));
       await page.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: dir });
@@ -821,7 +821,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       await page.eval(`document.querySelector('#studioBtn').click()`);
       await page.waitFor(`!document.querySelector('#studio').hidden && document.querySelectorAll('#stScenes [data-scene]').length > 0`, 8000);
       assert.equal(await page.eval(`document.querySelectorAll('#stLooks [data-look]').length`), 20, 'twenty scenes');
-      assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stMoods .chip')].map(b => b.textContent)`), ['Morning', 'Golden Hour', 'Moonlit', 'Rose Blush', 'Mint Fresh', 'Lavender Dream', 'Vintage Sepia', 'Royal Night', 'Emerald', 'Sunset Coral'], 'ten moods each');
+      assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stMoods .chip')].map(b => b.textContent)`), ['Morning', 'Golden Hour', 'Moonlit', 'Rose Blush', 'Mint Fresh', 'Lavender Dream', 'Vintage Sepia', 'Royal Night', 'Emerald', 'Sunset Coral', 'Ivory Gold', 'Midnight Blue', 'Peacock Teal', 'Monsoon', 'Saffron Glow'], 'fifteen moods each');
       assert.equal(await page.eval(`document.querySelector('#stOrderRow').hidden`), true, 'no orders yet: no order picker');
       assert.match(await page.eval(`document.querySelector('#stWho').textContent`), /Diya & Aarav · Wedding/);
       // The preview is painted (many colours, not a blank canvas) and plays
@@ -990,7 +990,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`getComputedStyle(document.querySelector('.see-all-wrap')).display`), 'none');
   });
 
-  test('story videos: 20 scenes; a tap plays one in its ten moods; "Order this video" puts it in the order', async () => {
+  test('story videos: 20 scenes; a tap plays one in its fifteen moods; "Order this video" puts it in the order', async () => {
     await page.viewport(390, 844);
     await page.goto(base + 'index.html');
     await page.eval(`document.querySelector('.bottom-nav [data-videos]').click()`);
@@ -999,7 +999,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`!!document.querySelector('.hero').offsetParent`), false, 'the Videos tab shows only the videos');
     await page.eval(`document.querySelector('[data-scene="party"]').click()`);
     await page.waitFor(`document.querySelector('#vidWait').hidden`, 15000);
-    assert.equal(await page.eval(`document.querySelectorAll('#vidMoods .chip').length`), 10, 'ten moods');
+    assert.equal(await page.eval(`document.querySelectorAll('#vidMoods .chip').length`), 15, 'fifteen moods');
     const bar = await page.eval(`document.querySelector('#vidBar').style.width`);
     await page.waitFor(`document.querySelector('#vidBar').style.width !== ${JSON.stringify(bar)}`, 4000);
     await page.eval(`document.querySelector('#vidMoods .chip:nth-child(3)').click()`);

@@ -358,7 +358,7 @@
     <button type="button" class="vid-tile" data-scene="${id}" aria-label="Play the ${esc(name)} story video">
       <img src="img/videos/${id}.jpg" alt="" loading="lazy" decoding="async" width="360" height="640">
       <span class="vid-play" aria-hidden="true">▶</span>
-      <span class="vid-cap"><b>${esc(name)}</b><small>${esc(hint)} · 10 moods</small></span>
+      <span class="vid-cap"><b>${esc(name)}</b><small>${esc(hint)} · 15 moods</small></span>
     </button>`).join('');
 
   let studioScript = null;
@@ -534,7 +534,7 @@
   function showVideo() {
     $('#osVideo').innerHTML = ord.video
       ? `🎬 Story video: <b>${esc(ord.video.name)}</b> <button type="button" class="os-unvideo" data-unvideo aria-label="Remove the video">✕</button>`
-      : 'Want a story video for WhatsApp too? <a href="#videos" data-video-go>See the 200 video looks →</a>';
+      : 'Want a story video for WhatsApp too? <a href="#videos" data-video-go>See the 300 video looks →</a>';
   }
 
   // What each step needs before moving on.

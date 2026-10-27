@@ -792,7 +792,7 @@ const Studio = (() => {
     }
   }
 
-  // ---------- The looks: twenty painted scenes, each in ten moods (200 in all) ----------
+  // ---------- The looks: twenty painted scenes, each in fifteen moods (300 in all) ----------
   const LOOKS = {
     vrindavan: {
       name: 'Vrindavan Garden', mood: 'Morning', note: 'Forest light, peacock, flute & feather',
@@ -1636,8 +1636,8 @@ const Studio = (() => {
       LOOKS[`${id}-${md.key}`] = { ...B, ...md, scene: id, m: { ...(B.m || {}), ...(md.m || {}) }, col: { ...B.col, ...(md.col || {}) } };
     }
   }
-  // More moods for every scene from a shared set (light, tint and text colours), so each scene has ten
-  // (200 looks in all). Each scene gets a different mix, and its script font changes from mood to mood.
+  // More moods for every scene from a shared set (light, tint and text colours), so each scene has fifteen
+  // (300 looks in all). Each scene gets a different mix, and its script font changes from mood to mood.
   const LIGHT_TEXT = { names: '#ffd98a', ink: '#f6efdc', ink2: '#ddd2b4', accent: '#f4c6a8', gold: '#e8c46a' };
   const MOOD_SET = [
     { key: 'golden', mood: 'Golden Hour', tint: [['soft-light', ['#ffb347', '#ff6f61'], .7], ['multiply', '#ffe0b2', .3]], names: ['#a3203f', '#ffd27a'] },
@@ -1652,12 +1652,19 @@ const Studio = (() => {
     { key: 'ivory', mood: 'Ivory Gold', tint: [['color', '#d4b06a', .35], ['screen', '#fff6e0', .2]], names: ['#8a5a12', '#ffe3a3'] },
     { key: 'midnight', mood: 'Midnight Blue', tint: [['multiply', ['#1a2f6a', '#0a1230'], .85]], dark: true },
     { key: 'peacock', mood: 'Peacock Teal', tint: [['multiply', '#7fc8c8', .5], ['soft-light', '#0f6a7a', .4]], names: ['#0f4a5a', '#b8eef0'] },
-    { key: 'monsoon', mood: 'Monsoon', tint: [['multiply', '#9fb3b8', .55], ['soft-light', '#3a5a6a', .3]], names: ['#2a4a5a', '#d0e6f0'] }
+    { key: 'monsoon', mood: 'Monsoon', tint: [['multiply', '#9fb3b8', .55], ['soft-light', '#3a5a6a', .3]], names: ['#2a4a5a', '#d0e6f0'] },
+    { key: 'saffron', mood: 'Saffron Glow', tint: [['soft-light', '#ff9a1f', .65], ['multiply', '#ffe2b0', .3]], names: ['#a8420a', '#ffd08a'] },
+    { key: 'sakura', mood: 'Cherry Blossom', tint: [['screen', '#ffd6e6', .25], ['multiply', '#ffd0df', .45]], names: ['#b5265a', '#ffd6e6'] },
+    { key: 'champagne', mood: 'Champagne', tint: [['color', '#e8cfa0', .4], ['screen', '#fff4e0', .18]], names: ['#7a5a2a', '#ffe9c0'] },
+    { key: 'ocean', mood: 'Ocean Breeze', tint: [['multiply', '#a8d8f0', .55], ['soft-light', '#1a6fb0', .35]], names: ['#164a7a', '#c4e8ff'] },
+    { key: 'plum', mood: 'Plum Wine', tint: [['multiply', '#d8a8c8', .55], ['soft-light', '#6a1a4a', .4]], names: ['#6a1a4a', '#ffc4e4'] },
+    { key: 'sage', mood: 'Sage Mist', tint: [['color', '#8aa88a', .45], ['screen', '#f0f6ee', .15]], names: ['#3a5a3a', '#d8f0d0'] },
+    { key: 'terracotta', mood: 'Terracotta', tint: [['multiply', '#f0b89a', .55], ['soft-light', '#b04a20', .35]], names: ['#8a2e10', '#ffcfb0'] }
   ];
   const SCRIPTS = ['Great Vibes', 'Parisienne', 'Pinyon Script', 'Alex Brush'];
   SCENES.forEach((id, si) => {
     const B = LOOKS[id], dark = +(B.shadow[0].match(/\d+/) || [0])[0] < 200, have = new Set([B.mood, ...(B.moods || []).map(md => md.mood)]);
-    const need = 9 - (B.moods || []).length;
+    const need = 14 - (B.moods || []).length;
     let added = 0;
     for (let k = 0; k < MOOD_SET.length && added < need; k++) {
       const md = MOOD_SET[(si * 3 + k) % MOOD_SET.length];
