@@ -1092,3 +1092,14 @@ input::-webkit-date-and-time-value { text-align: left; }
 .section-h { line-height: 1.08; }
 /* "What are you celebrating?": five a row on a computer, so the ten occasions make two full rows */
 @media (min-width: 900px) { .occ-picker { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+/* Phones: the cover behind the floating top bar is part of the bar, so it always matches its height
+   (with a bigger system font, as on Oppo/Vivo phones, the bar grows taller than a fixed band and the page showed under it) */
+@media (max-width: 640px) {
+  body::before { height: 8px; background: var(--bg); }
+  .nav::before { content: ''; position: absolute; z-index: -1; left: calc(50% - 50vw); right: calc(50% - 50vw); top: -16px; bottom: -14px; pointer-events: none;
+    background: linear-gradient(var(--bg) calc(100% - 14px), transparent); }
+}
+/* Occasion chips: a long name ("Naming Ceremony") goes onto two lines instead of being cut off */
+.os-occ .chip { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.2; overflow-wrap: anywhere; }
+/* Nothing can widen the page sideways (a very big system font made the hero phones poke 3px out) */
+html { overflow-x: clip; }

@@ -1,6 +1,9 @@
 // Card viewer: reads the invitation from the URL hash and plays it.
 (function () {
   const params = new URLSearchParams(location.search);
+  // A short sample link ("/d?n=12"): the sample of that design number.
+  const sampleNo = /^\d{1,3}$/.test(params.get('n') || '') ? +params.get('n') : 0;
+  if (sampleNo) params.set('demo', '');
   const record = params.has('record'); // being filmed by the video maker
   const preview = params.has('preview') || record;
   let guest = params.get('to');
@@ -17,6 +20,10 @@
   // No hash = demo card. A hash that does not decode (e.g. a link cut off by a chat app) = null.
   function readData() {
     const raw = location.hash.slice(1);
+    if (sampleNo && !raw) {
+      const e = Catalog.entries()[sampleNo - 1];
+      if (e) return Codec.decode(Catalog.demoCode(e));
+    }
     if (!raw) return PRESETS.wedding.card;
     try {
       const d = Codec.decode(raw);
@@ -712,7 +719,7 @@
     if (params.has('demo')) {
       const t = Templates.get(data.theme) || Templates.get(1), label = PRESETS[data.type]?.label || 'Celebration';
       const site = safeUrl(SITE.url) || new URL('index.html', location.href).href;
-      url = location.href;
+      url = Core.sampleUrl(SITE.url, t.no) || location.href;
       text = `✨ ${label} invitation · Design ${Templates.serial(t.no)} ${t.name}\n\nSee it live:\n${url}\n\nGet yours made on ${SITE.brand}:\n${site}`;
     }
     if (navigator.share) {

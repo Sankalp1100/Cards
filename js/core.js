@@ -147,6 +147,12 @@ const Core = {
     return b ? `${a}&${b}` : a;
   },
 
+  // The short link to a design's sample: "https://site/d?n=12". Empty without a website address.
+  sampleUrl(base, no) {
+    const b = Core.safeUrl(base);
+    return b && no ? new URL(`d?n=${no}`, b.endsWith('/') ? b : b + '/').href : '';
+  },
+
   cardUrl(base, code, guest) {
     const url = new URL('card.html', base);
     if (guest && guest.trim()) url.searchParams.set('to', guest.trim());
