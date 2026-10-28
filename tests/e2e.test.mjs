@@ -29,11 +29,11 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
   };
 
   // ---------- Landing ----------
-  test('landing page sells 300 numbered designs, 24 at a time, without iframes', async () => {
+  test('landing page sells 600 numbered designs, 24 at a time, without iframes', async () => {
     await page.viewport(1300, 900);
     await page.goto(base + 'index.html');
-    assert.equal(await page.eval(`document.querySelector('#tplCount').textContent`), '300');
-    assert.equal(await page.eval(`document.querySelectorAll('#occPicker .occ-tile').length`), 10, 'a tile per occasion');
+    assert.equal(await page.eval(`document.querySelector('#tplCount').textContent`), '600');
+    assert.equal(await page.eval(`document.querySelectorAll('#occPicker .occ-tile').length`), 20, 'a tile per occasion');
     assert.match(await page.eval(`document.querySelector('#occPicker .occ-tile').textContent`), /Wedding\s*30 designs/);
     assert.equal(await page.eval(`document.querySelectorAll('#showcase .tpl').length`), 24);
     assert.equal(await page.eval(`document.querySelectorAll('iframe').length`), 0, 'no embedded live cards (they made the page slow)');
@@ -51,10 +51,10 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     for (const no of [1, 7, 9, 10, 13, 22]) assert.ok(first.includes(no), `owner pick #${no} is trending`);
   });
 
-  test('"Show more" loads the next page until all 300 are shown', async () => {
-    for (let i = 0; i < 20 && !(await page.eval(`document.querySelector('#moreBtn').hidden`)); i++) await page.eval(`document.querySelector('#moreBtn').click()`);
-    assert.equal(await page.eval(`document.querySelectorAll('#showcase .tpl').length`), 300);
-    assert.equal(await page.eval(`new Set([...document.querySelectorAll('#showcase .tpl')].map(t => t.dataset.no)).size`), 300);
+  test('"Show more" loads the next page until all 600 are shown', async () => {
+    for (let i = 0; i < 40 && !(await page.eval(`document.querySelector('#moreBtn').hidden`)); i++) await page.eval(`document.querySelector('#moreBtn').click()`);
+    assert.equal(await page.eval(`document.querySelectorAll('#showcase .tpl').length`), 600);
+    assert.equal(await page.eval(`new Set([...document.querySelectorAll('#showcase .tpl')].map(t => t.dataset.no)).size`), 600);
   });
 
   test('searching a design number shows exactly that design', async () => {
@@ -70,7 +70,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
   test('occasion and trending filters', async () => {
     await page.eval(`document.querySelector('[data-occ="kitty"]').click()`);
     await page.waitFor(`document.querySelectorAll('#showcase .tpl').length === 24`);
-    assert.match(await page.eval(`document.querySelector('#catStatusText').textContent`), /Showing 30 💃 Kitty Party designs of 300/);
+    assert.match(await page.eval(`document.querySelector('#catStatusText').textContent`), /Showing 30 💃 Kitty Party designs of 600/);
     await page.eval(`document.querySelector('#moreBtn').click()`);
     assert.equal(await page.eval(`document.querySelectorAll('#showcase .tpl').length`), 30, 'all 30 kitty designs');
     assert.ok(await page.eval(`[...document.querySelectorAll('#showcase .tpl .tpl-meta small')].every(s => s.textContent.includes('Kitty Party'))`), 'only kitty designs');
@@ -417,7 +417,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`document.querySelector('#musicBtn').classList.contains('playing')`), false, 'a second tap stops it');
   });
 
-  test('all 300 designs render without errors, with their decor and particles', async () => {
+  test('all 600 designs render without errors, with their decor and particles', async () => {
     // Its own browser, fresh every 75 designs: one tab loading 300 animated pages in a row wore Chrome out and
     // it stopped answering (around the 150th), although every design opens fine on its own.
     const main = page;
@@ -486,10 +486,10 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
   });
 
   // ---------- Admin ----------
-  test('admin: lists 10 occasions and the first 40 designs', async () => {
+  test('admin: lists 20 occasions and the first 40 designs', async () => {
     await page.viewport(1300, 900);
     await page.goto(base + 'admin.html');
-    assert.equal(await page.eval(`document.querySelectorAll('.occasion').length`), 10);
+    assert.equal(await page.eval(`document.querySelectorAll('.occasion').length`), 20);
     assert.equal(await page.eval(`document.querySelectorAll('#gallery .tpl').length`), 40);
     assert.equal(await page.eval(`document.querySelector('#gallery .tpl.on').dataset.no`), '1');
     assert.equal(await page.eval(`document.querySelector('#designNo').value`), '001');
@@ -508,7 +508,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
 
   test('admin: a number that does not exist explains the range', async () => {
     await page.eval(type('#designNo', '999'));
-    await page.waitFor(`/from 1 to 300/.test(document.querySelector('#designMsg').textContent)`, 3000);
+    await page.waitFor(`/from 1 to 600/.test(document.querySelector('#designMsg').textContent)`, 3000);
     assert.match(await page.eval(`document.querySelector('#themeName').textContent`), /#047/, 'selection unchanged');
   });
 
@@ -672,8 +672,8 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     noErrors();
   });
 
-  test('admin catalog: lists all 300 and filters them', async () => {
-    assert.equal(await page.eval(`document.querySelectorAll('#catTable tbody tr').length`), 300);
+  test('admin catalog: lists all 600 and filters them', async () => {
+    assert.equal(await page.eval(`document.querySelectorAll('#catTable tbody tr').length`), 600);
     await page.eval(`(() => { const s = document.querySelector('#catShow'); s.value = 'trending'; s.dispatchEvent(new Event('input')); })()`);
     assert.equal(await page.eval(`document.querySelectorAll('#catTable tbody tr').length`), 6);
     await page.eval(`(() => { const s = document.querySelector('#catShow'); s.value = ''; s.dispatchEvent(new Event('input')); })()`);

@@ -289,8 +289,8 @@ test.describe('Dates', () => {
 test.describe('Templates', () => {
   const all = Templates.all;
 
-  test('there are exactly 300, numbered 1 to 300 in order', () => {
-    assert.equal(all.length, 300);
+  test('there are exactly 600, numbered 1 to 600 in order', () => {
+    assert.equal(all.length, 600);
     all.forEach((t, i) => assert.equal(t.no, i + 1));
   });
 
@@ -299,7 +299,7 @@ test.describe('Templates', () => {
   });
 
   test('names are unique', () => {
-    assert.equal(new Set(all.map(t => t.name)).size, 300);
+    assert.equal(new Set(all.map(t => t.name)).size, 600);
   });
 
   test('numbers are stable: the first designs never move (links store the number)', () => {
@@ -308,14 +308,18 @@ test.describe('Templates', () => {
     assert.equal(Templates.get(47).name, 'Cobalt Milestone');
     assert.equal(Templates.get(200).name, all[199].name);
     assert.equal(Templates.get(201).name, 'Lime Saat Phere', 'the new designs start at #201');
-    assert.equal(Templates.get(300).name, all[299].name);
+    assert.equal(Templates.get(300).name, 'Saffron Diamond Years', '#300 is still the last of the first ten occasions');
+    assert.equal(Templates.get(301).occasion, 'reception', 'the ten later occasions start at #301');
+    assert.deepEqual(plain(all.slice(300, 310).map(t => t.occasion)), ['reception', 'haldi', 'mehendi', 'roka', 'housewarming', 'mundan', 'janeu', 'retirement', 'festive', 'corporate']);
+    assert.ok(all.slice(0, 300).every(t => !['reception', 'haldi', 'mehendi', 'roka', 'housewarming', 'mundan', 'janeu', 'retirement', 'festive', 'corporate'].includes(t.occasion)));
   });
 
   test('get() accepts numbers, padded strings, # and old names', () => {
     for (const id of [47, '47', '047', '#047', ' #47 ']) assert.equal(Templates.get(id).no, 47, String(id));
     assert.equal(Templates.get('royal').no, 1);
     assert.equal(Templates.get('lavender').no, 12);
-    for (const id of [0, 301, -1, 1.5, '', 'abc', null, undefined, {}]) assert.equal(Templates.get(id), null, String(id));
+    assert.equal(Templates.get('#301').no, 301);
+    for (const id of [0, 601, -1, 1.5, '', 'abc', null, undefined, {}]) assert.equal(Templates.get(id), null, String(id));
   });
 
   test('serial pads to three digits', () => {
@@ -416,16 +420,17 @@ test.describe('Templates', () => {
     for (const t of all) {
       const s = t.song;
       assert.ok(PROGRESSIONS[s.prog] && PATTERNS[s.pattern] && VOICES[s.voice] && s.key >= 0 && s.key < 12, `#${t.no} song`);
-      if (s.voice === 'pluck') assert.ok(['sangeet', 'kitty', 'bday', 'birthday'].includes(t.occasion), `#${t.no}: playful pluck only for parties`);
+      if (s.voice === 'pluck') assert.ok(['sangeet', 'kitty', 'bday', 'birthday', 'festive', 'corporate'].includes(t.occasion), `#${t.no}: playful pluck only for parties`);
     }
-    assert.equal(new Set(all.map(t => JSON.stringify(t.song))).size, 300);
+    assert.equal(new Set(all.map(t => JSON.stringify(t.song))).size, 600);
     assert.deepEqual(plain(all[0].song), { prog: 0, pattern: 0, voice: 'musicbox', key: 0 });
   });
 });
 
 test.describe('Occasion presets', () => {
-  test('there are 10 occasions', () => {
-    assert.equal(Object.keys(PRESETS).length, 10);
+  test('there are 20 occasions, Reception among them', () => {
+    assert.equal(Object.keys(PRESETS).length, 20);
+    for (const k of ['reception', 'haldi', 'mehendi', 'roka', 'housewarming', 'mundan', 'janeu', 'retirement', 'festive', 'corporate']) assert.ok(PRESETS[k], k);
   });
 
   for (const [key, p] of Object.entries(PRESETS)) {
@@ -460,8 +465,8 @@ test.describe('Catalog', () => {
 
   test('with no settings every design is on sale with the default price', () => {
     const e = Catalog.entries(site, {});
-    assert.equal(e.length, 300);
-    assert.equal(Catalog.visible(e).length, 300);
+    assert.equal(e.length, 600);
+    assert.equal(Catalog.visible(e).length, 600);
     assert.equal(e[46].price, 999);
     assert.equal(Catalog.priceText(e[46], site), '₹999');
   });
@@ -473,7 +478,7 @@ test.describe('Catalog', () => {
     assert.equal(Catalog.priceText(e[46], site), '₹1,499');
     assert.equal(e[8].occasion, 'kitty', 'unknown occasion is ignored');
     const v = Catalog.visible(e);
-    assert.equal(v.length, 299);
+    assert.equal(v.length, 599);
     assert.ok(!v.some(x => x.no === 5), 'hidden design not shown');
     assert.equal(v[0].no, 47, 'trending designs come first');
     assert.equal(v[1].no, 1);
@@ -523,7 +528,8 @@ test.describe('Catalog', () => {
     assert.equal(e.filter(x => Catalog.matches(x, 'kitty party')).length, 30);
     assert.equal(e.filter(x => Catalog.matches(x, '', 'birthday')).length, 30);
     assert.equal(e.filter(x => Catalog.matches(x, '47', 'wedding')).length, 0, 'number + wrong occasion');
-    assert.equal(e.filter(x => Catalog.matches(x, '')).length, 300);
+    assert.equal(e.filter(x => Catalog.matches(x, '')).length, 600);
+    assert.equal(e.filter(x => Catalog.matches(x, '', 'reception')).length, 30);
   });
 
   test('clean keeps only real changes', () => {

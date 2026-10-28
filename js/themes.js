@@ -55,8 +55,20 @@ const OCCASION_STYLE = {
   birthday: { motifs: ['bunting', 'garland', 'lanterns'], venues: ['garden', 'home', 'city'], join: '&', story: 'Growing Up', fests: 'The Fun' },
   babyshower: { motifs: ['bunting', 'garland', 'lanterns', 'bells'], venues: ['home', 'garden', 'palace'], join: '&', story: 'Our Little Journey', fests: 'The Ceremony' },
   ceremony: { motifs: ['toran', 'bells', 'diyas', 'garland'], venues: ['temple', 'home', 'palace'], join: '&', story: 'Our Home', fests: 'Shubh Muhurat' },
-  anniversary: { motifs: ['lanterns', 'garland', 'toran', 'bells'], venues: ['palace', 'garden', 'city'], join: '&', story: 'Our Journey', fests: 'The Evening' }
+  anniversary: { motifs: ['lanterns', 'garland', 'toran', 'bells'], venues: ['palace', 'garden', 'city'], join: '&', story: 'Our Journey', fests: 'The Evening' },
+  reception: { motifs: ['lanterns', 'garland', 'bunting', 'toran'], venues: ['palace', 'city', 'garden'], join: '&', story: 'Our Story', fests: 'The Evening' },
+  haldi: { motifs: ['garland', 'toran', 'bunting'], venues: ['garden', 'home', 'palace'], join: '&', story: 'Our Story', fests: 'The Rituals' },
+  mehendi: { motifs: ['garland', 'lanterns', 'toran', 'bunting'], venues: ['garden', 'home', 'palace'], join: '&', story: 'Our Story', fests: 'The Rituals' },
+  roka: { motifs: ['toran', 'garland', 'bells', 'diyas'], venues: ['home', 'palace', 'garden'], join: '&', story: 'Our Story', fests: 'Shubh Muhurat' },
+  housewarming: { motifs: ['toran', 'diyas', 'bells', 'garland'], venues: ['home', 'city', 'garden'], join: '&', story: 'Our Home', fests: 'Shubh Muhurat' },
+  mundan: { motifs: ['garland', 'bells', 'diyas', 'bunting'], venues: ['temple', 'home', 'garden'], join: '&', story: 'Our Little Journey', fests: 'The Ceremony' },
+  janeu: { motifs: ['toran', 'bells', 'diyas', 'garland'], venues: ['temple', 'home', 'palace'], join: '&', story: 'His Journey', fests: 'Shubh Muhurat' },
+  retirement: { motifs: ['lanterns', 'bunting', 'garland'], venues: ['city', 'garden', 'palace'], join: '&', story: 'The Years', fests: 'The Evening' },
+  festive: { motifs: ['diyas', 'lanterns', 'toran', 'bunting'], venues: ['home', 'city', 'garden'], join: '&', story: 'Our Traditions', fests: 'The Plan' },
+  corporate: { motifs: ['bunting', 'lanterns', 'garland'], venues: ['city', 'garden', 'palace'], join: '&', story: 'Our Story', fests: 'The Agenda' }
 };
+// The ten occasions added later get #301–#600, after every earlier number (links store design numbers).
+const LATER_OCCASIONS = ['reception', 'haldi', 'mehendi', 'roka', 'housewarming', 'mundan', 'janeu', 'retirement', 'festive', 'corporate'];
 
 // The original 12 hand-made designs are #001–#012. `key` keeps links made before numbering working.
 const CLASSICS = [
@@ -218,6 +230,76 @@ const RECIPES = {
     emoji: ['🥂', '💑', '🕯️', '💐', '✨'], intros: ['cardflip', 'doors', 'curtains'], moods: 'ddl', gold: true,
     fonts: ['regal', 'modern', 'dreamy', 'heritage'], decor: ['deco', 'stars', 'frame', 'lights', 'florals'],
     particles: [['sparkle'], ['heart', 'sparkle'], ['petal', 'sparkle']], count: 50, fireworks: true, tempo: 0.28
+  },
+  reception: {
+    scenes: ['aurora', 'bokeh', 'holo', 'silk', 'rays', 'mesh', 'grain', 'glow'],
+    nouns: ['Grand Reception', 'Gala Night', 'Soiree', 'Ballroom', 'Chandelier', 'Red Carpet', 'First Dance', 'Black Tie', 'Crystal Hall', 'Starlit Dinner', 'Evening Glow', 'Newlyweds', 'Mr & Mrs', 'Toast Night', 'Grand Entry', 'Sparkling Evening', 'Royal Banquet', 'Velvet Gala', 'Wedding Ball', 'Moonlight Reception', 'Couture Night', 'Reception Royale', 'Grand Soiree', 'Celebration Night', 'Glitter Gala', 'Fairy Lights', 'Swan Lake', 'Pearl Evening', 'Rose Ballroom', 'Golden Gala'],
+    emoji: ['🎊', '🥂', '💃', '✨', '🎶'], intros: ['curtains', 'doors', 'envelope', 'cardflip'], moods: 'ddl', gold: true,
+    fonts: ['regal', 'modern', 'dreamy'], decor: ['lights', 'deco', 'stars', 'frame', 'florals'],
+    particles: [['sparkle'], ['sparkle', 'confetti'], ['petal', 'sparkle']], count: 46, fireworks: true, tempo: 0.26
+  },
+  haldi: {
+    scenes: ['rays', 'bokeh', 'glow', 'waves', 'grain', 'silk', 'mesh'],
+    nouns: ['Pithi', 'Ubtan', 'Turmeric Glow', 'Yellow Bliss', 'Genda Phool', 'Sunflower', 'Marigold Morning', 'Haldi Rasam', 'Peeli Chunar', 'Golden Glow', 'Mango Leaves', 'Kesariya', 'Sunny Side', 'Basanti', 'Saffron Bliss', 'Haldi Hues', 'Yellow Swing', 'Lemon Zest', 'Mustard Fields', 'Haldi Utsav', 'Phoolon Ki Holi', 'Tamarind', 'Pankhuri', 'Kumkum Haldi', 'Shagun Haldi', 'Sunshine Bride', 'Marigold Mela', 'Haldi Kumkum', 'Pili Pagdi', 'Sona Haldi'],
+    emoji: ['🌼', '🌻', '💛', '🥥', '🌞'], intros: ['scroll', 'doors', 'giftbox'], moods: 'lll',
+    fonts: ['festive', 'garden', 'heritage'], decor: ['sunburst', 'florals', 'mandala', 'lace'],
+    particles: [['marigold', 'petal'], ['marigold'], ['petal', 'leaf']], count: 46, tempo: 0.26
+  },
+  mehendi: {
+    scenes: ['silk', 'mesh', 'bokeh', 'grain', 'glow', 'waves', 'aurora'],
+    nouns: ['Henna Night', 'Mehndi Raat', 'Hathon Ki Mehndi', 'Paisley', 'Henna Vines', 'Green Bangles', 'Mehndi Rasam', 'Rang De', 'Mehndi Mela', 'Bel Buta', 'Henna Bloom', 'Hara Bhara', 'Mehndi Lagi', 'Henna Lace', 'Peacock Henna', 'Mehndi Hai Rachne', 'Mor Pankh', 'Henna Garden', 'Leheriya', 'Bandhani', 'Chooda', 'Kaleera Night', 'Mehndi Beats', 'Henna Moon', 'Rangoli Night', 'Phulkari', 'Gota Patti', 'Henna Charm', 'Mehndi Masti', 'Hari Choodiyan'],
+    emoji: ['🌿', '🖐️', '🦚', '💚', '🌸'], intros: ['doors', 'scroll', 'envelope'], moods: 'lld',
+    fonts: ['heritage', 'festive', 'garden'], decor: ['lace', 'mandala', 'florals', 'lights'],
+    particles: [['leaf', 'petal'], ['petal'], ['leaf', 'sparkle']], count: 44, fireworks: true, tempo: 0.24
+  },
+  roka: {
+    scenes: ['rays', 'silk', 'bokeh', 'glow', 'mesh', 'aurora', 'grain'],
+    nouns: ['Shagun', 'Chunni', 'Rishta', 'Rokka', 'Tilak', 'Mishri', 'Shubh Rishta', 'Chunni Chadhai', 'Shagun Thali', 'Thaka', 'Two Families', 'Blessed Union', 'Mangni', 'Nazrana', 'Ladoo Ceremony', 'Sagan', 'Mauli', 'Kesar Shagun', 'Rishta Pakka', 'Sweet Beginning', 'Silver Thali', 'Gathjod', 'Chunri Rasam', 'Rose Shagun', 'Golden Tilak', 'Shubh Shagun', 'Family Blessing', 'Mehfil Roka', 'Pakki Baat', 'Sindoor Tilak'],
+    emoji: ['💐', '🪔', '🎁', '💍', '🌺'], intros: ['doors', 'scroll', 'cardflip'], moods: 'lld', gold: true,
+    fonts: ['regal', 'heritage', 'garden'], decor: ['mandala', 'lace', 'florals', 'frame'],
+    particles: [['marigold', 'petal'], ['petal', 'sparkle'], ['heart', 'petal']], count: 42, tempo: 0.28
+  },
+  housewarming: {
+    scenes: ['rays', 'glow', 'grain', 'bokeh', 'silk', 'mesh'],
+    nouns: ['New Home', 'Ghar Pravesh', 'Vastu Puja', 'Sweet Home', 'Nest', 'Doorway', 'Housewarming', 'Kalash Puja', 'New Address', 'Home Sweet Home', 'Welcome Home', 'Shubh Labh', 'Toran Door', 'Swastik', 'First Diya', 'Home Blessing', 'Grih Pravesh', 'Our Abode', 'Nayi Shuruaat', 'Keys & Blessings', 'Courtyard', 'Tulsi Home', 'Ghar Ki Rasoi', 'Happy Home', 'Doorbell', 'Vastu Shanti', 'Aangan', 'Brick & Love', 'Roof Garden', 'Home Diaries'],
+    emoji: ['🏡', '🪔', '🔑', '🕉️', '🌼'], intros: ['doors', 'scroll', 'envelope'], moods: 'llld',
+    fonts: ['heritage', 'festive', 'garden', 'soft'], decor: ['mandala', 'frame', 'sunburst', 'florals'],
+    particles: [['marigold', 'petal'], ['marigold'], ['sparkle', 'marigold']], count: 40, tempo: 0.3
+  },
+  mundan: {
+    scenes: ['bokeh', 'mesh', 'glow', 'waves', 'aurora', 'silk'],
+    nouns: ['Chudakarma', 'Annaprashan', 'First Bite', 'Little Blessings', 'Tiny Steps', 'Kheer', 'Mundan Sanskar', 'Baby Blessing', 'First Rice', 'Little Champ', 'Bal Gopal', 'Makhan Chor', 'Sweet Kheer', 'Choti', 'Little Krishna', 'Tiny Tilak', 'Shubh Aarambh', 'Baby Mundan', 'Pehla Niwala', 'Bhog', 'Little Ganesha', 'Blessed Child', 'Laddoo Gopal', 'First Feast', 'Tiny Prince', 'Little Lotus', 'Kanha', 'Baby Smiles', 'Bless Me', 'Sacred Steps'],
+    emoji: ['🧒', '🍚', '🪔', '🕉️', '👶'], intros: ['scroll', 'giftbox', 'envelope'], moods: 'llld', flavor: ['', 'playful'],
+    fonts: ['soft', 'garden', 'festive'], decor: ['blobs', 'florals', 'stars', 'mandala'],
+    particles: [['petal', 'sparkle'], ['marigold', 'petal'], ['balloon', 'sparkle']], count: 38, tempo: 0.3
+  },
+  janeu: {
+    scenes: ['rays', 'grain', 'silk', 'glow', 'mesh', 'bokeh'],
+    nouns: ['Upanayana', 'Yagnopavit', 'Sacred Thread', 'Brahmopadesham', 'Gayatri', 'Vedic Dawn', 'Bramhachari', 'Holy Thread', 'Gurukul', 'Vedas', 'Kashi Yatra', 'Mantra', 'Diksha', 'Rudraksha', 'Shloka', 'Sandhya', 'Suryodaya', 'Vidyarambh', 'Agni', 'Pavitra', 'Jnana', 'Dharma', 'Upakarma', 'Vedic Path', 'Sanskar', 'Tapas', 'Gyan Deep', 'Vedic Rays', 'Shubh Sanskar', 'Aashirvad'],
+    emoji: ['🕉️', '🪔', '📿', '🔥', '🙏'], intros: ['scroll', 'doors', 'envelope'], moods: 'llld', gold: true,
+    fonts: ['heritage', 'regal', 'festive'], decor: ['mandala', 'lace', 'sunburst', 'frame'],
+    particles: [['marigold', 'petal'], ['marigold'], ['sparkle', 'petal']], count: 38, tempo: 0.3
+  },
+  retirement: {
+    scenes: ['aurora', 'grain', 'bokeh', 'silk', 'rays', 'mesh', 'glow'],
+    nouns: ['New Chapter', 'Well Done', 'Golden Innings', 'Legacy', 'Farewell Toast', 'Next Adventure', 'Thank You Years', 'Hall of Fame', 'Gratitude', 'Retired & Inspired', 'Career Cheers', 'Encore Years', 'Applause', 'Finale', 'Second Innings', 'Free at Last', 'Service Salute', 'Proud Journey', 'Milestone Years', 'Happy Trails', 'Memory Lane', 'Honours', 'Standing Ovation', 'Bon Voyage', 'Life Begins', 'Merit', 'Golden Handshake', 'The Last Bell', 'Victory Lap', 'Grand Farewell'],
+    emoji: ['🎉', '🏆', '🎖️', '🌅', '🥂'], intros: ['curtains', 'envelope', 'cardflip'], moods: 'dll',
+    fonts: ['modern', 'regal', 'retro'], decor: ['deco', 'frame', 'lights', 'stars'],
+    particles: [['confetti', 'sparkle'], ['sparkle'], ['confetti']], count: 40, fireworks: true, tempo: 0.26
+  },
+  festive: {
+    scenes: ['bokeh', 'rays', 'holo', 'grain', 'aurora', 'glow', 'mesh'],
+    nouns: ['Diwali Milan', 'Holi Hai', 'Lohri Night', 'Navratri Nights', 'Dandiya Raas', 'Eid Mubarak', 'Christmas Cheer', 'Teej Utsav', 'Karwa Chauth', 'Ganpati Utsav', 'Durga Puja', 'Pongal', 'Onam Sadya', 'Baisakhi', 'Makar Sankranti', 'Rang Barse', 'Deepotsav', 'Festival of Lights', 'Gulaal', 'Patang', 'Rakhi Milan', 'Janmashtami', 'Chhath', 'Bihu', 'Ugadi', 'New Year Bash', 'Diya Night', 'Fireworks Fiesta', 'Garba Night', 'Utsav'],
+    emoji: ['🪔', '🎨', '🎆', '🪁', '🌙'], intros: ['curtains', 'giftbox', 'doors'], moods: 'ddl', flavor: ['', 'neon'],
+    fonts: ['festive', 'retro', 'modern'], decor: ['lights', 'sunburst', 'mandala', 'stars'],
+    particles: [['marigold', 'sparkle'], ['confetti', 'sparkle'], ['sparkle']], count: 50, fireworks: true, tempo: 0.22
+  },
+  corporate: {
+    scenes: ['grid', 'aurora', 'mesh', 'grain', 'bokeh', 'holo', 'glow'],
+    nouns: ['Reunion', 'Annual Meet', 'Team Night', 'Alumni Meet', 'Offsite', 'Townhall', 'Launch Night', 'Networking', 'Batch Reunion', 'Old Friends', 'Get-together', 'Dinner Meet', 'Summit', 'Gala Dinner', 'Award Night', 'Family Day', 'Fun Friday', 'Year Ender', 'Kick-off', 'Milestone Meet', 'Class of 2006', 'Homecoming', 'Founders Day', 'Celebration Meet', 'Team Spirit', 'Thank You Night', 'Mixer', 'Open House', 'Community Meet', 'Annual Bash'],
+    emoji: ['🤝', '🎓', '🏢', '🎤', '🍽️'], intros: ['envelope', 'cardflip', 'curtains'], moods: 'dll', flavor: ['', 'neon'],
+    fonts: ['modern', 'retro'], decor: ['deco', 'lights', 'frame', 'stars', 'blobs'],
+    particles: [['confetti', 'sparkle'], ['sparkle'], ['confetti']], count: 40, fireworks: true, tempo: 0.24
   }
 };
 
@@ -408,7 +490,17 @@ const OCCASION_STYLES = {
   birthday: ['toybox', 'bloom', 'retro'],
   babyshower: ['bloom', 'toybox', 'ivory', 'pichwai'],
   ceremony: ['marigold', 'pichwai', 'ivory', 'mehendi', 'palace'],
-  anniversary: ['palace', 'ivory', 'minimal', 'pichwai']
+  anniversary: ['palace', 'ivory', 'minimal', 'pichwai'],
+  reception: ['palace', 'ivory', 'neon', 'minimal', 'bloom'],
+  haldi: ['marigold', 'bloom', 'mehendi', 'retro'],
+  mehendi: ['mehendi', 'marigold', 'bloom', 'pichwai'],
+  roka: ['ivory', 'marigold', 'palace', 'bloom'],
+  housewarming: ['marigold', 'pichwai', 'ivory', 'minimal'],
+  mundan: ['toybox', 'bloom', 'pichwai', 'ivory'],
+  janeu: ['pichwai', 'marigold', 'ivory', 'palace'],
+  retirement: ['minimal', 'ivory', 'retro', 'palace'],
+  festive: ['marigold', 'neon', 'palace', 'retro'],
+  corporate: ['minimal', 'neon', 'retro', 'bloom']
 };
 
 function generated(occasion, j, c) {
@@ -433,7 +525,7 @@ function generated(occasion, j, c) {
 // Classics first, then the generated designs interleaved by occasion so neighbours look different.
 const TEMPLATES = (() => {
   const list = CLASSICS.map(t => ({ flavor: '', ...t }));
-  const occasions = Object.keys(RECIPES);
+  const occasions = Object.keys(RECIPES).filter(o => !LATER_OCCASIONS.includes(o));
   const made = Object.fromEntries(occasions.map(o => [o, 0]));
   // First #001–#200 (20 per occasion), then #201–#300 (30 per occasion). Numbers never move: links store them.
   for (const perOccasion of [20, 30]) {
@@ -442,6 +534,8 @@ const TEMPLATES = (() => {
       occasions.forEach((o, c) => { if (made[o] < need[o] && made[o] <= j) list.push(generated(o, made[o]++, c)); });
     }
   }
+  // #301–#600: thirty each for the occasions added later, interleaved the same way.
+  for (let j = 0; j < 30; j++) LATER_OCCASIONS.forEach((o, c) => list.push(generated(o, j, c + occasions.length)));
   // Each design takes its style (the classics keep their hand-picked one; the rest cycle through the styles that
   // suit the occasion), its colours from its own hue, and one of the style's layouts. No two designs of an occasion
   // share style, layout and hue.
@@ -466,9 +560,13 @@ const TEMPLATES = (() => {
   // Parties may get the playful pluck; weddings and ceremonies keep softer instruments. #001 keeps the original tune.
   const songs = new Set();
   list.forEach((t, i) => {
-    const voices = ['sangeet', 'kitty', 'bday', 'birthday'].includes(t.occasion) ? ['musicbox', 'bells', 'harp', 'pluck'] : ['musicbox', 'bells', 'harp'];
+    const voices = ['sangeet', 'kitty', 'bday', 'birthday', 'festive', 'corporate'].includes(t.occasion) ? ['musicbox', 'bells', 'harp', 'pluck'] : ['musicbox', 'bells', 'harp'];
     const song = { prog: i % 8, pattern: (i * 5 + (i >> 3)) % 6, voice: voices[(i * 3 + (i >> 2)) % voices.length], key: (i * 7) % 12 };
-    while (songs.has(JSON.stringify(song))) song.key = (song.key + 1) % 12;
+    // A taken tune moves to the next key; when all twelve keys are taken, to the next melody pattern.
+    for (let n = 0; songs.has(JSON.stringify(song)); n++) {
+      song.key = (song.key + 1) % 12;
+      if (n % 12 === 11) song.pattern = (song.pattern + 1) % 6;
+    }
     songs.add(JSON.stringify(song));
     t.song = song;
   });
@@ -639,6 +737,154 @@ const PRESETS = {
       ],
       music: true
     }
+  },
+  reception: {
+    label: 'Reception', icon: '🎊', labels: ['Bride / Partner 1', 'Groom / Partner 2'],
+    card: {
+      type: 'reception', theme: 301, title: 'Wedding Reception',
+      host1: 'Isha', host2: 'Kabir', tagline: 'invite you to celebrate their wedding reception',
+      date: '2026-12-14T20:00', venue: 'ITC Grand Bharat, Gurugram',
+      message: 'Dinner, music and a night to remember as we begin our new life together.',
+      events: [
+        { name: '🍸 Cocktails', date: '2026-12-14T19:30', dress: 'Cocktail glam' },
+        { name: '🍽️ Dinner', date: '2026-12-14T21:00' },
+        { name: '💃 DJ Night', date: '2026-12-14T22:00' }
+      ],
+      music: true
+    }
+  },
+  haldi: {
+    label: 'Haldi', icon: '🌼', labels: ['Bride / Groom', 'Partner (optional)'],
+    card: {
+      type: 'haldi', theme: 302, title: 'Haldi Ceremony',
+      host1: 'Diya', host2: 'Aarav', tagline: 'invite you to a morning of turmeric, flowers and laughter',
+      date: '2026-12-10T10:00', venue: 'Poolside Lawn, The Leela, Udaipur',
+      message: 'Come in yellow, bring your brightest smile and be ready to get a little haldi on you!',
+      events: [
+        { name: '🌼 Haldi Rasam', date: '2026-12-10T10:00', dress: 'Shades of yellow' },
+        { name: '🌸 Phoolon Ki Holi', date: '2026-12-10T11:30' },
+        { name: '🍲 Lunch', date: '2026-12-10T13:00' }
+      ],
+      music: true
+    }
+  },
+  mehendi: {
+    label: 'Mehendi', icon: '🌿', labels: ['Bride / Groom', 'Partner (optional)'],
+    card: {
+      type: 'mehendi', theme: 303, title: 'Mehendi Night',
+      host1: 'Diya', host2: 'Aarav', tagline: 'invite you to an evening of henna, music and dance',
+      date: '2026-12-10T17:00', venue: 'Garden Courtyard, The Leela, Udaipur',
+      message: 'Henna artists, folk music and chaat counters. Come with your dancing shoes!',
+      events: [
+        { name: '🌿 Mehendi', date: '2026-12-10T17:00', dress: 'Green & pink' },
+        { name: '🎶 Folk Music', date: '2026-12-10T19:00' },
+        { name: '🍢 Chaat & Dinner', date: '2026-12-10T20:30' }
+      ],
+      music: true
+    }
+  },
+  roka: {
+    label: 'Roka / Sagai', icon: '💐', labels: ['Partner 1', 'Partner 2'],
+    card: {
+      type: 'roka', theme: 304, title: 'Roka Ceremony',
+      host1: 'Simran', host2: 'Arjun', tagline: 'two families come together for the Roka',
+      date: '2026-11-29T12:00', venue: 'Malhotra Residence, Ludhiana',
+      message: 'With the blessings of our elders, we invite you to bless Simran and Arjun as they begin a new journey.',
+      events: [
+        { name: '🪔 Roka Rasam', date: '2026-11-29T12:00' },
+        { name: '🍛 Lunch', date: '2026-11-29T13:30' }
+      ],
+      music: true
+    }
+  },
+  housewarming: {
+    label: 'Griha Pravesh', icon: '🏡', labels: ['Host name', 'Second name (optional)'],
+    card: {
+      type: 'housewarming', theme: 305, title: 'Our new home',
+      host1: 'The Verma Family', host2: '', tagline: 'invites you to the Griha Pravesh of our new home',
+      date: '2026-12-02T09:00', venue: 'Villa 17, Palm Meadows, Bengaluru',
+      message: 'Please join us with your family to bless our new home and share a meal.',
+      events: [
+        { name: '🪔 Ganesh Puja', date: '2026-12-02T09:00' },
+        { name: '🔥 Vastu Havan', date: '2026-12-02T10:30' },
+        { name: '🍛 Bhoj', date: '2026-12-02T13:00' }
+      ],
+      music: true
+    }
+  },
+  mundan: {
+    label: 'Mundan / Annaprashan', icon: '🧒', labels: ["Child's name", 'Second name (optional)'],
+    card: {
+      type: 'mundan', theme: 306, title: 'Blessings for our little one',
+      host1: 'Vivaan', host2: '', tagline: 'Mundan ceremony of our little one',
+      date: '2027-01-17T10:00', venue: 'Shri Ram Mandir, Jaipur',
+      message: 'Come shower your blessings on Vivaan on his special day.',
+      events: [
+        { name: '🪔 Puja', date: '2027-01-17T10:00' },
+        { name: '✨ Mundan Sanskar', date: '2027-01-17T11:00' },
+        { name: '🍚 Lunch', date: '2027-01-17T13:00' }
+      ],
+      music: true
+    }
+  },
+  janeu: {
+    label: 'Thread Ceremony', icon: '🕉️', labels: ['Name', 'Second name (optional)'],
+    card: {
+      type: 'janeu', theme: 307, title: 'Upanayana Sanskar',
+      host1: 'Aditya', host2: '', tagline: 'Janeu ceremony of our son',
+      date: '2027-02-07T08:00', venue: 'Arya Samaj Mandir, Varanasi',
+      message: 'With the blessings of the Almighty, we invite you to bless Aditya on his sacred thread ceremony.',
+      events: [
+        { name: '🔥 Havan', date: '2027-02-07T08:00' },
+        { name: '📿 Upanayana', date: '2027-02-07T10:00' },
+        { name: '🍛 Bhoj', date: '2027-02-07T13:00' }
+      ],
+      music: true
+    }
+  },
+  retirement: {
+    label: 'Retirement', icon: '🎉', labels: ['Retiree name', 'Second name (optional)'],
+    card: {
+      type: 'retirement', theme: 308, title: 'Cheers to a new chapter',
+      host1: 'Mr. Rakesh Verma', host2: '', tagline: 'celebrates 35 years of service',
+      date: '2026-12-31T19:30', venue: 'The Gymkhana Club, New Delhi',
+      message: 'Join us to thank him for 35 wonderful years and toast to the adventures ahead.',
+      events: [
+        { name: '🏆 Felicitation', date: '2026-12-31T19:30' },
+        { name: '🍽️ Dinner', date: '2026-12-31T21:00' }
+      ],
+      music: true
+    }
+  },
+  festive: {
+    label: 'Festival Party', icon: '🎆', labels: ['Host name', 'Second name (optional)'],
+    card: {
+      type: 'festive', theme: 309, title: 'Diwali Milan',
+      host1: 'The Kapoors', host2: '', tagline: 'invite you to an evening of lights, sweets and cards',
+      date: '2026-11-07T19:00', venue: 'Kapoor House, Golf Links, New Delhi',
+      message: 'Diyas, mithai, a little teen patti and a lot of laughter. Come celebrate with us!',
+      events: [
+        { name: '🪔 Lakshmi Puja', date: '2026-11-07T19:00' },
+        { name: '🃏 Card Party', date: '2026-11-07T20:30', dress: 'Festive ethnic' },
+        { name: '🍽️ Dinner', date: '2026-11-07T21:30' }
+      ],
+      music: true
+    }
+  },
+  corporate: {
+    label: 'Get-together', icon: '🤝', labels: ['Host / group name', 'Second name (optional)'],
+    card: {
+      type: 'corporate', theme: 310, title: 'Twenty years later',
+      host1: 'Batch of 2006', host2: '', tagline: 'reunites for an evening of memories',
+      date: '2026-12-19T19:00', venue: 'The Park, Kolkata',
+      message: 'Old friends, new stories and a lot of catching up. Do not miss it!',
+      events: [
+        { name: '🍸 Welcome Drinks', date: '2026-12-19T19:00' },
+        { name: '🎤 Memories & Awards', date: '2026-12-19T20:00' },
+        { name: '🍽️ Dinner', date: '2026-12-19T21:00' }
+      ],
+      music: true
+    }
   }
 };
 
@@ -730,5 +976,53 @@ const EXTRAS = {
     families: [{ side: 'Hosted by', parents: 'Aryan & Kavya', more: 'Their proud children' }],
     attire: [{ name: 'The Evening', text: 'Silver and black', colors: '#c0c0c0,#1b1b1b,#e0c27a' }],
     hashtag: '#MeeraRaj25', thanks: 'Thank you for being part of our story.'
+  },
+  reception: {
+    families: [
+      { side: 'Bride’s Family', parents: 'Mr. Sunil & Mrs. Anju Bhatia', more: 'With Riya' },
+      { side: 'Groom’s Family', parents: 'Mr. Tribhuvan & Mrs. Anita Singh', more: 'With Dev' }
+    ],
+    attire: [{ name: 'Reception', text: 'Black tie and evening gowns', colors: '#1b1b2f,#c9a050,#f4f1ea' }],
+    hashtag: '#IshaWedsKabir', thanks: 'Thank you for celebrating our first evening as husband and wife.'
+  },
+  haldi: {
+    attire: [{ name: 'Haldi', text: 'Sunshine yellow, florals welcome', colors: '#f4c430,#ffb347,#fff1c1' }],
+    hashtag: '#DiyaKiHaldi', thanks: 'Thank you for adding colour to our morning.'
+  },
+  mehendi: {
+    attire: [{ name: 'Mehendi', text: 'Greens, pinks and mirror work', colors: '#2e7d32,#e91e63,#ffd54f' }],
+    hashtag: '#MehendiWithDiya', thanks: 'Thank you for the songs, the dance and the henna.'
+  },
+  roka: {
+    families: [
+      { side: 'Her Family', parents: 'Mr. Harpreet & Mrs. Kiran Kaur', more: 'With Jasleen' },
+      { side: 'His Family', parents: 'Mr. Anil & Mrs. Neelam Malhotra', more: 'With Karan' }
+    ],
+    hashtag: '#SimranArjunRoka', thanks: 'Thank you for blessing our two families.'
+  },
+  housewarming: {
+    story: [{ when: '2026', title: 'Home at Last', text: 'Years of dreaming, months of building. Now it is ready for your blessings.' }],
+    families: [{ side: 'With Blessings', parents: 'Shri Mahesh & Smt. Kusum Verma', more: 'With Ankit, Neha & family' }],
+    hashtag: '#VermaGharPravesh', thanks: 'Thank you for blessing our new beginning.'
+  },
+  mundan: {
+    families: [{ side: 'Proud Parents', parents: 'Rohit & Kavya Sharma', more: 'With grandparents' }],
+    hashtag: '#VivaanMundan', thanks: 'Your blessings mean the world to our little one.'
+  },
+  janeu: {
+    families: [{ side: 'With Blessings', parents: 'Pt. Shyam & Smt. Gita Mishra', more: 'With all the family' }],
+    hashtag: '#AdityaUpanayana', thanks: 'Thank you for blessing Aditya on his sacred day.'
+  },
+  retirement: {
+    story: [{ when: '1991–2026', title: '35 Years', text: 'From his first day at the branch to heading the region: a career of trust and kindness.' }],
+    hashtag: '#VermaRetires', thanks: 'Thank you for being part of an incredible journey.'
+  },
+  festive: {
+    attire: [{ name: 'Diwali Milan', text: 'Festive ethnic, sparkle welcome', colors: '#d97706,#be123c,#fde68a' }],
+    hashtag: '#KapoorDiwali', thanks: 'Wishing you light, laughter and prosperity.'
+  },
+  corporate: {
+    story: [{ when: '2006', title: 'Where It Began', text: 'Two hundred students, one canteen and a thousand memories.' }],
+    hashtag: '#Batch2006Reunion', thanks: 'Thank you for coming back together.'
   }
 };

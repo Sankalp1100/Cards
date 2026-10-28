@@ -212,7 +212,17 @@ const Core = {
       birthday: ['Balloons, cake and lots of fun! You are invited to the birthday party of', pair('&'), 'Come play, eat cake and make memories with us!'],
       babyshower: ['A little miracle is on the way! Join us for the baby shower of', pair('&'), 'Your blessings mean the world to us and our little one. ♥'],
       ceremony: [`With the blessings of the Almighty, ${pair('&')} ${String(c.tagline || 'invites you to a special ceremony').trim()}`, '', 'Please join us with your family to seek blessings.'],
-      anniversary: ['Celebrating a lifetime of love! You are invited to the anniversary of', pair('&'), 'Come raise a toast to many more years together. ♥']
+      anniversary: ['Celebrating a lifetime of love! You are invited to the anniversary of', pair('&'), 'Come raise a toast to many more years together. ♥'],
+      reception: ['With love and joy, you are invited to the wedding reception of', pair('&'), 'Dinner, music and a night to remember. ♥'],
+      haldi: ['Get ready to turn yellow! You are invited to the Haldi of', pair('&'), 'Come in yellow and bring your brightest smile. 🌼'],
+      mehendi: ['Henna, music and dance! You are invited to the Mehendi of', pair('&'), 'Come with your dancing shoes. 🌿'],
+      roka: ['Two families, one new bond. You are invited to the Roka of', pair('&'), 'Your blessings will make it complete. ♥'],
+      housewarming: [`With joy, ${pair('&')} invite you to the Griha Pravesh of their new home`, '', 'Please come with your family to bless our new beginning.'],
+      mundan: ['With blessings and joy, you are invited to the ceremony of our little one', pair('&'), 'Your blessings mean the world to us. ♥'],
+      janeu: ['With the blessings of the Almighty, you are invited to the Upanayana (Janeu) of', pair('&'), 'Please join us to bless him on his sacred day.'],
+      retirement: ['A career to celebrate! You are invited to the retirement party of', pair('&'), 'Come raise a toast to the next chapter.'],
+      festive: [`${pair('&')} invite you to a festive celebration`, '', 'Lights, sweets and lots of laughter. See you there!'],
+      corporate: [`${pair('&')} invite you to get together`, '', 'Old friends, new stories. Do not miss it!']
     }[c.type];
     if (!lines || !a) {
       return `✨ ${guest ? `Dear ${guest}, y` : 'Y'}ou're invited! ✨\n${who || ''}${label ? ` · ${label}` : ''}\n\nOpen your invitation:\n${link}`;

@@ -24,14 +24,27 @@ const Studio = (() => {
     birthday: 'Come play, eat cake & celebrate\nthe birthday of',
     babyshower: 'Join us to shower love\nat the baby shower of',
     ceremony: 'With the blessings of the Almighty\nwe invite you to a ceremony hosted by',
-    anniversary: 'Join us to celebrate\nthe anniversary of'
+    anniversary: 'Join us to celebrate\nthe anniversary of',
+    reception: 'Request the pleasure of your company\nat the wedding reception of',
+    haldi: 'Invite you to a morning of turmeric & joy\nat the Haldi of',
+    mehendi: 'Invite you to an evening of henna & music\nat the Mehendi of',
+    roka: 'With the blessings of our elders\nwe invite you to the Roka of',
+    housewarming: 'With joy we invite you\nto the Griha Pravesh hosted by',
+    mundan: 'With blessings we invite you\nto the ceremony of our little',
+    janeu: 'With the blessings of the Almighty\nwe invite you to the Upanayana of',
+    retirement: 'Join us to celebrate\nthe retirement of',
+    festive: 'Join us for an evening of\nlights, sweets & laughter with',
+    corporate: 'You are invited to\nan evening together with'
   };
   const CLOSINGS = {
     wedding: 'Awaiting your presence', engagement: 'Awaiting your presence', sangeet: 'Let’s dance together',
     kitty: 'See you there!', bday: 'See you there!', birthday: 'See you there!', naming: 'With love & blessings',
-    babyshower: 'With love & blessings', ceremony: 'With blessings', anniversary: 'Cheers to love'
+    babyshower: 'With love & blessings', ceremony: 'With blessings', anniversary: 'Cheers to love',
+    reception: 'Awaiting your presence', haldi: 'See you in yellow!', mehendi: 'Let’s dance together', roka: 'With love & blessings',
+    housewarming: 'With blessings', mundan: 'With love & blessings', janeu: 'With blessings', retirement: 'Here’s to the next chapter',
+    festive: 'See you there!', corporate: 'See you there!'
   };
-  const BLESSED = ['wedding', 'engagement', 'naming', 'ceremony', 'babyshower'];
+  const BLESSED = ['wedding', 'engagement', 'naming', 'ceremony', 'babyshower', 'haldi', 'mehendi', 'roka', 'housewarming', 'mundan', 'janeu'];
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -51,7 +64,7 @@ const Studio = (() => {
   // The two families as "D/o …" / "S/o …" lines (wedding and engagement only), matched by what their side says,
   // else in order: the first family goes with the first name (the bride's side in the order form).
   function parents(card) {
-    if (!/^(wedding|engagement)$/.test(card.type)) return ['', ''];
+    if (!/^(wedding|engagement|reception|roka)$/.test(card.type)) return ['', ''];
     const fam = (card.families || []).filter(f => f && clean(f.parents));
     const bride = fam.find(f => /bride|ladki|daughter|girl|dulhan/i.test(f.side || ''));
     const groom = fam.find(f => /groom|ladka|\bson\b|boy|dulha/i.test(f.side || ''));
@@ -129,7 +142,7 @@ const Studio = (() => {
         when && clean(card.venue) ? T('Venue', 'serif', 30, 'accent', { up: true, ls: 8, gap: 12 }) : null,
         T(card.venue, 'serif', 48, 'ink', { wrap: 3, gap: 14 }), T(card.venueNote, 'italic', 40, 'ink2', { wrap: 2 })];
     } else if (s.k === 'end') {
-      const fams = /^(wedding|engagement)$/.test(card.type) ? (card.families || []).map(f => clean(f && f.parents)).filter(Boolean).slice(0, 3) : [];
+      const fams = /^(wedding|engagement|reception|roka)$/.test(card.type) ? (card.families || []).map(f => clean(f && f.parents)).filter(Boolean).slice(0, 3) : [];
       const tag = clean(card.hashtag).replace(/^#+/, '');
       L = [T(CLOSINGS[card.type] || CLOSINGS.wedding, 'script', 116, 'names', { gap: 22 }),
         T(card.thanks || card.message, 'italic', 46, 'ink', { wrap: 4, gap: 34 }),
@@ -1680,7 +1693,8 @@ const Studio = (() => {
   });
   const lookName = L => `${L.name} · ${L.mood}`;
   // A look for the occasion, the first time (parties get the party scene, pujas the temple, and so on).
-  const OCCASION_LOOK = { bday: 'party', birthday: 'party', kitty: 'disco', ceremony: 'temple', naming: 'clouds', sangeet: 'mehendi', babyshower: 'clouds', anniversary: 'galaxy', engagement: 'jharokha' };
+  const OCCASION_LOOK = { bday: 'party', birthday: 'party', kitty: 'disco', ceremony: 'temple', naming: 'clouds', sangeet: 'mehendi', babyshower: 'clouds', anniversary: 'galaxy', engagement: 'jharokha',
+    reception: 'lights', haldi: 'haldi', mehendi: 'mehendi', roka: 'jharokha-rose', housewarming: 'haveli', mundan: 'clouds', janeu: 'temple', retirement: 'palace', festive: 'diwali', corporate: 'galaxy' };
 
   // ---------- Layout and text ----------
   const fontOf = (L, f, z) => f === 'script' ? `${z}px "${L.font.script}"` : f === 'italic' ? `italic ${z}px "Cormorant Garamond"`

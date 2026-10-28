@@ -477,9 +477,16 @@
       </section>`);
 
     // The bar shows initials for a couple, a short name in full, and the first letters of a long name ("GGKC").
+    // Small words are skipped and a number stays whole: "Batch of 2006" gives "B·2006", not "BO2".
+    const shortName = ws => {
+      const keep = ws.filter(w => !/^(of|the|and|&|ki|ka|ke)$/i.test(w));
+      const letters = keep.filter(w => !/^\d+$/.test(w)).map(w => graphemes(w)[0]).join('').slice(0, 4);
+      const num = keep.find(w => /^\d+$/.test(w));
+      return num ? `${letters}·${num}` : letters;
+    };
     const one = String(d.host1 || '').trim(), words = one.split(/\s+/).filter(Boolean);
     const mono = d.host2 ? `${esc(graphemes(one || '?')[0])} <i>&amp;</i> ${esc(graphemes(d.host2)[0])}`
-      : esc(one.length <= 12 ? one : words.map(w => graphemes(w)[0]).join('').slice(0, 5));
+      : esc(one.length <= 12 ? one : shortName(words));
     const menuLinks = [['top', 'Home'], ...(when ? [['details', 'Countdown']] : []), ...sections.map(s => [s.id, s.label])];
 
     $('#card').innerHTML = `
