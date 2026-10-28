@@ -871,8 +871,9 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stScenes .chip')].map(b => b.textContent)`), ['Opening', 'Title', 'Invitation', 'Functions', 'Venue', 'Regards', 'Thank You']);
       await page.eval(`document.querySelector('[data-ev="each"]').click()`);
       await page.eval(`document.querySelector('#stScenes [data-scene="4"]').click()`);
-      await sleep(300);
-      assert.equal(await page.eval(`document.querySelector('#stScenes .chip.on').textContent`), 'Mehendi', 'a scene button jumps there');
+      // Lit by the next painted frame (waited for, not guessed: a busy machine paints later)
+      await page.waitFor(`(document.querySelector('#stScenes .chip.on') || {}).textContent === 'Mehendi'`, 5000)
+        .catch(() => assert.fail('a scene button jumps there'));
       await page.eval(`document.querySelector('#stLooks [data-look="lotusnight"]').click()`);
       assert.equal(await page.eval(`document.querySelector('#stLooks .on').dataset.look`), 'lotusnight');
       await page.eval(`document.querySelector('#stMoods [data-look="lotusnight-dawn"]').click()`);

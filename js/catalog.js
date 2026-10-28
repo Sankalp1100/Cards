@@ -242,7 +242,8 @@ const Catalog = {
     if (a && MONTHS.includes(a[2].slice(0, 3).toLowerCase())) [d, mo, y] = [+a[1], MONTHS.indexOf(a[2].slice(0, 3).toLowerCase()) + 1, +a[3]];
     else if (b) [d, mo, y] = [+b[1], +b[2], +b[3]];
     else return '';
-    if (mo < 1 || mo > 12 || d < 1 || d > 31) return '';
+    // Only a day the calendar has (no 31 February)
+    if (mo < 1 || mo > 12 || d < 1 || new Date(y, mo - 1, d).getDate() !== d) return '';
     const day = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const tm = t.slice((a || b).index + (a || b)[0].length).match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b|(\d{1,2}):(\d{2})/i);
     if (!tm) return day;

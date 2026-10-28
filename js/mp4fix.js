@@ -49,24 +49,29 @@ const MP4Fix = (() => {
     // Every sample of every fragment: where it is, how long, how big, keyframe or not, display offset
     const samples = {};
     for (const moof of top.filter(x => x.type === 'moof')) {
+      // Where a track fragment's data starts by default: the moof for the first one (or always, with
+      // default-base-is-moof), else the end of the one before
+      let trafEnd = moof.start;
       for (const traf of kids(b, moof).filter(x => x.type === 'traf')) {
         const t = kids(b, traf), tfhd = find(t, 'tfhd');
         const tf = u32(b, tfhd.body) & 0xffffff;
         let o = tfhd.body + 4;
         const id = u32(b, o); o += 4;
         const d = trex[id] || { duration: 0, size: 0, flags: 0 };
-        let base = moof.start, dur = d.duration, size = d.size, flags = d.flags;
+        let base = tf & 0x20000 ? moof.start : trafEnd, dur = d.duration, size = d.size, flags = d.flags;
         if (tf & 0x1) { base = u64(b, o); o += 8; }
         if (tf & 0x2) o += 4;
         if (tf & 0x8) { dur = u32(b, o); o += 4; }
         if (tf & 0x10) { size = u32(b, o); o += 4; }
         if (tf & 0x20) { flags = u32(b, o); o += 4; }
         const list = samples[id] = samples[id] || [];
+        // A run without its own data offset follows straight on from the run before
+        let runEnd = base;
         for (const trun of t.filter(x => x.type === 'trun')) {
           const version = b.getUint8(trun.body), rf = u32(b, trun.body) & 0xffffff;
           let p = trun.body + 4;
           const count = u32(b, p); p += 4;
-          let at = base;
+          let at = runEnd;
           if (rf & 0x1) { at = base + b.getInt32(p); p += 4; }
           let firstFlags = null;
           if (rf & 0x4) { firstFlags = u32(b, p); p += 4; }
@@ -80,6 +85,7 @@ const MP4Fix = (() => {
             at += s.size;
             list.push(s);
           }
+          runEnd = trafEnd = at;
         }
       }
     }

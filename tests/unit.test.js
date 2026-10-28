@@ -633,6 +633,36 @@ test.describe('Catalog', () => {
     assert.equal(r.photo, true);
   });
 
+  test('pasting anything never breaks the panel: random text, cut-off and garbled orders, odd dates', () => {
+    let seed = 7;
+    const rnd = n => { seed = (seed * 1103515245 + 12345) >>> 0; return seed % n; };
+    const CHARS = 'ab Z09#*•:;,()&-–\n\t/.@+🌼हिWC1.-_' + '\u0000￿';
+    const msg = Catalog.orderMessage({ ...order, type: 'wedding', host2: 'Arjun', events: [{ name: 'Haldi', date: '2026-11-27T10:00', venue: 'Home', dress: 'Yellow' }] }, Catalog.entries(site, {}));
+    const typed = msg.split('\n').filter(l => !/Order code/.test(l)).join('\n');
+    const texts = [
+      ...Array.from({ length: 300 }, () => Array.from({ length: rnd(200) }, () => CHARS[rnd(CHARS.length)]).join('')),
+      ...Array.from({ length: Math.ceil(msg.length / 5) }, (_, i) => msg.slice(0, i * 5)), // cut off anywhere, the code too
+      ...Array.from({ length: Math.ceil(typed.length / 5) }, (_, i) => typed.slice(i * 5)),
+      typed.replace(/:/g, ''), typed.replace(/\(/g, '').replace(/\)/g, ''), typed.toUpperCase(), typed.replace(/;/g, ';;;'),
+      '* Names: \n* Functions: ;;;', '* Functions: (((', '* Date: 99 Foo 2026', 'WC1.' + 'A'.repeat(5000), 'x'.repeat(100000)
+    ];
+    for (const text of texts) {
+      let r;
+      assert.doesNotThrow(() => { r = Catalog.readOrder(text); }, JSON.stringify(text.slice(0, 80)));
+      if (!r) continue;
+      if (r.partial) { assert.ok(Templates.get(r.card.theme)); continue; }
+      assert.ok(PRESETS[r.card.type], 'a known occasion');
+      for (const k of ['host1', 'host2', 'venue', 'message', 'title', 'tagline']) assert.equal(typeof r.card[k], 'string', k);
+      assert.ok(Array.isArray(r.card.events) && Array.isArray(r.guests));
+      for (const s of [r.card.date, ...r.card.events.map(e => e.date)]) if (s) assert.ok(Core.parseDate(s) && !isNaN(Core.parseDate(s)), `a real date: ${s}`);
+    }
+    // Dates: only real ones, in the card's own format
+    for (const [s, want] of [['31 Feb 2026', ''], ['0 Dec 2026', ''], ['32/1/2026', ''], ['1/13/2026', ''], ['12 Dec 2026, 25:00', '2026-12-12'],
+      ['12 Dec 2026 12 am', '2026-12-12T00:00'], ['12 Dec 2026 12:30 pm', '2026-12-12T12:30'], ['Sat, 12th Dec 2026, 7 pm', '2026-12-12T19:00'], ['', '']]) {
+      assert.equal(Catalog.readWhen(s), want, s);
+    }
+  });
+
   test('a message without its order code is read from its lines: the same order, emoji aside', () => {
     const full = {
       ...order, type: 'wedding', host2: 'Arjun', nick2: 'Arju', mapUrl: 'https://maps.app.goo.gl/abc',
@@ -1014,5 +1044,77 @@ test.describe('Client videos (v.html)', { skip: !fs.existsSync(path.join(ROOT, '
     assert.match(page, /t >= player\.total - \.1/);
     assert.match(page, /location\.href = site/);
     assert.ok(JSON.parse(fs.readFileSync(path.join(ROOT, 'vercel.json'), 'utf8')).rewrites.some(r => r.source === '/v' && r.destination === '/v.html'));
+  });
+});
+
+// ---------- MP4Fix: the browser's recording made into a standard MP4 that WhatsApp accepts ----------
+test.describe('MP4Fix', () => {
+  const MP4Fix = require('../js/mp4fix.js');
+  const crypto = require('node:crypto');
+  const fixture = name => new Uint8Array(fs.readFileSync(path.join(ROOT, 'tests', 'fixtures', name)));
+  // A plain reader for standard MP4s (its own, not MP4Fix's): the boxes, and each track's samples
+  // from its sample tables (sizes, chunk offsets, samples per chunk, durations, keyframes).
+  const boxes = (d, s, e) => {
+    const out = [];
+    for (let o = s; o + 8 <= e;) {
+      const v = new DataView(d.buffer, d.byteOffset);
+      let size = v.getUint32(o), head = 8;
+      if (size === 1) { size = Number(v.getBigUint64(o + 8)); head = 16; } else if (size === 0) size = e - o;
+      out.push({ type: String.fromCharCode(...d.subarray(o + 4, o + 8)), start: o, end: o + size, body: o + head });
+      o += size;
+    }
+    return out;
+  };
+  const kid = (d, b, t) => boxes(d, b.body, b.end).find(x => x.type === t);
+  function tracks(d) {
+    const v = new DataView(d.buffer, d.byteOffset), u = o => v.getUint32(o), res = {};
+    const moov = boxes(d, 0, d.length).find(x => x.type === 'moov');
+    for (const trak of boxes(d, moov.body, moov.end).filter(x => x.type === 'trak')) {
+      const tkhd = kid(d, trak, 'tkhd'), id = u(tkhd.body + (d[tkhd.body] ? 20 : 12));
+      const stbl = kid(d, kid(d, kid(d, trak, 'mdia'), 'minf'), 'stbl'), get = t => kid(d, stbl, t);
+      const sz = get('stsz'), fixed = u(sz.body + 4), n = u(sz.body + 8);
+      const sizes = Array.from({ length: n }, (_, i) => fixed || u(sz.body + 12 + i * 4));
+      const co = get('stco'), offsets = Array.from({ length: u(co.body + 4) }, (_, i) => u(co.body + 8 + i * 4));
+      const sc = get('stsc'), runs = Array.from({ length: u(sc.body + 4) }, (_, i) => [u(sc.body + 8 + i * 12), u(sc.body + 12 + i * 12)]);
+      const ts = get('stts'), durations = [];
+      for (let i = 0; i < u(ts.body + 4); i++) for (let k = 0; k < u(ts.body + 8 + i * 8); k++) durations.push(u(ts.body + 12 + i * 8));
+      const ss = get('stss'), sync = ss ? Array.from({ length: u(ss.body + 4) }, (_, i) => u(ss.body + 8 + i * 4)) : null;
+      const at = [];
+      let s = 0;
+      offsets.forEach((off, c) => {
+        const per = runs.filter(([first]) => first <= c + 1).pop()[1];
+        for (let k = 0; k < per && s < n; k++, s++) { at.push(off); off += sizes[s]; }
+      });
+      const md5 = crypto.createHash('md5');
+      sizes.forEach((size, i) => md5.update(d.subarray(at[i], at[i] + size)));
+      res[id] = { count: n, duration: durations.reduce((a, x) => a + x, 0), md5: md5.digest('hex'), sync, durations };
+    }
+    return res;
+  }
+  // Worked out separately (tests/fixtures, read sample by sample by an independent reader): an 8-second Chrome
+  // recording, H.264 video (track 1) and AAC sound (track 2), in three fragments
+  const EXPECTED = { 1: { count: 188, duration: 240315, md5: 'b4f3a47638baf17e9c0cbf63612092a7' }, 2: { count: 355, duration: 363238, md5: '5324f3f0fd521b2cf613a677a003a565' } };
+
+  for (const name of ['chrome-recording.mp4', 'chrome-recording-split.mp4']) {
+    test(`${name}: every frame and sound sample kept, in order, with its timing, in a standard fast-start MP4`, () => {
+      const out = MP4Fix.defragment(fixture(name));
+      assert.deepEqual(boxes(out, 0, out.length).map(b => b.type), ['ftyp', 'moov', 'mdat'], 'index first, then the media: no fragments');
+      const moov = boxes(out, 0, out.length).find(b => b.type === 'moov');
+      assert.equal(boxes(out, moov.body, moov.end).some(b => b.type === 'mvex'), false, 'no fragment defaults left');
+      const got = tracks(out);
+      for (const [id, want] of Object.entries(EXPECTED)) {
+        assert.deepEqual({ count: got[id].count, duration: got[id].duration, md5: got[id].md5 }, want, `track ${id}`);
+      }
+      assert.equal(got[1].sync[0], 1, 'the video starts on a keyframe');
+      assert.ok(got[1].sync.length < got[1].count, 'only some frames are keyframes');
+      assert.ok(got[1].durations.every(x => x > 0), 'no frame without a length');
+    });
+  }
+
+  test('a standard MP4, or bytes that are not an MP4, come back as they are', () => {
+    const once = MP4Fix.defragment(fixture('chrome-recording.mp4'));
+    assert.equal(MP4Fix.defragment(once), once);
+    const junk = new Uint8Array(500).map((_, i) => (i * 37) & 255);
+    assert.equal(MP4Fix.defragment(junk), junk);
   });
 });
