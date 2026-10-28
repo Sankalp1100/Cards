@@ -215,8 +215,8 @@ const Catalog = {
   // It shows the design's own fonts, layout, background, frame and name finish, so no two posters look alike.
   // The same couple the design's card shows (two of every three designs of an occasion with library pictures)
   posterCouple(e) {
-    const pic = e.no % 3 !== 0 && Core.coupleFor(e.occasion, `design-${e.no}`);
-    return pic ? `<img class="p-couple" src="img/couples/cut/${Core.esc(pic.id)}.png" alt="" width="${pic.w}" height="${pic.h}" loading="lazy" decoding="async">` : '';
+    const pic = e.no % 3 !== 0 && Core.coupleFor(e.occasion, e.no - Math.floor(e.no / 3));
+    return pic ? `<img class="p-couple${pic.flip ? ' flip' : ''}" src="img/couples/cut/${Core.esc(pic.id)}.png" alt="" width="${pic.w}" height="${pic.h}" loading="lazy" decoding="async">` : '';
   },
 
   poster(e, tag, attrs) {

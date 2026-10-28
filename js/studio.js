@@ -121,7 +121,11 @@ const Studio = (() => {
 
   // The couple art library (js/couples.js, made by tools/couples.mjs): which pictures suit an occasion, best first
   const library = () => (typeof COUPLES !== 'undefined' && Array.isArray(COUPLES) ? COUPLES : []);
-  const coupleFor = (card, key) => Core.coupleFor(card.type, key);
+  // In turn by the look's place (story films, then the 300 looks), so neighbouring videos never share a couple
+  const coupleFor = (card, key) => {
+    const ids = [...Object.keys(STORIES), ...Object.keys(LOOKS)], i = ids.indexOf(key);
+    return Core.coupleFor(card.type, i >= 0 ? i : key);
+  };
   // Opened from a file (admin.html double-clicked), pictures would stop the video from recording, so none are used
   const localFile = () => typeof location !== 'undefined' && location.protocol === 'file:';
   const EVENT_COUPLES = [[/haldi|pithi|ubtan/i, 'haldi'], [/mehe?n?d/i, 'mehendi'], [/sangeet|dance|dj|garba|dandiya|cocktail/i, 'sangeet'],
@@ -2006,7 +2010,8 @@ const Studio = (() => {
 
   // A library picture (already cut out): full-length on the ground with a soft shadow and a gentle sway, or set in
   // a gold arch or a round medallion over a soft glow. (cx, foot) = where they stand; `s` = their height.
-  function cutout(c, img, cx, foot, s, pose, L, t = 0) {
+  function cutout(c, img, cx, foot, s, pose, L, t = 0, flip = false) {
+    if (flip) { c.save(); c.translate(cx * 2, 0); c.scale(-1, 1); cutout(c, img, cx, foot, s, pose, L, t); c.restore(); return; }
     const iw = img.naturalWidth, ih = img.naturalHeight;
     if (pose === 'arch' || pose === 'medallion') {
       const w = pose === 'arch' ? s * .82 : s * .9, h = pose === 'arch' ? s * 1.05 : w, top = foot - h;
@@ -2478,7 +2483,7 @@ const Studio = (() => {
         const cy = s.couple.y + (1 - ease((p - .3) / 1.2)) * 60;
         const lib = art.coupleArt !== 'drawn' && !photos.couple && libImage(s.coupleEntry || this.couple);
         if (art.coupleArt !== 'drawn' && photos.couple) { const h = s.couple.s * 1.12, w = h * .78; framedPhoto(c, photos.couple, W / 2, cy - h, w, h, 'arch', L, t); }
-        else if (lib) cutout(c, lib, W / 2, cy, s.couple.s, this.v.pose, L, t);
+        else if (lib) cutout(c, lib, W / 2, cy, s.couple.s, this.v.pose, L, t, !!(s.coupleEntry || this.couple || {}).flip);
         else if (art.coupleArt === 'drawn') couple(c, W / 2, cy, s.couple.s, t);
         c.restore();
       }

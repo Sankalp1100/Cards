@@ -148,9 +148,10 @@ const Core = {
       let list = lib.filter(x => x.occasion === occ);
       if (list.length > 1 && avoid) list = list.filter(x => x.id !== avoid);
       if (list.length) {
-        let h = 11;
-        for (const ch of String(key)) h = (h * 33 + ch.charCodeAt(0)) >>> 0;
-        return list[h % list.length];
+        let n = key;
+        if (typeof n !== 'number') { n = 11; for (const ch of String(key)) n = (n * 33 + ch.charCodeAt(0)) >>> 0; }
+        // In turn: neighbours never share a picture; every other round it is mirrored, so it looks new again
+        return { ...list[n % list.length], flip: Math.floor(n / list.length) % 2 === 1 };
       }
     }
     return null;

@@ -207,8 +207,8 @@
 
   function heroCouple(t, d) {
     if (t.no % 3 === 0) return '';
-    const pic = Core.coupleFor(d.type, `design-${t.no}`);
-    return pic ? `<img class="hero-couple" src="img/couples/cut/${esc(pic.id)}.png" alt="" width="${pic.w}" height="${pic.h}" decoding="async">` : '';
+    const pic = Core.coupleFor(d.type, t.no - Math.floor(t.no / 3));
+    return pic ? `<img class="hero-couple${pic.flip ? ' flip' : ''}" src="img/couples/cut/${esc(pic.id)}.png" alt="" width="${pic.w}" height="${pic.h}" decoding="async">` : '';
   }
 
   // Elegant styles show a monogram seal where the emoji would be: the initials inside a fine double ring,

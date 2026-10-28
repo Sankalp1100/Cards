@@ -1187,3 +1187,6 @@ html { overflow-x: clip; }
 .p-couple { display: block; height: 58cqw; width: auto; max-width: 84%; margin: 0 auto 2px; object-fit: contain; flex: none;
   filter: drop-shadow(0 8px 12px rgba(0,0,0,.22)); }
 .poster:has(.p-couple) :is(.p-tag, .p-title) { display: none; }
+
+/* A library picture used for the second time round is mirrored, so it looks new */
+.hero-couple.flip, .p-couple.flip { transform: scaleX(-1); }
