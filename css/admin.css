@@ -342,3 +342,6 @@ body.studio-open { overflow: hidden; }
 .st-art > span { font-weight: 700; font-size: .9rem; margin-top: 4px; }
 .st-upload { justify-self: start; cursor: pointer; }
 .st-brand { margin-top: 6px; }
+
+/* Your own song: the first, clearest button of the music choices */
+#stMusic .add-song { flex-basis: 100%; padding: 14px; font-size: 1rem; border: 2px dashed var(--gold); color: var(--gold); background: rgba(255,201,92,.08); }

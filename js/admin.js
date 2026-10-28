@@ -890,10 +890,9 @@
   })();
   function renderMusicChips() {
     const auto = songs.length ? `🎵 My songs, a different one per video (${songs.length})` : '🎵 The look’s own tune';
-    $('#stMusic').innerHTML = [['auto', auto], ...songs.map((s, i) => [`song:${i}`, `🎶 ${s.name}`]), ...(songs.length ? [['look', 'The look’s own tune']] : []),
+    $('#stMusic').innerHTML = '<button type="button" class="chip add-song" data-music-add>＋ 🎵 Add your own song</button>' + [['auto', auto], ...songs.map((s, i) => [`song:${i}`, `🎶 ${s.name}`]), ...(songs.length ? [['look', 'The look’s own tune']] : []),
       ...Object.entries(TUNES).map(([k, T]) => [k, T.label]), ['card', 'The card’s music box']]
       .map(([k, label]) => `<button type="button" class="chip" data-music="${k}">${esc(label)}</button>`).join('')
-      + '<button type="button" class="chip" data-music-add>＋ Add songs</button>'
       + (songs.length ? '<button type="button" class="chip" data-music-clear>🗑 Remove my songs</button>' : '');
     $('#stSongNow').textContent = songNow();
   }
