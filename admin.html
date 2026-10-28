@@ -350,7 +350,8 @@
             <button type="button" class="chip" data-art="none">None</button>
           </div>
           <label class="btn-small st-upload">⬆ Upload the couple's photo (sent by the customer) <input type="file" id="stCoupleFile" accept="image/*" hidden></label>
-          <label class="st-check st-brand"><input type="checkbox" id="stBrand" checked> Show my website (QR code) and “Designed by Sankalp”</label>
+          <label class="st-check st-brand"><input type="checkbox" id="stBrand" checked> Show my website (QR code) at the end</label>
+          <label class="st-check st-brand"><input type="checkbox" id="stSign" checked> Show “Designed by Sankalp”</label>
           <small class="muted" id="stArtNote">Photos show in a gold frame. The couple appears only when you upload their own photo (or choose Drawn). Branding off: no QR code, no website, no signature anywhere in the video.</small>
         </div>
         <h3>2 · Words</h3>
@@ -366,8 +367,9 @@
         </div>
         <h3>4 · Music</h3>
         <div class="chips" id="stMusic"></div>
-        <input type="file" id="stMusicFile" accept="audio/*" hidden>
-        <small class="muted">🎵 My music: pick any song (MP3, M4A, WAV). It fades in, repeats if the video is longer, and fades out at the end. It stays on this PC.</small>
+        <input type="file" id="stMusicFile" accept="audio/*" multiple hidden>
+        <small class="muted" id="stSongNow"></small>
+        <small class="muted">🎵 Every video has music. Add your songs (MP3, M4A, WAV, several at once): each look and story film then gets a different one, which fades in, repeats if needed and fades out at the end. They stay on this PC.</small>
         <button type="button" class="btn-glow" id="stMake">🎬 Make video</button>
         <p class="muted" id="stStatus">Watch it on the left, then make the video. It records in real time, so keep this tab open.</p>
         <div class="rec-progress"><i id="stRecBar"></i></div>

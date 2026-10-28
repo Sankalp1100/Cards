@@ -850,7 +850,26 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       assert.equal(await page.eval(`document.querySelectorAll('#stMoods .chip').length`), 0, 'a story film has no moods to pick');
       await page.eval(`document.querySelector('#stLang [data-lang="hi"]').click()`);
       assert.equal(await page.eval(`document.querySelector('#stLang .on').dataset.lang`), 'hi');
-      assert.ok(await page.eval(`document.querySelectorAll('#stMusic [data-music]').length`) >= 14, 'twelve tunes plus the look’s own and none');
+      assert.ok(await page.eval(`document.querySelectorAll('#stMusic [data-music]').length`) >= 14, 'twelve tunes plus the automatic choice and the music box');
+      assert.equal(await page.eval(`document.querySelector('#stMusic [data-music="none"]')`), null, 'every video has music');
+      assert.match(await page.eval(`document.querySelector('#stSongNow').textContent`), /This video’s music: /, 'it says which music the video gets');
+      // Your own songs: added several at once, each video gets a different one
+      await page.eval(`(async () => {
+        const wav = (hz) => { const n = 8000, b = new DataView(new ArrayBuffer(44 + n * 2)), w = (o, s) => [...s].forEach((c, i) => b.setUint8(o + i, c.charCodeAt(0)));
+          w(0, 'RIFF'); b.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt '); b.setUint32(16, 16, true); b.setUint16(20, 1, true); b.setUint16(22, 1, true);
+          b.setUint32(24, 8000, true); b.setUint32(28, 16000, true); b.setUint16(32, 2, true); b.setUint16(34, 16, true); w(36, 'data'); b.setUint32(40, n * 2, true);
+          for (let i = 0; i < n; i++) b.setInt16(44 + i * 2, Math.sin(i * hz / 8000 * 2 * Math.PI) * 8000, true); return b.buffer; };
+        const dt = new DataTransfer();
+        ['Song A', 'Song B', 'Song C'].forEach((n, i) => dt.items.add(new File([wav(300 + i * 100)], n + '.wav', { type: 'audio/wav' })));
+        const input = document.querySelector('#stMusicFile'); input.files = dt.files; input.dispatchEvent(new Event('change'));
+      })()`);
+      await page.waitFor(`document.querySelectorAll('#stMusic [data-music^="song:"]').length === 3`, 5000);
+      const songOf = async sel => { await page.eval(`document.querySelector(${JSON.stringify(sel)}).click()`); return page.eval(`document.querySelector('#stSongNow').textContent`); };
+      const songs = [await songOf('#stStories [data-story="story-rajwada"]'), await songOf('#stStories [data-story="story-rajwada"] + [data-story]'), await songOf('#stLooks [data-look="lotusnight"]')];
+      assert.ok(songs.every(s => /^This video’s song: Song [ABC]$/.test(s)), songs.join(' | '));
+      assert.notEqual(songs[0], songs[1], 'neighbouring films get different songs');
+      await page.eval(`window.confirm = () => true; document.querySelector('[data-music-clear]').click()`);
+      assert.equal(await page.eval(`document.querySelectorAll('#stMusic [data-music^="song:"]').length`), 0, 'the songs can be removed');
       await page.eval(`document.querySelector('#stLang [data-lang="en"]').click()`);
       await page.eval(`document.querySelector('#stLooks [data-look="lotusnight"]').click()`);
       // Phones: nothing sticks out sideways

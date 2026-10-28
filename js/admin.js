@@ -794,8 +794,8 @@
   const ART_KEY = 'weddingcard.studioArt';
   const art = (() => { try { return JSON.parse(localStorage.getItem(ART_KEY)) || {}; } catch (e) { return {}; } })();
   art.photos = {};
-  const studioArt = () => ({ brand: art.brand !== false, ganeshaArt: art.ganeshaArt || 'photo', coupleArt: art.coupleArt || 'photo', photos: art.photos });
-  const saveArt = () => { try { localStorage.setItem(ART_KEY, JSON.stringify({ brand: art.brand, ganeshaArt: art.ganeshaArt, coupleArt: art.coupleArt, ganeshaPhoto: art.ganeshaPhoto })); } catch (e) { toast('This photo is too big to remember: it is used for this session only'); } };
+  const studioArt = () => ({ brand: art.brand !== false, signature: art.signature !== false, ganeshaArt: art.ganeshaArt || 'photo', coupleArt: art.coupleArt || 'photo', photos: art.photos });
+  const saveArt = () => { try { localStorage.setItem(ART_KEY, JSON.stringify({ brand: art.brand, signature: art.signature, ganeshaArt: art.ganeshaArt, coupleArt: art.coupleArt, ganeshaPhoto: art.ganeshaPhoto })); } catch (e) { toast('This photo is too big to remember: it is used for this session only'); } };
   // A photo shrunk to at most 1200 px (sharp in the video, small to keep), as a canvas the video can draw
   const loadPhoto = src => new Promise((resolve, reject) => {
     const img = new Image();
@@ -814,6 +814,7 @@
     document.querySelectorAll('#stGanesha [data-art]').forEach(b => b.classList.toggle('on', b.dataset.art === a.ganeshaArt));
     document.querySelectorAll('#stCouple [data-art]').forEach(b => b.classList.toggle('on', b.dataset.art === a.coupleArt));
     $('#stBrand').checked = a.brand;
+    $('#stSign').checked = a.signature;
   }
   function setArt(change) {
     Object.assign(art, change);
@@ -847,15 +848,25 @@
     });
   }
   $('#stBrand').addEventListener('change', e => { if (!st.rec) setArt({ brand: e.target.checked }); else e.target.checked = !e.target.checked; });
+  $('#stSign').addEventListener('change', e => { if (!st.rec) setArt({ signature: e.target.checked }); else e.target.checked = !e.target.checked; });
 
-  // ---- Your own music ----
-  let myMusic = null; // { name, buffer }
-  async function useMusic(name, bytes) {
+  // ---- Your own songs ----
+  // Every video has a song: by default each look and story film gets one of your songs in turn (neighbours differ),
+  // or, while you have none, the look's own tune. The songs stay on this PC and never go to the website.
+  let songs = []; // [{ name, bytes, buffer }]
+  async function decodeSong(name, bytes) {
     const AC = window.AudioContext || window.webkitAudioContext, c = new AC();
-    try { myMusic = { name, buffer: await c.decodeAudioData(bytes.slice(0)) }; } finally { c.close(); }
+    try { return { name, bytes, buffer: await c.decodeAudioData(bytes.slice(0)) }; } finally { c.close(); }
   }
-  // A tiny IndexedDB store for the song (too big for localStorage)
-  function musicStore(op, value) {
+  const saveSongs = () => musicStore('put', songs.map(({ name, bytes }) => ({ name, bytes })));
+  // The song a look gets: its place among the story films and looks, so neighbouring videos never share one
+  const songFor = (story, look) => {
+    if (!songs.length) return null;
+    const i = [...Object.keys(Studio.STORIES), ...Object.keys(Studio.LOOKS)].indexOf(story || look);
+    return songs[Math.max(0, i) % songs.length];
+  };
+  // A tiny IndexedDB store for the songs (too big for localStorage)
+  function musicStore(op, value, key = 'songs') {
     return new Promise(resolve => {
       try {
         const req = indexedDB.open('cardalbum-studio', 1);
@@ -863,17 +874,36 @@
         req.onerror = () => resolve(null);
         req.onsuccess = () => {
           const tx = req.result.transaction('music', op === 'get' ? 'readonly' : 'readwrite'), store = tx.objectStore('music');
-          const r = op === 'get' ? store.get('song') : store.put(value, 'song');
+          const r = op === 'get' ? store.get(key) : store.put(value, key);
           r.onsuccess = () => resolve(r.result || null); r.onerror = () => resolve(null);
         };
       } catch (e) { resolve(null); }
     });
   }
-  musicStore('get').then(saved => saved && useMusic(saved.name, saved.bytes).then(() => { if (st.player) { renderMusicChips(); refreshStudio(); } }).catch(() => {}));
+  (async () => {
+    // The list of songs (an older single song is taken in too)
+    const saved = (await musicStore('get')) || [], old = await musicStore('get', null, 'song');
+    if (old && !saved.some(s => s.name === old.name)) saved.push(old);
+    for (const s of saved) { try { songs.push(await decodeSong(s.name, s.bytes)); } catch (e) { /* a file this browser cannot play */ } }
+    if (old) saveSongs();
+    if (st.player) { renderMusicChips(); refreshStudio(); }
+  })();
   function renderMusicChips() {
-    $('#stMusic').innerHTML = [['file', myMusic ? `🎵 ${myMusic.name}` : '🎵 My music…'], ['look', 'The look’s own tune'], ...Object.entries(TUNES).map(([k, T]) => [k, T.label]), ['card', 'The card’s music box'], ['none', 'No music']]
+    const auto = songs.length ? `🎵 My songs, a different one per video (${songs.length})` : '🎵 The look’s own tune';
+    $('#stMusic').innerHTML = [['auto', auto], ...songs.map((s, i) => [`song:${i}`, `🎶 ${s.name}`]), ...(songs.length ? [['look', 'The look’s own tune']] : []),
+      ...Object.entries(TUNES).map(([k, T]) => [k, T.label]), ['card', 'The card’s music box']]
       .map(([k, label]) => `<button type="button" class="chip" data-music="${k}">${esc(label)}</button>`).join('')
-      + (myMusic ? '<button type="button" class="chip" data-music-change>Change song</button>' : '');
+      + '<button type="button" class="chip" data-music-add>＋ Add songs</button>'
+      + (songs.length ? '<button type="button" class="chip" data-music-clear>🗑 Remove my songs</button>' : '');
+    $('#stSongNow').textContent = songNow();
+  }
+  // Which music this video gets, in words
+  function songNow() {
+    if (!st.opt) return '';
+    const m = st.opt.music, s = m === 'auto' ? songFor(st.opt.story, st.opt.look) : /^song:/.test(m) ? songs[+m.slice(5)] : null;
+    const tune = st.opt.story ? Studio.STORIES[st.opt.story].tune : Studio.LOOKS[st.opt.look].music;
+    return s ? `This video’s song: ${s.name}` : m === 'card' ? 'This video’s music: the card’s music box'
+      : `This video’s music: ${TUNES[TUNES[m] ? m : tune].label}`;
   }
 
   // `video`: the look or story film the customer chose on the website, if any (it wins over the occasion's look);
@@ -886,7 +916,7 @@
     const story = Studio.STORIES[video] ? video : kept ? st.opt.story : '';
     // The look the occasion suits, unless one was picked by hand in this visit
     const look = story ? Studio.STORIES[story].open : Studio.LOOKS[video] ? video : kept ? st.opt.look : auto.look;
-    st.opt = { ...auto, look, story, music: st.opt ? st.opt.music : 'look', ...studioArt() };
+    st.opt = { ...auto, look, story, music: st.opt ? st.opt.music : 'auto', ...studioArt() };
     document.querySelectorAll('#stLang [data-lang]').forEach(b => b.classList.toggle('on', b.dataset.lang === st.lang));
     $('#stWho').textContent = `${who(st.card)} · ${occasion(st.card).label}`;
     $('#stBless').checked = st.opt.blessing;
@@ -946,6 +976,7 @@
       `<button type="button" class="chip" data-scene="${i}">${esc(Studio.sceneName(s))}</button>`).join('');
     document.querySelectorAll('#stEvents [data-ev]').forEach(b => b.classList.toggle('on', b.dataset.ev === st.opt.events));
     document.querySelectorAll('#stMusic [data-music]').forEach(b => b.classList.toggle('on', b.dataset.music === st.opt.music));
+    $('#stSongNow').textContent = songNow();
     const scene = Studio.LOOKS[st.opt.look].scene;
     document.querySelectorAll('#stStories [data-story]').forEach(b => b.classList.toggle('on', b.dataset.story === st.opt.story));
     document.querySelectorAll('#stLooks [data-look]').forEach(b => b.classList.toggle('on', !st.opt.story && b.dataset.look === scene));
@@ -1008,7 +1039,7 @@
     st.opt.look = st.opt.story ? Studio.STORIES[st.opt.story].open : b.dataset.look;
     st.picked = true;
     refreshStudio();
-    if (previewSound && st.opt.music === 'look') soundOn();
+    if (previewSound && (st.opt.music === 'look' || st.opt.music === 'auto')) soundOn();
   };
   $('#stStories').addEventListener('click', pickLook);
   // English or Hindi: every fixed word, the dates and times, and the invitation line follow
@@ -1026,25 +1057,34 @@
   });
   $('#stMusic').addEventListener('click', e => {
     if (st.rec) return;
-    if (e.target.closest('[data-music-change]')) { $('#stMusicFile').click(); return; }
+    if (e.target.closest('[data-music-add]')) { $('#stMusicFile').click(); return; }
+    if (e.target.closest('[data-music-clear]')) {
+      if (!confirm(`Remove your ${songs.length} song${songs.length === 1 ? '' : 's'} from this PC? The videos go back to the looks’ own tunes.`)) return;
+      songs = []; saveSongs(); st.opt.music = 'auto';
+      renderMusicChips(); refreshStudio(); if (previewSound) soundOn();
+      return;
+    }
     const b = e.target.closest('[data-music]');
     if (!b) return;
-    if (b.dataset.music === 'file' && !myMusic) { $('#stMusicFile').click(); return; }
     st.opt.music = b.dataset.music; refreshStudio(); if (previewSound) soundOn();
   });
-  // Your own song: decoded once, kept on this PC (IndexedDB) so it is there next time too
+  // Your own songs (several at once): decoded once, kept on this PC (IndexedDB) so they are there next time too
   $('#stMusicFile').addEventListener('change', async e => {
-    const f = e.target.files[0];
+    const files = [...e.target.files];
     e.target.value = '';
-    if (!f) return;
-    try {
-      await useMusic(f.name.replace(/\.[^.]+$/, ''), await f.arrayBuffer());
-      musicStore('put', { name: myMusic.name, bytes: await f.arrayBuffer() });
-      st.opt.music = 'file';
-      renderMusicChips();
-      refreshStudio(); if (previewSound) soundOn();
-      toast(`🎵 “${myMusic.name}” added`);
-    } catch (err) { toast('That file is not a song this browser can play. Please choose an MP3, M4A or WAV.'); }
+    let added = 0;
+    for (const f of files) {
+      const name = f.name.replace(/\.[^.]+$/, '');
+      if (songs.some(s => s.name === name)) continue;
+      try { songs.push(await decodeSong(name, await f.arrayBuffer())); added++; }
+      catch (err) { toast(`“${name}” is not a song this browser can play. Please choose an MP3, M4A or WAV.`); }
+    }
+    if (!added) return;
+    saveSongs();
+    st.opt.music = 'auto';
+    renderMusicChips();
+    refreshStudio(); if (previewSound) soundOn();
+    toast(`🎵 ${added} song${added === 1 ? '' : 's'} added: each video gets a different one`);
   });
   [['stBless', 'blessing', 'checked'], ['stBlessText', 'blessingText', 'value'], ['stInvite', 'inviteLine', 'value'], ['stParents', 'parents', 'checked']]
     .forEach(([id, key, prop]) => $('#' + id).addEventListener('input', e => {
@@ -1053,13 +1093,12 @@
       refreshStudio();
     }));
 
-  // The music for the video: a story tune (js/tunes.js), the card's own music box tune, or none.
+  // The music for the video (always some): one of your songs, a story tune (js/tunes.js) or the card's music box.
   function studioMusic() {
-    const m = st.opt.music;
-    if (m === 'none') return null;
-    if (m === 'file' && myMusic) { const f = new FileTune(myMusic.buffer); return f.start() ? f : null; }
+    const m = st.opt.music, song = m === 'auto' ? songFor(st.opt.story, st.opt.look) : /^song:/.test(m) ? songs[+m.slice(5)] : null;
+    if (song) { const f = new FileTune(song.buffer); return f.start() ? f : null; }
     if (m === 'card') { const b = new MusicBox(design().tempo, design().song); return b.start() ? b : null; }
-    const t = new Tune(m === 'look' ? (st.opt.story ? Studio.STORIES[st.opt.story].tune : Studio.LOOKS[st.opt.look].music) : m);
+    const t = new Tune(TUNES[m] ? m : st.opt.story ? Studio.STORIES[st.opt.story].tune : Studio.LOOKS[st.opt.look].music);
     return t.start() ? t : null;
   }
   // 🔊 on the preview: hear the music while watching (it follows the music choice)

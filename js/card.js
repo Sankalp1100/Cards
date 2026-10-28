@@ -196,7 +196,7 @@
     return `<div class="venue-art va-${kind}" aria-hidden="true"><svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice">${s}</svg></div>`;
   }
 
-  // Shri Ganesh at the top of the card, for the occasions that begin with his blessing (a different one per design)
+  // Shri Ganesh at the very top of the card, above the couple, for the occasions that begin with his blessing (a different one per design)
   const GANESHA_TYPES = ['wedding', 'engagement', 'reception', 'naming', 'ceremony', 'babyshower', 'haldi', 'mehendi', 'roka', 'housewarming', 'mundan', 'janeu', 'festive'];
   function heroGanesha(t, d) {
     const list = typeof GANESHA_ART !== 'undefined' && Array.isArray(GANESHA_ART) ? GANESHA_ART : [];
@@ -515,12 +515,13 @@
       <section class="hero layout-${t.layout || 'classic'}" id="top">
         ${motifSVG(t.motif || 'toran')}
         ${decor(t.decor)}
+        ${heroGanesha(t, d)}
         ${heroLayout(t, d, when, {
           // Without a photo the design's emoji takes its place; the polaroid frame also shows the initials as a caption.
           // A couple from the library takes the seal's place on two of every three designs of an occasion that has one
           visual: photo ? `<div class="photo"><img src="${esc(photo)}" alt=""></div>` : heroCouple(t, d) || (t.emblem ? emblemHTML(d) : `<div class="ornament">${esc(t.emoji)}<small class="orn-cap" aria-hidden="true">${esc(initials(d))}</small></div>`),
           // Empty lines are left out altogether, so nothing blank shows on the card.
-          title: heroGanesha(t, d) + (d.title ? `<p class="title fade" style="--d:.2s">${esc(d.title)}</p>` : ''),
+          title: d.title ? `<p class="title fade" style="--d:.2s">${esc(d.title)}</p>` : '',
           names: `<h1 class="names">${names}</h1>${nickLine(d)}`,
           tagline: d.tagline ? `<p class="tagline fade" style="--d:1.6s">${esc(d.tagline)}</p>` : '',
           date: when ? `<div class="date-badge fade" style="--d:2s"><span>${esc(fmtDate(when))}</span>${Core.hasTime(d.date) ? `<b>${esc(fmtTime(when))}</b>` : ''}</div>` : '',

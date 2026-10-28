@@ -747,7 +747,8 @@ test.describe('Video Studio', () => {
     assert.ok(story(c, { coupleArt: 'drawn' }).scenes[1].couple, 'the drawn couple when chosen');
     assert.ok(story(c, { photos: { couple: {} } }).scenes[1].couple, 'their photo on the title');
     assert.ok(!story(c, { ganeshaArt: 'none' }).scenes[0].ganesha, 'Ganesh ji can be left out');
-    assert.ok(!story(c, { brand: false }).scenes.some(s => s.sigCorner), 'branding off: no signature');
+    assert.ok(!story(c, { signature: false }).scenes.some(s => s.sigCorner), 'signature off: no "Designed by"');
+    assert.ok(story(c, { brand: false }).scenes.some(s => s.sigCorner), 'website off, signature on: still signed');
     assert.ok(scenes[scenes.length - 1].sigCorner, 'the designer signs the last scene');
     assert.deepEqual(plain(story(c, { events: 'list' }).scenes.map(s => s.k)), ['open', 'title', 'invite', 'events', 'date', 'end', 'final']);
     assert.deepEqual(plain(story(c, { events: 'none' }).scenes.map(s => s.k)), ['open', 'title', 'invite', 'date', 'end', 'final']);

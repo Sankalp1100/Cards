@@ -161,7 +161,8 @@ const Studio = (() => {
     parents: true,
     events: (card.events || []).filter(e => clean(e.name)).length > 3 ? 'list' : 'each',
     music: 'look',
-    brand: true, // the website's QR code and "Designed by" (off: neither appears anywhere)
+    brand: true, // the website and its QR code at the end (off: neither appears)
+    signature: true, // "Designed by Sankalp" (off: it appears nowhere in the video)
     ganeshaArt: 'photo', coupleArt: 'photo', // 'photo' (a real one), 'drawn' or 'none'; a couple shows only with their photo
     photos: {}
   });
@@ -195,7 +196,7 @@ const Studio = (() => {
     else if (opt.events === 'list' && evs.length) S.push({ k: 'events', evs, d: 4 + evs.length });
     if (Core.parseDate(card.date) || clean(card.venue)) S.push({ k: 'date', d: 5.5 });
     S.push({ k: 'end', d: 6 });
-    S.push({ k: 'final', d: 5, sigCorner: opt.brand !== false });
+    S.push({ k: 'final', d: 5, sigCorner: opt.signature !== false });
     if (opt.story && STORIES[opt.story]) storyLooks(S, STORIES[opt.story]);
     let t = 0;
     S.forEach(s => { s.t0 = t; t += s.d; });
@@ -2521,7 +2522,7 @@ const Studio = (() => {
         c.fillStyle = light ? L.col.ink2 : '#f3e6cf'; c.font = `28px "${L.font.serif}"`; spacing(c, 7); c.fillText('DESIGNED BY', 76, H - 178);
         spacing(c, 0); c.fillStyle = L.col.gold; c.font = '112px "Great Vibes"'; c.fillText(this.ctx.designer, 70, H - 80);
         c.restore();
-      } else if (s.k !== 'end' && art.brand !== false) {
+      } else if (s.k !== 'end' && art.signature !== false) {
         // The credit sits on a soft pill, so it reads on any background
         const light = isLight(L), txt = `Designed by ${this.ctx.designer}`;
         c.save(); c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `26px "${L.font.serif}"`; spacing(c, 2);

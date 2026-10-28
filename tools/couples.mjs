@@ -39,8 +39,14 @@ async function cutAll(src, pick, label) {
       const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
       const c = cv.getContext('2d'); c.drawImage(img, 0, 0, w, h);
       const d = c.getImageData(0, 0, w, h), px = d.data;
-      // The background: light, low-colour pixels (white, or the grey and white squares of a fake "transparent" checkerboard)
-      const bg = i => px[i + 3] < 20 || (Math.min(px[i], px[i + 1], px[i + 2]) > 200 && Math.max(px[i], px[i + 1], px[i + 2]) - Math.min(px[i], px[i + 1], px[i + 2]) < 18);
+      // The background: light, low-colour pixels (white, or the grey and white squares of a fake "transparent" checkerboard).
+      // How light is measured on the picture's own edge, so a pure white background doesn't eat into a white gown.
+      const edge = [];
+      for (let x = 0; x < w; x += 4) edge.push(Math.min(px[x * 4], px[x * 4 + 1], px[x * 4 + 2]), Math.min(...px.subarray(((h - 1) * w + x) * 4, ((h - 1) * w + x) * 4 + 3)));
+      for (let y = 0; y < h; y += 4) edge.push(Math.min(...px.subarray(y * w * 4, y * w * 4 + 3)), Math.min(...px.subarray((y * w + w - 1) * 4, (y * w + w - 1) * 4 + 3)));
+      edge.sort((a, b) => a - b);
+      const light = edge[Math.floor(edge.length * .1)] >= 250 ? 244 : 200;
+      const bg = i => px[i + 3] < 20 || (Math.min(px[i], px[i + 1], px[i + 2]) > light && Math.max(px[i], px[i + 1], px[i + 2]) - Math.min(px[i], px[i + 1], px[i + 2]) < 18);
       const seen = new Uint8Array(w * h), stack = [];
       for (let x = 0; x < w; x++) stack.push(x, (h - 1) * w + x);
       for (let y = 0; y < h; y++) stack.push(y * w, y * w + w - 1);
