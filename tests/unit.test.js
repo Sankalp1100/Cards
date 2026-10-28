@@ -807,7 +807,7 @@ test.describe('Video Studio', () => {
       assert.ok(L.font.script && L.font.serif);
       assert.ok(L.zone[0] < L.zone[1] && L.zone[1] <= 1920 && L.zone[2] <= 1080, id);
       for (const f of ['back', 'anim', 'fx', 'crest']) assert.equal(typeof L[f], 'function', `${id}.${f}`);
-      assert.ok(['royal', 'romantic', 'festive'].includes(L.music), id);
+      assert.ok(['royal', 'romantic', 'festive', 'calm'].includes(L.music), id);
       for (const [op] of L.tint || []) assert.ok(['multiply', 'soft-light', 'screen', 'color'].includes(op), id);
     }
     assert.equal(new Set(looks.map(([, L]) => Studio.lookName(L))).size, 300, 'every look has its own name');

@@ -1135,7 +1135,7 @@ const Studio = (() => {
       name: 'Blush Floral', mood: 'Blush', note: 'Watercolour roses, gold arch',
       col: { names: '#a8436a', ink: '#553943', ink2: '#7a5c66', accent: '#b98352', gold: '#c9a063' },
       mono: [['#eaa5ba', '#b4527a'], ['#d9b47a', '#9a7440']],
-      font: { script: 'Pinyon Script', serif: 'Gilda Display' }, zone: [440, 1460, 720], shadow: ['rgba(255,250,246,.95)', 10], music: 'romantic',
+      font: { script: 'Pinyon Script', serif: 'Gilda Display' }, zone: [440, 1460, 720], shadow: ['rgba(255,250,246,.95)', 10], music: 'calm',
       back(c, R, m) {
         const ro = m.roses || [['#fde3ea', '#e48aa6'], ['#fff3f0', '#e7b9b0'], ['#f9d6df', '#c9708f']];
         c.fillStyle = m.paper || '#fbf2ec'; c.fillRect(0, 0, W, H);
@@ -1525,7 +1525,7 @@ const Studio = (() => {
       name: 'Dreamy Clouds', mood: 'Pastel Sky', note: 'Pastel clouds, a moon and hanging stars',
       col: { names: '#6b5bd6', ink: '#3e3a6a', ink2: '#5e5a8a', accent: '#e86a9a', gold: '#d8a84a' },
       mono: [['#a99bff', '#6b5bd6'], ['#ffb3cf', '#e86a9a']],
-      font: { script: 'Parisienne', serif: 'Fredoka' }, zone: [460, 1420, 800], shadow: ['rgba(255,255,255,.95)', 14], music: 'romantic',
+      font: { script: 'Parisienne', serif: 'Fredoka' }, zone: [460, 1420, 800], shadow: ['rgba(255,255,255,.95)', 14], music: 'calm',
       back(c, R, m) {
         sky(c, m.sky || [[0, '#cfe4ff'], [.55, '#f1e6ff'], [1, '#ffe1ee']]);
         c.save(); c.globalAlpha = .22; c.lineWidth = 28;

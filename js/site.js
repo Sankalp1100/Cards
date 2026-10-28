@@ -390,10 +390,21 @@
   $('#vidsMore').addEventListener('click', () => { vidShown += VID_PAGE; renderVideos(); });
 
   let studioScript = null;
-  const loadStudio = () => studioScript || (studioScript = new Promise((resolve, reject) => {
-    const s = Object.assign(document.createElement('script'), { src: 'js/studio.js', onload: resolve, onerror: () => { studioScript = null; reject(new Error('offline')); } });
-    document.head.appendChild(s);
-  }));
+  const script = src => new Promise((resolve, reject) => {
+    document.head.appendChild(Object.assign(document.createElement('script'), { src, onload: resolve, onerror: () => reject(new Error('offline')) }));
+  });
+  const loadStudio = () => studioScript || (studioScript = Promise.all([script('js/studio.js'), script('js/tunes.js')]).catch(e => { studioScript = null; throw e; }));
+  // The look's music while the video plays; 🔇 mutes it (and stays muted for the next video)
+  let tune = null, muted = false;
+  const tuneOff = () => { if (tune) { tune.close(); tune = null; } };
+  function tuneOn() {
+    tuneOff();
+    if (muted || !vid.look || typeof Tune === 'undefined') return;
+    tune = new Tune(Studio.LOOKS[vid.look].music);
+    if (!tune.start()) tune = null;
+  }
+  const showSound = () => { $('#vidSound').textContent = muted ? '🔇 Sound off' : '🔊 Sound on'; $('#vidSound').setAttribute('aria-pressed', String(!muted)); };
+  $('#vidSound').addEventListener('click', () => { muted = !muted; showSound(); if (muted) tuneOff(); else tuneOn(); });
   const vid = { player: null, card: null, scene: '', look: '', t: 0, last: 0, raf: 0 };
 
   async function openVideo(look) {
@@ -418,14 +429,17 @@
       .map(([id, L]) => `<button type="button" class="chip" data-look="${id}">${esc(L.mood)}</button>`).join('');
     vid.t = 0;
     pickMood(look);
+    showSound();
     $('#vidWait').hidden = true;
     cancelAnimationFrame(vid.raf);
     vid.last = performance.now();
     vid.raf = requestAnimationFrame(videoFrame);
   }
   function pickMood(id) {
+    const tuneWas = vid.look && Studio.LOOKS[vid.look].music;
     vid.look = id;
     const L = Studio.LOOKS[id];
+    if (!tune || tuneWas !== L.music) tuneOn(); // a new mood with the same tune keeps playing without a restart
     vid.player.set(vid.card, { ...Studio.defaults(vid.card), look: id }, SITE);
     vid.t = Math.min(vid.t, vid.player.total - .05);
     $('#vidNote').textContent = `${L.mood} mood · ${L.note}`;
@@ -440,6 +454,8 @@
     vid.raf = requestAnimationFrame(videoFrame);
   }
   function closeVideo() {
+    tuneOff();
+    vid.look = '';
     cancelAnimationFrame(vid.raf);
     vid.scene = '';
     $('#vidSheet').hidden = true;

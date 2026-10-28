@@ -1174,3 +1174,4 @@ html { overflow-x: clip; }
 }
 /* The play badge sits in the corner, so the names on the picture stay readable */
 .vid-play { left: auto; top: 10px; right: 10px; width: 38px; height: 38px; margin: 0; font-size: .85rem; }
+.vid-sound { justify-self: start; padding: 8px 14px; font-size: .86rem; }

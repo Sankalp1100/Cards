@@ -773,11 +773,6 @@
   // ---------- Video Studio ----------
   // Story videos painted on a canvas (js/studio.js), on their own full screen: pick a look, the words and the music,
   // watch it, then record it straight from the canvas as an MP4 (no screen sharing, so it also works on a phone).
-  const SONGS = {
-    royal: [{ prog: 4, pattern: 4, voice: 'bells', key: -3 }, .32],
-    romantic: [{ prog: 2, pattern: 2, voice: 'harp', key: 2 }, .26],
-    festive: [{ prog: 7, pattern: 3, voice: 'pluck', key: 0 }, .2]
-  };
   const stCanvas = $('#stCanvas');
   const st = { player: null, card: null, opt: null, t: 0, playing: true, last: 0, raf: 0, rec: null };
   const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -837,6 +832,8 @@
   }
   function closeStudio() {
     if (st.rec) return toast('Please wait: the video is still recording');
+    soundOff();
+    $('#stSound').textContent = '🔇';
     cancelAnimationFrame(st.raf);
     $('#studio').hidden = true;
     document.body.classList.remove('studio-open');
@@ -917,7 +914,7 @@
   });
   $('#stMusic').addEventListener('click', e => {
     const b = e.target.closest('[data-music]');
-    if (b && !st.rec) { st.opt.music = b.dataset.music; refreshStudio(); }
+    if (b && !st.rec) { st.opt.music = b.dataset.music; refreshStudio(); if (previewSound) soundOn(); }
   });
   [['stBless', 'blessing', 'checked'], ['stBlessText', 'blessingText', 'value'], ['stInvite', 'inviteLine', 'value'], ['stParents', 'parents', 'checked']]
     .forEach(([id, key, prop]) => $('#' + id).addEventListener('input', e => {
@@ -926,12 +923,24 @@
       refreshStudio();
     }));
 
-  function studioSong() {
+  // The music for the video: a story tune (js/tunes.js), the card's own music box tune, or none.
+  function studioMusic() {
     const m = st.opt.music;
     if (m === 'none') return null;
-    if (m === 'card') return [design().song, design().tempo];
-    return SONGS[m === 'look' ? Studio.LOOKS[st.opt.look].music : m] || null;
+    if (m === 'card') { const b = new MusicBox(design().tempo, design().song); return b.start() ? b : null; }
+    const t = new Tune(m === 'look' ? Studio.LOOKS[st.opt.look].music : m);
+    return t.start() ? t : null;
   }
+  // 🔊 on the preview: hear the music while watching (it follows the music choice)
+  let previewSound = null;
+  function soundOff() { if (previewSound) { previewSound.stop(); if (previewSound.close) previewSound.close(); else previewSound.ctx.close(); previewSound = null; } }
+  function soundOn() { soundOff(); previewSound = studioMusic(); }
+  $('#stSound').addEventListener('click', () => {
+    const on = !previewSound && !st.rec;
+    if (on) soundOn(); else soundOff();
+    $('#stSound').textContent = previewSound ? '🔊' : '🔇';
+    $('#stSound').setAttribute('aria-label', previewSound ? 'Sound off' : 'Sound on');
+  });
 
   $('#stOrder').addEventListener('change', e => {
     if (st.rec) return;
@@ -955,15 +964,16 @@
     btn.disabled = $('#stAuto').disabled = true;
     $('#stVideo').hidden = $('#stDownload').hidden = true;
     let box = null;
+    const hadSound = !!previewSound;
+    soundOff();
     try {
-      const stream = stCanvas.captureStream(30), song = studioSong();
-      if (song) {
-        box = new MusicBox(song[1], song[0]);
-        if (box.start()) {
-          const dest = box.ctx.createMediaStreamDestination();
-          box.master.connect(dest);
-          dest.stream.getAudioTracks().forEach(tr => stream.addTrack(tr));
-        }
+      const stream = stCanvas.captureStream(30);
+      box = studioMusic();
+      if (box) {
+        const dest = box.ctx.createMediaStreamDestination();
+        box.master.connect(dest);
+        dest.stream.getAudioTracks().forEach(tr => stream.addTrack(tr));
+        if (box.fadeOut) box.fadeOut(st.player.total - 2.6, 2.4); // the music fades away with the closing scene
       }
       const mimeType = VIDEO_TYPES.find(t => MediaRecorder.isTypeSupported(t)) || '';
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 5e6 } : { videoBitsPerSecond: 5e6 });
@@ -1003,8 +1013,9 @@
       st.rec = null;
       stStatus(`Could not make the video: ${e.message}. Please try again.`);
     } finally {
-      if (box) { box.stop(); box.ctx.close(); }
+      if (box) { box.stop(); if (box.close) box.close(); else box.ctx.close(); }
       btn.disabled = $('#stAuto').disabled = false;
+      if (hadSound) soundOn();
     }
   }
 

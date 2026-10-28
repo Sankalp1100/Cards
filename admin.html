@@ -311,6 +311,7 @@
         <canvas id="stCanvas" aria-label="Video preview"></canvas>
         <div class="st-play">
           <button type="button" id="stPlay" aria-label="Pause">❚❚</button>
+          <button type="button" id="stSound" aria-label="Sound on" title="Hear the music">🔇</button>
           <div class="st-scrub" id="stScrub"><i id="stBar"></i></div>
           <span id="stTime">0:00</span>
         </div>
@@ -340,9 +341,10 @@
         <h3>4 · Music</h3>
         <div class="chips" id="stMusic">
           <button type="button" class="chip" data-music="look">The look’s tune</button>
-          <button type="button" class="chip" data-music="royal">Royal</button>
-          <button type="button" class="chip" data-music="romantic">Romantic</button>
-          <button type="button" class="chip" data-music="festive">Festive</button>
+          <button type="button" class="chip" data-music="royal">Royal (flute)</button>
+          <button type="button" class="chip" data-music="romantic">Romantic (piano)</button>
+          <button type="button" class="chip" data-music="festive">Festive (bells)</button>
+          <button type="button" class="chip" data-music="calm">Calm</button>
           <button type="button" class="chip" data-music="card">The card’s tune</button>
           <button type="button" class="chip" data-music="none">No music</button>
         </div>
@@ -380,6 +382,7 @@
   <script src="js/db.js"></script>
   <script src="js/music.js"></script>
   <script src="js/mp4fix.js"></script>
+  <script src="js/tunes.js"></script>
   <script src="js/studio.js"></script>
   <script src="js/admin.js"></script>
 </body>
