@@ -400,7 +400,7 @@
   const script = src => new Promise((resolve, reject) => {
     document.head.appendChild(Object.assign(document.createElement('script'), { src, onload: resolve, onerror: () => reject(new Error('offline')) }));
   });
-  const loadStudio = () => studioScript || (studioScript = script('js/couples.js').then(() => Promise.all([script('js/studio.js'), script('js/tunes.js')])).catch(e => { studioScript = null; throw e; }));
+  const loadStudio = () => studioScript || (studioScript = Promise.all([script('js/studio.js'), script('js/tunes.js')]).catch(e => { studioScript = null; throw e; }));
   // The look's music while the video plays; 🔇 mutes it (and stays muted for the next video)
   let tune = null, muted = false;
   const tuneOff = () => { if (tune) { tune.close(); tune = null; } };
