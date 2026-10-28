@@ -1182,3 +1182,8 @@ html { overflow-x: clip; }
 .story-tile { border-color: rgba(255,201,92,.45); }
 .vid-lang { gap: 8px; }
 .vid-lang .chip { padding: 7px 14px; font-size: .86rem; }
+
+/* Design posters: the couple from the library, where the design's card has one */
+.p-couple { display: block; height: 58cqw; width: auto; max-width: 84%; margin: 0 auto 2px; object-fit: contain; flex: none;
+  filter: drop-shadow(0 8px 12px rgba(0,0,0,.22)); }
+.poster:has(.p-couple) :is(.p-tag, .p-title) { display: none; }

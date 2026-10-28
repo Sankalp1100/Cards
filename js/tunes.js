@@ -296,4 +296,47 @@ class Tune {
   }
 }
 
-if (typeof module !== 'undefined') module.exports = { Tune, TUNES };
+// Your own music (an MP3, M4A or WAV picked in the admin Video Studio), played like a tune: it fades in, loops if
+// the video is longer, and fades out with the closing scene. `buffer` is a decoded AudioBuffer.
+class FileTune {
+  constructor(buffer) { this.buffer = buffer; this.on = false; }
+  start() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC || !this.buffer) return false;
+    const c = this.ctx = new AC();
+    this.master = c.createGain();
+    this.master.gain.value = 0;
+    this.master.connect(c.destination);
+    this.src = c.createBufferSource();
+    this.src.buffer = this.buffer;
+    this.src.loop = true;
+    this.src.connect(this.master);
+    c.resume();
+    const now = c.currentTime;
+    this.src.start(now);
+    this.master.gain.linearRampToValueAtTime(1, now + .8);
+    this.on = true;
+    return true;
+  }
+  fadeOut(after = 0, secs = 2.5) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime + after;
+    this.master.gain.setValueAtTime(1, t);
+    this.master.gain.linearRampToValueAtTime(0, t + secs);
+  }
+  stop() {
+    this.on = false;
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    this.master.gain.cancelScheduledValues(now);
+    this.master.gain.setValueAtTime(this.master.gain.value, now);
+    this.master.gain.linearRampToValueAtTime(0, now + .3);
+    try { this.src.stop(now + .35); } catch (e) { /* already stopped */ }
+  }
+  close() {
+    this.stop();
+    if (this.ctx) setTimeout(() => this.ctx.close(), 500);
+  }
+}
+
+if (typeof module !== 'undefined') module.exports = { Tune, TUNES, FileTune };

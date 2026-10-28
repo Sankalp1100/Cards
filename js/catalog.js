@@ -213,6 +213,12 @@ const Catalog = {
 
   // Lightweight poster (plain HTML/CSS, no iframe). `tag`/`attrs` let each page make it a link or a button.
   // It shows the design's own fonts, layout, background, frame and name finish, so no two posters look alike.
+  // The same couple the design's card shows (two of every three designs of an occasion with library pictures)
+  posterCouple(e) {
+    const pic = e.no % 3 !== 0 && Core.coupleFor(e.occasion, `design-${e.no}`);
+    return pic ? `<img class="p-couple" src="img/couples/cut/${Core.esc(pic.id)}.png" alt="" width="${pic.w}" height="${pic.h}" loading="lazy" decoding="async">` : '';
+  },
+
   poster(e, tag, attrs) {
     const c = PRESETS[e.occasion].card, v = e.vars, d = Core.parseDate(c.date);
     const day = d ? String(d.getDate()).padStart(2, '0') : '♥', month = d ? d.toLocaleDateString('en-IN', { month: 'short' }) : '';
@@ -224,7 +230,7 @@ const Catalog = {
         <span class="p-mono" aria-hidden="true">${Core.esc(Core.initials(c))}</span>
         <span class="p-date" aria-hidden="true"><b>${day}</b>${Core.esc(month)}</span>
         <span class="p-body">
-          ${e.emblem ? `<span class="p-emoji p-medal">${Core.esc(Core.initials(c))}</span>` : `<span class="p-emoji">${e.emoji}</span>`}
+          ${Catalog.posterCouple(e) || (e.emblem ? `<span class="p-emoji p-medal">${Core.esc(Core.initials(c))}</span>` : `<span class="p-emoji">${e.emoji}</span>`)}
           <span class="p-title">${Core.esc(c.title)}</span>
           <span class="p-names">${Core.esc(c.host1)}${c.host2 ? `<i>&amp;</i>${Core.esc(c.host2)}` : ''}</span>
           <span class="p-tag">${Core.esc(c.tagline)}</span>

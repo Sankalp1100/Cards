@@ -848,6 +848,34 @@
   }
   $('#stBrand').addEventListener('change', e => { if (!st.rec) setArt({ brand: e.target.checked }); else e.target.checked = !e.target.checked; });
 
+  // ---- Your own music ----
+  let myMusic = null; // { name, buffer }
+  async function useMusic(name, bytes) {
+    const AC = window.AudioContext || window.webkitAudioContext, c = new AC();
+    try { myMusic = { name, buffer: await c.decodeAudioData(bytes.slice(0)) }; } finally { c.close(); }
+  }
+  // A tiny IndexedDB store for the song (too big for localStorage)
+  function musicStore(op, value) {
+    return new Promise(resolve => {
+      try {
+        const req = indexedDB.open('cardalbum-studio', 1);
+        req.onupgradeneeded = () => req.result.createObjectStore('music');
+        req.onerror = () => resolve(null);
+        req.onsuccess = () => {
+          const tx = req.result.transaction('music', op === 'get' ? 'readonly' : 'readwrite'), store = tx.objectStore('music');
+          const r = op === 'get' ? store.get('song') : store.put(value, 'song');
+          r.onsuccess = () => resolve(r.result || null); r.onerror = () => resolve(null);
+        };
+      } catch (e) { resolve(null); }
+    });
+  }
+  musicStore('get').then(saved => saved && useMusic(saved.name, saved.bytes).then(() => { if (st.player) { renderMusicChips(); refreshStudio(); } }).catch(() => {}));
+  function renderMusicChips() {
+    $('#stMusic').innerHTML = [['file', myMusic ? `🎵 ${myMusic.name}` : '🎵 My music…'], ['look', 'The look’s own tune'], ...Object.entries(TUNES).map(([k, T]) => [k, T.label]), ['card', 'The card’s music box'], ['none', 'No music']]
+      .map(([k, label]) => `<button type="button" class="chip" data-music="${k}">${esc(label)}</button>`).join('')
+      + (myMusic ? '<button type="button" class="chip" data-music-change>Change song</button>' : '');
+  }
+
   // `video`: the look or story film the customer chose on the website, if any (it wins over the occasion's look);
   // `lang`: the language they asked for.
   function studioLoad(card, video, lang) {
@@ -934,8 +962,7 @@
       return `<button type="button" class="st-look" data-look="${id}" title="${esc(L.note)}"><canvas width="135" height="240"></canvas><span>${esc(L.name)}</span></button>`; }).join('');
     $('#stStories').innerHTML = Object.entries(Studio.STORIES).map(([id, S]) =>
       `<button type="button" class="st-look" data-story="${id}" data-look="${S.title}" title="${esc(S.note)} · ${esc(TUNES[S.tune].label)}"><canvas width="135" height="240"></canvas><span>${esc(S.name)}</span></button>`).join('');
-    $('#stMusic').innerHTML = [['look', 'The look’s own tune'], ...Object.entries(TUNES).map(([k, T]) => [k, T.label]), ['card', 'The card’s music box'], ['none', 'No music']]
-      .map(([k, label]) => `<button type="button" class="chip" data-music="${k}">${esc(label)}</button>`).join('');
+    renderMusicChips();
     // Painted after the preview has started, one at a time in idle moments, so the preview never stalls
     const idle = fn => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 800 }) : setTimeout(fn, 60));
     [...box.querySelectorAll('[data-look]'), ...$('#stStories').querySelectorAll('[data-look]')]
@@ -998,8 +1025,26 @@
     if (b && !st.rec) { st.opt.events = b.dataset.ev; refreshStudio(); }
   });
   $('#stMusic').addEventListener('click', e => {
+    if (st.rec) return;
+    if (e.target.closest('[data-music-change]')) { $('#stMusicFile').click(); return; }
     const b = e.target.closest('[data-music]');
-    if (b && !st.rec) { st.opt.music = b.dataset.music; refreshStudio(); if (previewSound) soundOn(); }
+    if (!b) return;
+    if (b.dataset.music === 'file' && !myMusic) { $('#stMusicFile').click(); return; }
+    st.opt.music = b.dataset.music; refreshStudio(); if (previewSound) soundOn();
+  });
+  // Your own song: decoded once, kept on this PC (IndexedDB) so it is there next time too
+  $('#stMusicFile').addEventListener('change', async e => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    try {
+      await useMusic(f.name.replace(/\.[^.]+$/, ''), await f.arrayBuffer());
+      musicStore('put', { name: myMusic.name, bytes: await f.arrayBuffer() });
+      st.opt.music = 'file';
+      renderMusicChips();
+      refreshStudio(); if (previewSound) soundOn();
+      toast(`🎵 “${myMusic.name}” added`);
+    } catch (err) { toast('That file is not a song this browser can play. Please choose an MP3, M4A or WAV.'); }
   });
   [['stBless', 'blessing', 'checked'], ['stBlessText', 'blessingText', 'value'], ['stInvite', 'inviteLine', 'value'], ['stParents', 'parents', 'checked']]
     .forEach(([id, key, prop]) => $('#' + id).addEventListener('input', e => {
@@ -1012,6 +1057,7 @@
   function studioMusic() {
     const m = st.opt.music;
     if (m === 'none') return null;
+    if (m === 'file' && myMusic) { const f = new FileTune(myMusic.buffer); return f.start() ? f : null; }
     if (m === 'card') { const b = new MusicBox(design().tempo, design().song); return b.start() ? b : null; }
     const t = new Tune(m === 'look' ? (st.opt.story ? Studio.STORIES[st.opt.story].tune : Studio.LOOKS[st.opt.look].music) : m);
     return t.start() ? t : null;

@@ -136,6 +136,26 @@ const Core = {
     return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}T${p(d.getHours())}${p(d.getMinutes())}00`;
   },
 
+  // The couple art library (js/couples.js): which pictures suit an occasion, best first; `key` picks a different one
+  // per design or video. Returns a library entry ({ id, occasion, w, h }) or null.
+  COUPLE_GROUPS: { wedding: ['wedding'], roka: ['roka', 'engagement', 'wedding'], engagement: ['engagement', 'roka', 'wedding'],
+    reception: ['reception', 'wedding'], sangeet: ['sangeet', 'reception', 'wedding'], haldi: ['haldi', 'wedding'], mehendi: ['mehendi', 'haldi', 'wedding'],
+    anniversary: ['anniversary'], babyshower: ['babyshower'], naming: ['naming', 'family'], birthday: ['kid'],
+    housewarming: ['family'], ceremony: ['family'], festive: ['family'] },
+  coupleFor(type, key, avoid) {
+    const lib = typeof COUPLES !== 'undefined' && Array.isArray(COUPLES) ? COUPLES : [];
+    for (const occ of Core.COUPLE_GROUPS[type] || []) {
+      let list = lib.filter(x => x.occasion === occ);
+      if (list.length > 1 && avoid) list = list.filter(x => x.id !== avoid);
+      if (list.length) {
+        let h = 11;
+        for (const ch of String(key)) h = (h * 33 + ch.charCodeAt(0)) >>> 0;
+        return list[h % list.length];
+      }
+    }
+    return null;
+  },
+
   who(card) {
     const a = (card.host1 || '').trim(), b = (card.host2 || '').trim();
     return a && b ? `${a} & ${b}` : a || b || 'Our celebration';

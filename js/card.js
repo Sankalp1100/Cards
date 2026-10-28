@@ -196,6 +196,12 @@
     return `<div class="venue-art va-${kind}" aria-hidden="true"><svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice">${s}</svg></div>`;
   }
 
+  function heroCouple(t, d) {
+    if (t.no % 3 === 0) return '';
+    const pic = Core.coupleFor(d.type, `design-${t.no}`);
+    return pic ? `<img class="hero-couple" src="img/couples/cut/${esc(pic.id)}.png" alt="" width="${pic.w}" height="${pic.h}" decoding="async">` : '';
+  }
+
   // Elegant styles show a monogram seal where the emoji would be: the initials inside a fine double ring,
   // with a slowly turning ring of dots and four small diamonds.
   function emblemHTML(d) {
@@ -502,7 +508,8 @@
         ${decor(t.decor)}
         ${heroLayout(t, d, when, {
           // Without a photo the design's emoji takes its place; the polaroid frame also shows the initials as a caption.
-          visual: photo ? `<div class="photo"><img src="${esc(photo)}" alt=""></div>` : t.emblem ? emblemHTML(d) : `<div class="ornament">${esc(t.emoji)}<small class="orn-cap" aria-hidden="true">${esc(initials(d))}</small></div>`,
+          // A couple from the library takes the seal's place on two of every three designs of an occasion that has one
+          visual: photo ? `<div class="photo"><img src="${esc(photo)}" alt=""></div>` : heroCouple(t, d) || (t.emblem ? emblemHTML(d) : `<div class="ornament">${esc(t.emoji)}<small class="orn-cap" aria-hidden="true">${esc(initials(d))}</small></div>`),
           // Empty lines are left out altogether, so nothing blank shows on the card.
           title: d.title ? `<p class="title fade" style="--d:.2s">${esc(d.title)}</p>` : '',
           names: `<h1 class="names">${names}</h1>${nickLine(d)}`,

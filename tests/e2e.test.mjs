@@ -457,7 +457,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.goto(cardLink(evil, '?demo&to=' + encodeURIComponent('<img src=x onerror="window.__xss=6">')));
     await openEnvelope();
     assert.equal(await page.eval(`window.__xss`), undefined, 'no injected script ran');
-    assert.equal(await page.eval(`document.querySelectorAll('#card img, #card script, #card svg [onload], #envelope img, #demoBar img').length`), 0);
+    assert.equal(await page.eval(`document.querySelectorAll('#card img:not(.hero-couple), #card script, #card svg [onload], #envelope img, #demoBar img').length`), 0);
     assert.match(await page.eval(`document.querySelector('.names').textContent`), /<img src=x/);
     assert.match(await page.eval(`document.querySelector('.venue a').href`), /^https:\/\/www\.google\.com\/maps/);
     assert.equal(await page.eval(`!!document.querySelector('.photo')`), false, 'javascript: photo rejected');

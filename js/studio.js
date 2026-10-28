@@ -119,9 +119,33 @@ const Studio = (() => {
     return { ...it, f, z: Math.round(it.z * k), up: false, ls: 0 };
   };
 
+  // The couple art library (js/couples.js, made by tools/couples.mjs): which pictures suit an occasion, best first
+  const library = () => (typeof COUPLES !== 'undefined' && Array.isArray(COUPLES) ? COUPLES : []);
+  const coupleFor = (card, key) => Core.coupleFor(card.type, key);
+  // Opened from a file (admin.html double-clicked), pictures would stop the video from recording, so none are used
+  const localFile = () => typeof location !== 'undefined' && location.protocol === 'file:';
+  const EVENT_COUPLES = [[/haldi|pithi|ubtan/i, 'haldi'], [/mehe?n?d/i, 'mehendi'], [/sangeet|dance|dj|garba|dandiya|cocktail/i, 'sangeet'],
+    [/reception|dinner|swagat|bhoj/i, 'reception'], [/phera|vivah|wedding|varmala|jaimala|shaadi|baraat|barat/i, 'wedding'], [/ring|engage|sagai|roka/i, 'engagement']];
+  function eventCouple(name, key, avoid) {
+    const occ = (EVENT_COUPLES.find(([re]) => re.test(name)) || [])[1];
+    let list = library().filter(x => x.occasion === occ);
+    if (list.length > 1 && avoid) list = list.filter(x => x.id !== avoid.id);
+    if (!list.length) return null;
+    let h = 5;
+    for (const ch of key + name) h = (h * 37 + ch.charCodeAt(0)) >>> 0;
+    return list[h % list.length];
+  }
+  const libImages = {};
+  function libImage(entry) {
+    if (!entry || typeof Image === 'undefined' || localFile()) return null;
+    if (!libImages[entry.id]) { const img = new Image(); img.src = `img/couples/cut/${entry.id}.png`; libImages[entry.id] = img; }
+    const img = libImages[entry.id];
+    return img.complete && img.naturalWidth ? img : null;
+  }
+
   // Couples are drawn on the title scene (bride and groom); these occasions have a couple
-  const COUPLES = ['wedding', 'engagement', 'reception', 'roka', 'anniversary', 'sangeet', 'haldi', 'mehendi'];
-  const hasCouple = card => COUPLES.includes(card.type) && !!clean(card.host1) && !!clean(card.host2);
+  const COUPLE_TYPES = ['wedding', 'engagement', 'reception', 'roka', 'anniversary', 'sangeet', 'haldi', 'mehendi'];
+  const hasCouple = card => COUPLE_TYPES.includes(card.type) && !!clean(card.host1) && !!clean(card.host2);
 
   const defaults = (card, lang = 'en') => ({
     look: OCCASION_LOOK[card.type] || 'vrindavan',
@@ -148,17 +172,22 @@ const Studio = (() => {
       const scenes = opt.script.map(x => { const sc = { k: 'custom', ...x, t0: t }; t += sc.d; return sc; });
       return { scenes, total: t };
     }
-    const photos = opt.photos || {};
-    const couple = hasCouple(card) && (opt.coupleArt === 'drawn' || (opt.coupleArt !== 'none' && !!photos.couple));
+    const photos = opt.photos || {}, lib = opt.coupleArt !== 'none' && coupleFor(card, opt.story || opt.look || '');
+    // A couple (or a family, a child) shows with their own photo, a picture from the library, or the drawing when chosen
+    const couple = opt.coupleArt === 'drawn' ? hasCouple(card) : opt.coupleArt !== 'none' && (!!photos.couple && hasCouple(card) || !!lib);
     const god = opt.blessing && opt.ganeshaArt !== 'none';
     const S = [god
       ? { k: 'open', d: 6, doors: true, shower: true, ganesha: { y: 600, s: 760 }, zone: [200, 500, 940] }
       : { k: 'open', d: 5.5, doors: true, shower: true }];
-    S.push(couple ? { k: 'title', d: 6, couple: { y: 1830, s: 640 }, zone: [290, 1080, 760] } : { k: 'title', d: 5.5 });
+    S.push(couple ? { k: 'title', d: 6, couple: { y: 1880, s: 860 }, zone: [250, 960, 780] } : { k: 'title', d: 5.5 });
     const [p1, p2] = opt.parents ? parents(card, opt.lang) : ['', ''];
     S.push({ k: 'invite', d: p1 || p2 ? 7.5 : 6.5 });
     const evs = (card.events || []).filter(e => clean(e.name)).slice(0, 6);
-    if (opt.events === 'each') evs.forEach(e => S.push({ k: 'event', e, d: 4.5 }));
+    const art = opt.coupleArt !== 'none' && opt.coupleArt !== 'drawn' && !(opt.photos || {}).couple;
+    if (opt.events === 'each') evs.forEach(e => {
+      const pic = art && eventCouple(clean(e.name), opt.story || opt.look || '', couple && !(opt.photos || {}).couple && coupleFor(card, opt.story || opt.look || ''));
+      S.push(pic ? { k: 'event', e, d: 5, couple: { y: 1880, s: 820 }, coupleEntry: pic, zone: [230, 940, 780] } : { k: 'event', e, d: 4.5 });
+    });
     else if (opt.events === 'list' && evs.length) S.push({ k: 'events', evs, d: 4 + evs.length });
     if (Core.parseDate(card.date) || clean(card.venue)) S.push({ k: 'date', d: 5.5 });
     S.push({ k: 'end', d: 6 });
@@ -1963,6 +1992,32 @@ const Studio = (() => {
     c.stroke(); c.restore();
   }
 
+  // A library picture (already cut out): full-length on the ground with a soft shadow and a gentle sway, or set in
+  // a gold arch or a round medallion over a soft glow. (cx, foot) = where they stand; `s` = their height.
+  function cutout(c, img, cx, foot, s, pose, L, t = 0) {
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    if (pose === 'arch' || pose === 'medallion') {
+      const w = pose === 'arch' ? s * .82 : s * .9, h = pose === 'arch' ? s * 1.05 : w, top = foot - h;
+      const light = isLight(L);
+      c.save();
+      const path = () => { c.beginPath(); if (pose === 'arch') { c.moveTo(cx - w / 2, top + h); c.lineTo(cx - w / 2, top + w / 2); c.arc(cx, top + w / 2, w / 2, Math.PI, 0); c.lineTo(cx + w / 2, top + h); c.closePath(); } else c.arc(cx, top + h / 2, w / 2, 0, TAU); };
+      path(); const g = c.createRadialGradient(cx, top + h * .45, 10, cx, top + h * .5, w * .7);
+      g.addColorStop(0, light ? '#fffaf0' : '#3a2a4a'); g.addColorStop(1, light ? '#f3e2c8' : '#1a1024'); c.fillStyle = g; c.fill();
+      c.clip();
+      const k = Math.min(w * .95 / iw, h * .96 / ih), dw = iw * k, dh = ih * k;
+      c.drawImage(img, cx - dw / 2, top + h - dh, dw, dh);
+      c.restore();
+      const gg = c.createLinearGradient(cx - w / 2, top, cx + w / 2, top + h); gg.addColorStop(0, '#f6e3a8'); gg.addColorStop(.5, '#c9952e'); gg.addColorStop(1, '#f2d27a');
+      c.save(); path(); c.strokeStyle = gg; c.lineWidth = 10; c.stroke(); c.restore();
+      return;
+    }
+    const k = s / ih, dw = iw * k, dh = s, sway = Math.sin(t * .9) * .006;
+    c.save();
+    c.fillStyle = 'rgba(30,15,10,.22)'; c.beginPath(); c.ellipse(cx, foot, dw * .42, dh * .03, 0, 0, TAU); c.fill();
+    c.translate(cx, foot); c.rotate(sway); c.drawImage(img, -dw / 2, -dh, dw, dh);
+    c.restore();
+  }
+
   // A bride and groom side by side, drawn flat (front view). (x, y) = between their feet, `s` = their height.
   function couple(c, x, y, s, t = 0) {
     const sway = Math.sin(t * 1.2) * s * .003, skin = '#e8b08a', skinD = '#c98a62';
@@ -2042,11 +2097,12 @@ const Studio = (() => {
   const CHANGES = ['flash', 'iris', 'wipe', 'bloom', 'petals'];
   const LAYOUTS_V = ['center', 'panel', 'high', 'low', 'framed'];
   const ENTRANCES = ['rise', 'drop', 'zoom', 'side'];
+  const POSES = ['full', 'full', 'arch', 'medallion']; // how a library couple is shown
   function variant(key) {
     let h = 7;
     for (const ch of String(key)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
     const pick = (list, m) => list[Math.floor(h / m) % list.length];
-    return { open: pick(OPENINGS, 1), change: pick(CHANGES, 7), layout: pick(LAYOUTS_V, 43), enter: pick(ENTRANCES, 311) };
+    return { open: pick(OPENINGS, 1), change: pick(CHANGES, 7), layout: pick(LAYOUTS_V, 43), enter: pick(ENTRANCES, 311), pose: pick(POSES, 1709) };
   }
 
   // Openings: each covers the screen and gives way to the first scene (p: 0 closed … 1 open)
@@ -2151,7 +2207,7 @@ const Studio = (() => {
   }
   function backing(c, kind, L, y0, h, a) {
     if (a <= .01 || !/^(panel|framed|low)$/.test(kind)) return;
-    const light = /^rgba\(255/.test(L.shadow[0]);
+    const light = isLight(L);
     c.save(); c.globalAlpha = a;
     if (kind === 'low') {
       const g = c.createLinearGradient(0, y0 - 260, 0, H);
@@ -2168,6 +2224,9 @@ const Studio = (() => {
     }
     c.restore();
   }
+
+  // A light look has dark words on a pale scene (its text shadow is a pale glow)
+  const isLight = L => { const m = String(L.shadow[0]).match(/\d+/g) || []; return m.length >= 3 && +m[0] > 200 && +m[1] > 200 && +m[2] > 200; };
 
   // ---------- Layout and text ----------
   // Hindi: 'hname' for names (Amita, calligraphic), 'hser' for text (Tiro Devanagari Hindi), 'deva' for headings
@@ -2362,6 +2421,8 @@ const Studio = (() => {
       this.card = card; this.opt = opt; this.L = LOOKS[opt.look] || LOOKS.vrindavan;
       this.tl = timeline(card, opt); this.cache = new Map();
       this.v = opt.variant || variant(opt.story || opt.look || 'vrindavan');
+      this.couple = coupleFor(card, opt.story || opt.look || '');
+      libImage(this.couple); // start loading it now
       let host = '';
       try { host = site.url ? new URL(site.url).host : ''; } catch (e) { /* no address */ }
       this.ctx = { designer: clean(site.designer) || 'Sankalp', host, letters: [initial(card.host1), initial(card.host2)].filter(Boolean) };
@@ -2402,8 +2463,10 @@ const Studio = (() => {
       if (s.couple && art.coupleArt !== 'none') {
         c.save(); c.globalAlpha = ease((p - .3) / 1);
         const cy = s.couple.y + (1 - ease((p - .3) / 1.2)) * 60;
-        if (art.coupleArt === 'photo' && photos.couple) { const h = s.couple.s * 1.12, w = h * .78; framedPhoto(c, photos.couple, W / 2, cy - h, w, h, 'arch', L, t); }
-        else couple(c, W / 2, cy, s.couple.s, t);
+        const lib = art.coupleArt !== 'drawn' && !photos.couple && libImage(s.coupleEntry || this.couple);
+        if (art.coupleArt !== 'drawn' && photos.couple) { const h = s.couple.s * 1.12, w = h * .78; framedPhoto(c, photos.couple, W / 2, cy - h, w, h, 'arch', L, t); }
+        else if (lib) cutout(c, lib, W / 2, cy, s.couple.s, this.v.pose, L, t);
+        else if (art.coupleArt === 'drawn') couple(c, W / 2, cy, s.couple.s, t);
         c.restore();
       }
       const V = this.v, lay = s.zone ? 'center' : V.layout;
@@ -2431,7 +2494,7 @@ const Studio = (() => {
       if (s.shower) petals(c, t, 70, ['#ff9f1c', '#ffd166', '#ef476f', '#ffffff', '#f4a3c4'], 7, 1.25);
       if (s.sigCorner) {
         // The designer's signature in the bottom-left corner (a client's video ends on it)
-        const a = ease((p - .6) / .9), light = /^rgba\(255/.test(L.shadow[0]);
+        const a = ease((p - .6) / .9), light = isLight(L);
         c.save(); c.globalAlpha = a; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
         c.font = '112px "Great Vibes"';
         const w = Math.max(300, c.measureText(this.ctx.designer).width + 90);
@@ -2442,7 +2505,7 @@ const Studio = (() => {
         c.restore();
       } else if (s.k !== 'end' && art.brand !== false) {
         // The credit sits on a soft pill, so it reads on any background
-        const light = /^rgba\(255/.test(L.shadow[0]), txt = `Designed by ${this.ctx.designer}`;
+        const light = isLight(L), txt = `Designed by ${this.ctx.designer}`;
         c.save(); c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `26px "${L.font.serif}"`; spacing(c, 2);
         const w = c.measureText(txt).width + 44;
         c.fillStyle = light ? 'rgba(255,253,246,.8)' : 'rgba(15,6,20,.45)'; rrect(c, W / 2 - w / 2, H - 70, w, 44, 22); c.fill();
@@ -2458,7 +2521,7 @@ const Studio = (() => {
   // Real photos the videos use (img/art; credits in img/art/CREDITS.md), loaded with the fonts
   const ART = {};
   function artReady() {
-    if (typeof Image === 'undefined' || ART.ganesha) return Promise.resolve();
+    if (typeof Image === 'undefined' || ART.ganesha || localFile()) return Promise.resolve();
     return new Promise(resolve => {
       const img = new Image();
       img.onload = () => { ART.ganesha = img; resolve(); };
@@ -2466,11 +2529,19 @@ const Studio = (() => {
       img.src = 'img/art/ganesha.jpg';
     });
   }
+  // Every library picture, so a video never shows a scene before its couple has loaded
+  function libReady() {
+    return Promise.all(library().map(entry => {
+      libImage(entry);
+      const img = libImages[entry.id];
+      return !img || img.complete ? null : new Promise(r => { img.addEventListener('load', r, { once: true }); img.addEventListener('error', r, { once: true }); });
+    }));
+  }
   function fontsReady() {
     if (typeof document === 'undefined' || !document.fonts) return Promise.resolve();
     const want = [...FONTS.map(f => `40px "${f}"`), '700 40px "Cinzel Decorative"', 'italic 40px "Cormorant Garamond"'];
     const hindi = ['40px "Yatra One"', '700 40px "Amita"', '40px "Tiro Devanagari Hindi"'].map(f => document.fonts.load(f, 'ॐ शुभ विवाह'));
-    return Promise.all([...want.map(f => document.fonts.load(f)), ...hindi, artReady()]).catch(() => {});
+    return Promise.all([...want.map(f => document.fonts.load(f)), ...hindi, artReady(), libReady()]).catch(() => {});
   }
 
   // The website's sample video for a scene: the occasion it suits, with sample names (and parents, for weddings).
@@ -2481,7 +2552,7 @@ const Studio = (() => {
     return card;
   }
 
-  return { W, H, LOOKS, SCENES, STORIES, variant, OPENINGS, CHANGES, LAYOUTS_V, ENTRANCES, SITE_QR, HI, hasCouple, dateRange, lookName, thumb, sample, defaults, timeline, lines, parents, splitIcon, ordinal, phone, sceneName, sceneLayer, Player, fontsReady };
+  return { W, H, LOOKS, SCENES, STORIES, variant, coupleFor, POSES, OPENINGS, CHANGES, LAYOUTS_V, ENTRANCES, SITE_QR, HI, hasCouple, dateRange, lookName, thumb, sample, defaults, timeline, lines, parents, splitIcon, ordinal, phone, sceneName, sceneLayer, Player, fontsReady };
 })();
 
 if (typeof module !== 'undefined') module.exports = Studio;

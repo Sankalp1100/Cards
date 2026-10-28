@@ -1179,3 +1179,10 @@ body.has-demo-bar .hero { padding-bottom: 110px; }
 /* The sample bar slides in once the guest scrolls, so the first screen (and its button) is never covered */
 .demo-bar { transition: transform .4s cubic-bezier(.2,.9,.3,1), opacity .3s; }
 body.has-demo-bar:not(.scrolled) .demo-bar { transform: translateY(160%); opacity: 0; pointer-events: none; }
+
+/* A couple from the library at the bottom of the first screen */
+.hero-couple { display: block; height: auto; width: auto; max-width: min(78%, 340px); max-height: 31svh; margin: 0 auto 4px; object-fit: contain;
+  filter: drop-shadow(0 12px 18px rgba(0,0,0,.2)); pointer-events: none; }
+@media (min-width: 900px) { .hero-couple { max-height: 36vh; } }
+.opened .hero-couple { animation: coupleIn 1.2s cubic-bezier(.2,.8,.2,1) .2s both; }
+@keyframes coupleIn { from { opacity: 0; transform: translateY(26px) scale(.96); } }
