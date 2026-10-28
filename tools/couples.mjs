@@ -4,6 +4,7 @@
 // trims the empty space, sizes it to at most 1400 px tall, and saves it to img/couples/cut/<name>.png.
 // Then writes js/couples.js, the list the cards and the videos pick from.
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -13,7 +14,15 @@ const { launch } = await import(pathToFileURL(path.join(ROOT, 'tests', 'cdp.mjs'
 fs.mkdirSync(OUT, { recursive: true });
 
 const OCCASIONS = ['wedding', 'reception', 'engagement', 'sangeet', 'haldi', 'mehendi', 'roka', 'anniversary', 'babyshower', 'naming', 'family', 'kid'];
-const files = fs.readdirSync(SRC).filter(f => /\.(png|jpe?g|webp)$/i.test(f)).sort();
+// Exact copies (the same picture under another name) are left out, so one couple never counts twice
+const seenHashes = new Set();
+const files = fs.readdirSync(SRC).filter(f => /\.(png|jpe?g|webp)$/i.test(f)).sort().filter(f => {
+  const h = crypto.createHash('md5').update(fs.readFileSync(path.join(SRC, f))).digest('hex');
+  if (seenHashes.has(h)) return false;
+  seenHashes.add(h);
+  return true;
+});
+for (const old of fs.readdirSync(OUT)) fs.unlinkSync(path.join(OUT, old));
 const list = [];
 if (files.length) {
   const page = await launch();
