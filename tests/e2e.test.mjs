@@ -923,7 +923,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.viewport(390, 844);
     await page.goto(base + 'index.html');
     assert.equal(await page.eval(`[...document.querySelectorAll('#showcase .tpl')].filter(t => t.offsetParent).length`), 0, 'Home shows no design cards (they live in the Designs tab)');
-    assert.equal(await page.eval(`[...document.querySelectorAll('#occPicker .occ-tile')].filter(t => t.offsetParent).length`), 10, 'Home: what are you celebrating?');
+    assert.equal(await page.eval(`[...document.querySelectorAll('#occPicker .occ-tile')].filter(t => t.offsetParent).length`), 20, 'Home: what are you celebrating?');
     await page.eval(`document.querySelector('#occPicker [data-pick="wedding"]').click()`);
     assert.equal(await page.eval(`document.body.dataset.tab`), 'designs');
     assert.equal(await page.eval(`!!document.querySelector('#occPicker').offsetParent`), false, 'the picker stays on Home');
@@ -933,7 +933,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.waitFor(`document.body.dataset.tab === 'home'`, 3000);
     await page.eval(`document.querySelector('#catShowAll').click()`);
     assert.ok(await page.eval(`!!document.querySelector('#seeAll').offsetParent`), 'See all button on Home');
-    assert.equal(await page.eval(`document.querySelector('#seeAll').innerText.trim()`), '🎨 See all 300 designs →', 'spaces around the number (was "all200designs")');
+    assert.equal(await page.eval(`document.querySelector('#seeAll').innerText.trim()`), '🎨 See all 600 designs →', 'spaces around the number (was "all200designs")');
     await page.eval(`document.querySelector('#seeAll').click()`);
     assert.equal(await page.eval(`document.body.dataset.tab`), 'designs');
     assert.equal(await page.eval(`location.hash`), '#designs');
