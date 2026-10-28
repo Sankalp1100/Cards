@@ -664,6 +664,21 @@
   // Chrome/Edge film this tab cropped to the phone-sized card, so the video is exactly what guests see.
   // The music is the same synthesized tune, recorded straight from the audio graph. The file is only downloaded.
   const VIDEO_TYPES = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm'];
+  // A finished video is opened before it is handed over: it has to load, show a picture and know its length,
+  // and a frame a second in has to show too (a broken file fails here instead of on the customer's phone).
+  function playable(blob) {
+    return new Promise(resolve => {
+      const v = Object.assign(document.createElement('video'), { muted: true, preload: 'auto', src: URL.createObjectURL(blob) });
+      const done = ok => { clearTimeout(timer); URL.revokeObjectURL(v.src); v.removeAttribute('src'); resolve(ok); };
+      const timer = setTimeout(() => done(false), 15000);
+      v.onerror = () => done(false);
+      v.onloadeddata = () => {
+        if (!v.videoWidth || !(v.duration > 1)) return done(false);
+        v.onseeked = () => done(v.readyState >= 2);
+        v.currentTime = Math.min(1, v.duration / 2);
+      };
+    });
+  }
   const recFrame = $('#recFrame');
   let recStream = null, recSeen = new Set(), recWaiters = {};
 
@@ -738,7 +753,31 @@
     recStatus('Getting the card ready…');
     await recWait('ready', 15000);
 
-    const tracks = [track];
+    // The tab capture is not recorded as it is: it sends frames only when something moves, and its size can change
+    // mid-way, which restarts the encoder and left broken frames that WhatsApp would not preview. Each frame is
+    // painted onto a fixed 1080×1920 canvas instead, which is recorded at a steady 30 frames a second (as the Video
+    // Studio does).
+    const live = Object.assign(document.createElement('video'), { muted: true, playsInline: true, srcObject: new MediaStream([track]) });
+    await live.play();
+    const canvas = Object.assign(document.createElement('canvas'), { width: 1080, height: 1920 }), cx = canvas.getContext('2d');
+    let painting = true;
+    const paint = () => {
+      if (!painting) return;
+      const vw = live.videoWidth, vh = live.videoHeight;
+      if (vw && vh) {
+        // Cropped to the card (9:16, give or take a pixel): fill the frame with it. If the browser did not crop
+        // (the whole tab came through), cut the card's own place out of the tab's picture.
+        let [sx, sy, sw, sh] = [0, 0, vw, vh];
+        if (Math.abs(vw / vh - 9 / 16) > .04) {
+          const r = $('#recStage').getBoundingClientRect(), fx = vw / innerWidth, fy = vh / innerHeight;
+          [sx, sy, sw, sh] = [r.left * fx, r.top * fy, r.width * fx, r.height * fy];
+        }
+        cx.drawImage(live, sx, sy, sw, sh, 0, 0, 1080, 1920);
+      }
+      requestAnimationFrame(paint);
+    };
+    paint();
+    const tracks = [canvas.captureStream(30).getVideoTracks()[0]];
     let box = null;
     if (state.music !== false) {
       box = new MusicBox(design().tempo, design().song);
@@ -749,7 +788,7 @@
       }
     }
     const mimeType = VIDEO_TYPES.find(t => MediaRecorder.isTypeSupported(t)) || '';
-    const recorder = new MediaRecorder(new MediaStream(tracks), { mimeType, videoBitsPerSecond: 6e6 });
+    const recorder = new MediaRecorder(new MediaStream(tracks), { mimeType, videoBitsPerSecond: 3.5e6 }); // a card is mostly still: sharp at 1080p and small enough for WhatsApp
     const chunks = [];
     recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
     const stopped = new Promise(r => { recorder.onstop = r; });
@@ -765,6 +804,9 @@
       if (box) { box.stop(); box.ctx.close(); }
     }
     await stopped;
+    painting = false;
+    tracks[0].stop();
+    live.srcObject = null;
 
     let blob = new Blob(chunks, { type: recorder.mimeType });
     // Browsers record a 'fragmented' MP4 that WhatsApp treats as a broken document: rebuild it as a standard
@@ -772,6 +814,7 @@
     if (recorder.mimeType.includes('mp4')) {
       try { blob = new Blob([MP4Fix.defragment(new Uint8Array(await blob.arrayBuffer()))], { type: 'video/mp4' }); } catch (e) { /* keep it as recorded */ }
     }
+    if (!(await playable(blob))) throw new Error('the recording did not come out right (it would not play)');
     const ext = recorder.mimeType.includes('mp4') ? 'mp4' : 'webm';
     const name = `${who(state)} invitation.${ext}`.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ');
     const url = URL.createObjectURL(blob);
@@ -1179,6 +1222,7 @@
       if (type.includes('mp4')) {
         try { blob = new Blob([MP4Fix.defragment(new Uint8Array(await blob.arrayBuffer()))], { type: 'video/mp4' }); } catch (e) { /* keep it as recorded */ }
       }
+      if (!(await playable(blob))) throw new Error('the recording did not come out right (it would not play)');
       const ext = type.includes('mp4') ? 'mp4' : 'webm';
       const name = `${who(st.card)} ${st.opt.story ? Studio.STORIES[st.opt.story].name : Studio.LOOKS[st.opt.look].name} ${st.lang === 'hi' ? 'Hindi' : 'English'} video.${ext}`.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ');
       const url = URL.createObjectURL(blob);
