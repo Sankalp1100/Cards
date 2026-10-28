@@ -1,36 +1,38 @@
-// Builds the couple art library: `node tools/couples.mjs`
-// Takes every picture in img/couples/ (PNG, JPG or WEBP; name it "<occasion>-NN", e.g. wedding-01.png, haldi-02.jpg),
-// removes a plain white or grey-checkerboard background (only what touches the edges, so white outfits stay),
-// trims the empty space, sizes it to at most 1400 px tall, and saves it to img/couples/cut/<name>.png.
-// Then writes js/couples.js, the list the cards and the videos pick from.
+// Builds the art libraries: `node tools/couples.mjs`
+// - Couples: every picture in img/couples/ (PNG, JPG or WEBP; name it "<occasion>-NN", e.g. wedding-01.png, haldi-02.jpg)
+// - Ganesh ji: every picture in img/art/ named "ganesha-NN.png" (or .jpg/.webp, a two-digit number; the older
+//   ganesha*.jpg photos are left as they are)
+// Each one: a plain white or grey-checkerboard background is removed (only what touches the edges, so white
+// outfits stay), the empty space is trimmed, and it is sized to at most 1400 px tall, then saved to
+// img/couples/cut/<name>.png or img/art/cut/<name>.png. Exact copies (the same picture under another name) are
+// left out. Then writes js/couples.js, the lists the cards and the videos pick from.
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname).replace(/^\/(\w:)/, '$1'), '..');
-const SRC = path.join(ROOT, 'img', 'couples'), OUT = path.join(SRC, 'cut');
 const { launch } = await import(pathToFileURL(path.join(ROOT, 'tests', 'cdp.mjs')).href);
-fs.mkdirSync(OUT, { recursive: true });
-
 const OCCASIONS = ['wedding', 'reception', 'engagement', 'sangeet', 'haldi', 'mehendi', 'roka', 'anniversary', 'babyshower', 'naming', 'family', 'kid'];
-// Exact copies (the same picture under another name) are left out, so one couple never counts twice
-const seenHashes = new Set();
-const files = fs.readdirSync(SRC).filter(f => /\.(png|jpe?g|webp)$/i.test(f)).sort().filter(f => {
-  const h = crypto.createHash('md5').update(fs.readFileSync(path.join(SRC, f))).digest('hex');
-  if (seenHashes.has(h)) return false;
-  seenHashes.add(h);
-  return true;
-});
-for (const old of fs.readdirSync(OUT)) fs.unlinkSync(path.join(OUT, old));
-const list = [];
-if (files.length) {
-  const page = await launch();
-  await page.goto('about:blank', 100);
+
+let page = null;
+async function cutAll(src, pick, label) {
+  const out = path.join(src, 'cut');
+  fs.mkdirSync(out, { recursive: true });
+  const seen = new Set();
+  const files = fs.readdirSync(src).filter(f => /\.(png|jpe?g|webp)$/i.test(f) && pick(f)).sort().filter(f => {
+    const h = crypto.createHash('md5').update(fs.readFileSync(path.join(src, f))).digest('hex');
+    if (seen.has(h)) { console.log(`  · ${f}: a copy of another picture, left out`); return false; }
+    seen.add(h);
+    return true;
+  });
+  for (const old of fs.readdirSync(out)) fs.unlinkSync(path.join(out, old));
+  const list = [];
   for (const f of files) {
+    if (!page) { page = await launch(); await page.goto('about:blank', 100); }
     const name = f.replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9-]+/g, '-');
-    const occasion = OCCASIONS.find(o => name.startsWith(o)) || 'wedding';
-    const data = 'data:image/' + (/png$/i.test(f) ? 'png' : /webp$/i.test(f) ? 'webp' : 'jpeg') + ';base64,' + fs.readFileSync(path.join(SRC, f)).toString('base64');
+    if (list.some(x => x.id === name)) { console.log(`  · ${f}: same name as another picture, left out`); continue; }
+    const data = 'data:image/' + (/png$/i.test(f) ? 'png' : /webp$/i.test(f) ? 'webp' : 'jpeg') + ';base64,' + fs.readFileSync(path.join(src, f)).toString('base64');
     const res = await page.eval(`(async () => {
       const img = new Image(); img.src = ${JSON.stringify(data)}; await img.decode();
       const k = Math.min(1, 1400 / img.height), w = Math.round(img.width * k), h = Math.round(img.height * k);
@@ -62,15 +64,21 @@ if (files.length) {
       return { url: out.toDataURL('image/png'), w: out.width, h: out.height, cut: seen.reduce((a, v) => a + v, 0) / (w * h) };
     })()`);
     if (!res) { console.log(`  ✖ ${f}: nothing left after removing the background`); continue; }
-    fs.writeFileSync(path.join(OUT, name + '.png'), Buffer.from(res.url.split(',')[1], 'base64'));
-    list.push({ id: name, occasion, w: res.w, h: res.h });
+    fs.writeFileSync(path.join(out, name + '.png'), Buffer.from(res.url.split(',')[1], 'base64'));
+    list.push({ id: name, occasion: OCCASIONS.find(o => name.startsWith(o)) || label, w: res.w, h: res.h });
     console.log(`  ✔ ${f} → cut/${name}.png (${res.w}×${res.h}, ${Math.round(res.cut * 100)}% background removed)`);
   }
-  await page.close();
+  return list;
 }
-fs.writeFileSync(path.join(ROOT, 'js', 'couples.js'), `// The couple art library (img/couples/cut), made by \`node tools/couples.mjs\` from the pictures in img/couples.
-// id = file name, occasion = what it suits; w × h in pixels. Cards and videos pick a different one per design.
-const COUPLES = ${JSON.stringify(list, null, 1).replace(/\n\s*/g, ' ')};
-if (typeof module !== 'undefined') module.exports = COUPLES;
+
+const couples = await cutAll(path.join(ROOT, 'img', 'couples'), () => true, 'wedding');
+const ganeshas = (await cutAll(path.join(ROOT, 'img', 'art'), f => /^ganesha-\d\d\.(png|jpe?g|webp)$/i.test(f), 'ganesha')).map(({ id, w, h }) => ({ id, w, h }));
+if (page) await page.close();
+const flat = a => JSON.stringify(a, null, 1).replace(/\n\s*/g, ' ');
+fs.writeFileSync(path.join(ROOT, 'js', 'couples.js'), `// The art libraries, made by \`node tools/couples.mjs\`: couples (img/couples/cut; id = file name, occasion = what
+// it suits) and Ganesh ji illustrations (img/art/cut); w × h in pixels. Cards and videos pick a different one per design.
+const COUPLES = ${flat(couples)};
+const GANESHA_ART = ${flat(ganeshas)};
+if (typeof module !== 'undefined') { module.exports = COUPLES; module.exports.GANESHA_ART = GANESHA_ART; }
 `);
-console.log(`${list.length} couple picture${list.length === 1 ? '' : 's'} in js/couples.js`);
+console.log(`${couples.length} couple picture${couples.length === 1 ? '' : 's'} and ${ganeshas.length} Ganesh ji picture${ganeshas.length === 1 ? '' : 's'} in js/couples.js`);

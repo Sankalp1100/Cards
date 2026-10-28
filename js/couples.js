@@ -1,4 +1,5 @@
-// The couple art library (img/couples/cut), made by `node tools/couples.mjs` from the pictures in img/couples.
-// id = file name, occasion = what it suits; w × h in pixels. Cards and videos pick a different one per design.
-const COUPLES = [ { "id": "haldi-01", "occasion": "haldi", "w": 615, "h": 978 }, { "id": "mehendi-01", "occasion": "mehendi", "w": 601, "h": 1030 }, { "id": "reception-01", "occasion": "reception", "w": 822, "h": 944 }, { "id": "sangeet-01", "occasion": "sangeet", "w": 775, "h": 853 }, { "id": "wedding-01", "occasion": "wedding", "w": 768, "h": 1077 }, { "id": "wedding-02", "occasion": "wedding", "w": 593, "h": 1043 } ];
-if (typeof module !== 'undefined') module.exports = COUPLES;
+// The art libraries, made by `node tools/couples.mjs`: couples (img/couples/cut; id = file name, occasion = what
+// it suits) and Ganesh ji illustrations (img/art/cut); w × h in pixels. Cards and videos pick a different one per design.
+const COUPLES = [ { "id": "haldi-01", "occasion": "haldi", "w": 615, "h": 978 }, { "id": "mehendi-01", "occasion": "mehendi", "w": 601, "h": 1030 }, { "id": "reception-01", "occasion": "reception", "w": 822, "h": 944 }, { "id": "sangeet-01", "occasion": "sangeet", "w": 775, "h": 853 }, { "id": "wedding-01", "occasion": "wedding", "w": 768, "h": 1077 }, { "id": "wedding-02", "occasion": "wedding", "w": 593, "h": 1043 }, { "id": "wedding-03", "occasion": "wedding", "w": 512, "h": 927 } ];
+const GANESHA_ART = [ { "id": "ganesha-06", "w": 684, "h": 966 }, { "id": "ganesha-07", "w": 862, "h": 987 }, { "id": "ganesha-08", "w": 801, "h": 975 }, { "id": "ganesha-09", "w": 863, "h": 984 } ];
+if (typeof module !== 'undefined') { module.exports = COUPLES; module.exports.GANESHA_ART = GANESHA_ART; }

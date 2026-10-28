@@ -1186,3 +1186,10 @@ body.has-demo-bar:not(.scrolled) .demo-bar { transform: translateY(160%); opacit
 @media (min-width: 900px) { .hero-couple { max-height: 36vh; } }
 .opened .hero-couple { animation: coupleIn 1.2s cubic-bezier(.2,.8,.2,1) .2s both; }
 @keyframes coupleIn { from { opacity: 0; transform: translateY(26px) scale(.96); } }
+
+/* Shri Ganesh at the top of the card */
+.hero-ganesha { display: block; width: auto; height: 84px; margin: 0 auto 6px; object-fit: contain; pointer-events: none;
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 45%, transparent)); }
+.opened .hero-ganesha { animation: ganeshaIn 1.1s ease .1s both; }
+@keyframes ganeshaIn { from { opacity: 0; transform: scale(.9); } }
+@media (min-width: 900px) { .hero-ganesha { height: 100px; } }

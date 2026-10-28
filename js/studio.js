@@ -1992,6 +1992,18 @@ const Studio = (() => {
     c.stroke(); c.restore();
   }
 
+  // A Ganesh ji illustration (cut out), full-figure inside an s × s square from (cx, top), over a soft golden glow,
+  // breathing very gently
+  function ganeshaCutout(c, img, cx, top, s, t = 0) {
+    const iw = img.naturalWidth, ih = img.naturalHeight, k = Math.min(s * .92 / iw, s * .98 / ih), w = iw * k, h = ih * k;
+    const cy = top + s / 2, z = 1 + .012 * Math.sin(t * 1.1);
+    glow(c, cx, cy, s * .62, 'rgba(255,214,120,.5)');
+    c.save(); c.translate(cx, cy); c.scale(z, z);
+    c.shadowColor = 'rgba(80,40,0,.25)'; c.shadowBlur = 24; c.shadowOffsetY = 10;
+    c.drawImage(img, -w / 2, -h / 2, w, h);
+    c.restore();
+  }
+
   // A library picture (already cut out): full-length on the ground with a soft shadow and a gentle sway, or set in
   // a gold arch or a round medallion over a soft glow. (cx, foot) = where they stand; `s` = their height.
   function cutout(c, img, cx, foot, s, pose, L, t = 0) {
@@ -2456,7 +2468,8 @@ const Studio = (() => {
         c.save(); c.globalAlpha = ease((p - .2) / 1.2);
         const gy = s.ganesha.y + (1 - ease(p / 1.4)) * 40;
         const god = photos.ganesha || ganeshaFor(art.story || art.look || '');
-        if (art.ganeshaArt !== 'drawn' && god) framedPhoto(c, god, W / 2, gy + s.ganesha.s * .06, s.ganesha.s * .92, s.ganesha.s * .92, 'circle', L, t);
+        if (art.ganeshaArt !== 'drawn' && god && ART.cutout && !photos.ganesha) ganeshaCutout(c, god, W / 2, gy, s.ganesha.s, t);
+        else if (art.ganeshaArt !== 'drawn' && god) framedPhoto(c, god, W / 2, gy + s.ganesha.s * .06, s.ganesha.s * .92, s.ganesha.s * .92, 'circle', L, t);
         else ganesha(c, W / 2, gy, s.ganesha.s, t);
         c.restore();
       }
@@ -2518,18 +2531,17 @@ const Studio = (() => {
   }
 
   const FONTS = ['Parisienne', 'Great Vibes', 'Pinyon Script', 'Alex Brush', 'Marcellus', 'Gilda Display', 'Cinzel', 'Pacifico', 'Fredoka'];
-  // Real photos the videos use (img/art; credits in img/art/CREDITS.md), loaded with the fonts
-  // Five Ganesh ji photos (credits in img/art/CREDITS.md and credits.html); each look and film shows its own
-  const GANESHAS = ['ganesha', 'ganesha-2', 'ganesha-3', 'ganesha-4', 'ganesha-5'];
-  const ART = { ganeshas: [] };
+  // Ganesh ji: the illustrations (img/art/cut, listed in js/couples.js as GANESHA_ART) shown full-figure; when
+  // there are none, the five photos (credits in img/art/CREDITS.md and credits.html) in a gold circle.
+  const GANESHA_PHOTOS = ['ganesha', 'ganesha-2', 'ganesha-3', 'ganesha-4', 'ganesha-5'];
+  const ART = { ganeshas: [], cutout: false };
+  const loadImg = src => new Promise(resolve => { const img = new Image(); img.onload = () => resolve(img); img.onerror = () => resolve(null); img.src = src; });
   function artReady() {
     if (typeof Image === 'undefined' || ART.ganeshas.length || localFile()) return Promise.resolve();
-    return Promise.all(GANESHAS.map((name, i) => new Promise(resolve => {
-      const img = new Image();
-      img.onload = () => { ART.ganeshas[i] = img; resolve(); };
-      img.onerror = () => resolve();
-      img.src = `img/art/${name}.jpg`;
-    })));
+    const drawn = typeof GANESHA_ART !== 'undefined' && Array.isArray(GANESHA_ART) ? GANESHA_ART : [];
+    ART.cutout = drawn.length > 0;
+    const srcs = ART.cutout ? drawn.map(g => `img/art/cut/${g.id}.png`) : GANESHA_PHOTOS.map(n => `img/art/${n}.jpg`);
+    return Promise.all(srcs.map(loadImg)).then(imgs => { ART.ganeshas = imgs; });
   }
   // Evenly: neighbouring looks and films take the photos in turn (a scene's moods too)
   function ganeshaFor(key) {

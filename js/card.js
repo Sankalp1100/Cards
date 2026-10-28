@@ -196,6 +196,15 @@
     return `<div class="venue-art va-${kind}" aria-hidden="true"><svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice">${s}</svg></div>`;
   }
 
+  // Shri Ganesh at the top of the card, for the occasions that begin with his blessing (a different one per design)
+  const GANESHA_TYPES = ['wedding', 'engagement', 'reception', 'naming', 'ceremony', 'babyshower', 'haldi', 'mehendi', 'roka', 'housewarming', 'mundan', 'janeu', 'festive'];
+  function heroGanesha(t, d) {
+    const list = typeof GANESHA_ART !== 'undefined' && Array.isArray(GANESHA_ART) ? GANESHA_ART : [];
+    if (!list.length || !GANESHA_TYPES.includes(d.type)) return '';
+    const g = list[t.no % list.length];
+    return `<img class="hero-ganesha" src="img/art/cut/${esc(g.id)}.png" alt="Shri Ganesh" width="${g.w}" height="${g.h}" decoding="async">`;
+  }
+
   function heroCouple(t, d) {
     if (t.no % 3 === 0) return '';
     const pic = Core.coupleFor(d.type, `design-${t.no}`);
@@ -511,7 +520,7 @@
           // A couple from the library takes the seal's place on two of every three designs of an occasion that has one
           visual: photo ? `<div class="photo"><img src="${esc(photo)}" alt=""></div>` : heroCouple(t, d) || (t.emblem ? emblemHTML(d) : `<div class="ornament">${esc(t.emoji)}<small class="orn-cap" aria-hidden="true">${esc(initials(d))}</small></div>`),
           // Empty lines are left out altogether, so nothing blank shows on the card.
-          title: d.title ? `<p class="title fade" style="--d:.2s">${esc(d.title)}</p>` : '',
+          title: heroGanesha(t, d) + (d.title ? `<p class="title fade" style="--d:.2s">${esc(d.title)}</p>` : ''),
           names: `<h1 class="names">${names}</h1>${nickLine(d)}`,
           tagline: d.tagline ? `<p class="tagline fade" style="--d:1.6s">${esc(d.tagline)}</p>` : '',
           date: when ? `<div class="date-badge fade" style="--d:2s"><span>${esc(fmtDate(when))}</span>${Core.hasTime(d.date) ? `<b>${esc(fmtTime(when))}</b>` : ''}</div>` : '',
