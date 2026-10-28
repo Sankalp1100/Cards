@@ -42,7 +42,12 @@ export async function launch({ headful = false, args = [] } = {}) {
     if (d.method === 'Runtime.exceptionThrown') errors.push(d.params.exceptionDetails.exception?.description || d.params.exceptionDetails.text);
     if (d.method === 'Page.javascriptDialogOpening') send('Page.handleJavaScriptDialog', { accept: true });
   };
-  const send = (method, params = {}) => new Promise(res => { const i = ++id; pending.set(i, res); ws.send(JSON.stringify({ id: i, method, params })); });
+  // Every call has a time limit: a Chrome that stops answering fails the test with a message instead of hanging the run
+  const send = (method, params = {}, ms = 30000) => new Promise((res, rej) => {
+    const i = ++id, timer = setTimeout(() => { pending.delete(i); rej(new Error(`Chrome did not answer ${method} within ${ms / 1000}s`)); }, ms);
+    pending.set(i, d => { clearTimeout(timer); res(d); });
+    ws.send(JSON.stringify({ id: i, method, params }));
+  });
   await send('Runtime.enable');
   await send('Page.enable');
 

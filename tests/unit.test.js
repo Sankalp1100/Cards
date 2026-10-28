@@ -752,7 +752,18 @@ test.describe('Video Studio', () => {
     assert.ok(scenes[scenes.length - 1].sigCorner, 'the designer signs the last scene');
     assert.deepEqual(plain(story(c, { events: 'list' }).scenes.map(s => s.k)), ['open', 'title', 'invite', 'events', 'date', 'end', 'final']);
     assert.deepEqual(plain(story(c, { events: 'none' }).scenes.map(s => s.k)), ['open', 'title', 'invite', 'date', 'end', 'final']);
-    assert.equal(Studio.defaults(c).events, 'list', 'more than three functions go on one page by default');
+    assert.equal(Studio.defaults(c).events, 'each', 'every function on its own screen by default');
+    // Each function in its own scenery, in the look's mood: Haldi, Mehendi, Sangeet, Pheras, Reception all differ
+    const looks = story(c, { look: 'blush-ocean' }).scenes.filter(s => s.k === 'event').map(s => s.look);
+    assert.equal(new Set(looks).size, looks.length, looks.join(', '));
+    assert.ok(looks.every(l => Studio.LOOKS[l]), looks.join(', '));
+    assert.ok(looks.some(l => l.startsWith('haldi')) && looks.some(l => l.startsWith('mandap')), looks.join(', '));
+    for (const look of Object.keys(Studio.LOOKS)) {
+      const sc = story(c, { look }).scenes;
+      sc.forEach((s, i) => { if (s.k === 'event' && sc[i - 1].k === 'event') assert.notEqual(s.look, sc[i - 1].look, `${look}: two function screens in a row share ${s.look}`); });
+    }
+    const six = story(card({ families: [], events: ['Haldi', 'Mehendi', 'Sangeet', 'Baraat', 'Pheras', 'Reception'].map(name => ({ name })) }));
+    assert.ok(six.total <= 60, `six functions: ${six.total}s still fits a WhatsApp status`);
     assert.equal(Studio.defaults(card({ events: c.events.slice(0, 2) })).events, 'each');
     assert.equal(story(card({ events: Array(9).fill({ name: 'Puja' }) }), { events: 'each' }).scenes.filter(s => s.k === 'event').length, 6, 'at most six');
     assert.deepEqual(plain(story(card({ date: '', venue: '', events: [] })).scenes.map(s => s.k)), ['open', 'title', 'invite', 'end', 'final'], 'no date and no venue: no venue scene');

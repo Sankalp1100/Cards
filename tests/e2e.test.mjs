@@ -833,9 +833,11 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       await page.waitFor(`document.querySelector('#stTime').textContent !== ${JSON.stringify(t1)}`, 4000).catch(() => {});
       assert.notEqual(await page.eval(`document.querySelector('#stTime').textContent`), t1, 'the preview plays');
       // Scenes follow the options
+      // Every function on its own screen by default; all on one page when chosen
+      assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stScenes .chip')].map(b => b.textContent)`), ['Opening', 'Title', 'Invitation', 'Haldi', 'Mehendi', 'Sangeet', 'Pheras', 'Reception', 'Venue', 'Regards', 'Thank You']);
+      await page.eval(`document.querySelector('[data-ev="list"]').click()`);
       assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stScenes .chip')].map(b => b.textContent)`), ['Opening', 'Title', 'Invitation', 'Functions', 'Venue', 'Regards', 'Thank You']);
       await page.eval(`document.querySelector('[data-ev="each"]').click()`);
-      assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stScenes .chip')].map(b => b.textContent)`), ['Opening', 'Title', 'Invitation', 'Haldi', 'Mehendi', 'Sangeet', 'Pheras', 'Reception', 'Venue', 'Regards', 'Thank You']);
       await page.eval(`document.querySelector('#stScenes [data-scene="4"]').click()`);
       await sleep(300);
       assert.equal(await page.eval(`document.querySelector('#stScenes .chip.on').textContent`), 'Mehendi', 'a scene button jumps there');

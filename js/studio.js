@@ -159,7 +159,7 @@ const Studio = (() => {
     blessingText: '॥ श्री गणेशाय नमः ॥',
     inviteLine: (lang === 'hi' ? HI.invite : INVITE_LINES)[card.type] || (lang === 'hi' ? HI.invite.wedding : INVITE_LINES.wedding),
     parents: true,
-    events: (card.events || []).filter(e => clean(e.name)).length > 3 ? 'list' : 'each',
+    events: 'each', // every function on its own screen, in its own scenery
     music: 'look',
     brand: true, // the website and its QR code at the end (off: neither appears)
     signature: true, // "Designed by Sankalp" (off: it appears nowhere in the video)
@@ -188,16 +188,18 @@ const Studio = (() => {
     const [p1, p2] = opt.parents ? parents(card, opt.lang) : ['', ''];
     S.push({ k: 'invite', d: p1 || p2 ? 7.5 : 6.5 });
     const evs = (card.events || []).filter(e => clean(e.name)).slice(0, 6);
+    const evD = evs.length > 5 ? 4 : 0; // six functions: a little shorter each, so the video still fits a WhatsApp status
     const art = opt.coupleArt !== 'none' && opt.coupleArt !== 'drawn' && !(opt.photos || {}).couple;
     if (opt.events === 'each') evs.forEach(e => {
       const pic = art && eventCouple(clean(e.name), opt.story || opt.look || '', couple && !(opt.photos || {}).couple && coupleFor(card, opt.story || opt.look || ''));
-      S.push(pic ? { k: 'event', e, d: 5, couple: { y: 1880, s: 820 }, coupleEntry: pic, zone: [230, 940, 780] } : { k: 'event', e, d: 4.5 });
+      S.push(pic ? { k: 'event', e, d: evD || 5, couple: { y: 1880, s: 820 }, coupleEntry: pic, zone: [230, 940, 780] } : { k: 'event', e, d: evD || 4.5 });
     });
     else if (opt.events === 'list' && evs.length) S.push({ k: 'events', evs, d: 4 + evs.length });
     if (Core.parseDate(card.date) || clean(card.venue)) S.push({ k: 'date', d: 5.5 });
     S.push({ k: 'end', d: 6 });
     S.push({ k: 'final', d: 5, sigCorner: opt.signature !== false });
     if (opt.story && STORIES[opt.story]) storyLooks(S, STORIES[opt.story]);
+    else eventLooks(S, opt.look);
     let t = 0;
     S.forEach(s => { s.t0 = t; t += s.d; });
     return { scenes: S, total: t };
@@ -320,6 +322,28 @@ const Studio = (() => {
       s.look = byName || ({ open: st.open, title: st.title, invite: st.invite, date: st.date, end: st.end, final: st.final })[s.k]
         || st.events[n++ % st.events.length];
       if (!LOOKS[s.look]) s.look = s.look.split('-')[0]; // a mood a scene does not have: its own first look
+    });
+  }
+
+  // In a look's video every function is its own screen in the scenery its name suggests (Haldi in the haldi courtyard,
+  // Mehendi in the mehendi garden, Pheras at the mandap…), in the look's own mood where that scenery has it; a function
+  // with no such name takes the next of a few other sceneries. Two screens in a row never share one.
+  const EVENT_SPARE = ['rosegarden', 'jharokha', 'lotusnight', 'marigold', 'vrindavan', 'himalaya'];
+  function eventLooks(S, look) {
+    if (!LOOKS[look]) return;
+    const base = look.split('-')[0], mood = look.slice(base.length + 1);
+    const inMood = scene => (mood && LOOKS[`${scene}-${mood}`] ? `${scene}-${mood}` : LOOKS[scene] ? scene : null);
+    let prev = base, spare = 0;
+    if (!S.some(s => s.k === 'event')) return;
+    S.forEach(s => {
+      if (s.k !== 'event') { s.look = look; return; } // the look's own scenery, so a function screen fades in and out of it
+      const named = (EVENT_LOOKS.find(([re]) => re.test(s.e.name)) || [])[1];
+      let scene = named && named.split('-')[0];
+      if (!scene || scene === prev) {
+        do scene = EVENT_SPARE[spare++ % EVENT_SPARE.length]; while ((scene === prev || scene === base) && spare < 40);
+      }
+      s.look = inMood(scene) || look;
+      prev = scene;
     });
   }
 
