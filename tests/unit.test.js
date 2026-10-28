@@ -840,9 +840,11 @@ test.describe('Story videos on the website', () => {
     const site = fs.readFileSync(path.join(ROOT, 'js', 'site.js'), 'utf8');
     const listed = [...site.slice(site.indexOf('const VIDEO_SCENES'), site.indexOf('];', site.indexOf('const VIDEO_SCENES'))).matchAll(/\['(\w+)', '([^']+)'/g)];
     assert.deepEqual(listed.map(m => m[1]), plain(Studio.SCENES));
-    for (const [, id, name] of listed) {
-      assert.equal(name, Studio.LOOKS[id].name, id);
-      assert.ok(fs.statSync(path.join(ROOT, 'img', 'videos', id + '.jpg')).size > 5000, `img/videos/${id}.jpg`);
-    }
+    for (const [, id, name] of listed) assert.equal(name, Studio.LOOKS[id].name, id);
+    // All 300 looks are on the website (js/videolooks.js), each with its picture
+    const looks = require(path.join(ROOT, 'js', 'videolooks.js'));
+    assert.deepEqual(looks, Object.entries(Studio.LOOKS).map(([id, L]) => [id, L.scene, L.mood]), 'js/videolooks.js matches the Video Studio');
+    assert.equal(looks.length, 300);
+    for (const [id] of looks) assert.ok(fs.statSync(path.join(ROOT, 'img', 'videos', id + '.jpg')).size > 4000, `img/videos/${id}.jpg`);
   });
 });

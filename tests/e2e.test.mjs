@@ -995,9 +995,15 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.goto(base + 'index.html');
     await page.eval(`document.querySelector('.bottom-nav [data-videos]').click()`);
     assert.equal(await page.eval(`document.body.dataset.tab`), 'videos');
-    assert.equal(await page.eval(`document.querySelectorAll('#vidsGrid .vid-tile').length`), 20);
+    assert.equal(await page.eval(`document.querySelectorAll('#vidsGrid .vid-tile').length`), 20, '20 at a time');
+    assert.match(await page.eval(`document.querySelector('#vidsCount').textContent`), /Showing 20 of 300 video looks/);
+    for (let i = 0; i < 20 && !(await page.eval(`document.querySelector('#vidsMore').hidden`)); i++) await page.eval(`document.querySelector('#vidsMore').click()`);
+    assert.equal(await page.eval(`new Set([...document.querySelectorAll('#vidsGrid .vid-tile')].map(t => t.dataset.look)).size`), 300, 'all 300 looks');
+    await page.eval(`document.querySelector('#vidsChips [data-vscene="party"]').click()`);
+    assert.equal(await page.eval(`document.querySelectorAll('#vidsGrid .vid-tile').length`), 15, 'a scene shows its fifteen moods');
+    assert.equal(await page.eval(`document.querySelector('#vidsMore').hidden`), true);
     assert.equal(await page.eval(`!!document.querySelector('.hero').offsetParent`), false, 'the Videos tab shows only the videos');
-    await page.eval(`document.querySelector('[data-scene="party"]').click()`);
+    await page.eval(`document.querySelector('#vidsGrid [data-look="party"]').click()`);
     await page.waitFor(`document.querySelector('#vidWait').hidden`, 15000);
     assert.equal(await page.eval(`document.querySelectorAll('#vidMoods .chip').length`), 15, 'fifteen moods');
     const bar = await page.eval(`document.querySelector('#vidBar').style.width`);

@@ -354,12 +354,40 @@
     ['haldi', 'Haldi Sunshine', 'Haldi'], ['clouds', 'Dreamy Clouds', 'Baby showers, naming'], ['disco', 'Disco Night', 'Kitty parties'],
     ['diwali', 'Diwali Lights', 'Pujas, Diwali'], ['rosegarden', 'Rose Garden', 'Weddings, anniversaries']
   ];
-  $('#vidsGrid').innerHTML = VIDEO_SCENES.map(([id, name, hint]) => `
-    <button type="button" class="vid-tile" data-scene="${id}" aria-label="Play the ${esc(name)} story video">
-      <img src="img/videos/${id}.jpg" alt="" loading="lazy" decoding="async" width="360" height="640">
+  // All 300 looks (js/videolooks.js), mixed so neighbours differ: every scene's first mood, then every scene's
+  // second, and so on. A scene chip shows only that scene's fifteen. 20 at a time, "Show more" for the next.
+  const sceneInfo = Object.fromEntries(VIDEO_SCENES.map(([id, name, hint]) => [id, { name, hint }]));
+  const moodNo = {};
+  const allLooks = VIDEO_LOOKS.map(([id, scene, mood]) => ({ id, scene, mood, n: moodNo[scene] = (moodNo[scene] ?? -1) + 1 }))
+    .sort((a, b) => a.n - b.n || VIDEO_SCENES.findIndex(v => v[0] === a.scene) - VIDEO_SCENES.findIndex(v => v[0] === b.scene));
+  const VID_PAGE = 20;
+  let vidScene = '', vidShown = VID_PAGE;
+  $('#vidsChips').innerHTML = `<button type="button" class="chip on" data-vscene="">✨ All ${allLooks.length}</button>` +
+    VIDEO_SCENES.map(([id, name]) => `<button type="button" class="chip" data-vscene="${id}">${esc(name)}</button>`).join('');
+  function renderVideos() {
+    const list = allLooks.filter(l => !vidScene || l.scene === vidScene);
+    $('#vidsGrid').innerHTML = list.slice(0, vidShown).map(l => {
+      const sc = sceneInfo[l.scene];
+      return `
+    <button type="button" class="vid-tile" data-look="${l.id}" aria-label="Play the ${esc(sc.name)} story video, ${esc(l.mood)} mood">
+      <img src="img/videos/${l.id}.jpg" alt="" loading="lazy" decoding="async" width="270" height="480">
       <span class="vid-play" aria-hidden="true">▶</span>
-      <span class="vid-cap"><b>${esc(name)}</b><small>${esc(hint)} · 15 moods</small></span>
-    </button>`).join('');
+      <span class="vid-cap"><b>${esc(sc.name)}</b><small>${esc(l.mood)} · ${esc(sc.hint)}</small></span>
+    </button>`;
+    }).join('');
+    $('#vidsCount').textContent = `Showing ${Math.min(vidShown, list.length)} of ${list.length} video looks`;
+    $('#vidsMore').hidden = vidShown >= list.length;
+  }
+  renderVideos();
+  $('#vidsChips').addEventListener('click', e => {
+    const b = e.target.closest('[data-vscene]');
+    if (!b) return;
+    vidScene = b.dataset.vscene;
+    vidShown = VID_PAGE;
+    document.querySelectorAll('#vidsChips .chip').forEach(c => c.classList.toggle('on', c === b));
+    renderVideos();
+  });
+  $('#vidsMore').addEventListener('click', () => { vidShown += VID_PAGE; renderVideos(); });
 
   let studioScript = null;
   const loadStudio = () => studioScript || (studioScript = new Promise((resolve, reject) => {
@@ -368,7 +396,8 @@
   }));
   const vid = { player: null, card: null, scene: '', look: '', t: 0, last: 0, raf: 0 };
 
-  async function openVideo(scene) {
+  async function openVideo(look) {
+    const scene = (VIDEO_LOOKS.find(l => l[0] === look) || VIDEO_LOOKS[0])[1];
     const [, name, hint] = VIDEO_SCENES.find(v => v[0] === scene) || VIDEO_SCENES[0];
     vid.scene = scene;
     $('#vidTitle').textContent = name;
@@ -388,7 +417,7 @@
     $('#vidMoods').innerHTML = Object.entries(Studio.LOOKS).filter(([, L]) => L.scene === scene)
       .map(([id, L]) => `<button type="button" class="chip" data-look="${id}">${esc(L.mood)}</button>`).join('');
     vid.t = 0;
-    pickMood(scene);
+    pickMood(look);
     $('#vidWait').hidden = true;
     cancelAnimationFrame(vid.raf);
     vid.last = performance.now();
@@ -416,7 +445,7 @@
     $('#vidSheet').hidden = true;
     document.body.classList.remove('sheet-open');
   }
-  $('#vidsGrid').addEventListener('click', e => { const b = e.target.closest('[data-scene]'); if (b) openVideo(b.dataset.scene); });
+  $('#vidsGrid').addEventListener('click', e => { const b = e.target.closest('[data-look]'); if (b) openVideo(b.dataset.look); });
   $('#vidMoods').addEventListener('click', e => { const b = e.target.closest('[data-look]'); if (b) pickMood(b.dataset.look); });
   $('#vidClose').addEventListener('click', closeVideo);
   addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#vidSheet').hidden) closeVideo(); });
