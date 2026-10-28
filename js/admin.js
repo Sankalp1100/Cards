@@ -195,7 +195,11 @@
       msg.textContent = `Design ${Templates.serial(order.card.theme)} selected. This message has no order code, so please type the details below.`;
       return;
     }
-    rememberOrder(ref ? text : text.match(/WC1\.[A-Za-z0-9_-]+/)[0], order);
+    // A message without its code is read line by line, and saved in the list with a code made from what it says
+    const code = ref ? text : order.typed
+      ? Catalog.orderCode({ ...order.card, design: order.card.theme || '', guests: order.guests, photo: order.photo, gallery: order.gallery, videoLang: order.videoLang })
+      : text.match(/WC1\.[A-Za-z0-9_-]+/)[0];
+    rememberOrder(code, order);
     $('#orderPaste').value = '';
     fillOrder(order);
   }
@@ -213,6 +217,7 @@
       (order.guests.length ? ` · ${order.guests.length} guest link${order.guests.length > 1 ? 's' : ''} ready to make` : '') +
       (order.photo ? ' · 📷 the customer will send a photo on WhatsApp: upload it under Extras.' : '') +
       (order.gallery ? ' · 🖼️ gallery photos coming on WhatsApp: add them under Premium sections.' : '') +
+      (order.typed ? ' · Read from the message (it had no order code): please check the dates and times.' : '') +
       ' Check the headline and tagline, then Get links.';
     toast('Order filled in ✨');
   }

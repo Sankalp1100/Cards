@@ -633,6 +633,40 @@ test.describe('Catalog', () => {
     assert.equal(r.photo, true);
   });
 
+  test('a message without its order code is read from its lines: the same order, emoji aside', () => {
+    const full = {
+      ...order, type: 'wedding', host2: 'Arjun', nick2: 'Arju', mapUrl: 'https://maps.app.goo.gl/abc',
+      events: [{ name: 'Haldi', date: '2026-11-27T10:00', venue: 'Poolside', dress: 'Yellow' }, { name: 'Sangeet', date: '2026-11-27', venue: 'Home, Agra', dress: '' },
+        { name: 'Pheras', date: '2026-11-28T23:30', venue: '', dress: 'Red' }],
+      ...Catalog.specialLines({ story: '2001 – Met at college – Same bus every day', families: 'Her family – Mr. & Mrs. Rao – With Kiran', attire: 'Party – Gold' }),
+      upi: 'neha@okicici', hashtag: '#Neha30', giftNote: 'No gifts please', venueNote: 'Parking at gate 2', thanks: 'Love you all',
+      title: 'Party time', tagline: 'is turning thirty', gallery: true, music: false
+    };
+    const msg = Catalog.orderMessage(full, Catalog.entries(site, {}));
+    const coded = Catalog.readOrder(msg), noEmoji = s => String(s).replace(/[\u{10000}-\u{10FFFF}️]/gu, '').trim();
+    const without = msg.split('\n').filter(l => !/Order code/.test(l)).join('\n');
+    // As sent, with WhatsApp's own "*" bullets, and as one long line (WhatsApp for Windows drops the line breaks)
+    for (const text of [without, without.replace(/•/g, '*'), without.replace(/\n/g, ' ')]) {
+      const r = Catalog.readOrder(text);
+      assert.equal(r.typed, true);
+      for (const k of ['type', 'theme', 'host1', 'host2', 'date', 'venue', 'mapUrl', 'message', 'rsvp', 'title', 'tagline', 'music', 'upi', 'hashtag', 'giftNote', 'venueNote', 'thanks'])
+        assert.equal(r.card[k], coded.card[k], k);
+      assert.equal(r.card.nick1, 'Nehu');
+      assert.deepEqual(plain(r.card.events), plain(coded.card.events).map(e => ({ ...e, name: noEmoji(e.name) })));
+      for (const k of ['story', 'families']) assert.deepEqual(plain(r.card[k]), plain(coded.card[k]), k);
+      assert.equal(r.card.attire[0].text, 'Gold');
+      assert.deepEqual(plain(r.guests), plain(coded.guests));
+      assert.equal(r.photo, true); assert.equal(r.gallery, true);
+    }
+    // Dates as people type them
+    assert.equal(Catalog.readWhen('Tue, 1 dec, 2026, 9:00 pm'), '2026-12-01T21:00');
+    assert.equal(Catalog.readWhen('12th December 2026'), '2026-12-12');
+    assert.equal(Catalog.readWhen('5/1/2027 7:05 am'), '2027-01-05T07:05');
+    assert.equal(Catalog.readWhen('soon'), '');
+    // Only a design number: still just the design
+    assert.equal(Catalog.readOrder('I like design #083').partial, true);
+  });
+
   test('premium sections are cleaned before they are shown (only safe colours, links and sizes)', () => {
     const x = Core.extras({
       story: [{ title: 'x'.repeat(500), when: 5 }, 'junk', null], gallery: ['javascript:alert(1)', 'https://a.com/p.jpg', 'data:text/html,hi'],

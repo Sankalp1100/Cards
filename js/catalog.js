@@ -176,15 +176,83 @@ const Catalog = {
   },
 
   // Reads a pasted WhatsApp order back. Returns { card, guests, photo } or null when there is no valid code.
+  // Without the code (cut off, or the message typed out), the message's own lines are read instead ({ typed: true });
+  // a message with only a design number gives { partial: true }.
   readOrder(text) {
     const m = String(text || '').match(/WC1\.([A-Za-z0-9_-]+)/);
     let o = null;
     if (m) { try { o = Codec.decode(m[1]); } catch (e) { o = null; } }
     if (!Core.isCard(o)) {
-      // No code (typed by hand): at least pick up the design number.
+      const typed = Catalog.readMessage(text);
+      if (typed) return { ...Catalog.fromPayload(typed), typed: true };
+      // At least pick up the design number.
       const d = String(text || '').match(/#\s?(\d{1,3})\b/);
       return d && Templates.get(+d[1]) ? { card: { theme: +d[1] }, guests: [], photo: false, partial: true } : null;
     }
+    return Catalog.fromPayload(o);
+  },
+
+  // The order message's labelled lines ("• Names: Riya & Kabir", "* Date: Sat, 12 Dec 2026, 7:30 pm"…) read back into
+  // the order code's fields. Bullets may be • * · or -, and the line breaks may be lost (WhatsApp for Windows).
+  // Returns null unless it finds the names or the functions.
+  MESSAGE_LABELS: { 'Design': 'design', 'Occasion': 'occasion', 'Names': 'names', 'Nicknames': 'nicks', 'Date': 'date', 'Venue': 'venue',
+    'Location': 'mapUrl', 'Functions': 'events', 'Headline': 'title', 'Line under the names': 'tagline', 'Message': 'message', 'RSVP number': 'rsvp',
+    'Guests': 'guests', 'Photo': 'photo', 'Gallery': 'gallery', 'Music': 'music', 'Video invitation': 'video', 'Our story': 'story',
+    'Families': 'families', 'Dress code': 'attire', 'UPI for gifts': 'upi', 'Gift note': 'giftNote', 'Venue note': 'venueNote',
+    'Thank-you line': 'thanks', 'Hashtag': 'hashtag', 'Order no': 'end', 'Order code': 'end' },
+  readMessage(text) {
+    const s = String(text || '').replace(/\r/g, '').replace(/\s*\(time not decided yet\)/gi, '');
+    const names = Object.keys(Catalog.MESSAGE_LABELS).sort((a, b) => b.length - a.length).map(l => l.replace(/[-()]/g, '\\$&'));
+    const re = new RegExp(`(?:^|[\\n•*·]|\\s-)\\s*(${names.join('|')})(?:\\s*\\([^)]*\\))?\\s*:`, 'gi');
+    const found = [...s.matchAll(re)];
+    const v = {};
+    found.forEach((m, i) => {
+      const key = Catalog.MESSAGE_LABELS[Object.keys(Catalog.MESSAGE_LABELS).find(l => l.toLowerCase() === m[1].toLowerCase())];
+      const val = s.slice(m.index + m[0].length, i + 1 < found.length ? found[i + 1].index : s.length).replace(/\s+/g, ' ').replace(/^[\s*•·]+|[\s*•·]+$/g, '').trim();
+      if (key && key !== 'end' && !(key in v)) v[key] = val;
+    });
+    const items = x => (x || '').split(/\s*;\s*/).map(p => p.trim()).filter(Boolean);
+    const events = items(v.events).map(p => {
+      const e = p.match(/^(.*?)(?:\s*\(([^)]*)\))?(?:\s+at\s+(.*?))?(?:,\s*wear\s+(.*))?$/i) || [];
+      return { name: (e[1] || p).trim(), date: Catalog.readWhen(e[2] || ''), venue: (e[3] || '').trim(), dress: (e[4] || '').trim() };
+    }).filter(e => e.name);
+    const [host1 = '', host2 = ''] = (v.names || '').split(/\s+(?:&|and|weds)\s+/i).map(x => x.trim());
+    if (!host1 && !events.length) return null;
+    const [nick1 = '', nick2 = ''] = (v.nicks || '').split(/\s*&\s*/);
+    const occasion = Object.keys(PRESETS).find(k => PRESETS[k].label.toLowerCase() === (v.occasion || '').toLowerCase());
+    const design = ((v.design || '').match(/#\s?(\d{1,3})\b/) || [])[1];
+    const lines = k => items(v[k]).map(p => p.replace(/\s+-\s+/g, ' – ')).join('\n');
+    const special = Catalog.specialLines({ story: lines('story'), families: lines('families'), attire: lines('attire') });
+    return {
+      design: design && Templates.get(+design) ? +design : '', type: occasion || (design && Templates.get(+design) ? (Catalog.entries()[design - 1] || {}).occasion : '') || 'wedding',
+      host1, host2, nick1, nick2, date: Catalog.readWhen(v.date || ''), venue: v.venue || '', mapUrl: v.mapUrl || '', events,
+      title: v.title || '', tagline: v.tagline || '', message: v.message || '', rsvp: v.rsvp || '',
+      guests: (v.guests || '').split(/\s*,\s*/).filter(Boolean).join('\n'), photo: v.photo ? 1 : '', morePhotos: v.gallery ? 1 : '',
+      music: /^no\b/i.test(v.music || '') ? false : '', vlang: /\bhindi\b/i.test(v.video || '') ? 'hi' : /\benglish\b/i.test(v.video || '') ? 'en' : '',
+      story: special.story, families: special.families, attire: special.attire, upi: v.upi || '', giftNote: v.giftNote || '',
+      venueNote: v.venueNote || '', thanks: v.thanks || '', hashtag: v.hashtag || ''
+    };
+  },
+  // "Sat, 12 Dec 2026, 7:30 pm", "12 December, 2026" or "12/12/2026 19:30" → "2026-12-12T19:30" (or just the day)
+  readWhen(s) {
+    const t = String(s || '');
+    const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    let y, mo, d;
+    const a = t.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s+([a-z]{3,9})\.?,?\s+(\d{4})/i), b = t.match(/\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})\b/);
+    if (a && MONTHS.includes(a[2].slice(0, 3).toLowerCase())) [d, mo, y] = [+a[1], MONTHS.indexOf(a[2].slice(0, 3).toLowerCase()) + 1, +a[3]];
+    else if (b) [d, mo, y] = [+b[1], +b[2], +b[3]];
+    else return '';
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) return '';
+    const day = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const tm = t.slice((a || b).index + (a || b)[0].length).match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b|(\d{1,2}):(\d{2})/i);
+    if (!tm) return day;
+    let h = +(tm[1] || tm[4]), min = +(tm[2] || tm[5] || 0);
+    if (tm[3]) h = (h % 12) + (/pm/i.test(tm[3]) ? 12 : 0);
+    return h < 24 && min < 60 ? `${day}T${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}` : day;
+  },
+
+  // An order code's fields, cleaned into the card the editor fills in.
+  fromPayload(o) {
     const type = PRESETS[o.type] ? o.type : 'wedding';
     const str = v => (typeof v === 'string' ? v : '').slice(0, 300);
     const card = {

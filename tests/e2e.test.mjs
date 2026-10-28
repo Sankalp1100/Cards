@@ -772,6 +772,31 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     noErrors();
   });
 
+  test('admin: a WhatsApp message without its order code still fills everything and becomes a new order', async () => {
+    const msg = ['*NEW INVITATION ORDER*', '* Design: *#083*', '* Occasion: Wedding', '* Names: Sudhanshu & Yadu', '* Date: Wed, 2 Dec, 2026, 11:00 pm',
+      '* Venue: Ashirwad banquet', '* Functions: Haldi (Mon, 30 Nov, 2026, 1:00 pm) at Home, wear Yellow; Mehendi (Mon, 30 Nov, 2026, 6:00 pm) at Home, wear Green; Sangeet (Tue, 1 dec, 2026, 9:00 pm) at Home; Pheras (Wed, 2 Dec, 2026, 11:00 pm) at Ashirwad banquet',
+      '* Message: You invited for the full family coming', '* RSVP number: 917530950486'].join('\n');
+    await page.eval(`document.querySelector('#clearBtn').click()`);
+    await page.eval(`document.querySelector('#orderPaste').value = ${JSON.stringify(msg)}`);
+    await page.eval(`document.querySelector('#orderFill').click()`);
+    assert.match(await page.eval(`document.querySelector('#orderMsg').textContent`), /Filled: Sudhanshu & Yadu · Wedding · design #083[\s\S]*no order code/);
+    assert.equal(await page.eval(`document.querySelector('[name=host2]').value`), 'Yadu');
+    assert.equal(await page.eval(`document.querySelector('[name=venue]').value`), 'Ashirwad banquet');
+    assert.equal(await page.eval(`document.querySelector('[name=rsvp]').value`), '7530950486');
+    assert.equal(await page.eval(`document.querySelector('[name=message]').value`), 'You invited for the full family coming');
+    assert.deepEqual(await page.eval(`[...document.querySelectorAll('.event-row')].map(r => r.querySelector('[data-k=name]').value + ' ' + r.querySelector('[data-k=date]').value + ' ' + r.querySelector('[data-k=venue]').value)`),
+      ['Haldi 2026-11-30T13:00 Home', 'Mehendi 2026-11-30T18:00 Home', 'Sangeet 2026-12-01T21:00 Home', 'Pheras 2026-12-02T23:00 Ashirwad banquet']);
+    // A new order in the list above, which fills everything again and goes to the Video Studio's order picker
+    assert.equal(await page.eval(`document.querySelectorAll('#ordersList .order-item').length`), 1);
+    assert.match(await page.eval(`document.querySelector('#ordersList .order-open').textContent`), /Sudhanshu & Yadu[\s\S]*Wedding · #083/);
+    await page.eval(`document.querySelector('#clearBtn').click()`);
+    await page.eval(`document.querySelector('#ordersList .order-open').click()`);
+    assert.equal(await page.eval(`document.querySelector('[name=host1]').value`), 'Sudhanshu');
+    assert.equal(await page.eval(`document.querySelectorAll('.event-row').length`), 4);
+    await page.eval(`window.confirm = () => true; document.querySelector('#ordersList [data-forget]').click()`);
+    noErrors();
+  });
+
   // ---------- Panel server ----------
   test.describe('panel server', () => {
     let origin;
