@@ -338,3 +338,7 @@ body.studio-open { overflow: hidden; }
 .st-look span { font-size: .66rem; padding: 18px 6px 6px; }
 @media (max-width: 860px) { .st-looks { grid-template-columns: repeat(3, 1fr); } }
 .st-moods { gap: 8px; }
+.st-art { display: grid; gap: 8px; padding: 14px; border-radius: 18px; border: 1px solid var(--line); background: rgba(255,255,255,.03); }
+.st-art > span { font-weight: 700; font-size: .9rem; margin-top: 4px; }
+.st-upload { justify-self: start; cursor: pointer; }
+.st-brand { margin-top: 6px; }

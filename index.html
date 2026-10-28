@@ -139,8 +139,11 @@
     <div class="vids-head">
       <p class="eyebrow">New · Video invitations</p>
       <h2 class="section-h">Story <span class="gradient-text">videos</span></h2>
-      <p class="muted">A painted 30-second video for WhatsApp status and Instagram: your names, every function, the date and the venue, with music. <b>300 looks: 20 scenes, each in 15 moods.</b> Tap any one to watch it play.</p>
+      <p class="muted">A painted one-minute video for WhatsApp status and Instagram: doors that open on Shri Ganesh, the two of you, every function, the venue and a thank-you, with music. <b>In English or हिन्दी.</b> Tap any one to watch it play.</p>
     </div>
+    <h3 class="vids-sub">✨ Story films <small>the scenery changes with every function, each with its own music</small></h3>
+    <div class="vids-grid stories-grid" id="storyGrid"></div>
+    <h3 class="vids-sub">🎨 300 looks <small>one painted scene in 15 moods</small></h3>
     <div class="chips vids-chips" id="vidsChips" aria-label="Scene"></div>
     <p class="vids-count" id="vidsCount"></p>
     <div class="vids-grid" id="vidsGrid"></div>
@@ -216,7 +219,11 @@
         <p class="eyebrow" id="vidKicker">Story video</p>
         <h3 id="vidTitle"></h3>
         <p class="muted" id="vidNote"></p>
-        <p class="vid-h">Pick a mood</p>
+        <div class="chips vid-lang" id="vidLang" aria-label="Language">
+          <button type="button" class="chip on" data-lang="en">English</button>
+          <button type="button" class="chip" data-lang="hi">हिन्दी</button>
+        </div>
+        <p class="vid-h" id="vidMoodsH">Pick a mood</p>
         <div class="chips vid-moods" id="vidMoods"></div>
         <div class="vid-bar"><i id="vidBar"></i></div>
         <button type="button" class="chip vid-sound" id="vidSound" aria-pressed="true">🔊 Sound on</button>

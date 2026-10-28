@@ -379,6 +379,13 @@
     $('#vidsMore').hidden = vidShown >= list.length;
   }
   renderVideos();
+  $('#storyGrid').innerHTML = VIDEO_STORIES.map(([id, name, note, tuneLabel]) => `
+    <button type="button" class="vid-tile story-tile" data-look="${id}" aria-label="Play the ${esc(name)} story film">
+      <img src="img/stories/${id}.jpg" alt="" loading="lazy" decoding="async" width="270" height="480">
+      <span class="vid-play" aria-hidden="true">▶</span>
+      <span class="vid-cap"><b>${esc(name)}</b><small>🎵 ${esc(tuneLabel)} · ${esc(note)}</small></span>
+    </button>`).join('');
+  $('#storyGrid').addEventListener('click', e => { const b = e.target.closest('[data-look]'); if (b) openVideo(b.dataset.look); });
   $('#vidsChips').addEventListener('click', e => {
     const b = e.target.closest('[data-vscene]');
     if (!b) return;
@@ -400,19 +407,25 @@
   function tuneOn() {
     tuneOff();
     if (muted || !vid.look || typeof Tune === 'undefined') return;
-    tune = new Tune(Studio.LOOKS[vid.look].music);
+    tune = new Tune(vid.story ? Studio.STORIES[vid.story].tune : Studio.LOOKS[vid.look].music);
     if (!tune.start()) tune = null;
   }
   const showSound = () => { $('#vidSound').textContent = muted ? '🔇 Sound off' : '🔊 Sound on'; $('#vidSound').setAttribute('aria-pressed', String(!muted)); };
   $('#vidSound').addEventListener('click', () => { muted = !muted; showSound(); if (muted) tuneOff(); else tuneOn(); });
-  const vid = { player: null, card: null, scene: '', look: '', t: 0, last: 0, raf: 0 };
+  const vid = { player: null, card: null, scene: '', look: '', story: '', lang: 'en', t: 0, last: 0, raf: 0 };
+  // Story films play with the sample invitation of the occasion they suit
+  const STORY_SAMPLE = { 'story-little': 'clouds', 'story-party': 'disco', 'story-sacred': 'temple', 'story-utsav': 'diwali' };
 
   async function openVideo(look) {
-    const scene = (VIDEO_LOOKS.find(l => l[0] === look) || VIDEO_LOOKS[0])[1];
-    const [, name, hint] = VIDEO_SCENES.find(v => v[0] === scene) || VIDEO_SCENES[0];
+    const story = VIDEO_STORIES.find(v => v[0] === look);
+    const scene = story ? STORY_SAMPLE[look] || 'vrindavan' : (VIDEO_LOOKS.find(l => l[0] === look) || VIDEO_LOOKS[0])[1];
+    const [, name, hint] = story ? [look, story[1], `Story film · ${story[3]}`] : VIDEO_SCENES.find(v => v[0] === scene) || VIDEO_SCENES[0];
     vid.scene = scene;
+    tuneOff();
+    vid.look = ''; vid.story = '';
     $('#vidTitle').textContent = name;
-    $('#vidKicker').textContent = `Story video · ${hint}`;
+    $('#vidKicker').textContent = story ? hint : `Story video · ${hint}`;
+    $('#vidMoodsH').hidden = !!story;
     $('#vidNote').textContent = '';
     $('#vidMoods').innerHTML = '';
     $('#vidWait').hidden = false;
@@ -425,10 +438,10 @@
     // Phones draw it smaller (it looks the same, and plays smoothly)
     vid.player = vid.player || new Studio.Player($('#vidCanvas'), matchMedia('(max-width: 640px)').matches ? .5 : .75);
     vid.card = Studio.sample(scene);
-    $('#vidMoods').innerHTML = Object.entries(Studio.LOOKS).filter(([, L]) => L.scene === scene)
+    $('#vidMoods').innerHTML = story ? '' : Object.entries(Studio.LOOKS).filter(([, L]) => L.scene === scene)
       .map(([id, L]) => `<button type="button" class="chip" data-look="${id}">${esc(L.mood)}</button>`).join('');
     vid.t = 0;
-    pickMood(look);
+    if (story) pickStory(look); else pickMood(look);
     showSound();
     $('#vidWait').hidden = true;
     cancelAnimationFrame(vid.raf);
@@ -437,14 +450,37 @@
   }
   function pickMood(id) {
     const tuneWas = vid.look && Studio.LOOKS[vid.look].music;
-    vid.look = id;
+    vid.look = id; vid.story = '';
     const L = Studio.LOOKS[id];
     if (!tune || tuneWas !== L.music) tuneOn(); // a new mood with the same tune keeps playing without a restart
-    vid.player.set(vid.card, { ...Studio.defaults(vid.card), look: id }, SITE);
+    vid.player.set(vid.card, { ...Studio.defaults(vid.card, vid.lang), look: id }, SITE);
     vid.t = Math.min(vid.t, vid.player.total - .05);
-    $('#vidNote').textContent = `${L.mood} mood · ${L.note}`;
+    $('#vidNote').textContent = `${L.mood} mood · 🎵 ${TUNES[L.music].label} · ${L.note}`;
     document.querySelectorAll('#vidMoods [data-look]').forEach(b => b.classList.toggle('on', b.dataset.look === id));
   }
+  // A story film: every part of the invitation in its own painted scene, each function on its own
+  function pickStory(id) {
+    const S = Studio.STORIES[id];
+    vid.story = id; vid.look = S.open;
+    tuneOn();
+    vid.player.set(vid.card, { ...Studio.defaults(vid.card, vid.lang), look: S.open, story: id, events: 'each' }, SITE);
+    vid.t = Math.min(vid.t, vid.player.total - .05);
+    $('#vidNote').textContent = `🎵 ${TUNES[S.tune].label} · ${S.note}`;
+  }
+  // English or Hindi: the preview switches straight away (the tune keeps playing)
+  $('#vidLang').addEventListener('click', e => {
+    const b = e.target.closest('[data-lang]');
+    if (!b) return;
+    vid.lang = b.dataset.lang;
+    document.querySelectorAll('#vidLang [data-lang]').forEach(c => c.classList.toggle('on', c === b));
+    if (!vid.player || !vid.look) return;
+    const keep = tune;
+    tune = null;
+    if (vid.story) { vid.player.set(vid.card, { ...Studio.defaults(vid.card, vid.lang), look: vid.look, story: vid.story, events: 'each' }, SITE); }
+    else vid.player.set(vid.card, { ...Studio.defaults(vid.card, vid.lang), look: vid.look }, SITE);
+    tune = keep;
+    vid.t = Math.min(vid.t, vid.player.total - .05);
+  });
   function videoFrame(now) {
     const p = vid.player;
     vid.t = (vid.t + Math.max(0, Math.min(.5, (now - vid.last) / 1000))) % p.total;
@@ -468,7 +504,8 @@
   // Order this video: the order form opens with the video look chosen (and the occasion it was shown for)
   $('#vidOrder').addEventListener('click', () => {
     if (!vid.look) return;
-    const video = { id: vid.look, name: Studio.lookName(Studio.LOOKS[vid.look]), type: vid.card.type };
+    const video = vid.story ? { id: vid.story, name: `Story film: ${Studio.STORIES[vid.story].name}`, type: vid.card.type, lang: vid.lang }
+      : { id: vid.look, name: Studio.lookName(Studio.LOOKS[vid.look]), type: vid.card.type, lang: vid.lang };
     closeVideo();
     openOrder('', video);
   });
@@ -572,14 +609,14 @@
       ...Catalog.specialLines({ story: v('xStory'), families: v('xFamilies'), attire: v('xAttire') }), upi: v('xUpi'), hashtag: v('xHashtag'),
       giftNote: v('xGiftNote'), venueNote: v('xVenueNote'), thanks: v('xThanks'), title: v('xTitle'), tagline: v('xTagline'),
       gallery: of.elements.xGallery.checked, music: of.elements.xMusic.checked,
-      video: ord.video ? ord.video.id : '', videoName: ord.video ? ord.video.name : ''
+      video: ord.video ? ord.video.id : '', videoName: ord.video ? ord.video.name : '', videoLang: ord.video ? ord.video.lang : ''
     };
   }
   // The story video in the order (or a nudge to pick one)
   function showVideo() {
     $('#osVideo').innerHTML = ord.video
-      ? `🎬 Story video: <b>${esc(ord.video.name)}</b> <button type="button" class="os-unvideo" data-unvideo aria-label="Remove the video">✕</button>`
-      : 'Want a story video for WhatsApp too? <a href="#videos" data-video-go>See the 300 video looks →</a>';
+      ? `🎬 Story video: <b>${esc(ord.video.name)}</b> · ${ord.video.lang === 'hi' ? 'हिन्दी' : 'English'} <button type="button" class="os-unvideo" data-unvideo aria-label="Remove the video">✕</button>`
+      : 'Want a story video for WhatsApp too? <a href="#videos" data-video-go>See the story films and 300 looks →</a>';
   }
 
   // What each step needs before moving on.

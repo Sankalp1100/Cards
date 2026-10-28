@@ -1,5 +1,19 @@
-// The Video Studio's 300 looks (scene, mood) for the website's Story videos grid. Made from js/studio.js
-// by a script; tests/unit.test.js checks it still matches.
+// The Video Studio's story films (id, name, note, tune) and its 300 looks (id, scene, mood), for the website's
+// Story videos section. Made from js/studio.js by a script; tests/unit.test.js checks they still match.
+const VIDEO_STORIES = [
+  ["story-rajwada","Royal Rajwada","Temple → jharokha → haveli → palace → mandap","Shehnai Mangal"],
+  ["story-pastel","Pastel Blossom","Soft florals and a pink mandap","Romantic Piano"],
+  ["story-night","Starlit Night","Lotus pond, palace lights and a starry sky","Grand Cinematic"],
+  ["story-mehfil","Mughal Mehfil","Jharokhas, haveli doors and a sufi evening","Sufi Evening"],
+  ["story-baraat","Baraat Dhamaka","Marigolds, haveli doors and a dhol beat","Baraat Dhol"],
+  ["story-garden","Garden Romance","Vrindavan, roses and fairy lights","Royal Flute"],
+  ["story-destination","Destination Dreams","Beach sunset to Himalayan peaks","Santoor Morning"],
+  ["story-utsav","Festive Utsav","Diya steps, marigolds and garba","Garba Night"],
+  ["story-raag","Raag Royale","Dawn over the lotus pond, a sitar raag","Sitar Raag"],
+  ["story-little","Little Star","Clouds, balloons and a lullaby","Lullaby"],
+  ["story-party","Party Night","Disco lights, confetti and a dance floor","Festive Bells"],
+  ["story-sacred","Sacred Blessings","Temple lamps, kalash and diyas","Calm Piano"]
+];
 const VIDEO_LOOKS = [
   ["vrindavan","vrindavan","Morning"],
   ["jharokha","jharokha","Ivory"],
@@ -302,4 +316,4 @@ const VIDEO_LOOKS = [
   ["rosegarden-ivory","rosegarden","Ivory Gold"],
   ["rosegarden-midnight","rosegarden","Midnight Blue"]
 ];
-if (typeof module !== 'undefined') module.exports = VIDEO_LOOKS;
+if (typeof module !== 'undefined') module.exports = { VIDEO_LOOKS, VIDEO_STORIES };

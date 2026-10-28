@@ -63,97 +63,239 @@ const Studio = (() => {
 
   // The two families as "D/o …" / "S/o …" lines (wedding and engagement only), matched by what their side says,
   // else in order: the first family goes with the first name (the bride's side in the order form).
-  function parents(card) {
+  function parents(card, lang) {
     if (!/^(wedding|engagement|reception|roka)$/.test(card.type)) return ['', ''];
     const fam = (card.families || []).filter(f => f && clean(f.parents));
     const bride = fam.find(f => /bride|ladki|daughter|girl|dulhan/i.test(f.side || ''));
     const groom = fam.find(f => /groom|ladka|\bson\b|boy|dulha/i.test(f.side || ''));
     const p1 = bride || fam.find(f => f !== groom), p2 = groom || fam.find(f => f !== p1);
-    return [p1 ? `D/o ${clean(p1.parents)}` : '', p2 ? `S/o ${clean(p2.parents)}` : ''];
+    const [d, so] = lang === 'hi' ? ['सुपुत्री', 'सुपुत्र'] : ['D/o', 'S/o'];
+    return [p1 ? `${d} ${clean(p1.parents)}` : '', p2 ? `${so} ${clean(p2.parents)}` : ''];
   }
 
-  const defaults = card => ({
+  // ---------- Hindi ----------
+  const HI = {
+    months: ['जनवरी', 'फ़रवरी', 'मार्च', 'अप्रैल', 'मई', 'जून', 'जुलाई', 'अगस्त', 'सितम्बर', 'अक्टूबर', 'नवम्बर', 'दिसम्बर'],
+    days: ['रविवार', 'सोमवार', 'मंगलवार', 'बुधवार', 'गुरुवार', 'शुक्रवार', 'शनिवार'],
+    label: { wedding: 'शुभ विवाह', engagement: 'सगाई समारोह', sangeet: 'संगीत संध्या', kitty: 'किटी पार्टी', bday: 'जन्मदिन समारोह',
+      naming: 'नामकरण संस्कार', birthday: 'जन्मदिन', babyshower: 'गोद भराई', ceremony: 'पूजा एवं अनुष्ठान', anniversary: 'वैवाहिक वर्षगाँठ',
+      reception: 'स्वागत समारोह', haldi: 'हल्दी रस्म', mehendi: 'मेहँदी रस्म', roka: 'रोका समारोह', housewarming: 'गृह प्रवेश',
+      mundan: 'मुंडन संस्कार', janeu: 'उपनयन संस्कार', retirement: 'सेवानिवृत्ति समारोह', festive: 'उत्सव', corporate: 'मिलन समारोह' },
+    invite: { wedding: 'परमपिता परमात्मा की असीम अनुकम्पा से\nआपको सादर आमन्त्रित करते हैं', engagement: 'आपको सपरिवार सादर आमन्त्रित करते हैं\nसगाई समारोह में',
+      sangeet: 'संगीत और नृत्य की एक शाम\nआपके बिना अधूरी है', kitty: 'आप सादर आमन्त्रित हैं\nकिटी पार्टी में', bday: 'आइए, मिलकर मनाएँ\nजन्मदिन',
+      naming: 'हर्षोल्लास के साथ आमन्त्रित करते हैं\nनामकरण संस्कार में', birthday: 'केक, खेल और ढेर सारी मस्ती\nजन्मदिन पर आइए', babyshower: 'आपका आशीर्वाद चाहिए\nगोद भराई में',
+      ceremony: 'प्रभु की कृपा से\nआपको सादर आमन्त्रित करते हैं', anniversary: 'प्रेम के अनमोल वर्ष\nहमारे साथ मनाइए', reception: 'आपको सपरिवार सादर आमन्त्रित करते हैं\nस्वागत समारोह में',
+      haldi: 'हल्दी की रस्म में\nआप सादर आमन्त्रित हैं', mehendi: 'मेहँदी की रस्म में\nआप सादर आमन्त्रित हैं', roka: 'बड़ों के आशीर्वाद से\nरोका समारोह में आमन्त्रित करते हैं',
+      housewarming: 'नए घर में प्रवेश पर\nआपका आशीर्वाद चाहिए', mundan: 'संस्कार के शुभ अवसर पर\nआप सादर आमन्त्रित हैं', janeu: 'उपनयन संस्कार के शुभ अवसर पर\nआप सादर आमन्त्रित हैं',
+      retirement: 'सेवा के सुनहरे वर्षों का उत्सव\nहमारे साथ मनाइए', festive: 'रोशनी, मिठाई और खुशियों के साथ\nआप सादर आमन्त्रित हैं', corporate: 'पुराने दोस्त, नई यादें\nआप सादर आमन्त्रित हैं' },
+    closing: { wedding: 'आपकी प्रतीक्षा में', engagement: 'आपकी प्रतीक्षा में', reception: 'आपकी प्रतीक्षा में', roka: 'आपकी प्रतीक्षा में',
+      sangeet: 'आइए, साथ झूमें', kitty: 'ज़रूर आइए!', bday: 'ज़रूर आइए!', birthday: 'ज़रूर आइए!', naming: 'प्रेम एवं आशीर्वाद सहित',
+      babyshower: 'प्रेम एवं आशीर्वाद सहित', ceremony: 'आशीर्वाद सहित', anniversary: 'प्रेम के नाम', haldi: 'पीले रंग में मिलते हैं!',
+      mehendi: 'आइए, साथ झूमें', housewarming: 'आशीर्वाद सहित', mundan: 'प्रेम एवं आशीर्वाद सहित', janeu: 'आशीर्वाद सहित',
+      retirement: 'नए सफ़र की शुभकामनाएँ', festive: 'ज़रूर आइए!', corporate: 'ज़रूर आइए!' }
+  };
+  const hiDay = d => `${HI.days[d.getDay()]}, ${d.getDate()} ${HI.months[d.getMonth()]} ${d.getFullYear()}`;
+  function hiTime(d) {
+    const h = d.getHours(), m = d.getMinutes();
+    const part = h < 4 ? 'रात्रि' : h < 12 ? 'प्रातः' : h < 16 ? 'दोपहर' : h < 19 ? 'सायं' : 'रात्रि';
+    return `${part} ${h % 12 || 12}${m ? `:${String(m).padStart(2, '0')}` : ''} बजे`;
+  }
+  // "9 – 13 December 2026" (or "9 से 13 दिसम्बर 2026"): the first and last day of the card and its functions
+  function dateRange(card, hi) {
+    const ds = [card.date, ...(card.events || []).map(e => e && e.date)].map(s => Core.parseDate(s)).filter(Boolean).sort((a, b) => a - b);
+    if (!ds.length) return '';
+    const [a, b] = [ds[0], ds[ds.length - 1]], M = hi ? HI.months : MONTHS;
+    const one = d => `${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()}`;
+    if (a.toDateString() === b.toDateString()) return hi ? one(a) : `${ordinal(a.getDate())} ${MONTHS[a.getMonth()]} ${a.getFullYear()}`;
+    const join = hi ? ' से ' : ' – ';
+    if (a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear()) return `${a.getDate()}${join}${one(b)}`;
+    return `${a.getDate()} ${M[a.getMonth()]}${join}${one(b)}`;
+  }
+  // In Hindi every fixed word is Hindi and the lettering is Devanagari: names in Amita, text in Tiro Devanagari Hindi
+  const HINDI_FONT = { script: ['hname', .74], serif: ['hser', 1], italic: ['hser', .96], display: ['deva', .9] };
+  const toHindi = it => {
+    if (it.t !== 'text' || !HINDI_FONT[it.f]) return it;
+    const [f, k] = HINDI_FONT[it.f];
+    return { ...it, f, z: Math.round(it.z * k), up: false, ls: 0 };
+  };
+
+  // Couples are drawn on the title scene (bride and groom); these occasions have a couple
+  const COUPLES = ['wedding', 'engagement', 'reception', 'roka', 'anniversary', 'sangeet', 'haldi', 'mehendi'];
+  const hasCouple = card => COUPLES.includes(card.type) && !!clean(card.host1) && !!clean(card.host2);
+
+  const defaults = (card, lang = 'en') => ({
     look: OCCASION_LOOK[card.type] || 'vrindavan',
+    story: '',
+    lang,
     blessing: BLESSED.includes(card.type),
-    blessingText: '|| Shree Ganeshay Namah ||',
-    inviteLine: INVITE_LINES[card.type] || INVITE_LINES.wedding,
+    blessingText: '॥ श्री गणेशाय नमः ॥',
+    inviteLine: (lang === 'hi' ? HI.invite : INVITE_LINES)[card.type] || (lang === 'hi' ? HI.invite.wedding : INVITE_LINES.wedding),
     parents: true,
     events: (card.events || []).filter(e => clean(e.name)).length > 3 ? 'list' : 'each',
-    music: 'look'
+    music: 'look',
+    brand: true, // the website's QR code and "Designed by" (off: neither appears anywhere)
+    ganeshaArt: 'photo', coupleArt: 'photo', // 'photo' (a real one), 'drawn' or 'none'; a couple shows only with their photo
+    photos: {}
   });
 
   // ---------- The story: which scenes, how long each ----------
+  // Doors open on the blessing (with Ganesha) → the title (monogram, names, dates, the couple) → the invitation
+  // (with the parents) → each function → the venue → the closing wishes → Thank You, the website's QR code and the
+  // designer's signature in the corner.
   function timeline(card, opt) {
-    const S = [{ k: 'open', d: 6 }];
-    const [p1, p2] = opt.parents ? parents(card) : ['', ''];
-    S.push({ k: 'invite', d: p1 || p2 ? 8 : 7 });
+    if (Array.isArray(opt.script)) {
+      let t = 0;
+      const scenes = opt.script.map(x => { const sc = { k: 'custom', ...x, t0: t }; t += sc.d; return sc; });
+      return { scenes, total: t };
+    }
+    const photos = opt.photos || {};
+    const couple = hasCouple(card) && (opt.coupleArt === 'drawn' || (opt.coupleArt !== 'none' && !!photos.couple));
+    const god = opt.blessing && opt.ganeshaArt !== 'none';
+    const S = [god
+      ? { k: 'open', d: 6, doors: true, shower: true, ganesha: { y: 600, s: 760 }, zone: [200, 500, 940] }
+      : { k: 'open', d: 5.5, doors: true, shower: true }];
+    S.push(couple ? { k: 'title', d: 6, couple: { y: 1830, s: 640 }, zone: [290, 1080, 760] } : { k: 'title', d: 5.5 });
+    const [p1, p2] = opt.parents ? parents(card, opt.lang) : ['', ''];
+    S.push({ k: 'invite', d: p1 || p2 ? 7.5 : 6.5 });
     const evs = (card.events || []).filter(e => clean(e.name)).slice(0, 6);
     if (opt.events === 'each') evs.forEach(e => S.push({ k: 'event', e, d: 4.5 }));
     else if (opt.events === 'list' && evs.length) S.push({ k: 'events', evs, d: 4 + evs.length });
-    if (Core.parseDate(card.date) || clean(card.venue)) S.push({ k: 'date', d: 6 });
-    S.push({ k: 'end', d: 7 });
+    if (Core.parseDate(card.date) || clean(card.venue)) S.push({ k: 'date', d: 5.5 });
+    S.push({ k: 'end', d: 6 });
+    S.push({ k: 'final', d: 5, sigCorner: opt.brand !== false });
+    if (opt.story && STORIES[opt.story]) storyLooks(S, STORIES[opt.story]);
     let t = 0;
     S.forEach(s => { s.t0 = t; t += s.d; });
     return { scenes: S, total: t };
   }
-  const sceneName = s => ({ open: 'Opening', invite: 'Invitation', events: 'Functions', date: 'Save the date', end: 'Closing' })[s.k]
+  const sceneName = s => s.name || ({ open: 'Opening', title: 'Title', invite: 'Invitation', events: 'Functions', date: 'Venue', end: 'Regards', final: 'Thank You' })[s.k]
     || splitIcon(s.e.name).name || 'Function';
 
   // What each scene says, as a list of lines for the layout below.
   function lines(s, card, opt) {
-    const two = !!clean(card.host2), when = Core.parseDate(card.date), timed = when && Core.hasTime(card.date);
+    if (s.k === 'custom') return (s.items || []).filter(Boolean).map(it => ({ gap: 12, ...it }));
+    const hi = opt.lang === 'hi', two = !!clean(card.host2), when = Core.parseDate(card.date), timed = when && Core.hasTime(card.date);
     const T = (str, f, z, col, more) => clean(str) ? { t: 'text', s: clean(str), f, z, col, gap: 12, ...more } : null;
-    const label = (PRESETS[card.type] || PRESETS.wedding).label;
+    const label = hi ? HI.label[card.type] || HI.label.wedding : `${(PRESETS[card.type] || PRESETS.wedding).label} Invitation`;
+    const day = d => hi ? hiDay(d) : dayText(d), time = d => hi ? hiTime(d) : `${timeText(d)} onwards`;
     let L = [];
     if (s.k === 'open') {
-      L = [{ t: 'crest', h: 210, gap: 26 }, { t: 'mono', z: two ? 300 : 340, gap: 40 },
-        when ? { t: 'date', d: when, z: 66, col: 'names', gap: 22 } : null,
-        T(`${label} Invitation`, 'serif', 32, 'accent', { up: true, ls: 7 })];
+      L = s.ganesha
+        ? [T(opt.blessingText, /[ऀ-ॿ]/.test(opt.blessingText) ? 'deva' : 'serif', 104, 'names', { gold: true })]
+        : [{ t: 'crest', h: 210, gap: 30 }, T(hi ? 'आप आमन्त्रित हैं' : 'You’re Invited', 'script', 150, 'names', { gold: true, gap: 16 }), T(label, 'serif', 34, 'accent', { up: true, ls: 6 })];
+    } else if (s.k === 'title') {
+      const names = two ? `${clean(card.host1)} & ${clean(card.host2)}` : clean(card.host1);
+      L = [{ t: 'mono', z: s.couple ? 220 : (two ? 280 : 320), gap: 26 },
+        T(label, 'serif', 50, 'accent', { gap: 10 }),
+        T(names, 'script', names.length > 18 ? 96 : 116, 'names', { gap: 12 }),
+        T(dateRange(card, hi), 'serif', 44, 'ink')];
     } else if (s.k === 'invite') {
-      const [p1, p2] = opt.parents ? parents(card) : ['', ''];
-      if (opt.blessing) L.push(T('ॐ', 'deva', 78, 'accent', { gap: 2 }), T(opt.blessingText, 'serif', 32, 'accent', { gap: 40, ls: 1 }));
+      const [p1, p2] = opt.parents ? parents(card, opt.lang) : ['', ''];
       const req = String(opt.inviteLine || '').split('\n').map(x => T(x, 'serif', 44, 'ink', { gap: 6 })).filter(Boolean);
       if (req.length) req[req.length - 1].gap = 30;
       L.push(...req, T(card.host1, 'script', 150, 'names', { gap: p1 ? 4 : 18 }), T(p1, 'serif', 34, 'ink2', { wrap: 2, gap: 26 }));
       if (two) {
-        L.push({ t: 'div', word: card.type === 'wedding' ? 'Weds' : '&', z: 50, gap: 22 },
+        L.push({ t: 'div', word: hi ? 'संग' : card.type === 'wedding' ? 'Weds' : '&', z: 50, gap: 22, hi },
           T(card.host2, 'script', 150, 'names', { gap: 4 }), T(p2, 'serif', 34, 'ink2', { wrap: 2 }));
       }
     } else if (s.k === 'event') {
       const { icon, name } = splitIcon(s.e.name), d = Core.parseDate(s.e.date);
-      L = [T('The Celebrations', 'serif', 30, 'accent', { up: true, ls: 8, gap: 30 }),
+      L = [T(hi ? 'मांगलिक कार्यक्रम' : 'We cordially invite you to the', hi ? 'serif' : 'italic', hi ? 44 : 38, 'accent', { gap: 14 }),
         icon ? { t: 'emoji', s: icon, z: 92, gap: 10 } : null,
         T(name, 'script', 150, 'names', { gap: 16 }), { t: 'div', word: '', z: 40, gap: 30 },
-        d ? T(dayText(d), 'serif', 44, 'ink', { gap: 10 }) : null,
-        d && Core.hasTime(s.e.date) ? T(`${timeText(d)} onwards`, 'serif', 38, 'ink2', { gap: 26 }) : null,
+        d ? T(day(d), 'serif', 44, 'ink', { gap: 10 }) : null,
+        d && Core.hasTime(s.e.date) ? T(time(d), 'serif', 40, 'accent', { gap: 26 }) : null,
         T(s.e.venue, 'serif', 42, 'ink', { wrap: 2, gap: 14 }),
-        T(s.e.dress && `Dress code · ${clean(s.e.dress)}`, 'italic', 42, 'ink2', { wrap: 2 })];
+        T(s.e.dress && `${hi ? 'परिधान' : 'Dress code'} · ${clean(s.e.dress)}`, 'italic', 40, 'ink2', { wrap: 2 })];
     } else if (s.k === 'events') {
-      L = [T('The Celebrations', 'script', 124, 'names', { gap: 6 }), { t: 'div', word: '', z: 40, gap: 36 }];
+      L = [T(hi ? 'मांगलिक कार्यक्रम' : 'The Celebrations', 'script', 124, 'names', { gap: 6 }), { t: 'div', word: '', z: 40, gap: 36 }];
       s.evs.forEach(e => {
         const d = Core.parseDate(e.date);
+        const short = d && (hi ? `${HI.days[d.getDay()]}, ${d.getDate()} ${HI.months[d.getMonth()]}` : `${DAYS[d.getDay()].slice(0, 3)}, ${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 3)}`);
         L.push(T(e.name, 'serif', 50, 'ink', { gap: 6 }),
-          T([d && `${DAYS[d.getDay()].slice(0, 3)}, ${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 3)}`, d && Core.hasTime(e.date) && timeText(d), clean(e.venue)].filter(Boolean).join('  ·  ') || ' ',
+          T([short, d && Core.hasTime(e.date) && (hi ? hiTime(d) : timeText(d)), clean(e.venue)].filter(Boolean).join('  ·  ') || ' ',
             'italic', 38, 'ink2', { wrap: 2, gap: 30 }));
       });
     } else if (s.k === 'date') {
-      L = [T(when ? 'Save the Date' : 'Join us at', 'script', 132, 'names', { gap: 26 }),
-        when ? { t: 'cal', d: when, timed, gap: 30 } : null, { t: 'div', word: '', z: 40, gap: 30 },
-        when && clean(card.venue) ? T('Venue', 'serif', 30, 'accent', { up: true, ls: 8, gap: 12 }) : null,
+      L = [T(when ? (hi ? 'शुभ तिथि' : 'Save the Date') : (hi ? 'समारोह स्थल' : 'Join us at'), 'script', 132, 'names', { gap: 26 }),
+        when ? (hi ? T(hiDay(when), 'serif', 52, 'ink', { gap: 8 }) : { t: 'cal', d: when, timed, gap: 30 }) : null,
+        when && hi && timed ? T(hiTime(when), 'serif', 46, 'accent', { gap: 20 }) : null,
+        { t: 'div', word: '', z: 40, gap: 30 },
+        when && clean(card.venue) ? T(hi ? 'स्थान' : 'Venue', 'serif', 30, 'accent', { up: true, ls: 8, gap: 12 }) : null,
         T(card.venue, 'serif', 48, 'ink', { wrap: 3, gap: 14 }), T(card.venueNote, 'italic', 40, 'ink2', { wrap: 2 })];
     } else if (s.k === 'end') {
       const fams = /^(wedding|engagement|reception|roka)$/.test(card.type) ? (card.families || []).map(f => clean(f && f.parents)).filter(Boolean).slice(0, 3) : [];
       const tag = clean(card.hashtag).replace(/^#+/, '');
-      L = [T(CLOSINGS[card.type] || CLOSINGS.wedding, 'script', 116, 'names', { gap: 22 }),
+      L = [T(hi ? HI.closing[card.type] || HI.closing.wedding : CLOSINGS[card.type] || CLOSINGS.wedding, 'script', 116, 'names', { gap: 22 }),
         T(card.thanks || card.message, 'italic', 46, 'ink', { wrap: 4, gap: 34 }),
-        fams.length ? T('Best compliments from', 'serif', 28, 'accent', { up: true, ls: 5, gap: 12 }) : null,
+        fams.length ? T(hi ? 'दर्शनाभिलाषी' : 'Warm regards', 'serif', 30, 'accent', { up: true, ls: 5, gap: 12 }) : null,
         ...fams.map((f, i) => T(f, 'serif', 38, 'ink2', { wrap: 2, gap: i === fams.length - 1 ? 28 : 8 })),
         T(tag && `#${tag}`, 'serif', 42, 'accent', { gap: 14 }),
-        T(phone(card.rsvp) && `RSVP  ·  ${phone(card.rsvp)}`, 'serif', 36, 'ink', { gap: 14 }),
-        { t: 'sig', gap: 0, pad: 40 }];
+        T(phone(card.rsvp) && `${hi ? 'संपर्क' : 'RSVP'}  ·  ${phone(card.rsvp)}`, 'serif', 36, 'ink')];
+    } else if (s.k === 'final' && opt.brand === false) {
+      L = [T(hi ? 'धन्यवाद' : 'Thank You', 'script', 160, 'names', { gap: 10 }),
+        T(hi ? 'हमारी ख़ुशियों में शामिल होने के लिए' : 'for being part of our celebration', 'italic', 44, 'ink2', { gap: 30 }),
+        T(clean(card.host2) ? `${clean(card.host1)} & ${clean(card.host2)}` : card.host1, 'script', 96, 'accent')];
+    } else if (s.k === 'final') {
+      L = [T(hi ? 'धन्यवाद' : 'Thank You', 'script', 140, 'names', { gap: 4 }),
+        T(hi ? 'हमारी ख़ुशियों में शामिल होने के लिए' : 'for being part of our celebration', 'italic', 38, 'ink2', { gap: 36 }),
+        { t: 'qr', rows: SITE_QR, z: 260, gap: 36 },
+        T(hi ? 'ऐसा ही निमन्त्रण बनवाएँ' : 'Your invitation, made like this', 'italic', 34, 'ink2', { gap: 6 }),
+        T('cardalbum.vercel.app', 'serif', 44, 'names', { lat: true })];
     }
-    return L.filter(Boolean);
+    L = L.filter(Boolean);
+    return hi ? L.map(it => (it.lat ? it : toHindi(it))) : L;
   }
+
+  // ---------- Story films: the scenery changes from scene to scene, each film with its own tune ----------
+  // Each names the look for every part of the story; a function takes the look its name suggests (Haldi, Mehendi,
+  // Baraat, Pheras, Reception…), else the film's own next one.
+  const STORIES = {
+    'story-rajwada': { name: 'Royal Rajwada', note: 'Temple → jharokha → haveli → palace → mandap', tune: 'shehnai',
+      open: 'temple', title: 'jharokha', invite: 'blush', events: ['haveli', 'palace', 'mandap'], date: 'palace', end: 'rosegarden', final: 'mandap' },
+    'story-pastel': { name: 'Pastel Blossom', note: 'Soft florals and a pink mandap', tune: 'romantic',
+      open: 'temple-sandal', title: 'rosegarden', invite: 'blush', events: ['mandap', 'blush-peach', 'rosegarden-sakura'], date: 'mandap', end: 'blush-sage', final: 'rosegarden' },
+    'story-night': { name: 'Starlit Night', note: 'Lotus pond, palace lights and a starry sky', tune: 'cinematic',
+      open: 'lotusnight', title: 'palace-blue', invite: 'galaxy', events: ['lights', 'palace', 'galaxy-plum'], date: 'lights', end: 'palace', final: 'diwali' },
+    'story-mehfil': { name: 'Mughal Mehfil', note: 'Jharokhas, haveli doors and a sufi evening', tune: 'sufi',
+      open: 'lotusnight-dawn', title: 'jharokha-night', invite: 'haveli-blue', events: ['haveli', 'jharokha-rose', 'lights'], date: 'palace-rose', end: 'haveli', final: 'jharokha' },
+    'story-baraat': { name: 'Baraat Dhamaka', note: 'Marigolds, haveli doors and a dhol beat', tune: 'baraat',
+      open: 'temple', title: 'marigold', invite: 'haveli-pink', events: ['haveli', 'marigold-green', 'palace'], date: 'palace', end: 'marigold', final: 'diwali' },
+    'story-garden': { name: 'Garden Romance', note: 'Vrindavan, roses and fairy lights', tune: 'royal',
+      open: 'vrindavan', title: 'rosegarden', invite: 'blush-sage', events: ['vrindavan-golden', 'lights', 'mandap'], date: 'lights', end: 'rosegarden', final: 'vrindavan' },
+    'story-destination': { name: 'Destination Dreams', note: 'Beach sunset to Himalayan peaks', tune: 'santoor',
+      open: 'beach', title: 'himalaya', invite: 'beach-golden', events: ['lights', 'himalaya-golden', 'beach-moonlit'], date: 'beach', end: 'himalaya', final: 'lights' },
+    'story-utsav': { name: 'Festive Utsav', note: 'Diya steps, marigolds and garba', tune: 'garba',
+      open: 'diwali', title: 'marigold', invite: 'mehendi', events: ['mehendi-rani', 'marigold-royal', 'diwali'], date: 'marigold', end: 'mehendi-green', final: 'diwali' },
+    'story-raag': { name: 'Raag Royale', note: 'Dawn over the lotus pond, a sitar raag', tune: 'sitar',
+      open: 'lotusnight-dawn', title: 'jharokha', invite: 'temple-lamps', events: ['haveli', 'lotusnight', 'palace'], date: 'palace', end: 'jharokha-rose', final: 'temple' },
+    'story-little': { name: 'Little Star', note: 'Clouds, balloons and a lullaby', tune: 'lullaby',
+      open: 'clouds', title: 'party', invite: 'clouds-lavender', events: ['party', 'clouds', 'galaxy'], date: 'clouds', end: 'party', final: 'clouds' },
+    'story-party': { name: 'Party Night', note: 'Disco lights, confetti and a dance floor', tune: 'festive',
+      open: 'disco', title: 'party-neon', invite: 'galaxy', events: ['disco', 'lights', 'party'], date: 'lights', end: 'disco', final: 'party' },
+    'story-sacred': { name: 'Sacred Blessings', note: 'Temple lamps, kalash and diyas', tune: 'calm',
+      open: 'temple', title: 'temple-lamps', invite: 'haveli', events: ['temple', 'mandap', 'diwali'], date: 'haveli', end: 'temple-sandal', final: 'diwali' }
+  };
+  const EVENT_LOOKS = [[/haldi|pithi|ubtan/i, 'haldi'], [/mehe?n?d/i, 'mehendi-rani'], [/sangeet|dance|dj|garba|dandiya|cocktail/i, 'lights'],
+    [/baraat|barat|ghud|ghod|sehra/i, 'haveli'], [/phera|vivah|wedding|varmala|jaimala|mandap|shaadi/i, 'mandap'],
+    [/reception|dinner|bhoj|swagat/i, 'palace'], [/puja|pooja|havan|ganesh|katha|aarti/i, 'temple'], [/cake|party|games/i, 'party']];
+  function storyLooks(S, st) {
+    let n = 0;
+    S.forEach(s => {
+      const byName = s.k === 'event' && (EVENT_LOOKS.find(([re]) => re.test(s.e.name)) || [])[1];
+      s.look = byName || ({ open: st.open, title: st.title, invite: st.invite, date: st.date, end: st.end, final: st.final })[s.k]
+        || st.events[n++ % st.events.length];
+      if (!LOOKS[s.look]) s.look = s.look.split('-')[0]; // a mood a scene does not have: its own first look
+    });
+  }
+
+  // Each scene has its own tune (its moods share it), so every template sounds different
+  const SCENE_TUNES = { vrindavan: 'royal', jharokha: 'shehnai', lotusnight: 'sitar', marigold: 'baraat', palace: 'cinematic', blush: 'romantic',
+    temple: 'santoor', haveli: 'sufi', mehendi: 'garba', party: 'festive', beach: 'calm', himalaya: 'santoor', lights: 'romantic',
+    mandap: 'shehnai', galaxy: 'cinematic', haldi: 'festive', clouds: 'lullaby', disco: 'festive', diwali: 'garba', rosegarden: 'royal' };
+
+  // The website's QR code (https://cardalbum.vercel.app/), shown at the end of every video
+  const SITE_QR = ["0000000000000000000000000000000", "0111111100101011101100011111110", "0100000101001100100001010000010", "0101110101110001010010010111010", "0101110101110101101001010111010", "0101110100101011101111010111010", "0100000100011111010000010000010", "0111111101010101010101011111110", "0000000001000110000110000000000", "0100000101011101101101110011100", "0110110000100101001110001101100", "0000010100101000001001100100000", "0000000001011001110101101110000", "0100010100100111000011011000010", "0001001001111011000111011100110", "0110110101001011110100010011000", "0110101011001111010010010101010", "0000010111001101101001001011000", "0110111001001100010011011101110", "0110111100000111011111110110010", "0100010011101001110111010100000", "0100110101001000011011111101110", "0000000001101010010001000110000", "0111111100011111110111010111000", "0100000100000010000101000100100", "0101110100011110110111111110000", "0101110100101000011110100011100", "0101110100111011001011011111100", "0100000100011000100000111011010", "0111111101101100000110000101000", "0000000000000000000000000000000"];
 
   // ---------- Drawing helpers ----------
   function leaf(c, x, y, len, wid, ang, fill, rib = true) {
@@ -1691,14 +1833,347 @@ const Studio = (() => {
       added++;
     }
   });
+  for (const L of Object.values(LOOKS)) L.music = SCENE_TUNES[L.scene] || L.music;
   const lookName = L => `${L.name} · ${L.mood}`;
   // A look for the occasion, the first time (parties get the party scene, pujas the temple, and so on).
   const OCCASION_LOOK = { bday: 'party', birthday: 'party', kitty: 'disco', ceremony: 'temple', naming: 'clouds', sangeet: 'mehendi', babyshower: 'clouds', anniversary: 'galaxy', engagement: 'jharokha',
     reception: 'lights', haldi: 'haldi', mehendi: 'mehendi', roka: 'jharokha-rose', housewarming: 'haveli', mundan: 'clouds', janeu: 'temple', retirement: 'palace', festive: 'diwali', corporate: 'galaxy' };
 
+  // ---------- Story art: carved doors, a golden Ganesha emblem, and a bride and groom ----------
+  // Two carved wooden doors cover the screen and swing open (p: 0 shut … 1 open).
+  function doors(c, p) {
+    if (p >= 1) return;
+    const e = ease(p);
+    for (const side of [0, 1]) {
+      c.save();
+      const hinge = side ? W : 0, w = W / 2 * (1 - e) * (1 - e * .15);
+      if (w < 2) { c.restore(); continue; }
+      c.translate(hinge, 0); c.scale(side ? -1 : 1, 1);
+      const g = c.createLinearGradient(0, 0, w, 0); g.addColorStop(0, '#3a1c0c'); g.addColorStop(.5, '#6b3518'); g.addColorStop(1, '#4a230f');
+      c.fillStyle = g; c.fillRect(0, 0, w, H);
+      const sx = w / (W / 2);
+      c.scale(sx, 1);
+      // carved panels: a grid of squares, each with a rosette
+      for (let r = 0; r < 7; r++) for (let q = 0; q < 2; q++) {
+        const x = 40 + q * 240, y = 70 + r * 260;
+        c.strokeStyle = 'rgba(20,8,2,.55)'; c.lineWidth = 6; c.strokeRect(x, y, 220, 220);
+        c.strokeStyle = 'rgba(200,140,80,.25)'; c.lineWidth = 2; c.strokeRect(x + 10, y + 10, 200, 200);
+        blossom(c, x + 110, y + 110, 70, 'rgba(40,16,4,.55)', 'rgba(170,110,60,.6)', 0, 8);
+        blossom(c, x + 110, y + 110, 34, 'rgba(120,70,30,.7)', 'rgba(230,180,110,.7)', .4, 6);
+      }
+      c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(W / 2 - 14, 0, 14, H);
+      // the brass ring handle
+      c.strokeStyle = '#d9a83a'; c.lineWidth = 8; c.beginPath(); c.arc(W / 2 - 50, H / 2 + 40, 34, 0, TAU); c.stroke();
+      c.fillStyle = '#d9a83a'; c.beginPath(); c.arc(W / 2 - 50, H / 2, 14, 0, TAU); c.fill();
+      c.restore();
+    }
+    // a warm light pours through the gap as they open
+    if (e > .02 && e < 1) glow(c, W / 2, H / 2, 700 * e + 100, `rgba(255,236,190,${(.5 * (1 - e)).toFixed(2)})`);
+  }
+
+  const goldFill = (c, y0, y1) => { const g = c.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, '#fff4c2'); g.addColorStop(.45, '#f0c24e'); g.addColorStop(.75, '#c08a22'); g.addColorStop(1, '#8a5a10'); return g; };
+
+  // A golden Ganesha (bust, like an idol): halo, tiered crown, ears, serene face, curling trunk, tusk,
+  // shoulders with a marigold garland. (x, y) = the top of the crown, `s` = its height.
+  function ganesha(c, x, y, s, t = 0) {
+    c.save(); c.translate(x, y);
+    const G = goldFill(c, 0, s), line = 'rgba(110,64,8,.85)';
+    // halo
+    glow(c, 0, s * .42, s * .75, 'rgba(255,214,120,.5)');
+    c.strokeStyle = 'rgba(214,160,50,.8)'; c.lineWidth = s * .01; c.beginPath(); c.arc(0, s * .42, s * .4, 0, TAU); c.stroke();
+    c.strokeStyle = 'rgba(214,160,50,.45)'; c.lineWidth = s * .006; c.beginPath(); c.arc(0, s * .42, s * .44, 0, TAU); c.stroke();
+    for (let i = 0; i < 40; i++) {
+      const a = i / 40 * TAU + t * .04, r0 = s * .45, r1 = s * (.5 + (i % 2) * .04);
+      c.beginPath(); c.moveTo(Math.cos(a) * r0, s * .42 + Math.sin(a) * r0); c.lineTo(Math.cos(a) * r1, s * .42 + Math.sin(a) * r1); c.stroke();
+    }
+    c.lineJoin = 'round'; c.lineCap = 'round';
+    // shoulders and chest
+    c.fillStyle = G; c.strokeStyle = line; c.lineWidth = s * .01;
+    c.beginPath(); c.moveTo(-s * .34, s * 1.0); c.quadraticCurveTo(-s * .34, s * .7, -s * .14, s * .64); c.lineTo(s * .14, s * .64);
+    c.quadraticCurveTo(s * .34, s * .7, s * .34, s * 1.0); c.closePath(); c.fill(); c.stroke();
+    // ears: big soft fans behind the head, with a rosy inner ear
+    for (const d of [-1, 1]) {
+      c.fillStyle = G; c.beginPath(); c.moveTo(d * s * .13, s * .3);
+      c.bezierCurveTo(d * s * .42, s * .2, d * s * .46, s * .58, d * s * .2, s * .62);
+      c.bezierCurveTo(d * s * .16, s * .56, d * s * .16, s * .4, d * s * .13, s * .3); c.fill(); c.stroke();
+      c.fillStyle = 'rgba(232,150,120,.55)'; c.beginPath(); c.moveTo(d * s * .16, s * .34);
+      c.bezierCurveTo(d * s * .36, s * .28, d * s * .38, s * .52, d * s * .21, s * .56); c.bezierCurveTo(d * s * .19, s * .5, d * s * .18, s * .42, d * s * .16, s * .34); c.fill();
+    }
+    // head
+    c.fillStyle = G; c.beginPath(); c.ellipse(0, s * .4, s * .16, s * .15, 0, 0, TAU); c.fill(); c.stroke();
+    // tiered crown (mukut)
+    c.fillStyle = G;
+    const tier = (w0, w1, y0, y1) => { c.beginPath(); c.moveTo(-w0, y0); c.lineTo(w0, y0); c.lineTo(w1, y1); c.lineTo(-w1, y1); c.closePath(); c.fill(); c.stroke(); };
+    tier(s * .15, s * .13, s * .28, s * .22); tier(s * .12, s * .1, s * .22, s * .15); tier(s * .09, s * .065, s * .15, s * .09);
+    c.beginPath(); c.moveTo(-s * .06, s * .09); c.quadraticCurveTo(-s * .05, s * .02, 0, 0); c.quadraticCurveTo(s * .05, s * .02, s * .06, s * .09); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = '#c0262d'; c.beginPath(); c.arc(0, s * .25, s * .022, 0, TAU); c.fill();
+    c.fillStyle = '#2e8b57'; for (const d of [-1, 1]) { c.beginPath(); c.arc(d * s * .08, s * .25, s * .012, 0, TAU); c.fill(); }
+    c.fillStyle = '#fff4c2'; c.beginPath(); c.arc(0, s * .045, s * .014, 0, TAU); c.fill();
+    // tripundra tilak and the red dot
+    c.strokeStyle = 'rgba(255,250,235,.95)'; c.lineWidth = s * .008;
+    for (let k = 0; k < 3; k++) { c.beginPath(); c.moveTo(-s * .07, s * (.32 + k * .018)); c.quadraticCurveTo(0, s * (.315 + k * .018), s * .07, s * (.32 + k * .018)); c.stroke(); }
+    c.fillStyle = '#c0262d'; c.beginPath(); c.arc(0, s * .345, s * .012, 0, TAU); c.fill();
+    // serene closed eyes
+    c.strokeStyle = '#4a2a08'; c.lineWidth = s * .009;
+    for (const d of [-1, 1]) { c.beginPath(); c.arc(d * s * .065, s * .39, s * .03, .3, Math.PI - .3); c.stroke(); }
+    // tusk (his right, our left)
+    c.fillStyle = '#fffaf0'; c.strokeStyle = line; c.lineWidth = s * .006;
+    c.beginPath(); c.moveTo(-s * .06, s * .5); c.quadraticCurveTo(-s * .13, s * .56, -s * .12, s * .62); c.quadraticCurveTo(-s * .09, s * .57, -s * .04, s * .54); c.closePath(); c.fill(); c.stroke();
+    // trunk: wide at the top, tapering, curling to his left and up
+    c.fillStyle = G; c.strokeStyle = line; c.lineWidth = s * .01;
+    c.beginPath(); c.moveTo(-s * .06, s * .44);
+    c.bezierCurveTo(-s * .07, s * .58, -s * .04, s * .7, s * .02, s * .78);
+    c.bezierCurveTo(s * .07, s * .84, s * .15, s * .82, s * .15, s * .74);
+    c.bezierCurveTo(s * .15, s * .7, s * .11, s * .69, s * .1, s * .72);
+    c.bezierCurveTo(s * .1, s * .76, s * .07, s * .77, s * .05, s * .73);
+    c.bezierCurveTo(s * .03, s * .66, s * .06, s * .56, s * .06, s * .44); c.closePath(); c.fill(); c.stroke();
+    c.strokeStyle = 'rgba(122,74,12,.45)'; c.lineWidth = s * .005;
+    for (let k = 0; k < 6; k++) { const yy = s * (.52 + k * .04); c.beginPath(); c.moveTo(-s * .055 + k * s * .008, yy); c.quadraticCurveTo(0, yy + s * .012, s * .06 - k * s * .003, yy); c.stroke(); }
+    // marigold garland over the shoulders
+    for (let k = 0; k <= 16; k++) {
+      const u = k / 16, a = Math.PI * (.08 + u * .84), gx = Math.cos(a) * s * .26, gy = s * .64 + Math.sin(a) * s * .26;
+      marigold(c, gx, gy, s * .028, k % 2 ? 38 : 28);
+    }
+    c.restore();
+  }
+
+  // A real photo (an Image or bitmap) in a gold frame: 'circle' (a glowing halo, for Ganesha) or 'arch' (a royal
+  // arch, for the couple). The photo fills the frame (cut to fit, centred); (cx, top) is the frame's top centre.
+  function framedPhoto(c, img, cx, top, w, h, shape, L, t = 0) {
+    const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+    if (!iw || !ih) return;
+    const x = cx - w / 2, path = () => {
+      c.beginPath();
+      if (shape === 'circle') c.arc(cx, top + h / 2, w / 2, 0, TAU);
+      else { c.moveTo(x, top + h); c.lineTo(x, top + w / 2); c.arc(cx, top + w / 2, w / 2, Math.PI, 0); c.lineTo(x + w, top + h); c.closePath(); }
+    };
+    if (shape === 'circle') glow(c, cx, top + h / 2, w * .85, 'rgba(255,214,120,.55)');
+    c.save(); c.shadowColor = 'rgba(0,0,0,.35)'; c.shadowBlur = 40; c.shadowOffsetY = 14; path(); c.fillStyle = '#fff'; c.fill(); c.restore();
+    c.save(); path(); c.clip();
+    const k = Math.max(w / iw, h / ih), dw = iw * k, dh = ih * k, zoom = 1 + .03 * Math.sin(t * .4);
+    c.translate(cx, top + h / 2); c.scale(zoom, zoom);
+    c.drawImage(img, -dw / 2, -dh / 2 - (shape === 'arch' ? (dh - h) * .2 : 0), dw, dh);
+    c.restore();
+    const g = c.createLinearGradient(x, top, x + w, top + h); g.addColorStop(0, '#f6e3a8'); g.addColorStop(.5, '#c9952e'); g.addColorStop(1, '#f2d27a');
+    c.save(); path(); c.strokeStyle = g; c.lineWidth = 12; c.stroke();
+    c.lineWidth = 3; c.strokeStyle = 'rgba(255,248,225,.85)';
+    c.beginPath();
+    if (shape === 'circle') c.arc(cx, top + h / 2, w / 2 + 16, 0, TAU);
+    else { c.moveTo(x - 16, top + h); c.lineTo(x - 16, top + w / 2); c.arc(cx, top + w / 2, w / 2 + 16, Math.PI, 0); c.lineTo(x + w + 16, top + h); }
+    c.stroke(); c.restore();
+  }
+
+  // A bride and groom side by side, drawn flat (front view). (x, y) = between their feet, `s` = their height.
+  function couple(c, x, y, s, t = 0) {
+    const sway = Math.sin(t * 1.2) * s * .003, skin = '#e8b08a', skinD = '#c98a62';
+    const face = (cx, cy, r) => {
+      const g = c.createRadialGradient(cx - r * .3, cy - r * .3, r * .1, cx, cy, r); g.addColorStop(0, '#f6caa6'); g.addColorStop(1, skin);
+      c.fillStyle = g; c.beginPath(); c.ellipse(cx, cy, r * .86, r, 0, 0, TAU); c.fill();
+      c.strokeStyle = '#3a2416'; c.lineWidth = r * .06; c.lineCap = 'round';
+      for (const d of [-1, 1]) { c.beginPath(); c.arc(cx + d * r * .32, cy - r * .05, r * .14, .2, Math.PI - .2); c.stroke(); }
+      c.strokeStyle = '#a8424a'; c.beginPath(); c.arc(cx, cy + r * .32, r * .2, .3, Math.PI - .3); c.stroke();
+      c.fillStyle = 'rgba(230,110,110,.25)'; for (const d of [-1, 1]) { c.beginPath(); c.arc(cx + d * r * .48, cy + r * .22, r * .16, 0, TAU); c.fill(); }
+    };
+    c.save(); c.translate(x, y);
+    c.fillStyle = 'rgba(40,20,10,.18)'; c.beginPath(); c.ellipse(0, 0, s * .4, s * .035, 0, 0, TAU); c.fill();
+
+    // ---- the groom (left): ivory sherwani, saffron safa, maroon stole
+    c.save(); c.translate(-s * .15 + sway, 0);
+    c.fillStyle = '#efe4cc'; c.fillRect(-s * .07, -s * .34, s * .055, s * .32); c.fillRect(s * .015, -s * .34, s * .055, s * .32);
+    c.fillStyle = '#c9952e'; for (const d of [-1, 1]) { c.beginPath(); c.ellipse(d * s * .045, -s * .01, s * .05, s * .02, 0, 0, TAU); c.fill(); }
+    const sh = c.createLinearGradient(-s * .16, 0, s * .16, 0); sh.addColorStop(0, '#d9c9a4'); sh.addColorStop(.5, '#fbf3e0'); sh.addColorStop(1, '#d6c49c');
+    c.fillStyle = sh; c.beginPath();
+    c.moveTo(-s * .12, -s * .8); c.lineTo(s * .12, -s * .8); c.lineTo(s * .16, -s * .3); c.lineTo(-s * .16, -s * .3); c.closePath(); c.fill();
+    c.strokeStyle = '#c9952e'; c.lineWidth = s * .008; c.stroke();
+    c.beginPath(); c.moveTo(0, -s * .8); c.lineTo(0, -s * .3); c.stroke();
+    c.fillStyle = '#c9952e'; for (let k = 0; k < 7; k++) { c.beginPath(); c.arc(s * .012, -s * (.76 - k * .06), s * .009, 0, TAU); c.fill(); }
+    c.fillStyle = 'rgba(201,149,46,.5)'; c.fillRect(-s * .16, -s * .34, s * .32, s * .03);
+    for (const d of [-1, 1]) { c.fillStyle = sh; c.beginPath(); c.moveTo(d * s * .12, -s * .79); c.lineTo(d * s * .17, -s * .5); c.lineTo(d * s * .13, -s * .5); c.lineTo(d * s * .09, -s * .74); c.fill(); c.fillStyle = skin; c.beginPath(); c.arc(d * s * .155, -s * .48, s * .022, 0, TAU); c.fill(); }
+    c.fillStyle = '#8a1c2b'; c.beginPath(); c.moveTo(-s * .11, -s * .8); c.lineTo(-s * .06, -s * .8); c.lineTo(s * .13, -s * .42); c.lineTo(s * .09, -s * .38); c.closePath(); c.fill();
+    c.strokeStyle = '#f2d27a'; c.lineWidth = s * .006; c.stroke();
+    c.strokeStyle = '#f7f1e3'; c.lineWidth = s * .01; c.beginPath(); c.arc(0, -s * .79, s * .07, .3, Math.PI - .3); c.stroke();
+    c.fillStyle = '#f3a42a'; for (let k = 0; k < 9; k++) { const a = .3 + k / 8 * (Math.PI - .6); c.beginPath(); c.arc(Math.cos(a) * s * .07, -s * .79 + Math.sin(a) * s * .07, s * .012, 0, TAU); c.fill(); }
+    c.fillStyle = skinD; c.fillRect(-s * .025, -s * .84, s * .05, s * .05);
+    face(0, -s * .9, s * .07);
+    c.strokeStyle = '#2a1a10'; c.lineWidth = s * .008; c.beginPath(); c.moveTo(-s * .025, -s * .875); c.quadraticCurveTo(0, -s * .865, s * .025, -s * .875); c.stroke();
+    const tb = c.createLinearGradient(0, -s * 1.04, 0, -s * .94); tb.addColorStop(0, '#ffb238'); tb.addColorStop(1, '#e0601c');
+    c.fillStyle = tb; c.beginPath(); c.ellipse(0, -s * .985, s * .085, s * .06, 0, Math.PI, TAU); c.lineTo(s * .085, -s * .95); c.lineTo(-s * .085, -s * .95); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(160,50,10,.5)'; c.lineWidth = s * .005; for (let k = 0; k < 3; k++) { c.beginPath(); c.moveTo(-s * .08, -s * (.96 + k * .022)); c.quadraticCurveTo(0, -s * (1.0 + k * .022), s * .08, -s * (.96 + k * .022)); c.stroke(); }
+    c.fillStyle = '#f2d27a'; c.beginPath(); c.arc(s * .02, -s * 1.0, s * .016, 0, TAU); c.fill();
+    c.fillStyle = '#fffaf0'; c.beginPath(); c.moveTo(s * .02, -s * 1.0); c.quadraticCurveTo(s * .07, -s * 1.08, s * .05, -s * 1.12); c.quadraticCurveTo(s * .035, -s * 1.06, s * .02, -s * 1.0); c.fill();
+    c.restore();
+
+    // ---- the bride (right): red lehenga with a gold border, pink dupatta over her head
+    c.save(); c.translate(s * .15 - sway, 0);
+    const lg = c.createLinearGradient(-s * .22, 0, s * .22, 0); lg.addColorStop(0, '#8e1730'); lg.addColorStop(.5, '#d63a5a'); lg.addColorStop(1, '#8e1730');
+    c.fillStyle = lg; c.beginPath(); c.moveTo(-s * .09, -s * .5); c.lineTo(s * .09, -s * .5); c.quadraticCurveTo(s * .2, -s * .2, s * .23, 0); c.lineTo(-s * .23, 0); c.quadraticCurveTo(-s * .2, -s * .2, -s * .09, -s * .5); c.fill();
+    c.fillStyle = '#e9b949'; c.beginPath(); c.moveTo(-s * .225, -s * .045); c.lineTo(s * .225, -s * .045); c.lineTo(s * .23, 0); c.lineTo(-s * .23, 0); c.fill();
+    c.fillStyle = 'rgba(244,203,96,.75)';
+    for (let r = 0; r < 4; r++) for (let k = -4; k <= 4; k++) { const yy = -s * (.1 + r * .1), xx = k * s * (.035 + r * -.004); c.beginPath(); c.arc(xx, yy, s * .006, 0, TAU); c.fill(); }
+    c.fillStyle = '#b8203f'; c.beginPath(); c.moveTo(-s * .085, -s * .78); c.lineTo(s * .085, -s * .78); c.lineTo(s * .09, -s * .5); c.lineTo(-s * .09, -s * .5); c.closePath(); c.fill();
+    c.fillStyle = '#e9b949'; c.fillRect(-s * .09, -s * .52, s * .18, s * .02);
+    for (const d of [-1, 1]) { c.fillStyle = skin; c.beginPath(); c.moveTo(d * s * .08, -s * .76); c.lineTo(d * s * .12, -s * .55); c.lineTo(d * s * .095, -s * .54); c.lineTo(d * s * .065, -s * .72); c.fill();
+      c.fillStyle = '#c0262d'; for (let k = 0; k < 3; k++) c.fillRect(d * s * .095 - s * .015, -s * (.6 - k * .012), s * .03, s * .007); }
+    c.strokeStyle = '#f2d27a'; c.lineWidth = s * .009; c.beginPath(); c.arc(0, -s * .79, s * .06, .4, Math.PI - .4); c.stroke();
+    c.fillStyle = skinD; c.fillRect(-s * .022, -s * .83, s * .044, s * .05);
+    c.fillStyle = '#2a1a12'; c.beginPath(); c.ellipse(0, -s * .9, s * .075, s * .082, 0, 0, TAU); c.fill();
+    face(0, -s * .885, s * .064);
+    c.fillStyle = '#c0262d'; c.beginPath(); c.arc(0, -s * .925, s * .007, 0, TAU); c.fill();
+    c.fillStyle = '#f2d27a'; c.beginPath(); c.arc(0, -s * .955, s * .012, 0, TAU); c.fill();
+    c.strokeStyle = '#f2d27a'; c.lineWidth = s * .004; c.beginPath(); c.moveTo(0, -s * .97); c.lineTo(0, -s * .955); c.stroke();
+    for (const d of [-1, 1]) { c.fillStyle = '#f2d27a'; c.beginPath(); c.arc(d * s * .058, -s * .86, s * .012, 0, TAU); c.fill(); }
+    c.strokeStyle = '#f2d27a'; c.lineWidth = s * .004; c.beginPath(); c.arc(s * .016, -s * .87, s * .012, 0, TAU); c.stroke();
+    // dupatta: over the head, down both shoulders, sheer with a gold border
+    const flut = Math.sin(t * 1.6) * s * .01;
+    c.fillStyle = 'rgba(244,140,170,.55)'; c.beginPath();
+    c.moveTo(-s * .03, -s * .99); c.quadraticCurveTo(s * .1, -s * 1.0, s * .11, -s * .86);
+    c.quadraticCurveTo(s * .16 + flut, -s * .5, s * .2 + flut, -s * .12); c.lineTo(s * .13 + flut, -s * .1);
+    c.quadraticCurveTo(s * .1, -s * .55, s * .06, -s * .82); c.quadraticCurveTo(s * .02, -s * .96, -s * .08, -s * .9);
+    c.quadraticCurveTo(-s * .11, -s * .75, -s * .1, -s * .6); c.lineTo(-s * .12, -s * .62); c.quadraticCurveTo(-s * .13, -s * .85, -s * .03, -s * .99); c.fill();
+    c.strokeStyle = '#e9b949'; c.lineWidth = s * .007; c.stroke();
+    c.restore();
+    c.restore();
+  }
+
+  // ---------- Variety: every look and story film opens, moves and lays out its words in its own way ----------
+  // Six openings, five scene changes, five layouts and four ways for the words to arrive, picked from the look's
+  // name, so neighbouring videos never share a format.
+  const OPENINGS = ['doors', 'curtains', 'scroll', 'iris', 'veil', 'gates'];
+  const CHANGES = ['flash', 'iris', 'wipe', 'bloom', 'petals'];
+  const LAYOUTS_V = ['center', 'panel', 'high', 'low', 'framed'];
+  const ENTRANCES = ['rise', 'drop', 'zoom', 'side'];
+  function variant(key) {
+    let h = 7;
+    for (const ch of String(key)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    const pick = (list, m) => list[Math.floor(h / m) % list.length];
+    return { open: pick(OPENINGS, 1), change: pick(CHANGES, 7), layout: pick(LAYOUTS_V, 43), enter: pick(ENTRANCES, 311) };
+  }
+
+  // Openings: each covers the screen and gives way to the first scene (p: 0 closed … 1 open)
+  function curtains(c, p) {
+    if (p >= 1) return;
+    const e = ease(p);
+    for (const side of [-1, 1]) {
+      const w = W / 2 * (1 - e), x = side < 0 ? 0 : W - w;
+      if (w < 2) continue;
+      const g = c.createLinearGradient(x, 0, x + w, 0);
+      for (let k = 0; k <= 8; k++) g.addColorStop(k / 8, k % 2 ? '#6e0f22' : '#9c1c34');
+      c.fillStyle = g; c.fillRect(x, 0, w, H);
+      c.fillStyle = 'rgba(0,0,0,.25)'; c.fillRect(side < 0 ? x + w - 18 : x, 0, 18, H);
+      c.fillStyle = '#d9a83a';
+      for (let y = 40; y < H; y += 120) c.fillRect(side < 0 ? x + w - 10 : x + 4, y, 6, 50);
+    }
+    const valance = c.createLinearGradient(0, 0, 0, 170); valance.addColorStop(0, '#5a0a1a'); valance.addColorStop(1, '#8a1a2e');
+    c.fillStyle = valance; c.beginPath(); c.moveTo(0, 0); c.lineTo(W, 0); c.lineTo(W, 120);
+    for (let x = W; x >= 0; x -= 90) c.quadraticCurveTo(x - 45, 200, x - 90, 120);
+    c.closePath(); c.fill();
+    c.strokeStyle = '#e8c46a'; c.lineWidth = 6; c.beginPath(); c.moveTo(0, 118);
+    for (let x = 0; x <= W; x += 90) c.quadraticCurveTo(x + 45, 198, x + 90, 118);
+    c.stroke();
+  }
+  function scrollOpen(c, p) {
+    if (p >= 1) return;
+    const e = ease(p), top = H * e;
+    if (top >= H - 4) return;
+    const g = c.createLinearGradient(0, top, 0, H); g.addColorStop(0, '#f3e2bd'); g.addColorStop(1, '#e2c58e');
+    c.fillStyle = g; c.fillRect(0, top, W, H - top);
+    c.strokeStyle = 'rgba(140,90,30,.35)'; c.lineWidth = 4; c.strokeRect(60, top + 60, W - 120, H - top - 120);
+    const rod = c.createLinearGradient(0, top - 40, 0, top + 40); rod.addColorStop(0, '#7a4a14'); rod.addColorStop(.5, '#f2c76b'); rod.addColorStop(1, '#6e420f');
+    c.fillStyle = rod; rrect(c, -10, top - 38, W + 20, 76, 38); c.fill();
+    for (const x of [24, W - 24]) { c.fillStyle = '#c0262d'; c.beginPath(); c.arc(x, top, 30, 0, TAU); c.fill(); }
+  }
+  function irisOpen(c, p) {
+    if (p >= 1) return;
+    const r = ease(p) * 1250;
+    c.save(); c.beginPath(); c.rect(0, 0, W, H); c.arc(W / 2, H / 2, r, 0, TAU, true); c.fillStyle = '#0b0612'; c.fill('evenodd');
+    c.strokeStyle = 'rgba(242,201,110,.9)'; c.lineWidth = 8; c.beginPath(); c.arc(W / 2, H / 2, r, 0, TAU); c.stroke();
+    c.restore();
+  }
+  function veil(c, p, t) {
+    if (p >= 1) return;
+    const R = rng(91), e = ease(p);
+    c.save(); c.globalAlpha = 1 - e;
+    c.fillStyle = '#fbe9ef'; c.fillRect(0, 0, W, H);
+    for (let i = 0; i < 140; i++) {
+      const x = R() * W, y = R() * H + e * (300 + R() * 900), r = 26 + R() * 40;
+      blossom(c, x, y, r, ['#f48fb1', '#ffffff', '#ffd166', '#ef8fa8'][i % 4], '#fff', R() * 6 + t);
+    }
+    c.restore();
+  }
+  function gates(c, p) {
+    if (p >= 1) return;
+    const e = ease(p);
+    glow(c, W / 2, H / 2, 900, `rgba(255,236,190,${(.9 * (1 - e)).toFixed(2)})`);
+    for (const side of [-1, 1]) {
+      const w = W / 2 * (1 - e), x = side < 0 ? 0 : W - w;
+      if (w < 2) continue;
+      const g = c.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, '#f6e3a8'); g.addColorStop(.5, '#c9952e'); g.addColorStop(1, '#8a5a10');
+      c.fillStyle = g; c.fillRect(x, 0, w, H);
+      c.strokeStyle = 'rgba(90,50,0,.45)'; c.lineWidth = 6;
+      for (let y = 160; y < H; y += 220) { c.beginPath(); c.arc(side < 0 ? x + w - 110 : x + 110, y, 70, 0, TAU); c.stroke(); }
+    }
+  }
+  function opening(c, kind, p, t) {
+    if (kind === 'curtains') curtains(c, p);
+    else if (kind === 'scroll') scrollOpen(c, p);
+    else if (kind === 'iris') irisOpen(c, p);
+    else if (kind === 'veil') veil(c, p, t);
+    else if (kind === 'gates') gates(c, p);
+    else doors(c, p);
+  }
+  // Scene changes: a short effect over the first moments of each scene
+  function change(c, kind, p, L) {
+    const q = clamp(p / .8);
+    if (q >= 1) return;
+    if (kind === 'iris') {
+      const r = ease(q) * 1250;
+      c.save(); c.beginPath(); c.rect(0, 0, W, H); c.arc(W / 2, H / 2, r, 0, TAU, true); c.fillStyle = `rgba(8,4,14,${(1 - q).toFixed(2)})`; c.fill('evenodd'); c.restore();
+    } else if (kind === 'wipe') {
+      const y = ease(q) * (H + 400) - 200, g = c.createLinearGradient(0, y - 200, 0, y + 200);
+      g.addColorStop(0, 'rgba(255,236,190,0)'); g.addColorStop(.5, 'rgba(255,226,160,.55)'); g.addColorStop(1, 'rgba(255,236,190,0)');
+      c.fillStyle = g; c.fillRect(0, y - 200, W, 400);
+    } else if (kind === 'bloom') {
+      glow(c, W / 2, H / 2, 1100, `rgba(255,214,140,${(.5 * (1 - q)).toFixed(2)})`);
+    } else if (kind === 'petals') {
+      const R = rng(17);
+      for (let i = 0; i < 60; i++) {
+        const a = R() * TAU, d = ease(q) * (400 + R() * 900);
+        c.save(); c.globalAlpha = 1 - q; blossom(c, W / 2 + Math.cos(a) * d, H / 2 + Math.sin(a) * d, 22 + R() * 18, [L.col.names, '#ffd166', '#ffffff'][i % 3], '#fff', a); c.restore();
+      }
+    } else { c.fillStyle = `rgba(255,250,236,${((1 - q) * .28).toFixed(2)})`; c.fillRect(0, 0, W, H); }
+  }
+  // Layouts: where the words sit, and what sits behind them
+  function zoneFor(kind, z) {
+    if (kind === 'high') return [230, 1080, z[2]];
+    if (kind === 'low') return [820, 1720, z[2]];
+    if (kind === 'panel' || kind === 'framed') return [Math.max(z[0], 300), Math.min(z[1], 1560), Math.min(z[2], 820)];
+    return z;
+  }
+  function backing(c, kind, L, y0, h, a) {
+    if (a <= .01 || !/^(panel|framed|low)$/.test(kind)) return;
+    const light = /^rgba\(255/.test(L.shadow[0]);
+    c.save(); c.globalAlpha = a;
+    if (kind === 'low') {
+      const g = c.createLinearGradient(0, y0 - 260, 0, H);
+      g.addColorStop(0, light ? 'rgba(255,250,240,0)' : 'rgba(8,4,14,0)'); g.addColorStop(.35, light ? 'rgba(255,250,240,.82)' : 'rgba(8,4,14,.66)');
+      c.fillStyle = g; c.fillRect(0, y0 - 260, W, H - y0 + 260);
+    } else {
+      const x = 90, w = W - 180, top = y0 - 70, hh = h + 140;
+      if (kind === 'panel') { c.fillStyle = light ? 'rgba(255,252,246,.8)' : 'rgba(12,6,20,.58)'; rrect(c, x, top, w, hh, 44); c.fill(); }
+      c.strokeStyle = L.col.gold; c.lineWidth = 3; rrect(c, x + 16, top + 16, w - 32, hh - 32, 34); c.stroke();
+      c.lineWidth = 1.5; rrect(c, x + 28, top + 28, w - 56, hh - 56, 28); c.stroke();
+      for (const [cx, cy] of [[x + 16, top + 16], [x + w - 16, top + 16], [x + 16, top + hh - 16], [x + w - 16, top + hh - 16]]) {
+        c.fillStyle = L.col.gold; c.beginPath(); c.moveTo(cx, cy - 12); c.lineTo(cx + 12, cy); c.lineTo(cx, cy + 12); c.lineTo(cx - 12, cy); c.fill();
+      }
+    }
+    c.restore();
+  }
+
   // ---------- Layout and text ----------
+  // Hindi: 'hname' for names (Amita, calligraphic), 'hser' for text (Tiro Devanagari Hindi), 'deva' for headings
   const fontOf = (L, f, z) => f === 'script' ? `${z}px "${L.font.script}"` : f === 'italic' ? `italic ${z}px "Cormorant Garamond"`
-    : f === 'deva' ? `${z}px "Yatra One"` : f === 'display' ? `700 ${z}px "Cinzel Decorative"` : `${z}px "${L.font.serif}"`;
+    : f === 'deva' ? `${z}px "Yatra One"` : f === 'hname' ? `700 ${z}px "Amita"` : f === 'hser' ? `${z}px "Tiro Devanagari Hindi"`
+    : f === 'display' ? `700 ${z}px "Cinzel Decorative"` : `${z}px "${L.font.serif}"`;
   function wrapText(c, s, maxW, max) {
     const words = s.split(' '), out = [];
     let line = '';
@@ -1710,7 +2185,7 @@ const Studio = (() => {
     if (out.length > max) { out.length = max; out[max - 1] = out[max - 1].replace(/\s*\S*$/, '') + '…'; }
     return out;
   }
-  const lineH = it => it.f === 'script' ? 1.22 : 1.3;
+  const lineH = it => it.f === 'script' ? 1.22 : /^(hname|hser|deva)$/.test(it.f) ? 1.42 : 1.3;
   function measure(c, L, it, k, maxW) {
     const m = { it, gap: (it.gap || 0) * k };
     if (it.t === 'text') {
@@ -1730,6 +2205,7 @@ const Studio = (() => {
     else if (it.t === 'emoji') { m.z = it.z * k; m.h = m.z * 1.2; }
     else if (it.t === 'date') { m.z = it.z * k; m.h = m.z * 1.3; }
     else if (it.t === 'cal') { m.k = k; m.h = (52 + 30 + 170 + (it.timed ? 64 : 0)) * k; }
+    else if (it.t === 'qr') { m.z = it.z * k; m.h = m.z; }
     else if (it.t === 'sig') { m.k = k; m.h = (it.pad + 30 + 96 + 40) * k; }
     return m;
   }
@@ -1778,7 +2254,7 @@ const Studio = (() => {
     const z = m.z, word = m.it.word, half = word ? 230 : 190;
     c.save(); c.globalAlpha = alpha; c.strokeStyle = L.col.gold; c.fillStyle = L.col.gold; c.lineWidth = 2.5;
     let gapW = 30;
-    if (word) { setText(c, L, fontOf(L, 'serif', z), 'accent', alpha); c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(word, cx, y); gapW = c.measureText(word).width / 2 + 26; c.shadowBlur = 0; }
+    if (word) { setText(c, L, fontOf(L, m.it.hi ? 'hser' : 'serif', z), 'accent', alpha); c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(word, cx, y); gapW = c.measureText(word).width / 2 + 26; c.shadowBlur = 0; }
     for (const d of [-1, 1]) {
       c.beginPath(); c.moveTo(cx + d * gapW, y); c.lineTo(cx + d * half, y); c.stroke();
       c.beginPath(); c.ellipse(cx + d * (half - 4), y, 10, 4, 0, 0, TAU); c.fill();
@@ -1792,7 +2268,12 @@ const Studio = (() => {
     c.save(); c.textAlign = 'center'; c.textBaseline = 'middle';
     if (it.t === 'text') {
       setText(c, L, fontOf(L, it.f, m.z), it.col, alpha); spacing(c, (it.ls || 0));
-      m.lines.forEach((ln, i) => c.fillText(ln, cx, y + (i + .5) * m.z * lineH(it)));
+      if (it.gold) {
+        // Gold lettering with depth: a gold gradient, a soft drop shadow and a fine dark edge
+        c.fillStyle = goldFill(c, y, y + m.h); c.shadowColor = 'rgba(90,50,0,.55)'; c.shadowBlur = 10; c.shadowOffsetY = 6;
+        c.strokeStyle = 'rgba(110,64,8,.8)'; c.lineWidth = Math.max(1.5, m.z * .025);
+      }
+      m.lines.forEach((ln, i) => { c.fillText(ln, cx, y + (i + .5) * m.z * lineH(it)); if (it.gold) { c.shadowColor = 'transparent'; c.strokeText(ln, cx, y + (i + .5) * m.z * lineH(it)); } });
     } else if (it.t === 'mono') drawMono(c, L, ctx.letters, cx, y, m.z, p, alpha);
     else if (it.t === 'crest') { c.globalAlpha = alpha; L.crest(c, cx, y, ctx.t); }
     else if (it.t === 'div') drawDivider(c, L, cx, y + m.h / 2, m, alpha);
@@ -1821,6 +2302,13 @@ const Studio = (() => {
       spacing(c, 0); c.textAlign = 'center'; setText(c, L, fontOf(L, 'display', 150 * k), 'names', alpha);
       c.fillText(String(d.getDate()), cx, ry + 8 * k);
       if (it.timed) { spacing(c, 6 * k); setText(c, L, fontOf(L, 'serif', 36 * k), 'ink2', alpha); c.fillText(`${timeText(d)} onwards`.toUpperCase(), cx, ry + (85 + 50) * k); }
+    } else if (it.t === 'qr') {
+      // A QR code on a white card (it.rows: '0'/'1' strings), so phones can scan it straight off the screen
+      const n = it.rows.length, cell = m.z / n, x0 = cx - m.z / 2;
+      c.globalAlpha = alpha; c.shadowColor = 'rgba(0,0,0,.35)'; c.shadowBlur = 30;
+      c.fillStyle = '#fff'; rrect(c, x0 - 22, y - 22, m.z + 44, m.z + 44, 26); c.fill(); c.shadowBlur = 0;
+      c.fillStyle = '#111';
+      it.rows.forEach((row, r) => { for (let q = 0; q < n; q++) if (row[q] === '1') c.fillRect(x0 + q * cell, y + r * cell, cell + .6, cell + .6); });
     } else if (it.t === 'sig') {
       const k = m.k, yy = y + it.pad * k;
       setText(c, L, fontOf(L, 'serif', 26 * k), 'ink2', alpha); spacing(c, 6 * k); c.fillText('DESIGNED BY', cx, yy + 15 * k);
@@ -1831,10 +2319,12 @@ const Studio = (() => {
   }
 
   // ---------- The player: draws frame t of the video on a 1080×1920 canvas ----------
-  function paint(id) {
+  // `k` paints at a higher resolution (2 = 4K, for a 2160×3840 video), so the art stays sharp.
+  function paint(id, k = 1) {
     const L = LOOKS[id], cv = document.createElement('canvas');
-    cv.width = W; cv.height = H;
+    cv.width = W * k; cv.height = H * k;
     const c = cv.getContext('2d');
+    c.scale(k, k);
     L.back(c, rng(L.scene.length * 977 + 13), L.m || {});
     for (const [op, col, alpha] of L.tint || []) {
       c.globalCompositeOperation = op; c.globalAlpha = alpha;
@@ -1871,34 +2361,86 @@ const Studio = (() => {
     set(card, opt, site = {}) {
       this.card = card; this.opt = opt; this.L = LOOKS[opt.look] || LOOKS.vrindavan;
       this.tl = timeline(card, opt); this.cache = new Map();
+      this.v = opt.variant || variant(opt.story || opt.look || 'vrindavan');
       let host = '';
       try { host = site.url ? new URL(site.url).host : ''; } catch (e) { /* no address */ }
       this.ctx = { designer: clean(site.designer) || 'Sankalp', host, letters: [initial(card.host1), initial(card.host2)].filter(Boolean) };
       if (!this.ctx.letters.length) this.ctx.letters = ['♥'];
       this.layer = sceneLayer(LOOKS[opt.look] ? opt.look : 'vrindavan');
+      // A script may give each scene its own look: all are painted now, so the video never stalls on a change.
+      this.layers = new Map();
+      const art = this.k > 1 ? this.k : 1;
+      if (art > 1) this.layer = paint(LOOKS[opt.look] ? opt.look : 'vrindavan', art);
+      this.tl.scenes.forEach(sc => { if (sc.look && LOOKS[sc.look] && !this.layers.has(sc.look)) this.layers.set(sc.look, paint(sc.look, art)); });
       return this;
     }
     get total() { return this.tl.total; }
     draw(t) {
-      const { c, L, tl } = this, { scenes, total } = tl;
+      const { c, tl } = this, { scenes, total } = tl;
       t = clamp(t, 0, total - .001);
       const idx = scenes.findIndex(s => t < s.t0 + s.d), s = scenes[idx < 0 ? scenes.length - 1 : idx], p = t - s.t0, last = s === scenes[scenes.length - 1];
+      const lookOf = sc => (sc && sc.look && this.layers.has(sc.look) ? sc.look : null);
+      const L = lookOf(s) ? LOOKS[s.look] : this.L, layer = lookOf(s) ? this.layers.get(s.look) : this.layer;
+      const prev = scenes[scenes.indexOf(s) - 1], prevLook = lookOf(prev), fade = prevLook && prevLook !== s.look ? ease(p / .9) : 1;
       c.setTransform(this.k, 0, 0, this.k, 0, 0);
       c.save(); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
       const intro = ease(t / 4.5), z = 1.2 - .16 * intro + .05 * (t / total);
       c.translate(W / 2 + Math.sin(t * .15) * 10, H / 2 + (1 - intro) * -50); c.scale(z, z); c.translate(-W / 2, -H / 2);
-      c.drawImage(this.layer, 0, 0); L.anim(c, t);
+      if (fade < 1) { c.drawImage(this.layers.get(prevLook), 0, 0, W, H); LOOKS[prevLook].anim(c, t); c.globalAlpha = fade; }
+      c.drawImage(layer, 0, 0, W, H); L.anim(c, t);
       c.restore();
-      if (!this.cache.has(s)) this.cache.set(s, layout(c, L, lines(s, this.card, this.opt)));
+      // Art in front of the scenery: Ganesha, and the bride and groom rising in at the bottom
+      const art = this.opt || {}, photos = art.photos || {};
+      if (s.ganesha && art.ganeshaArt !== 'none') {
+        c.save(); c.globalAlpha = ease((p - .2) / 1.2);
+        const gy = s.ganesha.y + (1 - ease(p / 1.4)) * 40;
+        const god = photos.ganesha || ART.ganesha;
+        if (art.ganeshaArt !== 'drawn' && god) framedPhoto(c, god, W / 2, gy + s.ganesha.s * .06, s.ganesha.s * .92, s.ganesha.s * .92, 'circle', L, t);
+        else ganesha(c, W / 2, gy, s.ganesha.s, t);
+        c.restore();
+      }
+      if (s.couple && art.coupleArt !== 'none') {
+        c.save(); c.globalAlpha = ease((p - .3) / 1);
+        const cy = s.couple.y + (1 - ease((p - .3) / 1.2)) * 60;
+        if (art.coupleArt === 'photo' && photos.couple) { const h = s.couple.s * 1.12, w = h * .78; framedPhoto(c, photos.couple, W / 2, cy - h, w, h, 'arch', L, t); }
+        else couple(c, W / 2, cy, s.couple.s, t);
+        c.restore();
+      }
+      const V = this.v, lay = s.zone ? 'center' : V.layout;
+      if (!this.cache.has(s)) this.cache.set(s, layout(c, { ...L, zone: s.zone || zoneFor(lay, L.zone) }, lines(s, this.card, this.opt)));
       const { M, y0 } = this.cache.get(s), out = last ? 1 : 1 - ease((p - (s.d - .6)) / .6);
+      const blockH = M.reduce((a, m, i) => a + m.h + (i < M.length - 1 ? m.gap : 0), 0);
+      backing(c, lay, L, y0, blockH, ease((p - .1) / .6) * out);
       let y = y0;
       M.forEach((m, i) => {
-        const a = ease((p - .25 - i * .16) / .7) * out;
-        if (a > .01) drawItem(c, L, m, W / 2, y + (1 - a) * 26, p - .25 - i * .16, a, { ...this.ctx, t });
+        const a = ease((p - .25 - i * .16) / .7) * out, k = 1 - a;
+        if (a > .01) {
+          let x = W / 2, yy = y + k * 26;
+          if (V.enter === 'drop') yy = y - k * 34;
+          else if (V.enter === 'side') { x = W / 2 + (i % 2 ? 1 : -1) * k * 90; yy = y; }
+          if (V.enter === 'zoom') {
+            const z = .86 + .14 * a;
+            c.save(); c.translate(W / 2, y + m.h / 2); c.scale(z, z); c.translate(-W / 2, -(y + m.h / 2));
+            drawItem(c, L, m, x, y, p - .25 - i * .16, a, { ...this.ctx, t });
+            c.restore();
+          } else drawItem(c, L, m, x, yy, p - .25 - i * .16, a, { ...this.ctx, t });
+        }
         y += m.h + m.gap;
       });
       L.fx(c, t);
-      if (s.k !== 'end') {
+      if (s.shower) petals(c, t, 70, ['#ff9f1c', '#ffd166', '#ef476f', '#ffffff', '#f4a3c4'], 7, 1.25);
+      if (s.sigCorner) {
+        // The designer's signature in the bottom-left corner (a client's video ends on it)
+        const a = ease((p - .6) / .9), light = /^rgba\(255/.test(L.shadow[0]);
+        c.save(); c.globalAlpha = a; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+        c.font = '112px "Great Vibes"';
+        const w = Math.max(300, c.measureText(this.ctx.designer).width + 90);
+        c.fillStyle = light ? 'rgba(255,253,246,.88)' : 'rgba(10,4,16,.6)'; rrect(c, 36, H - 236, w, 192, 34); c.fill();
+        c.strokeStyle = L.col.gold; c.globalAlpha = a * .7; c.lineWidth = 2; rrect(c, 46, H - 226, w - 20, 172, 28); c.stroke(); c.globalAlpha = a;
+        c.fillStyle = light ? L.col.ink2 : '#f3e6cf'; c.font = `28px "${L.font.serif}"`; spacing(c, 7); c.fillText('DESIGNED BY', 76, H - 178);
+        spacing(c, 0); c.fillStyle = L.col.gold; c.font = '112px "Great Vibes"'; c.fillText(this.ctx.designer, 70, H - 80);
+        c.restore();
+      } else if (s.k !== 'end' && art.brand !== false) {
         // The credit sits on a soft pill, so it reads on any background
         const light = /^rgba\(255/.test(L.shadow[0]), txt = `Designed by ${this.ctx.designer}`;
         c.save(); c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `26px "${L.font.serif}"`; spacing(c, 2);
@@ -1906,16 +2448,29 @@ const Studio = (() => {
         c.fillStyle = light ? 'rgba(255,253,246,.8)' : 'rgba(15,6,20,.45)'; rrect(c, W / 2 - w / 2, H - 70, w, 44, 22); c.fill();
         c.fillStyle = light ? L.col.ink : '#fff7ea'; c.fillText(txt, W / 2, H - 47); c.restore();
       }
-      if (s !== scenes[0] && p < .5) { c.fillStyle = `rgba(255,250,236,${(1 - p / .5) * .22})`; c.fillRect(0, 0, W, H); }
+      if (s !== scenes[0]) change(c, this.v.change, p, L);
+      if (s.doors) opening(c, this.v.open, clamp((p - .5) / 1.8), t);
       return s;
     }
   }
 
   const FONTS = ['Parisienne', 'Great Vibes', 'Pinyon Script', 'Alex Brush', 'Marcellus', 'Gilda Display', 'Cinzel', 'Pacifico', 'Fredoka'];
+  // Real photos the videos use (img/art; credits in img/art/CREDITS.md), loaded with the fonts
+  const ART = {};
+  function artReady() {
+    if (typeof Image === 'undefined' || ART.ganesha) return Promise.resolve();
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => { ART.ganesha = img; resolve(); };
+      img.onerror = () => resolve();
+      img.src = 'img/art/ganesha.jpg';
+    });
+  }
   function fontsReady() {
     if (typeof document === 'undefined' || !document.fonts) return Promise.resolve();
     const want = [...FONTS.map(f => `40px "${f}"`), '700 40px "Cinzel Decorative"', 'italic 40px "Cormorant Garamond"'];
-    return Promise.all([...want.map(f => document.fonts.load(f)), document.fonts.load('40px "Yatra One"', 'ॐ')]).catch(() => {});
+    const hindi = ['40px "Yatra One"', '700 40px "Amita"', '40px "Tiro Devanagari Hindi"'].map(f => document.fonts.load(f, 'ॐ शुभ विवाह'));
+    return Promise.all([...want.map(f => document.fonts.load(f)), ...hindi, artReady()]).catch(() => {});
   }
 
   // The website's sample video for a scene: the occasion it suits, with sample names (and parents, for weddings).
@@ -1926,7 +2481,7 @@ const Studio = (() => {
     return card;
   }
 
-  return { W, H, LOOKS, SCENES, lookName, thumb, sample, defaults, timeline, lines, parents, splitIcon, ordinal, phone, sceneName, sceneLayer, Player, fontsReady };
+  return { W, H, LOOKS, SCENES, STORIES, variant, OPENINGS, CHANGES, LAYOUTS_V, ENTRANCES, SITE_QR, HI, hasCouple, dateRange, lookName, thumb, sample, defaults, timeline, lines, parents, splitIcon, ordinal, phone, sceneName, sceneLayer, Player, fontsReady };
 })();
 
 if (typeof module !== 'undefined') module.exports = Studio;

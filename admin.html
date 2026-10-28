@@ -324,9 +324,35 @@
           <button type="button" class="btn-glow" id="stAuto">⚡ Make video from this order</button>
           <small class="muted">Picks up the customer’s names, parents, functions, date and venue from their order, then makes the video by itself.</small>
         </div>
-        <h3>1 · Pick a scene and its mood <small class="muted">(20 scenes × 15 moods = 300 looks)</small></h3>
+        <h3>Language</h3>
+        <div class="chips" id="stLang">
+          <button type="button" class="chip on" data-lang="en">English</button>
+          <button type="button" class="chip" data-lang="hi">हिन्दी</button>
+        </div>
+        <h3>1 · A story film <small class="muted">(the scenery changes with every part)</small></h3>
+        <div class="st-looks" id="stStories"></div>
+        <h3>… or one scene and its mood <small class="muted">(20 scenes × 15 moods = 300 looks)</small></h3>
         <div class="st-looks" id="stLooks"></div>
         <div class="chips st-moods" id="stMoods" aria-label="Mood"></div>
+        <h3>Pictures &amp; branding</h3>
+        <div class="st-art">
+          <span>Ganesh ji</span>
+          <div class="chips" id="stGanesha">
+            <button type="button" class="chip" data-art="photo">📷 Real photo (built in)</button>
+            <button type="button" class="chip" data-art="drawn">Drawn</button>
+            <button type="button" class="chip" data-art="none">None</button>
+          </div>
+          <label class="btn-small st-upload">⬆ Use my own Ganesh ji photo <input type="file" id="stGaneshaFile" accept="image/*" hidden></label>
+          <span>Bride &amp; groom</span>
+          <div class="chips" id="stCouple">
+            <button type="button" class="chip" data-art="photo">📷 Their photo</button>
+            <button type="button" class="chip" data-art="drawn">Drawn</button>
+            <button type="button" class="chip" data-art="none">None</button>
+          </div>
+          <label class="btn-small st-upload">⬆ Upload the couple's photo (sent by the customer) <input type="file" id="stCoupleFile" accept="image/*" hidden></label>
+          <label class="st-check st-brand"><input type="checkbox" id="stBrand" checked> Show my website (QR code) and “Designed by Sankalp”</label>
+          <small class="muted" id="stArtNote">Photos show in a gold frame. The couple appears only when you upload their own photo (or choose Drawn). Branding off: no QR code, no website, no signature anywhere in the video.</small>
+        </div>
         <h3>2 · Words</h3>
         <label class="st-check"><input type="checkbox" id="stBless"> Blessing at the top</label>
         <input id="stBlessText" maxlength="60" aria-label="Blessing line">
@@ -339,15 +365,7 @@
           <button type="button" class="chip" data-ev="none">Leave out</button>
         </div>
         <h3>4 · Music</h3>
-        <div class="chips" id="stMusic">
-          <button type="button" class="chip" data-music="look">The look’s tune</button>
-          <button type="button" class="chip" data-music="royal">Royal (flute)</button>
-          <button type="button" class="chip" data-music="romantic">Romantic (piano)</button>
-          <button type="button" class="chip" data-music="festive">Festive (bells)</button>
-          <button type="button" class="chip" data-music="calm">Calm</button>
-          <button type="button" class="chip" data-music="card">The card’s tune</button>
-          <button type="button" class="chip" data-music="none">No music</button>
-        </div>
+        <div class="chips" id="stMusic"></div>
         <button type="button" class="btn-glow" id="stMake">🎬 Make video</button>
         <p class="muted" id="stStatus">Watch it on the left, then make the video. It records in real time, so keep this tab open.</p>
         <div class="rec-progress"><i id="stRecBar"></i></div>

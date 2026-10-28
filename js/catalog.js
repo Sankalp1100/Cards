@@ -110,7 +110,7 @@ const Catalog = {
     add(order.photo, `• Photo: I'll send it in this chat`);
     add(order.gallery, `• Gallery: I'll send more photos in this chat`);
     add(order.music === false, `• Music: no background music`);
-    add(order.video, `• Video invitation: ${plain(order.videoName || order.video)}`);
+    add(order.video, `• Video invitation: ${plain(order.videoName || order.video)}${order.videoLang ? ` (${order.videoLang === 'hi' ? 'Hindi' : 'English'})` : ''}`);
     // Every "Make it special" detail, written out so the owner can read the whole order here.
     const list = (k, f) => (order[k] || []).map(f).filter(Boolean).join('; ');
     add((order.story || []).length, `• Our story: ${list('story', s => [s.when, s.title, s.text].map(plain).filter(Boolean).join(' - '))}`);
@@ -170,7 +170,7 @@ const Catalog = {
       story: order.story, families: order.families, attire: order.attire, upi: order.upi, hashtag: order.hashtag,
       giftNote: order.giftNote, venueNote: order.venueNote, thanks: order.thanks, title: order.title, tagline: order.tagline,
       morePhotos: order.gallery ? 1 : '', music: order.music === false ? false : '', // ("gallery" is the card's photo list)
-      video: Catalog.videoId(order.video)
+      video: Catalog.videoId(order.video), vlang: Catalog.videoId(order.video) && /^(hi|en)$/.test(order.videoLang) ? order.videoLang : ''
     });
     return Catalog.ORDER_TAG + Codec.encode(o);
   },
@@ -201,7 +201,7 @@ const Catalog = {
     const t = Templates.get(o.design);
     if (t) card.theme = t.no;
     const guests = (typeof o.guests === 'string' ? o.guests : '').split('\n').map(g => g.trim().slice(0, 60)).filter(Boolean).slice(0, 500);
-    return { card, guests, photo: !!o.photo, gallery: !!o.morePhotos, video: Catalog.videoId(o.video) };
+    return { card, guests, photo: !!o.photo, gallery: !!o.morePhotos, video: Catalog.videoId(o.video), videoLang: /^(hi|en)$/.test(o.vlang) ? o.vlang : '' };
   },
 
   // The sample card for a design, using the sample text of its occasion.

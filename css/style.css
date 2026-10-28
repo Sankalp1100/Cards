@@ -1175,3 +1175,10 @@ html { overflow-x: clip; }
 /* The play badge sits in the corner, so the names on the picture stay readable */
 .vid-play { left: auto; top: 10px; right: 10px; width: 38px; height: 38px; margin: 0; font-size: .85rem; }
 .vid-sound { justify-self: start; padding: 8px 14px; font-size: .86rem; }
+
+/* Story films (above the 300 looks) and the language switch in the player */
+.vids-sub { font-family: 'Syne', sans-serif; font-size: 1.25rem; margin: 26px 0 14px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.vids-sub small { font-family: 'Space Grotesk', sans-serif; font-size: .85rem; color: var(--muted); font-weight: 400; }
+.story-tile { border-color: rgba(255,201,92,.45); }
+.vid-lang { gap: 8px; }
+.vid-lang .chip { padding: 7px 14px; font-size: .86rem; }

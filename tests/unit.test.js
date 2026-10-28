@@ -595,7 +595,7 @@ test.describe('Catalog', () => {
         events: [{ name: '🎂 Cake Cutting', date: '2026-11-28T21:30', venue: '', dress: '' }],
         story: [], families: [], attire: [], upi: '', hashtag: '', giftNote: '', venueNote: '', thanks: '', theme: 47
       },
-      guests: ['Rahul Uncle', 'Priya Di'], photo: true, gallery: false, video: ''
+      guests: ['Rahul Uncle', 'Priya Di'], photo: true, gallery: false, video: '', videoLang: ''
     });
   });
 
@@ -735,59 +735,120 @@ test.describe('Video Studio', () => {
   const story = (c, o = {}) => Studio.timeline(c, { ...Studio.defaults(c), ...o });
   const texts = (s, c, o = {}) => Studio.lines(s, c, { ...Studio.defaults(c), ...o }).map(l => l.s || l.t);
 
-  test('the story: opening, invitation, the functions, save the date, closing', () => {
+  test('the story: doors and blessing, title, invitation, the functions, the venue, regards, thank you', () => {
     const c = card({ families: [] });
     const { scenes, total } = story(c, { events: 'each' });
-    assert.deepEqual(plain(scenes.map(s => s.k)), ['open', 'invite', 'event', 'event', 'event', 'event', 'event', 'date', 'end']);
+    assert.deepEqual(plain(scenes.map(s => s.k)), ['open', 'title', 'invite', 'event', 'event', 'event', 'event', 'event', 'date', 'end', 'final']);
     assert.equal(total, scenes.reduce((a, s) => a + s.d, 0));
+    assert.ok(total <= 60, `${total}s fits one WhatsApp status`);
     scenes.forEach((s, i) => assert.equal(s.t0, scenes.slice(0, i).reduce((a, x) => a + x.d, 0)));
-    assert.deepEqual(plain(story(c, { events: 'list' }).scenes.map(s => s.k)), ['open', 'invite', 'events', 'date', 'end']);
-    assert.deepEqual(plain(story(c, { events: 'none' }).scenes.map(s => s.k)), ['open', 'invite', 'date', 'end']);
+    assert.ok(scenes[0].doors && scenes[0].ganesha, 'a wedding opens on doors and Shri Ganesh');
+    assert.ok(!scenes[1].couple, 'no couple without their photo');
+    assert.ok(story(c, { coupleArt: 'drawn' }).scenes[1].couple, 'the drawn couple when chosen');
+    assert.ok(story(c, { photos: { couple: {} } }).scenes[1].couple, 'their photo on the title');
+    assert.ok(!story(c, { ganeshaArt: 'none' }).scenes[0].ganesha, 'Ganesh ji can be left out');
+    assert.ok(!story(c, { brand: false }).scenes.some(s => s.sigCorner), 'branding off: no signature');
+    assert.ok(scenes[scenes.length - 1].sigCorner, 'the designer signs the last scene');
+    assert.deepEqual(plain(story(c, { events: 'list' }).scenes.map(s => s.k)), ['open', 'title', 'invite', 'events', 'date', 'end', 'final']);
+    assert.deepEqual(plain(story(c, { events: 'none' }).scenes.map(s => s.k)), ['open', 'title', 'invite', 'date', 'end', 'final']);
     assert.equal(Studio.defaults(c).events, 'list', 'more than three functions go on one page by default');
     assert.equal(Studio.defaults(card({ events: c.events.slice(0, 2) })).events, 'each');
     assert.equal(story(card({ events: Array(9).fill({ name: 'Puja' }) }), { events: 'each' }).scenes.filter(s => s.k === 'event').length, 6, 'at most six');
-    assert.deepEqual(plain(story(card({ date: '', venue: '', events: [] })).scenes.map(s => s.k)), ['open', 'invite', 'end'], 'no date and no venue: no save-the-date');
+    assert.deepEqual(plain(story(card({ date: '', venue: '', events: [] })).scenes.map(s => s.k)), ['open', 'title', 'invite', 'end', 'final'], 'no date and no venue: no venue scene');
+    const party = story(plain(PRESETS.bday.card)).scenes;
+    assert.ok(!party[0].ganesha && !party[1].couple, 'a birthday: no Ganesha, no couple');
   });
 
-  test('parents go under the right names: by what the family side says, else in order', () => {
+  test('parents go under the right names: by what the family side says, else in order (and in Hindi)', () => {
     const fam = [{ side: "Groom's family", parents: 'Mr. & Mrs. Singh' }, { side: "Bride's family", parents: 'Mr. & Mrs. Bhatia' }];
     assert.deepEqual(plain(Studio.parents(card({ families: fam }))), ['D/o Mr. & Mrs. Bhatia', 'S/o Mr. & Mrs. Singh']);
+    assert.deepEqual(plain(Studio.parents(card({ families: fam }), 'hi')), ['सुपुत्री Mr. & Mrs. Bhatia', 'सुपुत्र Mr. & Mrs. Singh']);
     assert.deepEqual(plain(Studio.parents(card({ families: [{ side: 'A', parents: 'P1' }, { side: 'B', parents: 'P2' }] }))), ['D/o P1', 'S/o P2']);
     assert.deepEqual(plain(Studio.parents(card({ families: [{ side: 'x', parents: '  ' }] }))), ['', '']);
     assert.deepEqual(plain(Studio.parents({ ...plain(PRESETS.bday.card), families: fam })), ['', ''], 'only weddings and engagements');
   });
 
-  test('the invitation says the names, the parents and "Weds"; the blessing and the line can be changed', () => {
-    const c = card({ host1: 'Saumya', host2: 'Gaurav', families: [{ side: 'Bride', parents: 'Mr. Sunil Bhatia' }] });
-    const s = { k: 'invite' };
-    const t = texts(s, c);
-    for (const want of ['ॐ', '|| Shree Ganeshay Namah ||', 'Request your gracious presence', 'Saumya', 'D/o Mr. Sunil Bhatia', 'Gaurav']) assert.ok(t.includes(want), want);
-    assert.equal(Studio.lines(s, c, Studio.defaults(c)).find(l => l.t === 'div').word, 'Weds');
-    assert.ok(!texts(s, c, { blessing: false }).includes('ॐ'));
-    assert.ok(!texts(s, c, { parents: false }).includes('D/o Mr. Sunil Bhatia'));
-    assert.deepEqual(plain(texts(s, c, { inviteLine: 'Line one\nLine two', blessing: false }).slice(0, 2)), ['Line one', 'Line two']);
+  test('the blessing, the title and the invitation, in English and in Hindi', () => {
+    const c = card({ host1: 'Saumya', host2: 'Gaurav', families: [{ side: 'Bride', parents: 'Mr. Sunil Bhatia' }],
+      date: '2026-12-12T19:30', events: [{ name: 'Haldi', date: '2026-12-09T13:00' }] });
+    const open = { k: 'open', ganesha: { y: 600, s: 760 } };
+    assert.deepEqual(plain(texts(open, c)), ['॥ श्री गणेशाय नमः ॥']);
+    assert.ok(Studio.lines(open, c, Studio.defaults(c))[0].gold, 'gold lettering');
+    const fin = texts({ k: 'final' }, c, { brand: false });
+    assert.ok(!fin.includes('qr') && !fin.includes('cardalbum.vercel.app'), 'branding off: no QR code, no website');
+    assert.deepEqual(plain(texts({ k: 'title' }, c)), ['mono', 'Wedding Invitation', 'Saumya & Gaurav', '9 – 12 December 2026']);
+    assert.deepEqual(plain(texts({ k: 'title' }, c, { lang: 'hi' })), ['mono', 'शुभ विवाह', 'Saumya & Gaurav', '9 से 12 दिसम्बर 2026']);
+    const t = texts({ k: 'invite' }, c);
+    for (const want of ['Request your gracious presence', 'Saumya', 'D/o Mr. Sunil Bhatia', 'Gaurav']) assert.ok(t.includes(want), want);
+    assert.equal(Studio.lines({ k: 'invite' }, c, Studio.defaults(c)).find(l => l.t === 'div').word, 'Weds');
+    const h = Studio.lines({ k: 'invite' }, c, Studio.defaults(c, 'hi'));
+    assert.equal(h.find(l => l.t === 'div').word, 'संग');
+    assert.ok(h.some(l => l.s === 'सुपुत्री Mr. Sunil Bhatia'));
+    assert.ok(h.filter(l => l.t === 'text').every(l => /^(hname|hser|deva)$/.test(l.f)), 'Hindi lettering throughout');
+    assert.ok(!texts({ k: 'invite' }, c, { parents: false }).includes('D/o Mr. Sunil Bhatia'));
+    assert.deepEqual(plain(texts({ k: 'invite' }, c, { inviteLine: 'Line one\nLine two' }).slice(0, 2)), ['Line one', 'Line two']);
     assert.equal(Studio.defaults(plain(PRESETS.kitty.card)).blessing, false, 'no blessing for a kitty party');
-    assert.ok(!texts(s, { ...plain(PRESETS.bday.card), host2: '' }).includes('div'), 'one name: no "&" divider');
+    assert.ok(!texts({ k: 'invite' }, { ...plain(PRESETS.bday.card), host2: '' }).includes('div'), 'one name: no "&" divider');
   });
 
-  test('functions show the icon apart, and a time only when one was given', () => {
+  test('functions show the icon apart, a time only when one was given, and Hindi days and times', () => {
     const c = card();
     const ev = texts({ k: 'event', e: { name: '🌼 Haldi', date: '2026-12-10T10:00', venue: 'Lawn', dress: 'Yellow' } }, c);
     assert.ok(ev.includes('Haldi') && ev.includes('🌼') && ev.includes('10:00 AM onwards') && ev.includes('Thursday, 10th December 2026') && ev.includes('Dress code · Yellow'));
     const noTime = texts({ k: 'event', e: { name: 'Haldi', date: '2026-12-10' } }, c);
     assert.ok(!noTime.some(x => /onwards/.test(x)) && noTime.includes('Thursday, 10th December 2026'));
+    const hi = ev2 => texts({ k: 'event', e: ev2 }, c, { lang: 'hi' });
+    assert.ok(hi({ name: 'Haldi', date: '2026-12-09T13:00' }).includes('दोपहर 1 बजे') && hi({ name: 'Haldi', date: '2026-12-09T13:00' }).includes('बुधवार, 9 दिसम्बर 2026'));
+    assert.ok(hi({ name: 'Mehendi', date: '2026-12-10T18:30' }).includes('सायं 6:30 बजे'));
+    assert.ok(hi({ name: 'Puja', date: '2026-12-10T09:00' }).includes('प्रातः 9 बजे'));
+    assert.ok(hi({ name: 'Sangeet', date: '2026-12-10T20:00' }).includes('रात्रि 8 बजे'));
     assert.deepEqual(plain(Studio.splitIcon('🥂 Reception')), { icon: '🥂', name: 'Reception' });
     assert.deepEqual(plain(Studio.splitIcon('Reception')), { icon: '', name: 'Reception' });
     const cal = Studio.lines({ k: 'date' }, card({ date: '2026-12-12' }), Studio.defaults(card())).find(l => l.t === 'cal');
     assert.equal(cal.timed, false, 'date only: the calendar shows no time');
   });
 
-  test('the closing has the families, one # on the hashtag, the RSVP number and the signature', () => {
+  test('the closing has the families, one # on the hashtag and the RSVP number; the last scene the QR code', () => {
     const c = card({ hashtag: '##GauSa', rsvp: '98765 43210', families: [{ parents: 'Mr. & Mrs. Bhatia' }] });
     const t = texts({ k: 'end' }, c);
     assert.ok(t.includes('#GauSa') && t.includes('RSVP · +91 98765 43210') && t.includes('Mr. & Mrs. Bhatia') && t.includes('Awaiting your presence'));
-    assert.equal(t[t.length - 1], 'sig', '"Designed by" closes every video');
+    assert.ok(texts({ k: 'end' }, c, { lang: 'hi' }).includes('आपकी प्रतीक्षा में'));
+    const fin = Studio.lines({ k: 'final' }, c, Studio.defaults(c));
+    assert.ok(fin.some(l => l.t === 'qr' && l.rows === Studio.SITE_QR) && fin.some(l => l.s === 'cardalbum.vercel.app'));
+    assert.ok(Studio.SITE_QR.length >= 21 && Studio.SITE_QR.every(r => r.length === Studio.SITE_QR.length && /^[01]+$/.test(r)), 'a square QR code');
     assert.equal(Studio.phone('12345'), '');
+  });
+
+  test('twelve story films: real looks for every part, a function takes the look its name suggests, each its own tune', () => {
+    const { TUNES } = require(path.join(ROOT, 'js', 'tunes.js'));
+    const films = Object.entries(Studio.STORIES);
+    assert.equal(films.length, 12);
+    for (const [id, S] of films) {
+      assert.match(id, /^story-[a-z]+$/);
+      assert.ok(TUNES[S.tune], `${id} tune`);
+      const tl = story(card(), { story: id, events: 'each' });
+      for (const sc of tl.scenes) assert.ok(Studio.LOOKS[sc.look], `${id}: ${sc.k} → ${sc.look}`);
+      assert.ok(tl.total <= 60, `${id}: ${tl.total}s`);
+    }
+    const looks = story(card({ events: [{ name: '🌼 Haldi' }, { name: 'Mehendi Night' }, { name: 'Baraat' }] }), { story: 'story-night', events: 'each' }).scenes.filter(s => s.k === 'event').map(s => s.look);
+    assert.deepEqual(plain(looks), ['haldi', 'mehendi-rani', 'haveli']);
+    assert.ok(new Set(films.map(([, S]) => S.tune)).size >= 11, 'nearly every film sounds different');
+  });
+
+  test('variety: every look opens, changes scene and lays out its words in its own way', () => {
+    const fmt = id => JSON.stringify(plain(Studio.variant(id)));
+    const looks = Object.keys(Studio.LOOKS), films = Object.keys(Studio.STORIES);
+    for (const id of [...looks, ...films]) {
+      const v = Studio.variant(id);
+      assert.ok(Studio.OPENINGS.includes(v.open) && Studio.CHANGES.includes(v.change) && Studio.LAYOUTS_V.includes(v.layout) && Studio.ENTRANCES.includes(v.enter), id);
+    }
+    assert.equal(new Set(films.map(fmt)).size, films.length, 'no two story films alike');
+    for (const scene of Studio.SCENES) {
+      const moods = looks.filter(id => Studio.LOOKS[id].scene === scene);
+      assert.ok(new Set(moods.map(fmt)).size >= 12, `${scene}: its moods differ`);
+    }
+    for (const k of ['open', 'change', 'layout', 'enter']) assert.equal(new Set(looks.map(id => Studio.variant(id)[k])).size, { open: 6, change: 5, layout: 5, enter: 4 }[k], `every ${k} is used`);
+    assert.equal(fmt('vrindavan'), fmt('vrindavan'), 'the same look always plays the same way');
   });
 
   test('ordinals', () => {
@@ -807,10 +868,11 @@ test.describe('Video Studio', () => {
       assert.ok(L.font.script && L.font.serif);
       assert.ok(L.zone[0] < L.zone[1] && L.zone[1] <= 1920 && L.zone[2] <= 1080, id);
       for (const f of ['back', 'anim', 'fx', 'crest']) assert.equal(typeof L[f], 'function', `${id}.${f}`);
-      assert.ok(['royal', 'romantic', 'festive', 'calm'].includes(L.music), id);
+      assert.ok(require(path.join(ROOT, 'js', 'tunes.js')).TUNES[L.music], `${id} tune`);
       for (const [op] of L.tint || []) assert.ok(['multiply', 'soft-light', 'screen', 'color'].includes(op), id);
     }
     assert.equal(new Set(looks.map(([, L]) => Studio.lookName(L))).size, 300, 'every look has its own name');
+    assert.equal(new Set(looks.map(([, L]) => L.music)).size, 12, 'twelve different tunes across the scenes');
   });
 
   test('each occasion starts on a look that suits it', () => {
@@ -831,6 +893,10 @@ test.describe('Story videos on the website', () => {
     assert.equal(Catalog.readOrder(Catalog.orderMessage({ ...order, video: '' }, Catalog.entries())).video, '', 'no video chosen');
     assert.equal(Catalog.videoId('<script>'), '');
     assert.equal(Catalog.videoId('beach'), 'beach');
+    // a story film, in Hindi
+    const film = Catalog.orderMessage({ ...order, video: 'story-rajwada', videoName: 'Story film: Royal Rajwada', videoLang: 'hi' }, Catalog.entries());
+    assert.match(film, /• Video invitation: Story film: Royal Rajwada \(Hindi\)/);
+    assert.deepEqual([Catalog.readOrder(film).video, Catalog.readOrder(film).videoLang], ['story-rajwada', 'hi']);
   });
 
   test('the website lists every Video Studio scene, each with its picture', () => {
@@ -841,10 +907,40 @@ test.describe('Story videos on the website', () => {
     const listed = [...site.slice(site.indexOf('const VIDEO_SCENES'), site.indexOf('];', site.indexOf('const VIDEO_SCENES'))).matchAll(/\['(\w+)', '([^']+)'/g)];
     assert.deepEqual(listed.map(m => m[1]), plain(Studio.SCENES));
     for (const [, id, name] of listed) assert.equal(name, Studio.LOOKS[id].name, id);
-    // All 300 looks are on the website (js/videolooks.js), each with its picture
-    const looks = require(path.join(ROOT, 'js', 'videolooks.js'));
-    assert.deepEqual(looks, Object.entries(Studio.LOOKS).map(([id, L]) => [id, L.scene, L.mood]), 'js/videolooks.js matches the Video Studio');
-    assert.equal(looks.length, 300);
-    for (const [id] of looks) assert.ok(fs.statSync(path.join(ROOT, 'img', 'videos', id + '.jpg')).size > 4000, `img/videos/${id}.jpg`);
+    // All 300 looks and the 12 story films are on the website (js/videolooks.js), each with its picture
+    const { VIDEO_LOOKS, VIDEO_STORIES } = require(path.join(ROOT, 'js', 'videolooks.js'));
+    const { TUNES } = require(path.join(ROOT, 'js', 'tunes.js'));
+    assert.deepEqual(VIDEO_LOOKS, Object.entries(Studio.LOOKS).map(([id, L]) => [id, L.scene, L.mood]), 'js/videolooks.js matches the Video Studio');
+    assert.deepEqual(VIDEO_STORIES, Object.entries(Studio.STORIES).map(([id, S]) => [id, S.name, S.note, TUNES[S.tune].label]));
+    assert.equal(VIDEO_LOOKS.length, 300);
+    for (const [id] of VIDEO_LOOKS) assert.ok(fs.statSync(path.join(ROOT, 'img', 'videos', id + '.jpg')).size > 4000, `img/videos/${id}.jpg`);
+    for (const [id] of VIDEO_STORIES) assert.ok(fs.statSync(path.join(ROOT, 'img', 'stories', id + '.jpg')).size > 4000, `img/stories/${id}.jpg`);
+  });
+});
+
+test.describe('Client videos (v.html)', { skip: !fs.existsSync(path.join(ROOT, 'js', 'promos.js')) && 'no client videos here' }, () => {
+  const ctx = vm.createContext({ TextEncoder, TextDecoder, btoa, atob, URL, URLSearchParams, console });
+  if (fs.existsSync(path.join(ROOT, 'js', 'promos.js'))) for (const f of ['config.js', 'themes.js', 'codec.js', 'core.js', 'studio.js', 'promos.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', f), 'utf8'), ctx, { filename: f });
+  const { Studio, PROMOS, SITE_QR } = fs.existsSync(path.join(ROOT, 'js', 'promos.js')) ? vm.runInContext('({ Studio, PROMOS, SITE_QR })', ctx) : {};
+
+  test('every client video is complete: real looks, under a minute, ends on the QR code and the signature', () => {
+    for (const [id, p] of Object.entries(PROMOS)) {
+      const tl = Studio.timeline(p.card, { ...Studio.defaults(p.card), script: p.script });
+      assert.ok(tl.total <= 60, `${id}: ${tl.total}s fits one WhatsApp status`);
+      for (const s of p.script) assert.ok(Studio.LOOKS[s.look], `${id}: look ${s.look}`);
+      const last = p.script[p.script.length - 1];
+      assert.ok(last.sigCorner, `${id}: ends with the designer's signature`);
+      assert.ok(last.items.some(it => it.t === 'qr'), `${id}: ends with the QR code`);
+      assert.ok(require(path.join(ROOT, 'js', 'tunes.js')).TUNES[p.music], id);
+      assert.ok(fs.existsSync(path.join(ROOT, 'img', 'promo', id + '.jpg')), `${id}: link preview picture`);
+    }
+    assert.ok(SITE_QR.length >= 21 && SITE_QR.every(r => r.length === SITE_QR.length && /^[01]+$/.test(r)), 'a square QR code');
+  });
+
+  test('the video page opens the website at the end, and /v leads to it', () => {
+    const page = fs.readFileSync(path.join(ROOT, 'v.html'), 'utf8');
+    assert.match(page, /t >= player\.total - \.1/);
+    assert.match(page, /location\.href = site/);
+    assert.ok(JSON.parse(fs.readFileSync(path.join(ROOT, 'vercel.json'), 'utf8')).rewrites.some(r => r.source === '/v' && r.destination === '/v.html'));
   });
 });

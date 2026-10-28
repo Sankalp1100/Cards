@@ -826,21 +826,33 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       assert.match(await page.eval(`document.querySelector('#stWho').textContent`), /Diya & Aarav · Wedding/);
       // The preview is painted (many colours, not a blank canvas) and plays
       const colours = `(() => { const c = document.querySelector('#stCanvas'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, s = new Set(); for (let i = 0; i < d.length; i += 4 * 997) s.add(d[i] >> 4 << 8 | d[i + 1] >> 4 << 4 | d[i + 2] >> 4); return s.size; })()`;
+      await page.eval(`document.querySelector('#stScenes [data-scene="1"]').click()`);
+      await sleep(1500);
       assert.ok(await page.eval(colours) > 40, 'the scene is painted');
       const t1 = await page.eval(`document.querySelector('#stTime').textContent`);
       await page.waitFor(`document.querySelector('#stTime').textContent !== ${JSON.stringify(t1)}`, 4000).catch(() => {});
       assert.notEqual(await page.eval(`document.querySelector('#stTime').textContent`), t1, 'the preview plays');
       // Scenes follow the options
-      assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stScenes .chip')].map(b => b.textContent)`), ['Opening', 'Invitation', 'Functions', 'Save the date', 'Closing']);
+      assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stScenes .chip')].map(b => b.textContent)`), ['Opening', 'Title', 'Invitation', 'Functions', 'Venue', 'Regards', 'Thank You']);
       await page.eval(`document.querySelector('[data-ev="each"]').click()`);
-      assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stScenes .chip')].map(b => b.textContent)`), ['Opening', 'Invitation', 'Haldi', 'Mehendi', 'Sangeet', 'Pheras', 'Reception', 'Save the date', 'Closing']);
-      await page.eval(`document.querySelector('#stScenes [data-scene="3"]').click()`);
+      assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stScenes .chip')].map(b => b.textContent)`), ['Opening', 'Title', 'Invitation', 'Haldi', 'Mehendi', 'Sangeet', 'Pheras', 'Reception', 'Venue', 'Regards', 'Thank You']);
+      await page.eval(`document.querySelector('#stScenes [data-scene="4"]').click()`);
       await sleep(300);
       assert.equal(await page.eval(`document.querySelector('#stScenes .chip.on').textContent`), 'Mehendi', 'a scene button jumps there');
       await page.eval(`document.querySelector('#stLooks [data-look="lotusnight"]').click()`);
       assert.equal(await page.eval(`document.querySelector('#stLooks .on').dataset.look`), 'lotusnight');
       await page.eval(`document.querySelector('#stMoods [data-look="lotusnight-dawn"]').click()`);
       assert.equal(await page.eval(`document.querySelector('#stMoods .on').textContent`), 'Dawn');
+      // Story films and the language
+      assert.equal(await page.eval(`document.querySelectorAll('#stStories [data-story]').length`), 12, 'twelve story films');
+      await page.eval(`document.querySelector('#stStories [data-story="story-rajwada"]').click()`);
+      assert.equal(await page.eval(`document.querySelector('#stStories .on').dataset.story`), 'story-rajwada');
+      assert.equal(await page.eval(`document.querySelectorAll('#stMoods .chip').length`), 0, 'a story film has no moods to pick');
+      await page.eval(`document.querySelector('#stLang [data-lang="hi"]').click()`);
+      assert.equal(await page.eval(`document.querySelector('#stLang .on').dataset.lang`), 'hi');
+      assert.ok(await page.eval(`document.querySelectorAll('#stMusic [data-music]').length`) >= 14, 'twelve tunes plus the look’s own and none');
+      await page.eval(`document.querySelector('#stLang [data-lang="en"]').click()`);
+      await page.eval(`document.querySelector('#stLooks [data-look="lotusnight"]').click()`);
       // Phones: nothing sticks out sideways
       await page.viewport(390, 844);
       await sleep(300);
@@ -859,13 +871,13 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       assert.equal(await page.eval(`document.querySelector('#stLooks .on').dataset.look`), 'party', 'a birthday starts on the party scene');
       await page.eval(`document.querySelector('#stAuto').click()`);
       await page.waitFor(`/Recording/.test(document.querySelector('#stStatus').textContent)`, 5000);
-      assert.match(await page.eval(`document.querySelector('#stTime').textContent`), /\/ 0:26$/, 'opening, invitation, save the date, closing');
+      assert.match(await page.eval(`document.querySelector('#stTime').textContent`), /\/ 0:34$/, 'doors, title, invitation, venue, wishes, thank you');
       await page.eval(`document.querySelector('#stClose').click()`);
       assert.equal(await page.eval(`document.querySelector('#studio').hidden`), false, 'it cannot be closed while recording');
       await page.waitFor(`/Saved|Could not/.test(document.querySelector('#stStatus').textContent)`, 60000);
-      assert.match(await page.eval(`document.querySelector('#stStatus').textContent`), /Saved "Neha Confetti Party video\.mp4"/);
+      assert.match(await page.eval(`document.querySelector('#stStatus').textContent`), /Saved "Neha Confetti Party English video\.mp4"/);
       const dur = await page.eval(`new Promise(r => { const v = document.querySelector('#stVideo'); v.readyState ? r(v.duration) : v.onloadedmetadata = () => r(v.duration); })`);
-      assert.ok(dur > 24 && dur < 28, `video is ${dur}s`);
+      assert.ok(dur > 32 && dur < 36, `video is ${dur}s`);
       assert.deepEqual(await page.eval(`[document.querySelector('#stVideo').videoWidth, document.querySelector('#stVideo').videoHeight]`), [1080, 1920]);
       for (let i = 0; i < 20 && !fs.readdirSync(dir).some(f => f.endsWith('.mp4')); i++) await sleep(250);
       const file = fs.readdirSync(dir).find(f => f.endsWith('.mp4'));

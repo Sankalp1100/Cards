@@ -132,7 +132,8 @@
   function orderDetails(code) {
     const r = Catalog.readOrder(code);
     if (!r || r.partial) return 'Only the design number is known for this order.';
-    const video = Studio.LOOKS[r.video] ? Studio.lookName(Studio.LOOKS[r.video]) : '';
+    const video = (Studio.STORIES[r.video] ? `Story film: ${Studio.STORIES[r.video].name}` : Studio.LOOKS[r.video] ? Studio.lookName(Studio.LOOKS[r.video]) : '')
+      + (r.video && r.videoLang ? ` (${r.videoLang === 'hi' ? 'Hindi' : 'English'})` : '');
     const text = Catalog.orderMessage({ ...r.card, design: r.card.theme, guests: r.guests, photo: r.photo, gallery: r.gallery, video: video && r.video, videoName: video }, Catalog.entries());
     return text.split('\n').slice(1).filter(l => l && !/^Order (code|no)/.test(l)).map(l => l.replace(/\*/g, '')).join('\n');
   }
@@ -787,12 +788,78 @@
 
   // Loads a card into the Studio (the one in the editor, or an order's), with fresh words for its occasion.
   // `video`: the look the customer chose on the website, if any (it wins over the occasion's look).
-  function studioLoad(card, video) {
+  // Pictures and branding: real photos (Ganesh ji, the couple) or the drawings or none, and whether the video shows
+  // the website and "Designed by". The Ganesh ji photo and the brand choice are kept on this PC; a couple's photo is
+  // for this video only.
+  const ART_KEY = 'weddingcard.studioArt';
+  const art = (() => { try { return JSON.parse(localStorage.getItem(ART_KEY)) || {}; } catch (e) { return {}; } })();
+  art.photos = {};
+  const studioArt = () => ({ brand: art.brand !== false, ganeshaArt: art.ganeshaArt || 'photo', coupleArt: art.coupleArt || 'photo', photos: art.photos });
+  const saveArt = () => { try { localStorage.setItem(ART_KEY, JSON.stringify({ brand: art.brand, ganeshaArt: art.ganeshaArt, coupleArt: art.coupleArt, ganeshaPhoto: art.ganeshaPhoto })); } catch (e) { toast('This photo is too big to remember: it is used for this session only'); } };
+  // A photo shrunk to at most 1200 px (sharp in the video, small to keep), as a canvas the video can draw
+  const loadPhoto = src => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 1200 / Math.max(img.width, img.height)), cv = document.createElement('canvas');
+      cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      resolve(cv);
+    };
+    img.onerror = () => reject(new Error('not a picture'));
+    img.src = src;
+  });
+  if (art.ganeshaPhoto) loadPhoto(art.ganeshaPhoto).then(cv => { art.photos.ganesha = cv; }).catch(() => {});
+  function showArt() {
+    const a = studioArt();
+    document.querySelectorAll('#stGanesha [data-art]').forEach(b => b.classList.toggle('on', b.dataset.art === a.ganeshaArt));
+    document.querySelectorAll('#stCouple [data-art]').forEach(b => b.classList.toggle('on', b.dataset.art === a.coupleArt));
+    $('#stBrand').checked = a.brand;
+  }
+  function setArt(change) {
+    Object.assign(art, change);
+    saveArt();
+    if (st.opt) { Object.assign(st.opt, studioArt()); refreshStudio(); }
+    showArt();
+  }
+  for (const [box, key, file] of [['#stGanesha', 'ganeshaArt', '#stGaneshaFile'], ['#stCouple', 'coupleArt', '#stCoupleFile']]) {
+    $(box).addEventListener('click', e => {
+      const b = e.target.closest('[data-art]');
+      if (!b || st.rec) return;
+      // The couple's photo has to come from them; Ganesh ji has a real photo built in (an upload replaces it)
+      if (b.dataset.art === 'photo' && key === 'coupleArt' && !art.photos.couple) { $(file).click(); return; }
+      setArt({ [key]: b.dataset.art });
+    });
+    $(file).addEventListener('change', e => {
+      const f = e.target.files[0];
+      e.target.value = '';
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const cv = await loadPhoto(reader.result), which = key === 'ganeshaArt' ? 'ganesha' : 'couple';
+          art.photos[which] = cv;
+          if (which === 'ganesha') art.ganeshaPhoto = cv.toDataURL('image/jpeg', .86);
+          setArt({ [key]: 'photo' });
+          toast(which === 'ganesha' ? 'Ganesh ji photo added 🙏' : 'Couple photo added 💑');
+        } catch (err) { toast('That file is not a picture. Please choose a JPG or PNG photo.'); }
+      };
+      reader.readAsDataURL(f);
+    });
+  }
+  $('#stBrand').addEventListener('change', e => { if (!st.rec) setArt({ brand: e.target.checked }); else e.target.checked = !e.target.checked; });
+
+  // `video`: the look or story film the customer chose on the website, if any (it wins over the occasion's look);
+  // `lang`: the language they asked for.
+  function studioLoad(card, video, lang) {
     st.card = card;
-    const auto = Studio.defaults(st.card);
+    st.lang = lang === 'hi' || lang === 'en' ? lang : st.lang || 'en';
+    const auto = Studio.defaults(st.card, st.lang);
+    const kept = st.picked && st.opt;
+    const story = Studio.STORIES[video] ? video : kept ? st.opt.story : '';
     // The look the occasion suits, unless one was picked by hand in this visit
-    const look = Studio.LOOKS[video] ? video : st.picked && st.opt ? st.opt.look : auto.look;
-    st.opt = { ...auto, look, music: st.opt ? st.opt.music : 'look' };
+    const look = story ? Studio.STORIES[story].open : Studio.LOOKS[video] ? video : kept ? st.opt.look : auto.look;
+    st.opt = { ...auto, look, story, music: st.opt ? st.opt.music : 'look', ...studioArt() };
+    document.querySelectorAll('#stLang [data-lang]').forEach(b => b.classList.toggle('on', b.dataset.lang === st.lang));
     $('#stWho').textContent = `${who(st.card)} · ${occasion(st.card).label}`;
     $('#stBless').checked = st.opt.blessing;
     $('#stBlessText').value = st.opt.blessingText;
@@ -802,6 +869,7 @@
     if (st.player) refreshStudio();
   }
   const orderVideo = code => (code && (Catalog.readOrder(code) || {}).video) || '';
+  const orderLang = code => (code && (Catalog.readOrder(code) || {}).videoLang) || '';
   function orderCard(code) {
     const r = Catalog.readOrder(code);
     return { ...Core.blankCard(), ...r.card, theme: r.card.theme || design().no };
@@ -815,11 +883,12 @@
     $('#stOrder').innerHTML = (state.host1 ? `<option value="">✏️ The invite in the editor: ${esc(who(state))}</option>` : '') +
       orders.map(o => `<option value="${esc(o.code)}">${o.done ? '✓ ' : '🆕 '}${esc(o.name)} · ${esc(occasion(o).label)}${Catalog.refOf(o.code) ? ` · ${Catalog.refOf(o.code)}` : ''}</option>`).join('');
     $('#stOrderRow').hidden = !orders.length;
-    studioLoad(state.host1 ? clone(state) : orderCard(orders[0].code), state.host1 ? '' : orderVideo(orders[0].code));
+    studioLoad(state.host1 ? clone(state) : orderCard(orders[0].code), state.host1 ? '' : orderVideo(orders[0].code), state.host1 ? '' : orderLang(orders[0].code));
     $('#stVideo').hidden = $('#stDownload').hidden = true;
     stStatus('Watch it on the left, then make the video. It records in real time, so keep this tab open.');
     $('#studio').hidden = false;
     document.body.classList.add('studio-open');
+    showArt();
     await Studio.fontsReady();
     st.player = st.player || new Studio.Player(stCanvas);
     st.t = 0;
@@ -850,8 +919,9 @@
     document.querySelectorAll('#stEvents [data-ev]').forEach(b => b.classList.toggle('on', b.dataset.ev === st.opt.events));
     document.querySelectorAll('#stMusic [data-music]').forEach(b => b.classList.toggle('on', b.dataset.music === st.opt.music));
     const scene = Studio.LOOKS[st.opt.look].scene;
-    document.querySelectorAll('#stLooks [data-look]').forEach(b => b.classList.toggle('on', b.dataset.look === scene));
-    $('#stMoods').innerHTML = Object.entries(Studio.LOOKS).filter(([, L]) => L.scene === scene)
+    document.querySelectorAll('#stStories [data-story]').forEach(b => b.classList.toggle('on', b.dataset.story === st.opt.story));
+    document.querySelectorAll('#stLooks [data-look]').forEach(b => b.classList.toggle('on', !st.opt.story && b.dataset.look === scene));
+    $('#stMoods').innerHTML = st.opt.story ? '' : Object.entries(Studio.LOOKS).filter(([, L]) => L.scene === scene)
       .map(([id, L]) => `<button type="button" class="chip${id === st.opt.look ? ' on' : ''}" data-look="${id}">${esc(L.mood)}</button>`).join('');
   }
 
@@ -862,9 +932,14 @@
     if (box.children.length) return;
     box.innerHTML = Studio.SCENES.map(id => { const L = Studio.LOOKS[id];
       return `<button type="button" class="st-look" data-look="${id}" title="${esc(L.note)}"><canvas width="135" height="240"></canvas><span>${esc(L.name)}</span></button>`; }).join('');
+    $('#stStories').innerHTML = Object.entries(Studio.STORIES).map(([id, S]) =>
+      `<button type="button" class="st-look" data-story="${id}" data-look="${S.title}" title="${esc(S.note)} · ${esc(TUNES[S.tune].label)}"><canvas width="135" height="240"></canvas><span>${esc(S.name)}</span></button>`).join('');
+    $('#stMusic').innerHTML = [['look', 'The look’s own tune'], ...Object.entries(TUNES).map(([k, T]) => [k, T.label]), ['card', 'The card’s music box'], ['none', 'No music']]
+      .map(([k, label]) => `<button type="button" class="chip" data-music="${k}">${esc(label)}</button>`).join('');
     // Painted after the preview has started, one at a time in idle moments, so the preview never stalls
     const idle = fn => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 800 }) : setTimeout(fn, 60));
-    [...box.querySelectorAll('[data-look]')].forEach((b, i) => setTimeout(() => idle(() => Studio.thumb(b.dataset.look, b.querySelector('canvas'))), 1200 + i * 250));
+    [...box.querySelectorAll('[data-look]'), ...$('#stStories').querySelectorAll('[data-look]')]
+      .forEach((b, i) => setTimeout(() => idle(() => Studio.thumb(b.dataset.look, b.querySelector('canvas'))), 1200 + i * 250));
     refreshStudio();
   }
 
@@ -902,10 +977,20 @@
   const pickLook = e => {
     const b = e.target.closest('[data-look]');
     if (!b || st.rec) return;
-    st.opt.look = b.dataset.look;
+    st.opt.story = b.dataset.story || '';
+    st.opt.look = st.opt.story ? Studio.STORIES[st.opt.story].open : b.dataset.look;
     st.picked = true;
     refreshStudio();
+    if (previewSound && st.opt.music === 'look') soundOn();
   };
+  $('#stStories').addEventListener('click', pickLook);
+  // English or Hindi: every fixed word, the dates and times, and the invitation line follow
+  $('#stLang').addEventListener('click', e => {
+    const b = e.target.closest('[data-lang]');
+    if (!b || st.rec) return;
+    st.picked = true;
+    studioLoad(st.card, '', b.dataset.lang);
+  });
   $('#stLooks').addEventListener('click', pickLook);
   $('#stMoods').addEventListener('click', pickLook);
   $('#stEvents').addEventListener('click', e => {
@@ -928,7 +1013,7 @@
     const m = st.opt.music;
     if (m === 'none') return null;
     if (m === 'card') { const b = new MusicBox(design().tempo, design().song); return b.start() ? b : null; }
-    const t = new Tune(m === 'look' ? Studio.LOOKS[st.opt.look].music : m);
+    const t = new Tune(m === 'look' ? (st.opt.story ? Studio.STORIES[st.opt.story].tune : Studio.LOOKS[st.opt.look].music) : m);
     return t.start() ? t : null;
   }
   // 🔊 on the preview: hear the music while watching (it follows the music choice)
@@ -944,13 +1029,13 @@
 
   $('#stOrder').addEventListener('change', e => {
     if (st.rec) return;
-    studioLoad(e.target.value ? orderCard(e.target.value) : clone(state), orderVideo(e.target.value));
+    studioLoad(e.target.value ? orderCard(e.target.value) : clone(state), orderVideo(e.target.value), orderLang(e.target.value));
   });
   // One tap: take the chosen order's details and make the video straight away.
   $('#stAuto').addEventListener('click', () => {
     if (st.rec) return;
     const code = $('#stOrder').value;
-    studioLoad(code ? orderCard(code) : clone(state), orderVideo(code));
+    studioLoad(code ? orderCard(code) : clone(state), orderVideo(code), orderLang(code));
     const when = Core.parseDate(st.card.date);
     if (when && when < new Date(new Date().toDateString())) return stStatus('⚠️ This order’s date has already passed. Please check the date with the customer first.');
     makeStudioVideo();
@@ -999,7 +1084,7 @@
         try { blob = new Blob([MP4Fix.defragment(new Uint8Array(await blob.arrayBuffer()))], { type: 'video/mp4' }); } catch (e) { /* keep it as recorded */ }
       }
       const ext = type.includes('mp4') ? 'mp4' : 'webm';
-      const name = `${who(st.card)} ${Studio.LOOKS[st.opt.look].name} video.${ext}`.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ');
+      const name = `${who(st.card)} ${st.opt.story ? Studio.STORIES[st.opt.story].name : Studio.LOOKS[st.opt.look].name} ${st.lang === 'hi' ? 'Hindi' : 'English'} video.${ext}`.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ');
       const url = URL.createObjectURL(blob);
       const v = $('#stVideo');
       if (v.src) URL.revokeObjectURL(v.src);
