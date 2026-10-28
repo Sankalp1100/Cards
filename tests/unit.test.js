@@ -561,7 +561,7 @@ test.describe('Catalog', () => {
     const html = Catalog.poster(e, 'a', 'href="#"');
     assert.match(html, /^\s*<a class="poster ps-palace d-deco l-arch s-bokeh n-shimmer f-arch"/, 'the poster shows the design\'s own style and look');
     assert.match(html, /--fd:&quot;Cinzel&quot;, serif/, 'Palace Night lettering');
-    assert.match(html, /--fs:&quot;Great Vibes&quot;, cursive/, 'and its own fonts');
+    assert.match(html, /--fs:&quot;(Playball|Dancing Script|Satisfy|Cookie|Pacifico|Yellowtail)&quot;, cursive/, 'and its own fonts');
     assert.match(html, /<span class="p-by">by Sankalp<\/span>/, 'signed by the designer');
     assert.match(html, /🔥 Trending/);
     assert.match(html, /Diya<i>&amp;<\/i>Aarav/);
@@ -670,7 +670,7 @@ test.describe('Catalog', () => {
   test('premium sections are cleaned before they are shown (only safe colours, links and sizes)', () => {
     const x = Core.extras({
       story: [{ title: 'x'.repeat(500), when: 5 }, 'junk', null], gallery: ['javascript:alert(1)', 'https://a.com/p.jpg', 'data:text/html,hi'],
-      attire: [{ name: 'Haldi', colors: '#ffcc00, red, #12345, url(x)' }], upi: 'a b<script>@ok', rsvpForm: false
+      attire: [{ name: 'Haldi', colors: '#ffcc00, red, #12345, url(x)' }], upi: 'a b<script>@ok'
     });
     assert.equal(x.story.length, 1);
     assert.equal(x.story[0].title.length, 60);
@@ -678,7 +678,8 @@ test.describe('Catalog', () => {
     assert.deepEqual(plain(x.gallery), ['https://a.com/p.jpg']);
     assert.deepEqual(plain(x.attire[0].colors), ['#ffcc00']);
     assert.equal(x.upi, 'abscript@ok');
-    assert.equal(x.rsvpForm, false);
+    assert.equal(x.rsvpForm, false, 'no RSVP form unless switched on');
+    assert.equal(Core.extras({ rsvpForm: true }).rsvpForm, true);
   });
 
   test('the code survives WhatsApp for Windows mangling the message', () => {
@@ -791,7 +792,8 @@ test.describe('Video Studio', () => {
     const looks = story(c, { look: 'blush-ocean' }).scenes.filter(s => s.k === 'event').map(s => s.look);
     assert.equal(new Set(looks).size, looks.length, looks.join(', '));
     assert.ok(looks.every(l => Studio.LOOKS[l]), looks.join(', '));
-    assert.ok(looks.some(l => l.startsWith('haldi')) && looks.some(l => l.startsWith('mandap')), looks.join(', '));
+    const sceneOf = l => l.split('-')[0];
+    assert.ok(['haldi', 'vrindavan', 'clouds', 'rosegarden'].includes(sceneOf(looks[0])) && ['mandap', 'temple', 'lotusnight', 'diwali'].includes(sceneOf(looks[3])), looks.join(', '));
     for (const look of Object.keys(Studio.LOOKS)) {
       const sc = story(c, { look }).scenes;
       sc.forEach((s, i) => { if (s.k === 'event' && sc[i - 1].k === 'event') assert.notEqual(s.look, sc[i - 1].look, `${look}: two function screens in a row share ${s.look}`); });
@@ -865,7 +867,7 @@ test.describe('Video Studio', () => {
     assert.equal(Studio.phone('12345'), '');
   });
 
-  test('twelve story films: real looks for every part, a function takes the look its name suggests, each its own tune', () => {
+  test('twelve story films: real looks for every part, a function takes a scenery that suits it, each its own tune', () => {
     const { TUNES } = require(path.join(ROOT, 'js', 'tunes.js'));
     const films = Object.entries(Studio.STORIES);
     assert.equal(films.length, 12);
@@ -877,8 +879,32 @@ test.describe('Video Studio', () => {
       assert.ok(tl.total <= 60, `${id}: ${tl.total}s`);
     }
     const looks = story(card({ events: [{ name: '🌼 Haldi' }, { name: 'Mehendi Night' }, { name: 'Baraat' }] }), { story: 'story-night', events: 'each' }).scenes.filter(s => s.k === 'event').map(s => s.look);
-    assert.deepEqual(plain(looks), ['haldi', 'mehendi-rani', 'haveli']);
+    assert.ok(['haldi', 'vrindavan', 'clouds', 'rosegarden'].includes(looks[0].split('-')[0]), looks[0]);
+    assert.ok(['mehendi', 'rosegarden', 'jharokha', 'blush'].includes(looks[1].split('-')[0]), looks[1]);
+    assert.ok(['haveli', 'palace', 'marigold', 'diwali'].includes(looks[2].split('-')[0]), looks[2]);
     assert.ok(new Set(films.map(([, S]) => S.tune)).size >= 11, 'nearly every film sounds different');
+  });
+
+  test('variety: Haldi, Mehendi, Sangeet… look different from video to video (never the same in neighbouring videos)', () => {
+    const c = card({ families: [] }), isLight = L => { const m = String(L.shadow[0]).match(/\d+/g) || []; return m.length >= 3 && +m[0] > 200 && +m[1] > 200 && +m[2] > 200; };
+    const videos = [...Object.keys(Studio.STORIES).map(story => ({ story })), ...Object.keys(Studio.LOOKS).map(look => ({ look }))];
+    const seen = {};
+    let before = null;
+    for (const v of videos) {
+      const sc = story(c, { ...v, look: v.look || Studio.STORIES[v.story].open }).scenes, byName = {};
+      sc.forEach((s, i) => {
+        if (s.k !== 'event') return;
+        assert.ok(Studio.LOOKS[s.look], s.look);
+        assert.notEqual(s.look.split('-')[0], sc[i - 1].look && sc[i - 1].look.split('-')[0], `${v.story || v.look}: ${s.e.name} in the same scenery as the screen before`);
+        if (/Haldi|Mehendi/.test(s.e.name)) assert.ok(isLight(Studio.LOOKS[s.look]), `${s.e.name} is a daytime function: ${s.look}`);
+        if (/Sangeet|Reception/.test(s.e.name)) assert.ok(!isLight(Studio.LOOKS[s.look]), `${s.e.name} is an evening function: ${s.look}`);
+        byName[s.e.name] = s.look;
+        (seen[s.e.name] = seen[s.e.name] || new Set()).add(s.look);
+      });
+      if (before) for (const k in byName) assert.notEqual(byName[k], before[k], `${v.story || v.look}: ${k} the same as the video before`);
+      before = byName;
+    }
+    for (const [k, set] of Object.entries(seen)) assert.ok(set.size >= 40, `${k}: only ${set.size} different screens`);
   });
 
   test('variety: every look opens, changes scene and lays out its words in its own way', () => {

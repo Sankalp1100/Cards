@@ -360,6 +360,10 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     const href = await page.eval(`document.querySelector('#rsvpBtn').href`);
     assert.match(href, /^https:\/\/wa\.me\/919876543210\?text=/);
     assert.match(decodeURIComponent(href), /Neha here/);
+    // Just the button: no name, guests and meal form unless it is switched on for the card
+    assert.equal(await page.eval(`document.querySelectorAll('#rsvpForm input, #rsvpForm select').length`), 0, 'no RSVP form by default');
+    await page.goto(cardLink({ ...PRESETS.kitty.card, rsvp: '9876543210', rsvpForm: true }, '?auto'));
+    assert.ok(await page.eval(`!!document.querySelector('#rsvpForm [name=meal]')`), 'the form when switched on');
   });
 
   test('RSVP button is hidden when the number has no digits', async () => {
@@ -730,6 +734,8 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.eval(`document.querySelector('#orderPaste').value = ${JSON.stringify('Hi!\n' + (page.lastOrder || ''))}`);
     await page.eval(`document.querySelector('#orderFill').click()`);
     assert.match(await page.eval(`document.querySelector('#orderMsg').textContent`), /Filled: Diya & Aarav · Sangeet Night · design #010 · 2 guest links/);
+    assert.match(await page.eval(`document.querySelector('#orderMsg').textContent`), /^📥 Saved in the orders list above/);
+    assert.ok(await page.eval(`document.querySelector('#ordersList .order-item.on.flash')`), 'the new order is lit up in the list');
     assert.equal(await page.eval(`document.querySelector('#designNo').value`), '010');
     assert.equal(await page.eval(`document.querySelector('.occasion.on').dataset.type`), 'sangeet');
     assert.equal(await page.eval(`document.querySelector('[name=host1]').value`), 'Diya');
@@ -754,6 +760,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.eval(`document.querySelector('#orderPaste').value = ${JSON.stringify(page.lastOrder || '')}`);
     await page.eval(`document.querySelector('#orderFill').click()`);
     assert.equal(await page.eval(`document.querySelectorAll('#ordersList .order-item').length`), 1);
+    assert.match(await page.eval(`document.querySelector('#orderMsg').textContent`), /^📥 Already in the orders list above/);
     // Start from an empty editor, then tap the customer's name
     await page.eval(`document.querySelector('#clearBtn').click()`);
     assert.equal(await page.eval(`document.querySelector('[name=host1]').value`), '');

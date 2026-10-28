@@ -108,7 +108,7 @@
     if (added.length) jobs.push(DB.insert('orders', added.map(o => ({ id: o.id, code: o.code, names: o.name, occasion: o.type, design_no: o.design || null, event_date: o.date || '' }))));
     for (const o of before) if (!list.some(x => x.id === o.id)) jobs.push(DB.remove('orders', `id=eq.${o.id}`));
     for (const o of list) if (was.has(o.id) && was.get(o.id).done !== o.done) jobs.push(DB.update('orders', `id=eq.${o.id}`, { status: o.done ? 'done' : 'new' }));
-    Promise.all(jobs).catch(e => { toast(`Orders not saved: ${e.message}`); refreshOrders(); });
+    Promise.all(jobs).catch(e => { toast(`Orders not saved: ${e.message}`); $('#orderMsg').textContent = `⚠️ The order could not be saved in the list: ${e.message}`; refreshOrders(); });
   }
   async function refreshOrders() {
     if (!useDb || !DB.user) return;
@@ -119,13 +119,19 @@
     } catch (e) { /* keep the list we have */ }
   }
 
+  // Saves a pasted order at the top of the list (once), then shows it there: scrolled into view and lit up.
+  // Returns whether it is new.
   function rememberOrder(code, order) {
-    const list = loadOrders();
-    if (list.some(o => o.code === code)) { renderOrders(code); return; } // already in the list
-    const c = order.card;
-    list.unshift({ id: newId(), code, name: who(c), type: c.type, design: c.theme || '', date: c.date, received: Date.now(), done: false });
-    saveOrders(list);
+    const list = loadOrders(), known = list.some(o => o.code === code);
+    if (!known) {
+      const c = order.card;
+      list.unshift({ id: newId(), code, name: who(c), type: c.type, design: c.theme || '', date: c.date, received: Date.now(), done: false });
+      saveOrders(list);
+    }
     renderOrders(code);
+    const item = $('#ordersList .order-item.on');
+    if (item) { $('#ordersList').scrollTop = item.offsetTop - $('#ordersList').offsetTop - 8; item.classList.add('flash'); }
+    return !known;
   }
 
   // Everything the customer sent, written out the way the order message lists it (without the code line).
@@ -199,9 +205,10 @@
     const code = ref ? text : order.typed
       ? Catalog.orderCode({ ...order.card, design: order.card.theme || '', guests: order.guests, photo: order.photo, gallery: order.gallery, videoLang: order.videoLang })
       : text.match(/WC1\.[A-Za-z0-9_-]+/)[0];
-    rememberOrder(code, order);
+    const added = rememberOrder(code, order);
     $('#orderPaste').value = '';
     fillOrder(order);
+    $('#orderMsg').textContent = `${added ? '📥 Saved in the orders list above ↑' : '📥 Already in the orders list above ↑'} · ${$('#orderMsg').textContent}`;
   }
 
   function fillOrder(order) {
@@ -426,7 +433,7 @@
     showMobileHint(form.elements.rsvp);
     renderPhoto();
     form.elements.music.checked = state.music !== false;
-    form.elements.rsvpForm.checked = state.rsvpForm !== false;
+    form.elements.rsvpForm.checked = state.rsvpForm === true;
     renderXLists();
     const labels = occasion(state).labels;
     $('#lbl1').textContent = labels[0];

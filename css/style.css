@@ -39,7 +39,7 @@ small { color: var(--muted); font-weight: 400; }
 .mega .line:nth-child(2) { animation-delay: .12s; }
 .mega .line:nth-child(3) { animation-delay: .24s; }
 .mega em { font-style: normal; display: inline-block; animation: wobble 3s ease-in-out infinite; }
-.mega .script { font-family: 'Great Vibes', cursive; text-transform: none; font-weight: 400; letter-spacing: 0; font-size: .55em; color: var(--gold); margin-top: .15em; }
+.mega .script { font-family: 'Playball', cursive; text-transform: none; font-weight: 400; letter-spacing: 0; font-size: .55em; color: var(--gold); margin-top: .15em; }
 .gradient-text { background: var(--grad); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; }
 .sub { max-width: 58ch; color: var(--muted); font-size: clamp(1rem, 2.4vw, 1.15rem); animation: rise 1s .35s both; }
 .hero-ctas { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; animation: rise 1s .45s both; }
@@ -63,7 +63,7 @@ small { color: var(--muted); font-weight: 400; }
   transition: transform .3s ease-out;
 }
 .fcard span { font-size: 1.8rem; animation: bob 3s ease-in-out infinite; }
-.fcard b { font-family: 'Great Vibes', cursive; font-weight: 400; font-size: 1.5rem; }
+.fcard b { font-family: 'Playball', cursive; font-weight: 400; font-size: 1.5rem; }
 .fcard small { font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; }
 .fcard.c1 { left: 5%; top: 18%; --r: -8deg; --depth: 60; }
 .fcard.c2 { right: 6%; top: 22%; --r: 7deg; --depth: -50; }
@@ -238,7 +238,7 @@ textarea { resize: vertical; }
 .empty-note { text-align: center; padding: 30px 0; }
 .more-wrap { display: flex; justify-content: center; margin-top: 30px; }
 .p-title { font-size: .62rem; letter-spacing: .18em; text-transform: uppercase; opacity: .8; max-width: 22ch; }
-.p-names { font-family: 'Great Vibes', cursive; font-size: 2rem; line-height: 1.05; color: var(--a); display: grid; }
+.p-names { font-family: 'Playball', cursive; font-size: 2rem; line-height: 1.05; color: var(--a); display: grid; }
 .p-names i { font-style: normal; font-size: .55em; color: var(--a2); }
 .p-tag { font-size: .72rem; opacity: .85; max-width: 24ch; }
 .p-play { margin-top: 6px; padding: 6px 14px; border-radius: 999px; font-size: .75rem; font-weight: 700; background: var(--a); color: var(--b); transition: transform .2s; }
@@ -618,9 +618,9 @@ body[data-tab="trending"] :is(.hero, .marquee-wrap, .bento, #templates, .how, #o
 /* ---------- Posters show each design's own look: fonts, layout, background, frame and name finish ---------- */
 .p-body { position: relative; display: grid; justify-items: center; gap: 8px; max-width: 100%; }
 .p-title { font-family: var(--fd, inherit); }
-.p-names { font-family: var(--fs, 'Great Vibes'), cursive; }
+.p-names { font-family: var(--fs, 'Playball'), cursive; }
 .p-mono, .p-date { display: none; }
-.p-by { position: absolute; bottom: 8px; left: 0; right: 0; font: .9rem var(--fs, 'Great Vibes'), cursive; color: var(--a); opacity: .85; letter-spacing: .02em; }
+.p-by { position: absolute; bottom: 8px; left: 0; right: 0; font: .9rem var(--fs, 'Playball'), cursive; color: var(--a); opacity: .85; letter-spacing: .02em; }
 .p-play { margin-bottom: 10px; }
 
 /* The background, moving slowly (transforms only, so a page of posters stays smooth) */
@@ -682,7 +682,7 @@ body[data-tab="trending"] :is(.hero, .marquee-wrap, .bento, #templates, .how, #o
 .l-split .p-body { justify-items: start; text-align: left; padding-left: 12px; border-left: 3px solid var(--a); }
 .l-split { justify-items: stretch; }
 .l-editorial .p-names { font-family: var(--fd, inherit); font-weight: 700; text-transform: uppercase; font-size: min(1.6rem, 12cqw); line-height: 1; }
-.l-editorial .p-names i { font-family: var(--fs, 'Great Vibes'), cursive; text-transform: none; }
+.l-editorial .p-names i { font-family: var(--fs, 'Playball'), cursive; text-transform: none; }
 .l-editorial .p-date { display: block; position: absolute; inset: 18% 0 auto; z-index: -1; font: 700 clamp(4rem, 48cqw, 8rem)/1 var(--fd, inherit); color: transparent; -webkit-text-stroke: 1px var(--a); opacity: .3; }
 .l-editorial .p-date b { font-weight: inherit; }
 .l-orbit .p-emoji { position: relative; }
@@ -823,7 +823,7 @@ body.admin::before { display: none; }
 
 /* ---------- Posters in each design's style (js/themes.js STYLES) ---------- */
 /* Elegant styles: a gold monogram medallion instead of the emoji */
-.poster .p-medal { position: relative; display: grid; place-items: center; width: 62px; height: 62px; border-radius: 50%; font: 400 1.4rem/1 var(--fs, 'Great Vibes'), cursive;
+.poster .p-medal { position: relative; display: grid; place-items: center; width: 62px; height: 62px; border-radius: 50%; font: 400 1.4rem/1 var(--fs, 'Playball'), cursive;
   color: var(--a); border: 1.5px solid color-mix(in srgb, var(--a) 70%, transparent); box-shadow: 0 0 0 4px transparent, 0 0 0 5px color-mix(in srgb, var(--a) 35%, transparent); background: none; transform: none; padding: 0; }
 .poster .p-medal::after { content: ''; position: absolute; inset: -9px; border-radius: 50%; border: 1px dotted color-mix(in srgb, var(--a) 70%, transparent); animation: spinPoster 30s linear infinite; }
 .ps-ivory .p-medal, .ps-marigold .p-medal, .ps-pichwai .p-medal { color: var(--a2); border-color: var(--a2); }

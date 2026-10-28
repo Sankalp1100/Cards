@@ -1,7 +1,7 @@
 :root {
   --bg: #2b0a14; --bg2: #5c0f24; --ink: #fbeedd; --muted: #e8cfa9;
   --accent: #e9b949; --accent2: #ff8f3f; --card: rgba(255,255,255,.06); --line: rgba(233,185,73,.25);
-  --display: 'Cinzel Decorative', serif; --script: 'Great Vibes', cursive; --body: 'Cormorant Garamond', serif;
+  --display: 'Cinzel Decorative', serif; --script: 'Playball', cursive; --body: 'Cormorant Garamond', serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }

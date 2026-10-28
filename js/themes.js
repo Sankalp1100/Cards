@@ -2,13 +2,13 @@
 // A template's number (#001–#200) never changes, because card links store it.
 
 const FONT_SETS = {
-  regal: { display: "'Cinzel Decorative', serif", script: "'Great Vibes', cursive", body: "'Cormorant Garamond', serif" },
-  garden: { display: "'Playfair Display', serif", script: "'Parisienne', cursive", body: "'Cormorant Garamond', serif" },
+  regal: { display: "'Cinzel Decorative', serif", script: "'Playball', cursive", body: "'Cormorant Garamond', serif" },
+  garden: { display: "'Playfair Display', serif", script: "'Dancing Script', cursive", body: "'Cormorant Garamond', serif" },
   retro: { display: "'Righteous', sans-serif", script: "'Pacifico', cursive", body: "'Poppins', sans-serif" },
   playful: { display: "'Fredoka', sans-serif", script: "'Pacifico', cursive", body: "'Fredoka', sans-serif" },
-  modern: { display: "'Playfair Display', serif", script: "'Great Vibes', cursive", body: "'Poppins', sans-serif" },
-  heritage: { display: "'Marcellus', serif", script: "'Alex Brush', cursive", body: "'Lora', serif" },
-  dreamy: { display: "'Marcellus', serif", script: "'Pinyon Script', cursive", body: "'Cormorant Garamond', serif" },
+  modern: { display: "'Playfair Display', serif", script: "'Playball', cursive", body: "'Poppins', sans-serif" },
+  heritage: { display: "'Marcellus', serif", script: "'Cookie', cursive", body: "'Lora', serif" },
+  dreamy: { display: "'Marcellus', serif", script: "'Satisfy', cursive", body: "'Cormorant Garamond', serif" },
   festive: { display: "'Yatra One', serif", script: "'Dancing Script', cursive", body: "'Poppins', sans-serif" },
   soft: { display: "'Baloo 2', sans-serif", script: "'Dancing Script', cursive", body: "'Baloo 2', sans-serif" }
 };
@@ -96,14 +96,14 @@ const CLASSICS = [
   {
     key: 'haldi', style: 'marigold', hue: 22, name: 'Haldi Sunshine', emoji: '🌼', occasion: 'ceremony', decor: 'sunburst', layout: 'split', nameStyle: 'duo', cardStyle: 'soft', intro: 'scroll', scene: 'bokeh', nameFx: 'stamp', frame: 'polaroid', reveal: 'slide',
     vars: { '--bg': '#fff7d6', '--bg2': '#ffe08a', '--ink': '#5b3200', '--muted': '#8a5a10', '--accent': '#d97706', '--accent2': '#e11d48', '--card': 'rgba(255,255,255,.55)', '--line': 'rgba(217,119,6,.25)' },
-    fonts: { display: "'Playfair Display', serif", script: "'Great Vibes', cursive", body: "'Cormorant Garamond', serif" },
+    fonts: { display: "'Playfair Display', serif", script: "'Playball', cursive", body: "'Cormorant Garamond', serif" },
     particles: { types: ['marigold', 'petal'], colors: ['#ffb703', '#fb8500', '#ffd60a', '#ff7b00'], count: 40 },
     tempo: 0.26
   },
   {
     key: 'mehendi', style: 'mehendi', hue: 140, name: 'Mehendi Green', emoji: '🌿', occasion: 'wedding', decor: 'lace', layout: 'arch', nameStyle: 'shimmer', cardStyle: 'outline', intro: 'doors', scene: 'silk', nameFx: 'rise', frame: 'arch', reveal: 'wipe',
     vars: { '--bg': '#10261a', '--bg2': '#24513a', '--ink': '#f2efdc', '--muted': '#c9d6b4', '--accent': '#d4b46a', '--accent2': '#a7c957', '--card': 'rgba(255,255,255,.06)', '--line': 'rgba(212,180,106,.25)' },
-    fonts: { display: "'Cinzel Decorative', serif", script: "'Parisienne', cursive", body: "'Cormorant Garamond', serif" },
+    fonts: { display: "'Cinzel Decorative', serif", script: "'Dancing Script', cursive", body: "'Cormorant Garamond', serif" },
     particles: { types: ['leaf', 'petal'], colors: ['#6a994e', '#a7c957', '#f2e8cf', '#bc4749'], count: 36 },
     tempo: 0.3
   },
@@ -124,7 +124,7 @@ const CLASSICS = [
   {
     key: 'baby', style: 'toybox', hue: 215, name: 'Baby Cloud', emoji: '🍼', occasion: 'babyshower', decor: 'stars', layout: 'split', nameStyle: 'solid', cardStyle: 'pill', intro: 'giftbox', flavor: 'playful', scene: 'bokeh', nameFx: 'rise', frame: 'blob', reveal: 'up',
     vars: { '--bg': '#f2f7ff', '--bg2': '#fde8f1', '--ink': '#38456b', '--muted': '#6b7699', '--accent': '#7b9fe0', '--accent2': '#f29bbf', '--card': 'rgba(255,255,255,.7)', '--line': 'rgba(123,159,224,.25)' },
-    fonts: { display: "'Fredoka', sans-serif", script: "'Parisienne', cursive", body: "'Poppins', sans-serif" },
+    fonts: { display: "'Fredoka', sans-serif", script: "'Dancing Script', cursive", body: "'Poppins', sans-serif" },
     particles: { types: ['heart', 'sparkle', 'balloon'], colors: ['#a9c6ff', '#f9b9d2', '#fff1a8', '#c7f0db'], count: 38 },
     tempo: 0.3
   },
@@ -138,7 +138,7 @@ const CLASSICS = [
   {
     key: 'bollywood', style: 'retro', hue: 8, name: 'Filmy Bollywood', emoji: '🎬', occasion: 'sangeet', decor: 'sunburst', layout: 'ticket', nameStyle: 'outline', cardStyle: 'sharp', intro: 'curtains', scene: 'rays', nameFx: 'type', frame: 'polaroid', reveal: 'slide',
     vars: { '--bg': '#140500', '--bg2': '#7a1a00', '--ink': '#fff3dc', '--muted': '#ffd59a', '--accent': '#ffcc00', '--accent2': '#ff3c00', '--card': 'rgba(255,204,0,.07)', '--line': 'rgba(255,204,0,.35)' },
-    fonts: { display: "'Righteous', sans-serif", script: "'Great Vibes', cursive", body: "'Poppins', sans-serif" },
+    fonts: { display: "'Righteous', sans-serif", script: "'Playball', cursive", body: "'Poppins', sans-serif" },
     particles: { types: ['marigold', 'sparkle'], colors: ['#ffcc00', '#ff7a00', '#ff3c00', '#fff1b8'], count: 45, fireworks: true },
     tempo: 0.22
   },
@@ -359,7 +359,7 @@ const pal = (vars, colors) => ({ vars, colors });
 const STYLES = {
   ivory: {
     label: 'Royal Ivory', emblem: true,
-    fonts: { display: "'Cormorant Garamond', serif", script: "'Pinyon Script', cursive", body: "'Jost', sans-serif" },
+    fonts: { display: "'Cormorant Garamond', serif", script: "'Satisfy', cursive", body: "'Jost', sans-serif" },
     look: { nameStyle: 'solid', cardStyle: 'soft', nameFx: 'rise', frame: 'ring', reveal: 'up', events: 'cards', countdown: 'boxes', titles: 'flourish', scene: 'glow' },
     variants: [{ layout: 'classic', decor: 'mandala' }, { layout: 'arch', decor: 'mandala' }, { layout: 'monogram', decor: 'frame' }],
     motifs: ['toran', 'garland', 'bells'], intros: ['envelope', 'cardflip'], venues: ['palace', 'garden', 'temple'], particles: { types: ['petal'], count: 18 },
@@ -371,7 +371,7 @@ const STYLES = {
   },
   palace: {
     label: 'Palace Night', emblem: true,
-    fonts: { display: "'Cinzel', serif", script: "'Great Vibes', cursive", body: "'Cormorant Garamond', serif" },
+    fonts: { display: "'Cinzel', serif", script: "'Playball', cursive", body: "'Cormorant Garamond', serif" },
     look: { nameStyle: 'shimmer', cardStyle: 'outline', nameFx: 'blur', frame: 'arch', reveal: 'zoom', events: 'tickets', countdown: 'rings', titles: 'lines', scene: 'bokeh' },
     variants: [{ layout: 'arch', decor: 'deco' }, { layout: 'classic', decor: 'lights' }, { layout: 'split', decor: 'stars' }],
     motifs: ['lanterns', 'bells'], intros: ['doors', 'curtains'], venues: ['palace', 'city'], particles: { types: ['sparkle'], count: 28 },
@@ -383,7 +383,7 @@ const STYLES = {
   },
   bloom: {
     label: 'Bloom', emblem: true,
-    fonts: { display: "'Playfair Display', serif", script: "'Parisienne', cursive", body: "'Jost', sans-serif" },
+    fonts: { display: "'Playfair Display', serif", script: "'Dancing Script', cursive", body: "'Jost', sans-serif" },
     look: { nameStyle: 'duo', cardStyle: 'pill', nameFx: 'blur', frame: 'arch', reveal: 'up', events: 'cards', countdown: 'rings', titles: 'bar', scene: 'aurora' },
     variants: [{ layout: 'arch', decor: 'florals' }, { layout: 'classic', decor: 'florals' }, { layout: 'split', decor: 'blobs' }],
     motifs: ['garland'], intros: ['cardflip', 'envelope'], venues: ['garden', 'home'], particles: { types: ['petal'], count: 22 },
@@ -395,7 +395,7 @@ const STYLES = {
   },
   minimal: {
     label: 'Modern Minimal', emblem: false,
-    fonts: { display: "'DM Serif Display', serif", script: "'Pinyon Script', cursive", body: "'Jost', sans-serif" },
+    fonts: { display: "'DM Serif Display', serif", script: "'Satisfy', cursive", body: "'Jost', sans-serif" },
     look: { nameStyle: 'solid', cardStyle: 'sharp', nameFx: 'rise', frame: 'ring', reveal: 'blur', events: 'chapters', countdown: 'minimal', titles: 'lines', scene: 'none' },
     variants: [{ layout: 'editorial', decor: 'frame' }, { layout: 'classic', decor: 'frame' }, { layout: 'split', decor: 'frame' }],
     motifs: ['none'], intros: ['cardflip', 'envelope'], venues: ['city', 'garden'], particles: { types: ['confetti'], count: 6 },
@@ -407,7 +407,7 @@ const STYLES = {
   },
   marigold: {
     label: 'Marigold', emblem: true,
-    fonts: { display: "'Marcellus', serif", script: "'Alex Brush', cursive", body: "'Lora', serif" },
+    fonts: { display: "'Marcellus', serif", script: "'Cookie', cursive", body: "'Lora', serif" },
     look: { nameStyle: 'solid', cardStyle: 'soft', nameFx: 'rise', frame: 'halo', reveal: 'up', events: 'timeline', countdown: 'boxes', titles: 'flourish', scene: 'glow' },
     variants: [{ layout: 'classic', decor: 'sunburst' }, { layout: 'arch', decor: 'lace' }, { layout: 'ticket', decor: 'lace' }],
     motifs: ['toran', 'diyas'], intros: ['scroll', 'doors'], venues: ['temple', 'home', 'palace'], particles: { types: ['marigold', 'petal'], count: 24 },
@@ -419,7 +419,7 @@ const STYLES = {
   },
   mehendi: {
     label: 'Mehendi', emblem: true,
-    fonts: { display: "'Marcellus', serif", script: "'Great Vibes', cursive", body: "'Cormorant Garamond', serif" },
+    fonts: { display: "'Marcellus', serif", script: "'Playball', cursive", body: "'Cormorant Garamond', serif" },
     look: { nameStyle: 'shimmer', cardStyle: 'soft', nameFx: 'blur', frame: 'arch', reveal: 'wipe', events: 'zigzag', countdown: 'strip', titles: 'flourish', scene: 'silk' },
     variants: [{ layout: 'arch', decor: 'lace' }, { layout: 'classic', decor: 'florals' }, { layout: 'monogram', decor: 'lace' }],
     motifs: ['bells', 'garland'], intros: ['doors', 'scroll'], venues: ['garden', 'palace'], particles: { types: ['leaf', 'petal'], count: 20 },
@@ -432,7 +432,7 @@ const STYLES = {
   },
   pichwai: {
     label: 'Pichwai Lotus', emblem: true,
-    fonts: { display: "'Gilda Display', serif", script: "'Pinyon Script', cursive", body: "'Jost', sans-serif" },
+    fonts: { display: "'Gilda Display', serif", script: "'Satisfy', cursive", body: "'Jost', sans-serif" },
     look: { nameStyle: 'solid', cardStyle: 'outline', nameFx: 'rise', frame: 'halo', reveal: 'zoom', events: 'cards', countdown: 'rings', titles: 'lines', scene: 'glow' },
     variants: [{ layout: 'classic', decor: 'mandala' }, { layout: 'arch', decor: 'stars' }, { layout: 'split', decor: 'mandala' }],
     motifs: ['bells', 'diyas'], intros: ['scroll', 'envelope'], venues: ['temple', 'palace'], particles: { types: ['petal'], count: 18 },

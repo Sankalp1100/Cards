@@ -198,7 +198,7 @@ const Studio = (() => {
     if (Core.parseDate(card.date) || clean(card.venue)) S.push({ k: 'date', d: 5.5 });
     S.push({ k: 'end', d: 6 });
     S.push({ k: 'final', d: 5, sigCorner: opt.signature !== false });
-    if (opt.story && STORIES[opt.story]) storyLooks(S, STORIES[opt.story]);
+    if (opt.story && STORIES[opt.story]) storyLooks(S, STORIES[opt.story], opt.story);
     else eventLooks(S, opt.look);
     let t = 0;
     S.forEach(s => { s.t0 = t; t += s.d; });
@@ -312,38 +312,52 @@ const Studio = (() => {
     'story-sacred': { name: 'Sacred Blessings', note: 'Temple lamps, kalash and diyas', tune: 'calm',
       open: 'temple', title: 'temple-lamps', invite: 'haveli', events: ['temple', 'mandap', 'diwali'], date: 'haveli', end: 'temple-sandal', final: 'diwali' }
   };
-  const EVENT_LOOKS = [[/haldi|pithi|ubtan/i, 'haldi'], [/mehe?n?d/i, 'mehendi-rani'], [/sangeet|dance|dj|garba|dandiya|cocktail/i, 'lights'],
-    [/baraat|barat|ghud|ghod|sehra/i, 'haveli'], [/phera|vivah|wedding|varmala|jaimala|mandap|shaadi/i, 'mandap'],
-    [/reception|dinner|bhoj|swagat/i, 'palace'], [/puja|pooja|havan|ganesh|katha|aarti/i, 'temple'], [/cake|party|games/i, 'party']];
-  function storyLooks(S, st) {
-    let n = 0;
+  function storyLooks(S, st, key) {
+    let n = 0, f = 0, prev = '';
     S.forEach(s => {
-      const byName = s.k === 'event' && (EVENT_LOOKS.find(([re]) => re.test(s.e.name)) || [])[1];
+      const byName = s.k === 'event' && eventLook(s.e.name, videoNo(key), f++, prev, false);
       s.look = byName || ({ open: st.open, title: st.title, invite: st.invite, date: st.date, end: st.end, final: st.final })[s.k]
         || st.events[n++ % st.events.length];
       if (!LOOKS[s.look]) s.look = s.look.split('-')[0]; // a mood a scene does not have: its own first look
+      prev = s.look.split('-')[0];
     });
   }
 
-  // In a look's video every function is its own screen in the scenery its name suggests (Haldi in the haldi courtyard,
-  // Mehendi in the mehendi garden, Pheras at the mandap…), in the look's own mood where that scenery has it; a function
-  // with no such name takes the next of a few other sceneries. Two screens in a row never share one.
-  const EVENT_SPARE = ['rosegarden', 'jharokha', 'lotusnight', 'marigold', 'vrindavan', 'himalaya'];
+  // Every function is its own screen, and the same function looks different from video to video: each has a few
+  // sceneries that suit it, and each scenery 15 moods, so a Haldi screen comes round again only after ~60 videos.
+  // Video n takes the scenery n (in turn) in mood n / sceneries, so neighbouring videos never share one; two screens
+  // in a row in one video never share a scenery either.
+  // (A daytime function takes only the light moods, an evening one only the dark ones.)
+  const EVENT_SCENES = [[/haldi|pithi|ubtan/i, ['haldi', 'vrindavan', 'clouds', 'rosegarden'], 'day'],
+    [/mehe?n?d/i, ['mehendi', 'rosegarden', 'jharokha', 'blush'], 'day'],
+    [/sangeet|dance|dj|garba|dandiya|cocktail/i, ['lights', 'disco', 'party', 'galaxy'], 'night'],
+    [/baraat|barat|ghud|ghod|sehra/i, ['haveli', 'palace', 'marigold', 'diwali']],
+    [/phera|vivah|wedding|varmala|jaimala|mandap|shaadi/i, ['mandap', 'temple', 'lotusnight', 'diwali']],
+    [/reception|dinner|bhoj|swagat/i, ['palace', 'galaxy', 'lights', 'diwali'], 'night'],
+    [/puja|pooja|havan|ganesh|katha|aarti/i, ['temple', 'lotusnight', 'diwali', 'himalaya']],
+    [/cake|party|games/i, ['party', 'disco', 'lights', 'beach']]];
+  const EVENT_SPARE = ['rosegarden', 'jharokha', 'lotusnight', 'marigold', 'vrindavan', 'himalaya', 'clouds', 'beach'];
+  const moodsOf = scene => Object.keys(LOOKS).filter(id => id === scene || id.startsWith(scene + '-'));
+  // A video's place among the story films and the looks (as the couples and songs are given out)
+  const videoNo = key => Math.max(0, [...Object.keys(STORIES), ...Object.keys(LOOKS)].indexOf(key));
+  // The look for function number `f` of video `n`, not in scenery `avoid` (a name it does not know: a spare scenery, or null)
+  function eventLook(name, n, f, avoid, spare = true) {
+    const [, named, when] = EVENT_SCENES.find(([re]) => re.test(name)) || [], pool = named || (spare ? EVENT_SPARE : null);
+    if (!pool) return null;
+    let scene = pool[(n + f * (pool === EVENT_SPARE ? 3 : 0)) % pool.length];
+    // Two places on, not one: the next scenery is the neighbouring video's own
+    if (scene === avoid) scene = pool[(pool.indexOf(scene) + 2) % pool.length];
+    const all = moodsOf(scene), fit = all.filter(id => !when || isLight(LOOKS[id]) === (when === 'day')), moods = fit.length ? fit : all;
+    return moods.length ? moods[(Math.floor(n / pool.length) * 7 + f * 4) % moods.length] : null;
+  }
   function eventLooks(S, look) {
-    if (!LOOKS[look]) return;
-    const base = look.split('-')[0], mood = look.slice(base.length + 1);
-    const inMood = scene => (mood && LOOKS[`${scene}-${mood}`] ? `${scene}-${mood}` : LOOKS[scene] ? scene : null);
-    let prev = base, spare = 0;
-    if (!S.some(s => s.k === 'event')) return;
+    if (!LOOKS[look] || !S.some(s => s.k === 'event')) return;
+    const n = videoNo(look);
+    let prev = look.split('-')[0], f = 0;
     S.forEach(s => {
       if (s.k !== 'event') { s.look = look; return; } // the look's own scenery, so a function screen fades in and out of it
-      const named = (EVENT_LOOKS.find(([re]) => re.test(s.e.name)) || [])[1];
-      let scene = named && named.split('-')[0];
-      if (!scene || scene === prev) {
-        do scene = EVENT_SPARE[spare++ % EVENT_SPARE.length]; while ((scene === prev || scene === base) && spare < 40);
-      }
-      s.look = inMood(scene) || look;
-      prev = scene;
+      s.look = eventLook(s.e.name, n, f++, prev) || look;
+      prev = s.look.split('-')[0];
     });
   }
 
@@ -1011,7 +1025,7 @@ const Studio = (() => {
       name: 'Vrindavan Garden', mood: 'Morning', note: 'Forest light, peacock, flute & feather',
       col: { names: '#b0285e', ink: '#3b3016', ink2: '#5a4a28', accent: '#2f6b3a', gold: '#b8862b' },
       mono: [['#f28bb2', '#c2185b'], ['#3a6fd8', '#14306e']],
-      font: { script: 'Parisienne', serif: 'Marcellus' }, zone: [400, 1440, 820], shadow: ['rgba(255,252,235,.9)', 14], music: 'romantic',
+      font: { script: 'Dancing Script', serif: 'Marcellus' }, zone: [400, 1440, 820], shadow: ['rgba(255,252,235,.9)', 14], music: 'romantic',
       back(c, R, m) {
         sky(c, [[0, '#fbf6d8'], [.3, '#eef1c8'], [.62, '#b4cb8c'], [1, '#5f7f3e']]);
         for (const [y, l, n] of [[1150, 62, 500], [1250, 55, 500]]) {
@@ -1086,7 +1100,7 @@ const Studio = (() => {
       name: 'Royal Jharokha', mood: 'Ivory', note: 'Carved arch, peacocks, lotus urli',
       col: { names: '#c8436e', ink: '#2c4529', ink2: '#4c5b3a', accent: '#2f6b3a', gold: '#b88a2e' },
       mono: [['#f08aab', '#c2185b'], ['#46a06a', '#1f5a3a']],
-      font: { script: 'Great Vibes', serif: 'Marcellus' }, zone: [450, 1380, 600], shadow: ['rgba(255,252,235,.9)', 12], music: 'royal',
+      font: { script: 'Playball', serif: 'Marcellus' }, zone: [450, 1380, 600], shadow: ['rgba(255,252,235,.9)', 12], music: 'royal',
       back(c, R, m) {
         const l = 200, r = 880, spring = 760, apex = 290;
         sky(c, [[0, '#f7f4e0'], [.45, '#e6edcc'], [.75, '#bdd29b'], [1, '#93b273']]);
@@ -1163,7 +1177,7 @@ const Studio = (() => {
       name: 'Lotus Night', mood: 'Moonlit', note: 'Moonlit pond, floating diyas',
       col: { names: '#f7d58b', ink: '#f6eedc', ink2: '#d6caa8', accent: '#f4a9c6', gold: '#e9c46a' },
       mono: [['#fff1c1', '#d4a24c'], ['#fbd0e2', '#d96c9a']],
-      font: { script: 'Pinyon Script', serif: 'Gilda Display' }, zone: [360, 1240, 860], shadow: ['rgba(3,8,25,.85)', 16], music: 'royal',
+      font: { script: 'Satisfy', serif: 'Gilda Display' }, zone: [360, 1240, 860], shadow: ['rgba(3,8,25,.85)', 16], music: 'royal',
       back(c, R, m) {
         sky(c, [[0, '#060f26'], [.42, '#0f2850'], [.615, '#1f4474']], 0, 1180);
         for (let i = 0; i < 220; i++) { c.globalAlpha = .3 + R() * .7; c.fillStyle = '#fff'; c.beginPath(); c.arc(R() * W, R() * 1100, .8 + R() * 2, 0, TAU); c.fill(); }
@@ -1212,7 +1226,7 @@ const Studio = (() => {
       name: 'Marigold Mandap', mood: 'Maroon', note: 'Genda garlands, bells, rangoli',
       col: { names: '#ffd27a', ink: '#fff2dc', ink2: '#f5d3a6', accent: '#ffb347', gold: '#f2c14e' },
       mono: [['#ffe29a', '#f2a900'], ['#ffb38a', '#ff6a3c']],
-      font: { script: 'Alex Brush', serif: 'Gilda Display' }, zone: [470, 1460, 760], shadow: ['rgba(40,0,8,.85)', 14], music: 'festive',
+      font: { script: 'Cookie', serif: 'Gilda Display' }, zone: [470, 1460, 760], shadow: ['rgba(40,0,8,.85)', 14], music: 'festive',
       back(c, R, m) {
         const bg = m.bg || ['#951a2c', '#5c0b19', '#2c040e'];
         const g = c.createRadialGradient(540, 900, 50, 540, 900, 1200); g.addColorStop(0, bg[0]); g.addColorStop(.6, bg[1]); g.addColorStop(1, bg[2]);
@@ -1263,7 +1277,7 @@ const Studio = (() => {
       name: 'Palace Dusk', mood: 'Sunset', note: 'Lake palace at sunset, sky lanterns',
       col: { names: '#ffe3a3', ink: '#fff6ea', ink2: '#f7dcc6', accent: '#ffb08a', gold: '#f4c76b' },
       mono: [['#fff0c8', '#e0a84a'], ['#ffd1dc', '#e66b8f']],
-      font: { script: 'Great Vibes', serif: 'Cinzel' }, zone: [280, 1000, 860], shadow: ['rgba(30,10,40,.8)', 16], music: 'royal',
+      font: { script: 'Playball', serif: 'Cinzel' }, zone: [280, 1000, 860], shadow: ['rgba(30,10,40,.8)', 16], music: 'royal',
       back(c, R, m) {
         sky(c, m.sky || [[0, '#1b1240'], [.28, '#45286a'], [.5, '#a8497a'], [.64, '#ee8a5c'], [.73, '#ffc27c']], 0, 1400);
         glow(c, 540, 1330, 520, 'rgba(255,200,120,.55)');
@@ -1335,7 +1349,7 @@ const Studio = (() => {
       name: 'Blush Floral', mood: 'Blush', note: 'Watercolour roses, gold arch',
       col: { names: '#a8436a', ink: '#553943', ink2: '#7a5c66', accent: '#b98352', gold: '#c9a063' },
       mono: [['#eaa5ba', '#b4527a'], ['#d9b47a', '#9a7440']],
-      font: { script: 'Pinyon Script', serif: 'Gilda Display' }, zone: [440, 1460, 720], shadow: ['rgba(255,250,246,.95)', 10], music: 'calm',
+      font: { script: 'Satisfy', serif: 'Gilda Display' }, zone: [440, 1460, 720], shadow: ['rgba(255,250,246,.95)', 10], music: 'calm',
       back(c, R, m) {
         const ro = m.roses || [['#fde3ea', '#e48aa6'], ['#fff3f0', '#e7b9b0'], ['#f9d6df', '#c9708f']];
         c.fillStyle = m.paper || '#fbf2ec'; c.fillRect(0, 0, W, H);
@@ -1377,7 +1391,7 @@ const Studio = (() => {
       name: 'Temple Gateway', mood: 'Sunrise', note: 'Gopuram, banana leaves, jasmine, brass lamps',
       col: { names: '#9b1d20', ink: '#3b1f0e', ink2: '#5a3a1c', accent: '#a0521d', gold: '#b8862b' },
       mono: [['#e0583a', '#9b1d20'], ['#e9b949', '#a0681d']],
-      font: { script: 'Great Vibes', serif: 'Marcellus' }, zone: [380, 1330, 720], shadow: ['rgba(255,248,232,.92)', 14], music: 'royal',
+      font: { script: 'Playball', serif: 'Marcellus' }, zone: [380, 1330, 720], shadow: ['rgba(255,248,232,.92)', 14], music: 'royal',
       back(c, R, m) {
         sky(c, m.sky || [[0, '#fde8bd'], [.45, '#f7c886'], [.75, '#eb9a5a'], [1, '#c8643a']]);
         glow(c, 540, 760, 560, 'rgba(255,244,214,.75)');
@@ -1417,7 +1431,7 @@ const Studio = (() => {
       name: 'Haveli Doors', mood: 'Sandstone', note: 'Carved doors open onto a lit courtyard',
       col: { names: '#8a1c1c', ink: '#3a2414', ink2: '#5c4027', accent: '#a0522d', gold: '#b8862b' },
       mono: [['#d9534f', '#8a1c1c'], ['#e9b949', '#9a6a1a']],
-      font: { script: 'Alex Brush', serif: 'Gilda Display' }, zone: [470, 1400, 600], shadow: ['rgba(255,246,226,.9)', 12], music: 'royal',
+      font: { script: 'Cookie', serif: 'Gilda Display' }, zone: [470, 1400, 600], shadow: ['rgba(255,246,226,.9)', 12], music: 'royal',
       back(c, R, m) {
         const wall = m.wall || '#e7c08e', wall2 = m.wall2 || '#c9945c', wood = m.wood || ['#3a160a', '#7a3518', '#3a160a'];
         const wg = c.createLinearGradient(0, 0, W, 0); wg.addColorStop(0, wall2); wg.addColorStop(.5, wall); wg.addColorStop(1, wall2);
@@ -1472,7 +1486,7 @@ const Studio = (() => {
       name: 'Mehendi Mandala', mood: 'Henna', note: 'Henna mandala, paisleys and lace borders',
       col: { names: '#7a2e0e', ink: '#4a2a12', ink2: '#6b4a2a', accent: '#3f6b2a', gold: '#a86f22' },
       mono: [['#c0612a', '#7a2e0e'], ['#6b9a3a', '#2f5a1a']],
-      font: { script: 'Pinyon Script', serif: 'Marcellus' }, zone: [420, 1460, 760], shadow: ['rgba(250,244,226,.95)', 12], music: 'festive',
+      font: { script: 'Satisfy', serif: 'Marcellus' }, zone: [420, 1460, 760], shadow: ['rgba(250,244,226,.95)', 12], music: 'festive',
       back(c, R, m) {
         const bg = m.bg || ['#f6efd9', '#e6d6ad'], line = m.line || '#8a3b12';
         const g = c.createRadialGradient(540, 900, 80, 540, 900, 1150); g.addColorStop(0, bg[0]); g.addColorStop(1, bg[1]);
@@ -1545,7 +1559,7 @@ const Studio = (() => {
       name: 'Beach Sunset', mood: 'Golden Shore', note: 'Sea at sunset, palms, gulls and fairy lights',
       col: { names: '#b83a4b', ink: '#4a2a2a', ink2: '#6a4040', accent: '#c25a2a', gold: '#c08a3a' },
       mono: [['#ff9a8b', '#c2185b'], ['#ffc46b', '#d9772a']],
-      font: { script: 'Great Vibes', serif: 'Gilda Display' }, zone: [300, 1060, 840], shadow: ['rgba(255,244,230,.9)', 14], music: 'romantic',
+      font: { script: 'Playball', serif: 'Gilda Display' }, zone: [300, 1060, 840], shadow: ['rgba(255,244,230,.9)', 14], music: 'romantic',
       back(c, R, m) {
         sky(c, m.sky || [[0, '#ffb39a'], [.35, '#ffd2a8'], [.6, '#ffe7c0']], 0, 1160);
         glow(c, 540, 1150, 520, 'rgba(255,230,170,.75)');
@@ -1577,7 +1591,7 @@ const Studio = (() => {
       name: 'Himalayan Mandap', mood: 'Snow Peaks', note: 'Snowy mountains, pines, prayer flags',
       col: { names: '#7a2e3a', ink: '#2c3a4a', ink2: '#4a5a6a', accent: '#2f6b5a', gold: '#a8782a' },
       mono: [['#d9617a', '#7a2e3a'], ['#5fa8a0', '#2f6b5a']],
-      font: { script: 'Parisienne', serif: 'Marcellus' }, zone: [420, 1380, 820], shadow: ['rgba(250,252,255,.9)', 14], music: 'romantic',
+      font: { script: 'Dancing Script', serif: 'Marcellus' }, zone: [420, 1380, 820], shadow: ['rgba(250,252,255,.9)', 14], music: 'romantic',
       back(c, R, m) {
         sky(c, m.sky || [[0, '#bcd7f0'], [.45, '#e8f0f6'], [1, '#f6f1e6']]);
         range(c, R, 900, 380, 8, '#9fb6cf', '#ffffff');
@@ -1611,7 +1625,7 @@ const Studio = (() => {
       name: 'Fairy-light Garden', mood: 'Twilight', note: 'String lights and paper lanterns over a lawn at night',
       col: { names: '#ffe2a0', ink: '#f6efdc', ink2: '#d9d0b8', accent: '#9fe0c0', gold: '#f2c46a' },
       mono: [['#fff0c0', '#e8b44a'], ['#c8f5e0', '#5fc7a0']],
-      font: { script: 'Great Vibes', serif: 'Gilda Display' }, zone: [400, 1360, 820], shadow: ['rgba(5,15,20,.85)', 16], music: 'romantic',
+      font: { script: 'Playball', serif: 'Gilda Display' }, zone: [400, 1360, 820], shadow: ['rgba(5,15,20,.85)', 16], music: 'romantic',
       back(c, R, m) {
         sky(c, m.sky || [[0, '#0b1a2a'], [.6, '#143246'], [1, '#1d3d3a']]);
         for (let i = 0; i < 90; i++) { c.fillStyle = `rgba(255,255,255,${(R() * .6).toFixed(2)})`; c.beginPath(); c.arc(R() * W, R() * 700, 1 + R() * 1.6, 0, TAU); c.fill(); }
@@ -1637,7 +1651,7 @@ const Studio = (() => {
       name: 'Floral Mandap', mood: 'Blush Drapes', note: 'Gold pillars, sheer drapes, garlands and the sacred fire',
       col: { names: '#a21f45', ink: '#4a2232', ink2: '#6a3a4a', accent: '#b8862b', gold: '#b8862b' },
       mono: [['#f06292', '#a21f45'], ['#f2c46a', '#a8782a']],
-      font: { script: 'Pinyon Script', serif: 'Marcellus' }, zone: [470, 1420, 600], shadow: ['rgba(255,248,246,.92)', 12], music: 'royal',
+      font: { script: 'Satisfy', serif: 'Marcellus' }, zone: [470, 1420, 600], shadow: ['rgba(255,248,246,.92)', 12], music: 'royal',
       back(c, R, m) {
         sky(c, m.sky || [[0, '#fbe9ea'], [.6, '#fdf4ef'], [1, '#f3d9cf']]);
         glow(c, 540, 900, 600, 'rgba(255,255,255,.7)');
@@ -1661,7 +1675,7 @@ const Studio = (() => {
       name: 'Starry Galaxy', mood: 'Milky Way', note: 'Deep space, the Milky Way and shooting stars',
       col: { names: '#f5d0ff', ink: '#f2eeff', ink2: '#cfc6ec', accent: '#9fd8ff', gold: '#e8d38a' },
       mono: [['#ffd6ff', '#c27aff'], ['#c8eeff', '#6ab8ff']],
-      font: { script: 'Pinyon Script', serif: 'Cinzel' }, zone: [400, 1400, 860], shadow: ['rgba(5,3,20,.85)', 16], music: 'romantic',
+      font: { script: 'Satisfy', serif: 'Cinzel' }, zone: [400, 1400, 860], shadow: ['rgba(5,3,20,.85)', 16], music: 'romantic',
       back(c, R, m) {
         sky(c, m.sky || [[0, '#05041a'], [.5, '#120a35'], [1, '#1f0c3a']]);
         c.save(); c.globalCompositeOperation = 'screen';
@@ -1696,7 +1710,7 @@ const Studio = (() => {
       name: 'Haldi Sunshine', mood: 'Sunflower', note: 'Sunflowers, yellow garlands and haldi bowls',
       col: { names: '#b3541e', ink: '#5a3a0a', ink2: '#7a5520', accent: '#2f7a3a', gold: '#b8862b' },
       mono: [['#ffb347', '#d9661e'], ['#7cc576', '#2f7a3a']],
-      font: { script: 'Alex Brush', serif: 'Gilda Display' }, zone: [430, 1420, 780], shadow: ['rgba(255,250,224,.95)', 14], music: 'festive',
+      font: { script: 'Cookie', serif: 'Gilda Display' }, zone: [430, 1420, 780], shadow: ['rgba(255,250,224,.95)', 14], music: 'festive',
       back(c, R, m) {
         sky(c, m.sky || [[0, '#fff7c2'], [.5, '#ffe680'], [1, '#ffcf3a']]);
         c.save(); c.globalAlpha = .18; c.translate(540, 900);
@@ -1725,7 +1739,7 @@ const Studio = (() => {
       name: 'Dreamy Clouds', mood: 'Pastel Sky', note: 'Pastel clouds, a moon and hanging stars',
       col: { names: '#6b5bd6', ink: '#3e3a6a', ink2: '#5e5a8a', accent: '#e86a9a', gold: '#d8a84a' },
       mono: [['#a99bff', '#6b5bd6'], ['#ffb3cf', '#e86a9a']],
-      font: { script: 'Parisienne', serif: 'Fredoka' }, zone: [460, 1420, 800], shadow: ['rgba(255,255,255,.95)', 14], music: 'calm',
+      font: { script: 'Dancing Script', serif: 'Fredoka' }, zone: [460, 1420, 800], shadow: ['rgba(255,255,255,.95)', 14], music: 'calm',
       back(c, R, m) {
         sky(c, m.sky || [[0, '#cfe4ff'], [.55, '#f1e6ff'], [1, '#ffe1ee']]);
         c.save(); c.globalAlpha = .22; c.lineWidth = 28;
@@ -1790,7 +1804,7 @@ const Studio = (() => {
       name: 'Diwali Lights', mood: 'Festive Night', note: 'Steps of diyas, sky lanterns and fireworks',
       col: { names: '#ffd27a', ink: '#fff2dc', ink2: '#f0d9b5', accent: '#ff9f6b', gold: '#f2c14e' },
       mono: [['#ffe29a', '#f2a900'], ['#ffb38a', '#ff6a3c']],
-      font: { script: 'Great Vibes', serif: 'Gilda Display' }, zone: [380, 1340, 840], shadow: ['rgba(25,5,25,.85)', 16], music: 'festive',
+      font: { script: 'Playball', serif: 'Gilda Display' }, zone: [380, 1340, 840], shadow: ['rgba(25,5,25,.85)', 16], music: 'festive',
       back(c, R, m) {
         sky(c, m.sky || [[0, '#14092e'], [.6, '#3a0f3a'], [1, '#5a1626']]);
         for (let i = 0; i < 120; i++) { c.fillStyle = `rgba(255,240,220,${(R() * .5).toFixed(2)})`; c.beginPath(); c.arc(R() * W, R() * 900, 1 + R() * 1.4, 0, TAU); c.fill(); }
@@ -1818,7 +1832,7 @@ const Studio = (() => {
       name: 'Rose Garden', mood: 'Spring', note: 'A rose arbour, lawn and lovebirds',
       col: { names: '#b02a4a', ink: '#3a2a2a', ink2: '#5a4040', accent: '#3f7a3a', gold: '#b8862b' },
       mono: [['#f06a8a', '#b02a4a'], ['#7cc576', '#3f7a3a']],
-      font: { script: 'Parisienne', serif: 'Gilda Display' }, zone: [470, 1420, 640], shadow: ['rgba(255,252,246,.92)', 12], music: 'romantic',
+      font: { script: 'Dancing Script', serif: 'Gilda Display' }, zone: [470, 1420, 640], shadow: ['rgba(255,252,246,.92)', 12], music: 'romantic',
       back(c, R, m) {
         sky(c, m.sky || [[0, '#e8f4e6'], [.6, '#f8f6ee'], [1, '#e2eed8']]);
         glow(c, 540, 900, 560, 'rgba(255,255,250,.8)');
@@ -1874,7 +1888,7 @@ const Studio = (() => {
     { key: 'sage', mood: 'Sage Mist', tint: [['color', '#8aa88a', .45], ['screen', '#f0f6ee', .15]], names: ['#3a5a3a', '#d8f0d0'] },
     { key: 'terracotta', mood: 'Terracotta', tint: [['multiply', '#f0b89a', .55], ['soft-light', '#b04a20', .35]], names: ['#8a2e10', '#ffcfb0'] }
   ];
-  const SCRIPTS = ['Great Vibes', 'Parisienne', 'Pinyon Script', 'Alex Brush'];
+  const SCRIPTS = ['Playball', 'Dancing Script', 'Satisfy', 'Cookie'];
   SCENES.forEach((id, si) => {
     const B = LOOKS[id], dark = +(B.shadow[0].match(/\d+/) || [0])[0] < 200, have = new Set([B.mood, ...(B.moods || []).map(md => md.mood)]);
     const need = 14 - (B.moods || []).length;
@@ -2560,7 +2574,7 @@ const Studio = (() => {
     }
   }
 
-  const FONTS = ['Parisienne', 'Great Vibes', 'Pinyon Script', 'Alex Brush', 'Marcellus', 'Gilda Display', 'Cinzel', 'Pacifico', 'Fredoka'];
+  const FONTS = ['Dancing Script', 'Great Vibes', 'Playball', 'Satisfy', 'Cookie', 'Marcellus', 'Gilda Display', 'Cinzel', 'Pacifico', 'Fredoka'];
   // Ganesh ji: the illustrations (img/art/cut, listed in js/couples.js as GANESHA_ART) shown full-figure; when
   // there are none, the five photos (credits in img/art/CREDITS.md and credits.html) in a gold circle.
   const GANESHA_PHOTOS = ['ganesha', 'ganesha-2', 'ganesha-3', 'ganesha-4', 'ganesha-5'];

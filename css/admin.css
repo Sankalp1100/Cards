@@ -345,3 +345,7 @@ body.studio-open { overflow: hidden; }
 
 /* Your own song: the first, clearest button of the music choices */
 #stMusic .add-song { flex-basis: 100%; padding: 14px; font-size: 1rem; border: 2px dashed var(--gold); color: var(--gold); background: rgba(255,201,92,.08); }
+
+/* The order just pasted, lit up in the list */
+.order-item.flash { animation: orderFlash 2.4s ease; }
+@keyframes orderFlash { 0%, 40% { background: rgba(37,211,102,.22); } }
