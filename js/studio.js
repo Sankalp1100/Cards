@@ -2455,7 +2455,7 @@ const Studio = (() => {
       if (s.ganesha && art.ganeshaArt !== 'none') {
         c.save(); c.globalAlpha = ease((p - .2) / 1.2);
         const gy = s.ganesha.y + (1 - ease(p / 1.4)) * 40;
-        const god = photos.ganesha || ART.ganesha;
+        const god = photos.ganesha || ganeshaFor(art.story || art.look || '');
         if (art.ganeshaArt !== 'drawn' && god) framedPhoto(c, god, W / 2, gy + s.ganesha.s * .06, s.ganesha.s * .92, s.ganesha.s * .92, 'circle', L, t);
         else ganesha(c, W / 2, gy, s.ganesha.s, t);
         c.restore();
@@ -2519,15 +2519,27 @@ const Studio = (() => {
 
   const FONTS = ['Parisienne', 'Great Vibes', 'Pinyon Script', 'Alex Brush', 'Marcellus', 'Gilda Display', 'Cinzel', 'Pacifico', 'Fredoka'];
   // Real photos the videos use (img/art; credits in img/art/CREDITS.md), loaded with the fonts
-  const ART = {};
+  // Five Ganesh ji photos (credits in img/art/CREDITS.md and credits.html); each look and film shows its own
+  const GANESHAS = ['ganesha', 'ganesha-2', 'ganesha-3', 'ganesha-4', 'ganesha-5'];
+  const ART = { ganeshas: [] };
   function artReady() {
-    if (typeof Image === 'undefined' || ART.ganesha || localFile()) return Promise.resolve();
-    return new Promise(resolve => {
+    if (typeof Image === 'undefined' || ART.ganeshas.length || localFile()) return Promise.resolve();
+    return Promise.all(GANESHAS.map((name, i) => new Promise(resolve => {
       const img = new Image();
-      img.onload = () => { ART.ganesha = img; resolve(); };
+      img.onload = () => { ART.ganeshas[i] = img; resolve(); };
       img.onerror = () => resolve();
-      img.src = 'img/art/ganesha.jpg';
-    });
+      img.src = `img/art/${name}.jpg`;
+    })));
+  }
+  // Evenly: neighbouring looks and films take the photos in turn (a scene's moods too)
+  function ganeshaFor(key) {
+    const list = ART.ganeshas.filter(Boolean);
+    if (!list.length) return null;
+    const ids = [...Object.keys(STORIES), ...Object.keys(LOOKS)], i = ids.indexOf(key);
+    if (i >= 0) return list[(i + (i >= Object.keys(STORIES).length ? Math.floor((i - 12) / 20) : 0)) % list.length];
+    let h = 3;
+    for (const ch of String(key)) h = (h * 29 + ch.charCodeAt(0)) >>> 0;
+    return list[h % list.length];
   }
   // Every library picture, so a video never shows a scene before its couple has loaded
   function libReady() {
