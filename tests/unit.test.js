@@ -937,6 +937,26 @@ test.describe('Video Studio', () => {
     for (const [k, set] of Object.entries(seen)) assert.ok(set.size >= 40, `${k}: only ${set.size} different screens`);
   });
 
+  test('each function’s screen shows what was set for it: its own heading, venue line and quote, with any part left out', () => {
+    const c = card({ families: [] });
+    const set = { screens: [{ title: 'Haldi Ceremony', top: '', venue: 'Our home', quote: 'Haldi ka rang, apno ka sang', dress: false, couple: false, time: false }] };
+    const sc = story(c, set).scenes.filter(s => s.k === 'event');
+    assert.ok(!sc[0].couple, 'the couple left out where asked'); // (the library pictures are not loaded here)
+    const words = s => Studio.lines(s, c, { ...Studio.defaults(c), ...set }).map(l => l.s).filter(Boolean);
+    const first = words(sc[0]);
+    for (const w of ['Haldi Ceremony', 'Our home', 'Haldi ka rang, apno ka sang']) assert.ok(first.includes(w), w);
+    assert.ok(!first.some(w => /Dress code|onwards|cordially/.test(w)), first.join(' | '));
+    assert.ok(words(sc[1]).some(w => /Dress code/.test(w)) && words(sc[1]).includes('Garden Courtyard'), 'the other screens as in the order');
+    // Suggested quotes: for the function, in the video's language
+    assert.ok(Studio.quotesFor('🌼 Haldi', 'en')[0].includes('turmeric'));
+    assert.ok(/हल्दी/.test(Studio.quotesFor('हल्दी', 'hi')[0]));
+    assert.ok(Studio.quotesFor('Something else', 'en').length >= 3, 'general ones for any function');
+    // The second name first
+    const sw = Studio.swapNames({ ...c, nick1: 'Di', nick2: 'Aaru', families: [{ parents: 'A' }, { parents: 'B' }] });
+    assert.deepEqual(plain([sw.host1, sw.host2, sw.nick1, sw.families[0].parents]), ['Aarav', 'Diya', 'Aaru', 'B']);
+    assert.equal(Studio.swapNames({ ...c, host2: '' }).host1, 'Diya', 'one name: nothing to swap');
+  });
+
   test('functions named in Hindi get the scenery that suits them too', () => {
     const c = card({ families: [], events: ['हल्दी', 'मेहँदी', 'संगीत', 'बारात', 'फेरे', 'प्रीतिभोज'].map(name => ({ name, date: '2026-12-01T10:00' })) });
     const looks = story(c, { look: 'vrindavan' }).scenes.filter(s => s.k === 'event').map(s => s.look.split('-')[0]);

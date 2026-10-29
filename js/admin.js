@@ -963,6 +963,8 @@
   // `video`: the look or story film the customer chose on the website, if any (it wins over the occasion's look);
   // `lang`: the language they asked for.
   function studioLoad(card, video, lang) {
+    // The same order in another language keeps what was set for its screens; another order starts afresh
+    const same = st.card === card && st.opt;
     st.card = card;
     st.lang = lang === 'hi' || lang === 'en' ? lang : st.lang || 'en';
     const auto = Studio.defaults(st.card, st.lang);
@@ -970,16 +972,72 @@
     const story = Studio.STORIES[video] ? video : kept ? st.opt.story : '';
     // The look the occasion suits, unless one was picked by hand in this visit
     const look = story ? Studio.STORIES[story].open : Studio.LOOKS[video] ? video : kept ? st.opt.look : auto.look;
-    st.opt = { ...auto, look, story, music: st.opt ? st.opt.music : 'auto', ...studioArt() };
+    st.opt = { ...auto, look, story, music: st.opt ? st.opt.music : 'auto', ...studioArt(),
+      screens: same ? st.opt.screens : [], swapNames: same ? st.opt.swapNames : false };
     document.querySelectorAll('#stLang [data-lang]').forEach(b => b.classList.toggle('on', b.dataset.lang === st.lang));
     $('#stWho').textContent = `${who(st.card)} · ${occasion(st.card).label}`;
     $('#stBless').checked = st.opt.blessing;
     $('#stBlessText').value = st.opt.blessingText;
     $('#stInvite').value = st.opt.inviteLine;
     $('#stParents').checked = st.opt.parents;
+    renderNameOrder();
+    renderScreens();
     st.t = 0;
     if (st.player) refreshStudio();
   }
+
+  // Whose name comes first: as in the order, or the other way round (the bride's first, or the groom's)
+  function renderNameOrder() {
+    const a = (st.card.host1 || '').trim(), b = (st.card.host2 || '').trim();
+    $('#stNameOrder').innerHTML = b ? [[false, a], [true, b]].map(([swap, n]) =>
+      `<button type="button" class="chip${!!st.opt.swapNames === swap ? ' on' : ''}" data-swap="${swap}">${esc(n)} first</button>`).join('')
+      : '<small class="muted">Only one name in this order</small>';
+  }
+  $('#stNameOrder').addEventListener('click', e => {
+    const b = e.target.closest('[data-swap]');
+    if (!b || st.rec) return;
+    st.opt.swapNames = b.dataset.swap === 'true';
+    renderNameOrder(); refreshStudio();
+  });
+
+  // What each function's screen shows: the order's own details by default; any line can be changed or left out,
+  // and a quote added (suggestions for that function in the video's language).
+  const studioEvents = () => (st.card.events || []).filter(e => e && String(e.name || '').trim()).slice(0, 6);
+  function renderScreens() {
+    const evs = studioEvents(), sc = st.opt.screens;
+    if (!evs.length) { $('#stScreens').innerHTML = '<small class="muted">This order has no functions.</small>'; return; }
+    const val = (i, k, d) => (sc[i] && sc[i][k] != null ? sc[i][k] : d);
+    const box = (i, k, label) => `<label class="st-check"><input type="checkbox" data-i="${i}" data-k="${k}"${val(i, k, true) !== false ? ' checked' : ''}> ${label}</label>`;
+    $('#stScreens').innerHTML = `<span class="muted">Function screens: what each one shows</span>` + evs.map((e, i) => {
+      const d = Core.parseDate(e.date);
+      return `<details class="st-screen" data-i="${i}"><summary>${esc(e.name)}${d ? ` · ${esc(d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }))}` : ''}</summary>
+        <label>Line above <input data-i="${i}" data-k="top" maxlength="60" value="${esc(val(i, 'top', Studio.eventTop(st.lang)))}"></label>
+        <label>Heading <input data-i="${i}" data-k="title" maxlength="40" value="${esc(val(i, 'title', ''))}" placeholder="${esc(e.name)}"></label>
+        <label>Venue line <input data-i="${i}" data-k="venue" maxlength="120" value="${esc(val(i, 'venue', e.venue || ''))}"></label>
+        <label>Quote <textarea data-i="${i}" data-k="quote" rows="2" maxlength="120" placeholder="Pick one below or write your own">${esc(val(i, 'quote', ''))}</textarea></label>
+        <div class="chips st-quotes">${Studio.quotesFor(e.name, st.lang).map(q => `<button type="button" class="chip" data-i="${i}" data-quote="${esc(q)}">${esc(q)}</button>`).join('')}</div>
+        <div class="st-shows">${box(i, 'date', 'Date')}${box(i, 'time', 'Time')}${box(i, 'venue', 'Venue')}${box(i, 'dress', 'Dress code')}${box(i, 'couple', 'Couple picture')}</div>
+      </details>`;
+    }).join('');
+  }
+  const setScreen = (i, k, v) => { (st.opt.screens[i] = st.opt.screens[i] || {})[k] = v; refreshStudio(); };
+  // The video jumps to the screen being edited, so the change shows straight away
+  const showScreen = i => { const sc = st.player && st.player.tl.scenes.find(s => s.k === 'event' && s.i === +i); if (sc) st.t = sc.t0 + sc.d * .6; };
+  $('#stScreens').addEventListener('input', e => {
+    const t = e.target;
+    if (!t.dataset.k || st.rec) return;
+    setScreen(+t.dataset.i, t.dataset.k, t.type === 'checkbox' ? t.checked : t.value);
+    showScreen(t.dataset.i);
+  });
+  $('#stScreens').addEventListener('click', e => {
+    const q = e.target.closest('[data-quote]');
+    if (!q || st.rec) return;
+    const ta = $(`#stScreens textarea[data-i="${q.dataset.i}"]`);
+    ta.value = q.dataset.quote;
+    setScreen(+q.dataset.i, 'quote', q.dataset.quote);
+    showScreen(q.dataset.i);
+  });
+  $('#stScreens').addEventListener('toggle', e => { if (e.target.open) showScreen(e.target.dataset.i); }, true);
   const orderVideo = code => (code && (Catalog.readOrder(code) || {}).video) || '';
   const orderLang = code => (code && (Catalog.readOrder(code) || {}).videoLang) || '';
   function orderCard(code) {

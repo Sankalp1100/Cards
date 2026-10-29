@@ -359,12 +359,15 @@
         <input id="stBlessText" maxlength="60" aria-label="Blessing line">
         <label>Invitation line <textarea id="stInvite" rows="2" maxlength="120"></textarea></label>
         <label class="st-check"><input type="checkbox" id="stParents"> Parents’ names under the couple (from Families)</label>
+        <span class="muted">Whose name comes first</span>
+        <div class="chips" id="stNameOrder"></div>
         <h3>3 · Functions</h3>
         <div class="chips" id="stEvents">
           <button type="button" class="chip" data-ev="each">One by one</button>
           <button type="button" class="chip" data-ev="list">All on one page</button>
           <button type="button" class="chip" data-ev="none">Leave out</button>
         </div>
+        <div id="stScreens" class="st-screens"></div>
         <h3>4 · Music</h3>
         <div class="chips" id="stMusic"></div>
         <input type="file" id="stMusicFile" accept="audio/*" multiple hidden>

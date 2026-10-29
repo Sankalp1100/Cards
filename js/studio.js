@@ -190,9 +190,11 @@ const Studio = (() => {
     const evs = (card.events || []).filter(e => clean(e.name)).slice(0, 6);
     const evD = evs.length > 5 ? 4 : 0; // six functions: a little shorter each, so the video still fits a WhatsApp status
     const art = opt.coupleArt !== 'none' && opt.coupleArt !== 'drawn' && !(opt.photos || {}).couple;
-    if (opt.events === 'each') evs.forEach(e => {
-      const pic = art && eventCouple(clean(e.name), opt.story || opt.look || '', couple && !(opt.photos || {}).couple && coupleFor(card, opt.story || opt.look || ''));
-      S.push(pic ? { k: 'event', e, d: evD || 5, couple: { y: 1880, s: 820 }, coupleEntry: pic, zone: [230, 940, 780] } : { k: 'event', e, d: evD || 4.5 });
+    // opt.screens[i]: what function i's screen shows (set in the Video Studio); couple: false leaves its picture out
+    if (opt.events === 'each') evs.forEach((e, i) => {
+      const x = (opt.screens || [])[i] || {};
+      const pic = art && x.couple !== false && eventCouple(clean(e.name), opt.story || opt.look || '', couple && !(opt.photos || {}).couple && coupleFor(card, opt.story || opt.look || ''));
+      S.push(pic ? { k: 'event', e, i, d: evD || 5, couple: { y: 1880, s: 820 }, coupleEntry: pic, zone: [230, 940, 780] } : { k: 'event', e, i, d: evD || 4.5 });
     });
     else if (opt.events === 'list' && evs.length) S.push({ k: 'events', evs, d: 4 + evs.length });
     if (Core.parseDate(card.date) || clean(card.venue)) S.push({ k: 'date', d: 5.5 });
@@ -235,14 +237,17 @@ const Studio = (() => {
           T(card.host2, 'script', 150, 'names', { gap: 4 }), T(p2, 'serif', 34, 'ink2', { wrap: 2 }));
       }
     } else if (s.k === 'event') {
+      // Each function's screen as set in the Video Studio (opt.screens[i]); anything not set comes from the order
+      const x = (opt.screens || [])[s.i] || {}, on = k => x[k] !== false;
       const { icon, name } = splitIcon(s.e.name), d = Core.parseDate(s.e.date);
-      L = [T(hi ? 'मांगलिक कार्यक्रम' : 'We cordially invite you to the', hi ? 'serif' : 'italic', hi ? 44 : 38, 'accent', { gap: 14 }),
+      L = [T(x.top != null ? x.top : eventTop(opt.lang), hi ? 'serif' : 'italic', hi ? 44 : 38, 'accent', { gap: 14 }),
         icon ? { t: 'emoji', s: icon, z: 92, gap: 10 } : null,
-        T(name, 'script', 150, 'names', { gap: 16 }), { t: 'div', word: '', z: 40, gap: 30 },
-        d ? T(day(d), 'serif', 44, 'ink', { gap: 10 }) : null,
-        d && Core.hasTime(s.e.date) ? T(time(d), 'serif', 40, 'accent', { gap: 26 }) : null,
-        T(s.e.venue, 'serif', 42, 'ink', { wrap: 2, gap: 14 }),
-        T(s.e.dress && `${hi ? 'परिधान' : 'Dress code'} · ${clean(s.e.dress)}`, 'italic', 40, 'ink2', { wrap: 2 })];
+        T(clean(x.title) || name, 'script', 150, 'names', { gap: 16 }), { t: 'div', word: '', z: 40, gap: 30 },
+        d && on('date') ? T(day(d), 'serif', 44, 'ink', { gap: 10 }) : null,
+        d && on('time') && Core.hasTime(s.e.date) ? T(time(d), 'serif', 40, 'accent', { gap: 26 }) : null,
+        on('venue') ? T(x.venue != null ? x.venue : s.e.venue, 'serif', 42, 'ink', { wrap: 2, gap: 14 }) : null,
+        on('dress') ? T(s.e.dress && `${hi ? 'परिधान' : 'Dress code'} · ${clean(s.e.dress)}`, 'italic', 40, 'ink2', { wrap: 2, gap: 18 }) : null,
+        T(x.quote, 'italic', 42, 'accent', { wrap: 3 })];
     } else if (s.k === 'events') {
       L = [T(hi ? 'मांगलिक कार्यक्रम' : 'The Celebrations', 'script', 124, 'names', { gap: 6 }), { t: 'div', word: '', z: 40, gap: 36 }];
       s.evs.forEach(e => {
@@ -282,6 +287,46 @@ const Studio = (() => {
     L = L.filter(Boolean);
     return hi ? L.map(it => (it.lat ? it : toHindi(it))) : L;
   }
+
+  // The line above a function's name
+  const eventTop = lang => lang === 'hi' ? 'मांगलिक कार्यक्रम' : 'We cordially invite you to the';
+  // Suggested lines for a function's screen, by its name (English or Hindi), in the video's language
+  const QUOTES = [
+    [/haldi|pithi|ubtan|हल्दी|हलदी|पीठी|उबटन/i,
+      ['A touch of turmeric, a lifetime of glow', 'Come in yellow, leave with memories', 'Haldi ka rang, apno ka sang'],
+      ['हल्दी का रंग, अपनों का संग', 'पीले रंग में रंग जाइए, ख़ुशियों में शामिल हो जाइए', 'हल्दी की रस्म, अपनों के साथ']],
+    [/mehe?n?d|मेहँदी|मेहंदी|मेंहदी/i,
+      ['The deeper the colour, the deeper the love', 'An evening of henna, music and dance', 'Mehendi lagi, khushiyaan sajin'],
+      ['मेहँदी का रंग जितना गहरा, प्यार उतना गहरा', 'मेहँदी की रस्म में आपका स्वागत है', 'हाथों में मेहँदी, दिल में ख़ुशियाँ']],
+    [/sangeet|dance|dj|garba|dandiya|cocktail|संगीत|गरबा|डांडिया/i,
+      ['Let the music bring us together', 'An evening of songs, dance and love', 'Put on your dancing shoes!'],
+      ['आइए, संगीत की इस शाम को यादगार बनाएँ', 'गीत, संगीत और ढेर सारी ख़ुशियाँ', 'नाचेंगे, गाएँगे, जश्न मनाएँगे']],
+    [/baraat|barat|ghud|ghod|sehra|बारात|घुड़चढ़ी|घुडचढी|सेहरा/i,
+      ['Dhol bajega, baraat chalegi — come dance with us!', 'Join the baraat as the groom rides in', 'The band, the dhol and all of you'],
+      ['ढोल बजेगा, बारात चलेगी — आइए साथ नाचें', 'बारात की शान, आप सबका साथ', 'घोड़ी चढ़ेगा दूल्हा, नाचेंगे बाराती']],
+    [/phera|vivah|wedding|varmala|jaimala|mandap|shaadi|फेरे|विवाह|शादी|वरमाला|जयमाला|मंडप/i,
+      ['Seven vows, one forever', 'Two hearts, one journey — bless them with your presence', 'Witness the sacred seven steps'],
+      ['सात फेरे, सात वचन, जन्म-जन्म का साथ', 'नवदम्पति को आशीर्वाद देने अवश्य पधारें', 'अग्नि को साक्षी मान, सात जन्मों का बन्धन']],
+    [/reception|dinner|bhoj|swagat|स्वागत|रिसेप्शन|प्रीतिभोज|भोज/i,
+      ['An evening to celebrate the newlyweds', 'Dinner, dance and blessings for the couple', 'Come bless the newlyweds'],
+      ['नवदम्पति को आशीर्वाद देने अवश्य पधारें', 'प्रीतिभोज में आपका हार्दिक स्वागत है', 'आपकी उपस्थिति से ही यह शाम पूर्ण होगी']],
+    [/ring|engage|sagai|roka|सगाई|रोका|रिंग/i,
+      ['Two hearts, one promise', 'A ring, a promise, a lifetime', 'The beginning of forever'],
+      ['दो दिल, एक वादा', 'एक अंगूठी, एक वादा, जीवन भर का साथ', 'रिश्तों की नई शुरुआत']],
+    [/puja|pooja|havan|ganesh|katha|aarti|पूजा|हवन|गणेश|कथा|आरती/i,
+      ['With the blessings of the divine', 'Seek blessings with us', 'A sacred beginning'],
+      ['ईश्वर के आशीर्वाद से', 'प्रभु के चरणों में, आप सबके साथ', 'शुभ कार्य, शुभ आशीर्वाद']]
+  ];
+  const ANY_QUOTES = [['Your presence will make it complete', 'Celebrate with us', 'Made special by you'],
+    ['आपकी उपस्थिति से ही यह पल पूर्ण होगा', 'आप सपरिवार सादर आमन्त्रित हैं', 'आपके आने से ही रौनक है']];
+  function quotesFor(name, lang) {
+    const k = lang === 'hi' ? 2 : 1, row = QUOTES.find(([re]) => re.test(name || ''));
+    return [...(row ? row[k] : []), ...ANY_QUOTES[k - 1]];
+  }
+  // Second name first (bride before groom, or the other way round): names, nicknames and families swap places
+  const swapNames = card => clean(card.host2)
+    ? { ...card, host1: card.host2, host2: card.host1, nick1: card.nick2, nick2: card.nick1, families: [...(card.families || [])].reverse() }
+    : card;
 
   // ---------- Story films: the scenery changes from scene to scene, each film with its own tune ----------
   // Each names the look for every part of the story; a function takes the look its name suggests (Haldi, Mehendi,
@@ -2488,6 +2533,7 @@ const Studio = (() => {
     // `k` draws smaller (0.5 = 540×960, for previews on the website's phones); the video itself is made at 1.
     constructor(canvas, k = 1) { this.cv = canvas; this.k = k; this.c = canvas.getContext('2d'); canvas.width = Math.round(W * k); canvas.height = Math.round(H * k); }
     set(card, opt, site = {}) {
+      if (opt.swapNames) card = swapNames(card);
       this.card = card; this.opt = opt; this.L = LOOKS[opt.look] || LOOKS.vrindavan;
       this.tl = timeline(card, opt); this.cache = new Map();
       // A film (or a client's video) may ask for its own opening, e.g. curtains
@@ -2639,7 +2685,7 @@ const Studio = (() => {
     return card;
   }
 
-  return { W, H, LOOKS, SCENES, STORIES, variant, coupleFor, POSES, OPENINGS, CHANGES, LAYOUTS_V, ENTRANCES, SITE_QR, HI, hasCouple, dateRange, lookName, thumb, sample, defaults, timeline, lines, parents, splitIcon, ordinal, phone, sceneName, sceneLayer, Player, fontsReady };
+  return { W, H, LOOKS, SCENES, STORIES, quotesFor, eventTop, swapNames, variant, coupleFor, POSES, OPENINGS, CHANGES, LAYOUTS_V, ENTRANCES, SITE_QR, HI, hasCouple, dateRange, lookName, thumb, sample, defaults, timeline, lines, parents, splitIcon, ordinal, phone, sceneName, sceneLayer, Player, fontsReady };
 })();
 
 if (typeof module !== 'undefined') module.exports = Studio;

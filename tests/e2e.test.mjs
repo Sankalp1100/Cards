@@ -865,6 +865,15 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       await page.waitFor(`document.querySelector('#stTime').textContent !== ${JSON.stringify(t1)}`, 4000).catch(() => {});
       assert.notEqual(await page.eval(`document.querySelector('#stTime').textContent`), t1, 'the preview plays');
       // Scenes follow the options
+      // Whose name comes first, and what each function's screen shows (with quotes for it)
+      assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stNameOrder .chip')].map(b => b.textContent)`), ['Diya first', 'Aarav first']);
+      await page.eval(`document.querySelector('#stNameOrder [data-swap="true"]').click()`);
+      assert.equal(await page.eval(`document.querySelector('#stNameOrder .on').textContent`), 'Aarav first');
+      await page.eval(`document.querySelector('#stNameOrder [data-swap="false"]').click()`);
+      assert.equal(await page.eval(`document.querySelectorAll('#stScreens details').length`), 5, 'one block per function');
+      assert.ok(await page.eval(`document.querySelectorAll('#stScreens details[data-i="0"] [data-quote]').length`) >= 3, 'suggested quotes');
+      await page.eval(`document.querySelector('#stScreens details[data-i="0"] [data-quote]').click()`);
+      assert.match(await page.eval(`document.querySelector('#stScreens textarea[data-i="0"]').value`), /turmeric/i, 'a tap puts the quote in');
       // Every function on its own screen by default; all on one page when chosen
       assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stScenes .chip')].map(b => b.textContent)`), ['Opening', 'Title', 'Invitation', 'Haldi', 'Mehendi', 'Sangeet', 'Pheras', 'Reception', 'Venue', 'Regards', 'Thank You']);
       await page.eval(`document.querySelector('[data-ev="list"]').click()`);
