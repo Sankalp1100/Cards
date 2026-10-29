@@ -128,8 +128,8 @@ const Studio = (() => {
   };
   // Opened from a file (admin.html double-clicked), pictures would stop the video from recording, so none are used
   const localFile = () => typeof location !== 'undefined' && location.protocol === 'file:';
-  const EVENT_COUPLES = [[/haldi|pithi|ubtan/i, 'haldi'], [/mehe?n?d/i, 'mehendi'], [/sangeet|dance|dj|garba|dandiya|cocktail/i, 'sangeet'],
-    [/reception|dinner|swagat|bhoj/i, 'reception'], [/phera|vivah|wedding|varmala|jaimala|shaadi|baraat|barat/i, 'wedding'], [/ring|engage|sagai|roka/i, 'engagement']];
+  const EVENT_COUPLES = [[/haldi|pithi|ubtan|हल्दी|हलदी|पीठी|उबटन/i, 'haldi'], [/mehe?n?d|मेहँदी|मेहंदी|मेंहदी/i, 'mehendi'], [/sangeet|dance|dj|garba|dandiya|cocktail|संगीत|गरबा|डांडिया/i, 'sangeet'],
+    [/reception|dinner|swagat|bhoj|स्वागत|रिसेप्शन|प्रीतिभोज|भोज/i, 'reception'], [/phera|vivah|wedding|varmala|jaimala|shaadi|baraat|barat|फेरे|विवाह|शादी|वरमाला|जयमाला|बारात/i, 'wedding'], [/ring|engage|sagai|roka|सगाई|रोका|रिंग/i, 'engagement']];
   function eventCouple(name, key, avoid) {
     const occ = (EVENT_COUPLES.find(([re]) => re.test(name)) || [])[1];
     let list = library().filter(x => x.occasion === occ);
@@ -292,9 +292,9 @@ const Studio = (() => {
     'story-shahi': { name: 'Shahi Parampara', note: 'Curtains open on Ganesh ji, and every function in its own colours', tune: 'royal', opening: 'curtains',
       open: 'temple-golden', title: 'jharokha-champagne', invite: 'vrindavan-roseblush', events: ['haveli-pink', 'palace-plum', 'rosegarden-golden'],
       date: 'blush-peach', end: 'rosegarden-golden', final: 'mandap-roseblush', ganesha: 'ganesha-01',
-      fn: [[/haldi|pithi|ubtan/i, 'haldi-saffron'], [/mehe?n?d/i, 'mehendi-emerald'], [/baraat|barat|ghud|ghod|sehra/i, 'haveli-pink'],
-        [/sangeet|dance|dj|garba|dandiya|cocktail/i, 'lights-roseblush'], [/phera|vivah|wedding|varmala|jaimala|mandap|shaadi/i, 'mandap-golden'],
-        [/reception|dinner|bhoj|swagat/i, 'palace-plum']] },
+      fn: [[/haldi|pithi|ubtan|हल्दी|हलदी|पीठी|उबटन/i, 'haldi-saffron'], [/mehe?n?d|मेहँदी|मेहंदी|मेंहदी/i, 'mehendi-emerald'], [/baraat|barat|ghud|ghod|sehra|बारात|घुड़चढ़ी|घुडचढी|सेहरा/i, 'haveli-pink'],
+        [/sangeet|dance|dj|garba|dandiya|cocktail|संगीत|गरबा|डांडिया/i, 'lights-roseblush'], [/phera|vivah|wedding|varmala|jaimala|mandap|shaadi|फेरे|विवाह|शादी|वरमाला|जयमाला|मंडप/i, 'mandap-golden'],
+        [/reception|dinner|bhoj|swagat|स्वागत|रिसेप्शन|प्रीतिभोज|भोज/i, 'palace-plum']] },
     'story-rajwada': { name: 'Royal Rajwada', note: 'Temple → jharokha → haveli → palace → mandap', tune: 'shehnai',
       open: 'temple', title: 'jharokha', invite: 'blush', events: ['haveli', 'palace', 'mandap'], date: 'palace', end: 'rosegarden', final: 'mandap' },
     'story-pastel': { name: 'Pastel Blossom', note: 'Soft florals and a pink mandap', tune: 'romantic',
@@ -339,13 +339,13 @@ const Studio = (() => {
   // Video n takes the scenery n (in turn) in mood n / sceneries, so neighbouring videos never share one; two screens
   // in a row in one video never share a scenery either.
   // (A daytime function takes only the light moods, an evening one only the dark ones.)
-  const EVENT_SCENES = [[/haldi|pithi|ubtan/i, ['haldi', 'vrindavan', 'clouds', 'rosegarden'], 'day'],
-    [/mehe?n?d/i, ['mehendi', 'rosegarden', 'jharokha', 'blush'], 'day'],
-    [/sangeet|dance|dj|garba|dandiya|cocktail/i, ['lights', 'disco', 'party', 'galaxy'], 'night'],
-    [/baraat|barat|ghud|ghod|sehra/i, ['haveli', 'palace', 'marigold', 'diwali']],
-    [/phera|vivah|wedding|varmala|jaimala|mandap|shaadi/i, ['mandap', 'temple', 'lotusnight', 'diwali']],
-    [/reception|dinner|bhoj|swagat/i, ['palace', 'galaxy', 'lights', 'diwali'], 'night'],
-    [/puja|pooja|havan|ganesh|katha|aarti/i, ['temple', 'lotusnight', 'diwali', 'himalaya']],
+  const EVENT_SCENES = [[/haldi|pithi|ubtan|हल्दी|हलदी|पीठी|उबटन/i, ['haldi', 'vrindavan', 'clouds', 'rosegarden'], 'day'],
+    [/mehe?n?d|मेहँदी|मेहंदी|मेंहदी/i, ['mehendi', 'rosegarden', 'jharokha', 'blush'], 'day'],
+    [/sangeet|dance|dj|garba|dandiya|cocktail|संगीत|गरबा|डांडिया/i, ['lights', 'disco', 'party', 'galaxy'], 'night'],
+    [/baraat|barat|ghud|ghod|sehra|बारात|घुड़चढ़ी|घुडचढी|सेहरा/i, ['haveli', 'palace', 'marigold', 'diwali']],
+    [/phera|vivah|wedding|varmala|jaimala|mandap|shaadi|फेरे|विवाह|शादी|वरमाला|जयमाला|मंडप/i, ['mandap', 'temple', 'lotusnight', 'diwali']],
+    [/reception|dinner|bhoj|swagat|स्वागत|रिसेप्शन|प्रीतिभोज|भोज/i, ['palace', 'galaxy', 'lights', 'diwali'], 'night'],
+    [/puja|pooja|havan|ganesh|katha|aarti|पूजा|हवन|गणेश|कथा|आरती/i, ['temple', 'lotusnight', 'diwali', 'himalaya']],
     [/cake|party|games/i, ['party', 'disco', 'lights', 'beach']]];
   const EVENT_SPARE = ['rosegarden', 'jharokha', 'lotusnight', 'marigold', 'vrindavan', 'himalaya', 'clouds', 'beach'];
   const moodsOf = scene => Object.keys(LOOKS).filter(id => id === scene || id.startsWith(scene + '-'));

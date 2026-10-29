@@ -937,6 +937,16 @@ test.describe('Video Studio', () => {
     for (const [k, set] of Object.entries(seen)) assert.ok(set.size >= 40, `${k}: only ${set.size} different screens`);
   });
 
+  test('functions named in Hindi get the scenery that suits them too', () => {
+    const c = card({ families: [], events: ['हल्दी', 'मेहँदी', 'संगीत', 'बारात', 'फेरे', 'प्रीतिभोज'].map(name => ({ name, date: '2026-12-01T10:00' })) });
+    const looks = story(c, { look: 'vrindavan' }).scenes.filter(s => s.k === 'event').map(s => s.look.split('-')[0]);
+    const want = [['haldi', 'vrindavan', 'clouds', 'rosegarden'], ['mehendi', 'rosegarden', 'jharokha', 'blush'], ['lights', 'disco', 'party', 'galaxy'],
+      ['haveli', 'palace', 'marigold', 'diwali'], ['mandap', 'temple', 'lotusnight', 'diwali'], ['palace', 'galaxy', 'lights', 'diwali']];
+    looks.forEach((l, i) => assert.ok(want[i].includes(l), `${c.events[i].name} → ${l}`));
+    const film = story(c, { story: 'story-shahi' }).scenes.filter(s => s.k === 'event').map(s => s.look);
+    assert.deepEqual(plain(film), ['haldi-saffron', 'mehendi-emerald', 'lights-roseblush', 'haveli-pink', 'mandap-golden', 'palace-plum']);
+  });
+
   test('variety: every look opens, changes scene and lays out its words in its own way', () => {
     const fmt = id => JSON.stringify(plain(Studio.variant(id)));
     const looks = Object.keys(Studio.LOOKS), films = Object.keys(Studio.STORIES);
