@@ -358,3 +358,25 @@ body.studio-open { overflow: hidden; }
 .st-screen label:not(.st-check) { display: grid; gap: 4px; }
 .st-quotes .chip { font-size: .8rem; white-space: normal; text-align: left; }
 .st-shows { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+
+/* Pages: one at a time */
+main > section[data-page][hidden] { display: none !important; }
+/* Orders page */
+#ordFilter .chip { padding: 7px 12px; font-size: .82rem; }
+.order-item [data-video] { white-space: nowrap; }
+/* Premium sections: closed until needed */
+.premium-more > summary { cursor: pointer; font-weight: 700; padding: 10px 0; color: var(--gold); }
+.premium-more[open] > summary { margin-bottom: 8px; }
+.premium-more { display: grid; gap: 10px; }
+
+/* Video Studio: the options in tabs */
+.st-tabs { position: sticky; top: 0; z-index: 2; padding: 8px 0; gap: 6px; background: linear-gradient(#0d0b1c 75%, transparent); }
+.st-side .st-tabs .chip { padding: 7px 11px; font-size: .8rem; }
+.st-tab { display: grid; gap: 12px; align-content: start; }
+.st-tab[hidden] { display: none; }
+/* Phones: long rows of filter buttons scroll sideways instead of filling the screen */
+@media (max-width: 820px) {
+  #galFilters, #ordFilter { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+  #galFilters::-webkit-scrollbar { display: none; }
+  #galFilters .chip { flex: none; }
+}

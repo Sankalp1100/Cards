@@ -116,6 +116,7 @@
       const rows = await DB.select('orders', 'select=*&order=created_at.desc&limit=500');
       ordersCache = rows.map(r => ({ id: r.id, code: r.code, name: r.names || 'Customer', type: r.occasion, design: r.design_no || '', date: r.event_date, received: Date.parse(r.created_at), done: r.status === 'done' }));
       renderOrders();
+      if (!navigated && page !== 'orders' && ordersCache.some(o => !o.done)) showPage('orders');
     } catch (e) { /* keep the list we have */ }
   }
 
@@ -144,11 +145,17 @@
     return text.split('\n').slice(1).filter(l => l && !/^Order (code|no)/.test(l)).map(l => l.replace(/\*/g, '')).join('\n');
   }
 
+  // Which orders show: new ones, done ones or all, and only those matching the search
+  let ordShow = 'open';
   function renderOrders(active) {
-    const list = loadOrders().sort((a, b) => (a.done - b.done) || (b.received - a.received));
-    const open = list.filter(o => !o.done).length;
-    $('#ordersCount').hidden = !open;
-    $('#ordersCount').textContent = open;
+    const all = loadOrders().sort((a, b) => (a.done - b.done) || (b.received - a.received));
+    const open = all.filter(o => !o.done).length;
+    for (const id of ['#ordersCount', '#ordersNav']) { $(id).hidden = !open; $(id).textContent = open; }
+    const q = $('#ordSearch').value.trim().toLowerCase();
+    // The order just pasted or opened always shows, whatever the filter
+    const list = all.filter(o => o.code === active || ((ordShow === 'all' || (ordShow === 'done') === !!o.done) &&
+      (!q || [o.name, Catalog.refOf(o.code), o.design && Templates.serial(o.design), (PRESETS[o.type] || {}).label].join(' ').toLowerCase().includes(q))));
+    $('#ordersEmpty').hidden = list.length > 0;
     $('#ordersList').innerHTML = list.map(o => {
       const when = Core.parseDate(o.date);
       return `
@@ -158,6 +165,7 @@
             <small>${(PRESETS[o.type] || PRESETS.wedding).icon} ${esc((PRESETS[o.type] || PRESETS.wedding).label)}${o.design ? ` · ${Templates.serial(o.design)}` : ''}${when ? ` · ${when.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : ''}</small>
             <small class="ago">Received ${new Date(o.received).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</small>
           </button>
+          <button type="button" class="btn-small" data-video="${esc(o.code)}" title="Make this order's video">🎬 Video</button>
           <button type="button" class="btn-small" data-done="${esc(o.code)}" title="${o.done ? 'Mark as not done' : 'Mark as done'}">${o.done ? '↺' : '✓'}</button>
           <button type="button" class="btn-small danger" data-forget="${esc(o.code)}" aria-label="Delete order">✕</button>
           <details class="order-details"><summary>View details</summary><pre>${esc(orderDetails(o.code))}</pre></details>
@@ -166,13 +174,15 @@
   }
 
   $('#ordersList').addEventListener('click', e => {
-    const open = e.target.closest('[data-open]'), done = e.target.closest('[data-done]'), forget = e.target.closest('[data-forget]');
+    const open = e.target.closest('[data-open]'), done = e.target.closest('[data-done]'), forget = e.target.closest('[data-forget]'), video = e.target.closest('[data-video]');
     if (open) {
       const order = Catalog.readOrder(open.dataset.open);
-      if (order) { fillOrder(order); renderOrders(open.dataset.open); $('.create-grid').scrollIntoView({ behavior: 'smooth' }); }
+      if (order) { fillOrder(order); renderOrders(open.dataset.open); goTo('create', '.create-grid'); }
+    } else if (video) {
+      openStudioFor(video.dataset.video);
     } else if (done) {
       saveOrders(loadOrders().map(o => o.code === done.dataset.done ? { ...o, done: !o.done } : o));
-      renderOrders();
+      renderOrders(done.dataset.done); // it stays in view (greyed when done) until the list is filtered again
     } else if (forget && confirm('Delete this order from the list?')) {
       saveOrders(loadOrders().filter(o => o.code !== forget.dataset.forget));
       renderOrders();
@@ -208,7 +218,8 @@
     const added = rememberOrder(code, order);
     $('#orderPaste').value = '';
     fillOrder(order);
-    $('#orderMsg').textContent = `${added ? '📥 Saved in the orders list above ↑' : '📥 Already in the orders list above ↑'} · ${$('#orderMsg').textContent}`;
+    $('#orderMsg').textContent = `${added ? '📥 Saved in the orders list below ↓' : '📥 Already in the orders list below ↓'} · ${$('#orderMsg').textContent}`;
+    $('#orderGo').hidden = false;
   }
 
   function fillOrder(order) {
@@ -229,6 +240,14 @@
     toast('Order filled in ✨');
   }
   $('#orderFill').addEventListener('click', fillFromOrder);
+  $('#ordFilter').addEventListener('click', e => {
+    const b = e.target.closest('[data-show]');
+    if (!b) return;
+    ordShow = b.dataset.show;
+    document.querySelectorAll('#ordFilter [data-show]').forEach(x => x.classList.toggle('on', x === b));
+    renderOrders();
+  });
+  $('#ordSearch').addEventListener('input', () => renderOrders());
   // Pasting fills straight away.
   $('#orderPaste').addEventListener('paste', () => setTimeout(fillFromOrder, 0));
 
@@ -579,7 +598,7 @@
     const pick = e.target.closest('[data-pick]');
     if (!pick) return;
     chooseDesign(+pick.dataset.pick);
-    $('#create').scrollIntoView({ behavior: 'smooth' });
+    goTo('create');
   });
 
   // ---------- Link generation ----------
@@ -1059,7 +1078,9 @@
     $('#studio').hidden = false;
     document.body.classList.add('studio-open');
     showArt();
-    await Studio.fontsReady();
+    // Make video waits for this too: its frames come from the preview loop started below
+    st.ready = Studio.fontsReady();
+    await st.ready;
     st.player = st.player || new Studio.Player(stCanvas);
     st.t = 0;
     st.playing = true;
@@ -1130,6 +1151,13 @@
 
   document.querySelectorAll('[data-studio]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); openStudio(); }));
   $('#stClose').addEventListener('click', closeStudio);
+  // The options in tabs: Look, Pictures, Words, Functions, Music (the order, language and Make video stay in view)
+  $('#stTabs').addEventListener('click', e => {
+    const b = e.target.closest('[data-tab]');
+    if (!b) return;
+    document.querySelectorAll('#stTabs [data-tab]').forEach(x => x.classList.toggle('on', x === b));
+    document.querySelectorAll('.st-tab').forEach(t => { t.hidden = t.dataset.tab !== b.dataset.tab; });
+  });
   $('#stPlay').addEventListener('click', () => {
     st.playing = !st.playing;
     $('#stPlay').textContent = st.playing ? '❚❚' : '▶';
@@ -1241,6 +1269,7 @@
   $('#stMake').addEventListener('click', () => makeStudioVideo());
   async function makeStudioVideo() {
     if (st.rec) return;
+    await st.ready; // the Studio may still be opening (a tap straight after opening it)
     if (!(window.MediaRecorder && stCanvas.captureStream)) return stStatus('This browser cannot make videos. Please use Chrome, Edge or Safari.');
     const btn = $('#stMake');
     btn.disabled = $('#stAuto').disabled = true;
@@ -1342,6 +1371,7 @@
     const q = $('#search').value.trim().toLowerCase();
     const list = q ? all.filter(r => `${r.guest} ${r.who} ${designLabel(r.theme)}`.toLowerCase().includes(q)) : all;
     $('#linkCount').textContent = all.length;
+    $('#linkCount').hidden = !all.length;
     $('#emptyLinks').hidden = list.length > 0;
     $('#linksTable tbody').innerHTML = list.map(r => `
         <tr data-id="${esc(r.id)}">
@@ -1378,7 +1408,7 @@
       touched = true;
       fillForm();
       updatePreview(true);
-      $('#create').scrollIntoView({ behavior: 'smooth' });
+      goTo('create');
       toast('Loaded into editor. Change it and get a new link');
     } else if (del) {
       saveLinks(loadLinks().filter(x => x.id !== del.dataset.del));
@@ -1410,9 +1440,14 @@
       !show || (show === 'trending' && e.featured) || (show === 'hidden' && e.hidden) || (show === 'changed' && cfg.catalog[e.no])));
   }
 
+  // 50 rows at a time ("Show more" adds the next 50); a new search or filter starts again from the top
+  const CAT_PAGE = 50;
+  let catShown = CAT_PAGE;
   function renderCatalog() {
-    const rows = catalogRows(), cur = cfg.site.currency || '';
-    $('#catCount').textContent = `${rows.length} design${rows.length === 1 ? '' : 's'} · ${entries().filter(e => !e.hidden).length} on the website`;
+    const all = catalogRows(), cur = cfg.site.currency || '', rows = all.slice(0, catShown);
+    $('#catCount').textContent = `${all.length} design${all.length === 1 ? '' : 's'} · ${entries().filter(e => !e.hidden).length} on the website`;
+    $('#catMore').hidden = all.length <= rows.length;
+    $('#catMore').textContent = `Show more (${all.length - rows.length} left)`;
     $('#catTable tbody').innerHTML = rows.map(e => {
       const own = cfg.catalog[e.no] || {};
       return `
@@ -1456,9 +1491,10 @@
     const use = e.target.closest('[data-use]');
     if (!use) return;
     chooseDesign(+use.dataset.use);
-    $('#create').scrollIntoView({ behavior: 'smooth' });
+    goTo('create');
   });
-  ['catSearch', 'catOcc', 'catShow'].forEach(id => $('#' + id).addEventListener('input', renderCatalog));
+  ['catSearch', 'catOcc', 'catShow'].forEach(id => $('#' + id).addEventListener('input', () => { catShown = CAT_PAGE; renderCatalog(); }));
+  $('#catMore').addEventListener('click', () => { catShown += CAT_PAGE; renderCatalog(); });
   document.querySelectorAll('[data-bulk]').forEach(b => b.addEventListener('click', () => {
     const rows = catalogRows(), show = b.dataset.bulk === 'show';
     if (!rows.length || (!show && !confirm(`Hide ${rows.length} designs from the website?`))) return;
@@ -1636,11 +1672,45 @@
     toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
   }
 
-  // Highlight the sidebar item for the section in view.
-  const navIO = new IntersectionObserver(entries => entries.forEach(en => {
-    if (en.isIntersecting) document.querySelectorAll('.side-nav a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + en.target.id));
-  }), { rootMargin: '-40% 0px -55% 0px' });
-  document.querySelectorAll('.block').forEach(s => navIO.observe(s));
+  // ---------- Pages ----------
+  // One page at a time (Orders, Create, Designs, History, Catalog, Settings) instead of one very long page.
+  // A link to any part (#generate, #settings…) opens its page and scrolls to it.
+  const PAGES = ['orders', 'create', 'designs', 'links', 'catalog', 'settings'];
+  let page = '', navigated = false;
+  function showPage(p) {
+    if (!PAGES.includes(p)) return;
+    page = p;
+    document.querySelectorAll('main > section[data-page]').forEach(s => { s.hidden = s.dataset.page !== p; });
+    document.querySelectorAll('.side-nav a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + p));
+    history.replaceState(null, '', '#' + p);
+    if (p === 'create') updatePreview(true); // the preview was hidden: draw it again at its size
+  }
+  function goTo(p, target) {
+    navigated = true;
+    showPage(p);
+    const el = target && (typeof target === 'string' ? $(target) : target);
+    if (el && el !== $('#' + p)) el.scrollIntoView({ behavior: 'smooth' }); else scrollTo({ top: 0 });
+  }
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[href^="#"]');
+    const sec = a && !a.hasAttribute('data-studio') && document.getElementById(a.getAttribute('href').slice(1));
+    if (!sec || !sec.dataset.page) return;
+    e.preventDefault();
+    goTo(sec.dataset.page, sec);
+  });
+  // The first page: the one in the address, else the orders when some are waiting, else Create
+  function firstPage() {
+    const h = location.hash.slice(1), sec = h && document.getElementById(h);
+    if (sec && sec.dataset.page) { navigated = true; return sec.dataset.page; }
+    return loadOrders().some(o => !o.done) ? 'orders' : 'create';
+  }
+  // The Video Studio for one order (its 🎬 button in the list)
+  async function openStudioFor(code) {
+    await openStudio();
+    const sel = $('#stOrder');
+    if ([...sel.options].some(o => o.value === code)) { sel.value = code; sel.dispatchEvent(new Event('change')); }
+    else toast('This order has no names yet: fill it in first');
+  }
 
   let started = false;
   function startApp() {
@@ -1655,6 +1725,7 @@
     renderOrders();
     saveDraft();
     detectServer();
+    showPage(firstPage());
     updatePreview(true);
   }
 

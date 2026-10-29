@@ -676,8 +676,12 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     noErrors();
   });
 
-  test('admin catalog: lists all 600 and filters them', async () => {
-    assert.equal(await page.eval(`document.querySelectorAll('#catTable tbody tr').length`), 600);
+  test('admin catalog: lists all 600, 50 at a time, and filters them', async () => {
+    assert.equal(await page.eval(`document.querySelectorAll('#catTable tbody tr').length`), 50, 'the first 50');
+    assert.match(await page.eval(`document.querySelector('#catCount').textContent`), /^600 designs/);
+    for (let i = 0; i < 11; i++) await page.eval(`document.querySelector('#catMore').click()`);
+    assert.equal(await page.eval(`document.querySelectorAll('#catTable tbody tr').length`), 600, 'Show more adds the rest');
+    assert.equal(await page.eval(`document.querySelector('#catMore').hidden`), true);
     await page.eval(`(() => { const s = document.querySelector('#catShow'); s.value = 'trending'; s.dispatchEvent(new Event('input')); })()`);
     assert.equal(await page.eval(`document.querySelectorAll('#catTable tbody tr').length`), 6);
     await page.eval(`(() => { const s = document.querySelector('#catShow'); s.value = ''; s.dispatchEvent(new Event('input')); })()`);
@@ -734,7 +738,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.eval(`document.querySelector('#orderPaste').value = ${JSON.stringify('Hi!\n' + (page.lastOrder || ''))}`);
     await page.eval(`document.querySelector('#orderFill').click()`);
     assert.match(await page.eval(`document.querySelector('#orderMsg').textContent`), /Filled: Diya & Aarav · Sangeet Night · design #010 · 2 guest links/);
-    assert.match(await page.eval(`document.querySelector('#orderMsg').textContent`), /^📥 Saved in the orders list above/);
+    assert.match(await page.eval(`document.querySelector('#orderMsg').textContent`), /^📥 Saved in the orders list below/);
     assert.ok(await page.eval(`document.querySelector('#ordersList .order-item.on.flash')`), 'the new order is lit up in the list');
     assert.equal(await page.eval(`document.querySelector('#designNo').value`), '010');
     assert.equal(await page.eval(`document.querySelector('.occasion.on').dataset.type`), 'sangeet');
@@ -760,7 +764,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.eval(`document.querySelector('#orderPaste').value = ${JSON.stringify(page.lastOrder || '')}`);
     await page.eval(`document.querySelector('#orderFill').click()`);
     assert.equal(await page.eval(`document.querySelectorAll('#ordersList .order-item').length`), 1);
-    assert.match(await page.eval(`document.querySelector('#orderMsg').textContent`), /^📥 Already in the orders list above/);
+    assert.match(await page.eval(`document.querySelector('#orderMsg').textContent`), /^📥 Already in the orders list below/);
     // Start from an empty editor, then tap the customer's name
     await page.eval(`document.querySelector('#clearBtn').click()`);
     assert.equal(await page.eval(`document.querySelector('[name=host1]').value`), '');
@@ -934,7 +938,9 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       assert.equal(await page.eval(`document.querySelector('#stLooks .on').dataset.look`), 'party', 'a birthday starts on the party scene');
       await page.eval(`document.querySelector('#stAuto').click()`);
       await page.waitFor(`/Recording/.test(document.querySelector('#stStatus').textContent)`, 5000);
-      assert.match(await page.eval(`document.querySelector('#stTime').textContent`), /\/ 0:34$/, 'doors, title, invitation, venue, wishes, thank you');
+      // The timer shows the new length from the next frame (starting the recorder can hold the page for a moment)
+      await page.waitFor(`document.querySelector('#stTime').textContent.endsWith('/ 0:34')`, 3000)
+        .catch(() => assert.fail('doors, title, invitation, venue, wishes, thank you: 34 seconds'));
       await page.eval(`document.querySelector('#stClose').click()`);
       assert.equal(await page.eval(`document.querySelector('#studio').hidden`), false, 'it cannot be closed while recording');
       await page.waitFor(`/Saved|Could not/.test(document.querySelector('#stStatus').textContent)`, 60000);

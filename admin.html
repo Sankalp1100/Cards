@@ -22,9 +22,9 @@
     <a class="logo" href="index.html">💌 <span>CardAlbum</span></a>
     <p class="side-tag">Admin panel</p>
     <nav class="side-nav">
+      <a href="#orders">📥 <span>Orders</span> <b id="ordersNav" hidden></b></a>
       <a href="#create">✨ <span>Create<em> invite</em></span></a>
       <a href="#designs">🎨 <span>Designs</span></a>
-      <a href="#generate">🔗 <span><em>Get </em>Links</span></a>
       <a href="#studio" data-studio>🎬 <span><em>Video </em>Studio</span></a>
       <a href="#links">📋 <span><em>My </em>History</span> <b id="linkCount">0</b></a>
       <a href="#catalog">🗂️ <span>Catalog</span></a>
@@ -51,20 +51,41 @@
       </div>
     </div>
 
-    <section id="create" class="block">
-      <h1 class="section-h">Create an <span class="gradient-text">invite</span></h1>
-      <p class="muted">Type the design number the customer chose, fill in their details, and get the link.</p>
+    <section id="orders" class="block" data-page="orders">
+      <h1 class="section-h">Customer <span class="gradient-text">orders</span></h1>
+      <p class="muted">Every order from the website or WhatsApp. Tap a name to fill the invite, or make its video.</p>
 
       <div class="panel import-order">
-        <h2 class="step">📥 Customer orders <b class="count" id="ordersCount" hidden></b></h2>
-        <div class="orders" id="ordersList"></div>
-        <p class="muted">New order on WhatsApp? Copy the customer's whole message (it ends with an order code) and paste it here. It is saved in the list above, and everything below fills itself in.</p>
+        <h2 class="step">📥 New order on WhatsApp?</h2>
+        <p class="muted">Copy the customer's whole message and paste it here. It is saved in the list below, and the invite fills itself in.</p>
         <textarea id="orderPaste" rows="3" placeholder="Paste the order message here"></textarea>
         <div class="link-actions">
           <button type="button" class="btn-glow" id="orderFill">✨ Fill everything</button>
         </div>
         <p class="order-msg" id="orderMsg" role="status"></p>
+        <a class="btn-small go" href="#create" id="orderGo" hidden>✏️ Open the filled invite</a>
       </div>
+
+      <div class="panel">
+        <div class="links-head">
+          <h2 class="step">📋 Orders <b class="count" id="ordersCount" hidden></b></h2>
+          <div class="links-tools">
+            <input id="ordSearch" type="search" placeholder="🔍 Name, order no. or design">
+            <div class="chips" id="ordFilter">
+              <button type="button" class="chip on" data-show="open">🆕 New</button>
+              <button type="button" class="chip" data-show="done">✓ Done</button>
+              <button type="button" class="chip" data-show="all">All</button>
+            </div>
+          </div>
+        </div>
+        <div class="orders" id="ordersList"></div>
+        <p class="muted empty" id="ordersEmpty" hidden>No orders here.</p>
+      </div>
+    </section>
+
+    <section id="create" class="block" data-page="create">
+      <h1 class="section-h">Create an <span class="gradient-text">invite</span></h1>
+      <p class="muted">Type the design number the customer chose, fill in their details, and get the link.</p>
 
       <div class="design-pick panel">
         <h2 class="step"><b>1</b> Design number</h2>
@@ -136,6 +157,7 @@
 
           <fieldset class="premium-fields">
             <legend>Premium sections <small>(each one shows only when filled)</small></legend>
+            <details class="premium-more" id="premiumMore"><summary>💎 Story, families, dress code, photo gallery, gifts <small>(tap to open)</small></summary>
             <p class="hint">“Sample text” fills these with examples. Leave anything empty to hide that section.</p>
 
             <h4>💞 Story <small>(moments, in order)</small></h4>
@@ -164,6 +186,7 @@
             <label>Venue note <small>(parking, boats, timings)</small> <input name="venueNote" maxlength="200" placeholder="Boats leave the jetty every 15 minutes from 6:30 pm."></label>
             <label>Thank-you line <input name="thanks" maxlength="200" placeholder="For your love, your blessings…"></label>
             <label class="switch"><input type="checkbox" name="rsvpForm"> <span></span> RSVP form (name, guests, meal) before WhatsApp</label>
+            </details>
           </fieldset>
         </form>
 
@@ -178,7 +201,7 @@
       </div>
     </section>
 
-    <section id="generate" class="block panel">
+    <section id="generate" class="block panel" data-page="create">
       <h2 class="step"><b>4</b> Get links</h2>
       <p class="warn" id="urlWarn" hidden>⚠️ Your live website address is not set, so links only work on this PC. Add it in <a href="#settings"><b>Settings</b></a> (e.g. https://your-site.vercel.app/).</p>
       <div class="gen-grid">
@@ -203,7 +226,7 @@
       </div>
     </section>
 
-    <section id="designs" class="block">
+    <section id="designs" class="block" data-page="designs">
       <h2 class="step">🎨 All designs <small>Tap one to use it. The number under each is what customers order.</small></h2>
       <div class="cat-tools left">
         <input id="galSearch" type="search" placeholder="🔍 Number or name">
@@ -213,7 +236,7 @@
       <div class="more-wrap"><button type="button" class="btn-line small" id="galMore" hidden>Show more</button></div>
     </section>
 
-    <section id="links" class="block">
+    <section id="links" class="block" data-page="links">
       <div class="links-head">
         <h2 class="step">📋 My links</h2>
         <div class="links-tools">
@@ -232,7 +255,7 @@
       <p class="muted tiny">Links are saved in this browser. Use Download CSV to keep a backup.</p>
     </section>
 
-    <section id="catalog" class="block">
+    <section id="catalog" class="block" data-page="catalog">
       <div class="links-head">
         <h2 class="step">🗂️ Catalog <small>What customers see on the website</small></h2>
         <div class="links-tools">
@@ -257,9 +280,10 @@
           <tbody></tbody>
         </table>
       </div>
+      <div class="more-wrap"><button type="button" class="btn-line small" id="catMore" hidden>Show more</button></div>
     </section>
 
-    <section id="settings" class="block">
+    <section id="settings" class="block" data-page="settings">
       <h2 class="step">⚙️ Settings</h2>
       <form id="siteForm" class="panel settings-grid" autocomplete="off" onsubmit="return false">
         <label>Live website address <small>(Vercel → Settings → Domains)</small> <input name="url" type="url" placeholder="https://your-site.vercel.app/"></label>
@@ -329,11 +353,21 @@
           <button type="button" class="chip on" data-lang="en">English</button>
           <button type="button" class="chip" data-lang="hi">हिन्दी</button>
         </div>
+        <nav class="chips st-tabs" id="stTabs" aria-label="Video options">
+          <button type="button" class="chip on" data-tab="look">🎨 Look</button>
+          <button type="button" class="chip" data-tab="pictures">🖼️ Pictures</button>
+          <button type="button" class="chip" data-tab="words">✍️ Words</button>
+          <button type="button" class="chip" data-tab="functions">🎉 Functions</button>
+          <button type="button" class="chip" data-tab="music">🎵 Music</button>
+        </nav>
+        <div class="st-tab" data-tab="look">
         <h3>1 · A story film <small class="muted">(the scenery changes with every part)</small></h3>
         <div class="st-looks" id="stStories"></div>
         <h3>… or one scene and its mood <small class="muted">(20 scenes × 15 moods = 300 looks)</small></h3>
         <div class="st-looks" id="stLooks"></div>
         <div class="chips st-moods" id="stMoods" aria-label="Mood"></div>
+        </div>
+        <div class="st-tab" data-tab="pictures" hidden>
         <h3>Pictures &amp; branding</h3>
         <div class="st-art">
           <span>Ganesh ji</span>
@@ -354,6 +388,8 @@
           <label class="st-check st-brand"><input type="checkbox" id="stSign" checked> Show “Designed by Sankalp”</label>
           <small class="muted" id="stArtNote">Photos show in a gold frame. The couple appears only when you upload their own photo (or choose Drawn). Branding off: no QR code, no website, no signature anywhere in the video.</small>
         </div>
+        </div>
+        <div class="st-tab" data-tab="words" hidden>
         <h3>2 · Words</h3>
         <label class="st-check"><input type="checkbox" id="stBless"> Blessing at the top</label>
         <input id="stBlessText" maxlength="60" aria-label="Blessing line">
@@ -361,6 +397,8 @@
         <label class="st-check"><input type="checkbox" id="stParents"> Parents’ names under the couple (from Families)</label>
         <span class="muted">Whose name comes first</span>
         <div class="chips" id="stNameOrder"></div>
+        </div>
+        <div class="st-tab" data-tab="functions" hidden>
         <h3>3 · Functions</h3>
         <div class="chips" id="stEvents">
           <button type="button" class="chip" data-ev="each">One by one</button>
@@ -368,11 +406,14 @@
           <button type="button" class="chip" data-ev="none">Leave out</button>
         </div>
         <div id="stScreens" class="st-screens"></div>
+        </div>
+        <div class="st-tab" data-tab="music" hidden>
         <h3>4 · Music</h3>
         <div class="chips" id="stMusic"></div>
         <input type="file" id="stMusicFile" accept="audio/*" multiple hidden>
         <small class="muted" id="stSongNow"></small>
         <small class="muted">🎵 Every video has music. Add your songs (MP3, M4A, WAV, several at once): each look and story film then gets a different one, which fades in, repeats if needed and fades out at the end. They stay on this PC.</small>
+        </div>
         <button type="button" class="btn-glow" id="stMake">🎬 Make video</button>
         <p class="muted" id="stStatus">Watch it on the left, then make the video. It records in real time, so keep this tab open.</p>
         <div class="rec-progress"><i id="stRecBar"></i></div>
