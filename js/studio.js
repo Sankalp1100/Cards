@@ -2238,8 +2238,9 @@ const Studio = (() => {
     const q = clamp(p / .8);
     if (q >= 1) return;
     if (kind === 'iris') {
-      const r = ease(q) * 1250;
-      c.save(); c.beginPath(); c.rect(0, 0, W, H); c.arc(W / 2, H / 2, r, 0, TAU, true); c.fillStyle = `rgba(8,4,14,${(1 - q).toFixed(2)})`; c.fill('evenodd'); c.restore();
+      // Opens from a small circle under a soft shade, never from solid black (that flashed at every cut)
+      const r = 180 + ease(q) * 1070;
+      c.save(); c.beginPath(); c.rect(0, 0, W, H); c.arc(W / 2, H / 2, r, 0, TAU, true); c.fillStyle = `rgba(8,4,14,${(.55 * (1 - q)).toFixed(2)})`; c.fill('evenodd'); c.restore();
     } else if (kind === 'wipe') {
       const y = ease(q) * (H + 400) - 200, g = c.createLinearGradient(0, y - 200, 0, y + 200);
       g.addColorStop(0, 'rgba(255,236,190,0)'); g.addColorStop(.5, 'rgba(255,226,160,.55)'); g.addColorStop(1, 'rgba(255,236,190,0)');
