@@ -897,10 +897,10 @@ test.describe('Video Studio', () => {
     assert.equal(Studio.phone('12345'), '');
   });
 
-  test('twelve story films: real looks for every part, a function takes a scenery that suits it, each its own tune', () => {
+  test('thirteen story films: real looks for every part, a function takes a scenery that suits it, each its own tune', () => {
     const { TUNES } = require(path.join(ROOT, 'js', 'tunes.js'));
     const films = Object.entries(Studio.STORIES);
-    assert.equal(films.length, 12);
+    assert.equal(films.length, 13);
     for (const [id, S] of films) {
       assert.match(id, /^story-[a-z]+$/);
       assert.ok(TUNES[S.tune], `${id} tune`);

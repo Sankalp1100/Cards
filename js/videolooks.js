@@ -1,6 +1,7 @@
 // The Video Studio's story films (id, name, note, tune) and its 300 looks (id, scene, mood), for the website's
 // Story videos section. Made from js/studio.js by a script; tests/unit.test.js checks they still match.
 const VIDEO_STORIES = [
+  ["story-shahi","Shahi Parampara","Curtains open on Ganesh ji, and every function in its own colours","Royal Flute"],
   ["story-rajwada","Royal Rajwada","Temple → jharokha → haveli → palace → mandap","Shehnai Mangal"],
   ["story-pastel","Pastel Blossom","Soft florals and a pink mandap","Romantic Piano"],
   ["story-night","Starlit Night","Lotus pond, palace lights and a starry sky","Grand Cinematic"],

@@ -287,6 +287,14 @@ const Studio = (() => {
   // Each names the look for every part of the story; a function takes the look its name suggests (Haldi, Mehendi,
   // Baraat, Pheras, Reception…), else the film's own next one.
   const STORIES = {
+    // Shahi Parampara: the film made for Sudhanshu & Yadu, for every order. Doors open on Ganesh ji, then each
+    // function in its own colours (fn: the look a function's name takes) with a couple for it.
+    'story-shahi': { name: 'Shahi Parampara', note: 'Curtains open on Ganesh ji, and every function in its own colours', tune: 'royal', opening: 'curtains',
+      open: 'temple-golden', title: 'jharokha-champagne', invite: 'vrindavan-roseblush', events: ['haveli-pink', 'palace-plum', 'rosegarden-golden'],
+      date: 'blush-peach', end: 'rosegarden-golden', final: 'mandap-roseblush', ganesha: 'ganesha-01',
+      fn: [[/haldi|pithi|ubtan/i, 'haldi-saffron'], [/mehe?n?d/i, 'mehendi-emerald'], [/baraat|barat|ghud|ghod|sehra/i, 'haveli-pink'],
+        [/sangeet|dance|dj|garba|dandiya|cocktail/i, 'lights-roseblush'], [/phera|vivah|wedding|varmala|jaimala|mandap|shaadi/i, 'mandap-golden'],
+        [/reception|dinner|bhoj|swagat/i, 'palace-plum']] },
     'story-rajwada': { name: 'Royal Rajwada', note: 'Temple → jharokha → haveli → palace → mandap', tune: 'shehnai',
       open: 'temple', title: 'jharokha', invite: 'blush', events: ['haveli', 'palace', 'mandap'], date: 'palace', end: 'rosegarden', final: 'mandap' },
     'story-pastel': { name: 'Pastel Blossom', note: 'Soft florals and a pink mandap', tune: 'romantic',
@@ -315,7 +323,10 @@ const Studio = (() => {
   function storyLooks(S, st, key) {
     let n = 0, f = 0, prev = '';
     S.forEach(s => {
-      const byName = s.k === 'event' && eventLook(s.e.name, videoNo(key), f++, prev, false);
+      // A film's own look for the function, else one that suits it
+      const own = s.k === 'event' && ((st.fn || []).find(([re]) => re.test(s.e.name)) || [])[1];
+      const byName = s.k === 'event' && (own || eventLook(s.e.name, videoNo(key), f, prev, false));
+      if (s.k === 'event') f++;
       s.look = byName || ({ open: st.open, title: st.title, invite: st.invite, date: st.date, end: st.end, final: st.final })[s.k]
         || st.events[n++ % st.events.length];
       if (!LOOKS[s.look]) s.look = s.look.split('-')[0]; // a mood a scene does not have: its own first look
@@ -2039,9 +2050,11 @@ const Studio = (() => {
   // breathing very gently
   function ganeshaCutout(c, img, cx, top, s, t = 0) {
     const iw = img.naturalWidth, ih = img.naturalHeight, k = Math.min(s * .92 / iw, s * .98 / ih), w = iw * k, h = ih * k;
-    const cy = top + s / 2, z = 1 + .012 * Math.sin(t * 1.1);
+    const cy = top + s / 2; // held still (no sway or breathing), with a steady glow behind
     glow(c, cx, cy, s * .62, 'rgba(255,214,120,.5)');
-    c.save(); c.translate(cx, cy); c.scale(z, z);
+    // Behind him a fine gold mandala turns slowly (only the halo moves)
+    mandala(c, cx, cy - s * .04, s * .66, 'rgba(201,146,44,.42)', t * .12);
+    c.save(); c.translate(cx, cy);
     c.shadowColor = 'rgba(80,40,0,.25)'; c.shadowBlur = 24; c.shadowOffsetY = 10;
     c.drawImage(img, -w / 2, -h / 2, w, h);
     c.restore();
@@ -2477,7 +2490,9 @@ const Studio = (() => {
     set(card, opt, site = {}) {
       this.card = card; this.opt = opt; this.L = LOOKS[opt.look] || LOOKS.vrindavan;
       this.tl = timeline(card, opt); this.cache = new Map();
-      this.v = opt.variant || variant(opt.story || opt.look || 'vrindavan');
+      // A film (or a client's video) may ask for its own opening, e.g. curtains
+      const v = opt.variant || variant(opt.story || opt.look || 'vrindavan'), open = opt.opening || (STORIES[opt.story] || {}).opening;
+      this.v = OPENINGS.includes(open) ? { ...v, open } : v;
       this.couple = coupleFor(card, opt.story || opt.look || '');
       libImage(this.couple); // start loading it now
       let host = '';
@@ -2511,8 +2526,8 @@ const Studio = (() => {
       const art = this.opt || {}, photos = art.photos || {};
       if (s.ganesha && art.ganeshaArt !== 'none') {
         c.save(); c.globalAlpha = ease((p - .2) / 1.2);
-        const gy = s.ganesha.y + (1 - ease(p / 1.4)) * 40;
-        const god = photos.ganesha || ganeshaFor(art.story || art.look || '');
+        const gy = s.ganesha.y; // Shri Ganesh stays still: he only fades in
+        const god = photos.ganesha || ganeshaFor(art.story || art.look || '', art.ganeshaId || (STORIES[art.story] || {}).ganesha);
         if (art.ganeshaArt !== 'drawn' && god && ART.cutout && !photos.ganesha) ganeshaCutout(c, god, W / 2, gy, s.ganesha.s, t);
         else if (art.ganeshaArt !== 'drawn' && god) framedPhoto(c, god, W / 2, gy + s.ganesha.s * .06, s.ganesha.s * .92, s.ganesha.s * .92, 'circle', L, t);
         else ganesha(c, W / 2, gy, s.ganesha.s, t);
@@ -2589,9 +2604,12 @@ const Studio = (() => {
     return Promise.all(srcs.map(loadImg)).then(imgs => { ART.ganeshas = imgs; });
   }
   // Evenly: neighbouring looks and films take the photos in turn (a scene's moods too)
-  function ganeshaFor(key) {
+  function ganeshaFor(key, id) {
     const list = ART.ganeshas.filter(Boolean);
     if (!list.length) return null;
+    // A film or a client's video may name its own (e.g. 'ganesha-01')
+    const own = id && list.find(img => new RegExp(`/${id}\.png$`).test(img.src));
+    if (own) return own;
     const ids = [...Object.keys(STORIES), ...Object.keys(LOOKS)], i = ids.indexOf(key);
     if (i >= 0) return list[(i + (i >= Object.keys(STORIES).length ? Math.floor((i - 12) / 20) : 0)) % list.length];
     let h = 3;

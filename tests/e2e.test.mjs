@@ -859,8 +859,8 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       // The preview is painted (many colours, not a blank canvas) and plays
       const colours = `(() => { const c = document.querySelector('#stCanvas'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, s = new Set(); for (let i = 0; i < d.length; i += 4 * 997) s.add(d[i] >> 4 << 8 | d[i + 1] >> 4 << 4 | d[i + 2] >> 4); return s.size; })()`;
       await page.eval(`document.querySelector('#stScenes [data-scene="1"]').click()`);
-      await sleep(1500);
-      assert.ok(await page.eval(colours) > 40, 'the scene is painted');
+      // Painted once its sceneries are ready (waited for: a busy machine takes longer)
+      await page.waitFor(`${colours} > 40`, 8000).catch(() => assert.fail('the scene is painted'));
       const t1 = await page.eval(`document.querySelector('#stTime').textContent`);
       await page.waitFor(`document.querySelector('#stTime').textContent !== ${JSON.stringify(t1)}`, 4000).catch(() => {});
       assert.notEqual(await page.eval(`document.querySelector('#stTime').textContent`), t1, 'the preview plays');
@@ -879,7 +879,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       await page.eval(`document.querySelector('#stMoods [data-look="lotusnight-dawn"]').click()`);
       assert.equal(await page.eval(`document.querySelector('#stMoods .on').textContent`), 'Dawn');
       // Story films and the language
-      assert.equal(await page.eval(`document.querySelectorAll('#stStories [data-story]').length`), 12, 'twelve story films');
+      assert.equal(await page.eval(`document.querySelectorAll('#stStories [data-story]').length`), 13, 'thirteen story films');
       await page.eval(`document.querySelector('#stStories [data-story="story-rajwada"]').click()`);
       assert.equal(await page.eval(`document.querySelector('#stStories .on').dataset.story`), 'story-rajwada');
       assert.equal(await page.eval(`document.querySelectorAll('#stMoods .chip').length`), 0, 'a story film has no moods to pick');
