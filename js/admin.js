@@ -1678,7 +1678,7 @@
   let lastVideo = null;
   function keepVideo(file) {
     lastVideo = file;
-    $('#lastVideoBtn').hidden = false;
+    $('#lastVideoBtn').disabled = false;
   }
   $('#lastVideoBtn').addEventListener('click', () => {
     if (!lastVideo) return;
