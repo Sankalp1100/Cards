@@ -729,7 +729,8 @@
     recSeen = new Set();
     recWaiters = {};
     $('#recVideo').hidden = true;
-    $('#recDownload').hidden = true;
+    $('#recDownload').hidden = $('#recShare').hidden = true;
+    recShareFile = null;
     $('#recModal').hidden = false;
     recFrame.src = 'card.html?record#' + code({ music: false });
   }
@@ -840,6 +841,9 @@
     Object.assign($('#recVideo'), { src: url, hidden: false });
     Object.assign($('#recDownload'), { href: url, download: name, hidden: false });
     $('#recDownload').click();
+    recShareFile = new File([blob], name, { type: blob.type.split(';')[0] });
+    $('#recShare').hidden = !canShareFile(recShareFile);
+    keepVideo(recShareFile);
     recStatus(`✅ Saved "${name}" (${(blob.size / 1048576).toFixed(1)} MB) to your Downloads.` +
       (ext === 'webm' ? ' This browser can only make WebM, which WhatsApp does not accept: update Chrome to get MP4.' : ''), 1);
     toast('Video downloaded 🎬');
@@ -1073,7 +1077,8 @@
       orders.map(o => `<option value="${esc(o.code)}">${o.done ? '✓ ' : '🆕 '}${esc(o.name)} · ${esc(occasion(o).label)}${Catalog.refOf(o.code) ? ` · ${Catalog.refOf(o.code)}` : ''}</option>`).join('');
     $('#stOrderRow').hidden = !orders.length;
     studioLoad(state.host1 ? clone(state) : orderCard(orders[0].code), state.host1 ? '' : orderVideo(orders[0].code), state.host1 ? '' : orderLang(orders[0].code));
-    $('#stVideo').hidden = $('#stDownload').hidden = true;
+    $('#stVideo').hidden = $('#stDownload').hidden = $('#stShare').hidden = true;
+    stShareFile = null;
     stStatus('Watch it on the left, then make the video. It records in real time, so keep this tab open.');
     $('#studio').hidden = false;
     document.body.classList.add('studio-open');
@@ -1273,7 +1278,8 @@
     if (!(window.MediaRecorder && stCanvas.captureStream)) return stStatus('This browser cannot make videos. Please use Chrome, Edge or Safari.');
     const btn = $('#stMake');
     btn.disabled = $('#stAuto').disabled = true;
-    $('#stVideo').hidden = $('#stDownload').hidden = true;
+    $('#stVideo').hidden = $('#stDownload').hidden = $('#stShare').hidden = true;
+    stShareFile = null;
     let box = null;
     const hadSound = !!previewSound;
     soundOff();
@@ -1318,6 +1324,9 @@
       Object.assign(v, { src: url, hidden: false });
       Object.assign($('#stDownload'), { href: url, download: name, hidden: false });
       $('#stDownload').click();
+      stShareFile = new File([blob], name, { type: type.split(';')[0] });
+      $('#stShare').hidden = !canShareFile(stShareFile);
+      keepVideo(stShareFile);
       stStatus(`✅ Saved "${name}" (${(blob.size / 1048576).toFixed(1)} MB) to your Downloads.` +
         (ext === 'webm' ? ' This browser can only make WebM, which WhatsApp does not accept: please update Chrome to get MP4.' : ''), 1);
       toast('Video downloaded 🎬');
@@ -1653,6 +1662,30 @@
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
+
+  // Videos can be shared from the device's share sheet (WhatsApp, Instagram, Mail…). The Share button only shows
+  // where the browser can share files; otherwise the video is just downloaded.
+  let recShareFile = null, stShareFile = null;
+  const canShareFile = file => !!(navigator.share && navigator.canShare && navigator.canShare({ files: [file] }));
+  async function shareFile(file, title) {
+    try { await navigator.share({ files: [file], title }); }
+    catch (e) { if (e.name !== 'AbortError') toast(`Could not share: ${e.message}`); }
+  }
+  $('#recShare').addEventListener('click', () => recShareFile && shareFile(recShareFile, 'Invitation video'));
+  $('#stShare').addEventListener('click', () => stShareFile && shareFile(stShareFile, 'Story video'));
+
+  // The last video made on this page, downloadable from the main screen (also after its window is closed).
+  let lastVideo = null;
+  function keepVideo(file) {
+    lastVideo = file;
+    $('#lastVideoBtn').hidden = false;
+  }
+  $('#lastVideoBtn').addEventListener('click', () => {
+    if (!lastVideo) return;
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(lastVideo), download: lastVideo.name });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
 
   async function copy(text, msg) {
     try { await navigator.clipboard.writeText(text); }
