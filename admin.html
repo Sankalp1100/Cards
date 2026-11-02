@@ -213,8 +213,9 @@
             <button type="button" class="btn-glow" id="generate-btn">⚡ Get links</button>
             <button type="button" class="btn-line" id="studioBtn" data-studio>✨ Video Studio</button>
             <button type="button" class="btn-line" id="videoBtn">🎬 Card video</button>
+            <button type="button" class="btn-line" id="lastVideoBtn" hidden>⬇ Download video</button>
           </div>
-          <small><b>Video Studio</b>: a story video (monogram, invitation, functions, save the date) in six painted looks. <b>Card video</b>: films the card itself. Both have music, are ready for WhatsApp and Instagram, and are only saved to this device.</small>
+          <small><b>Video Studio</b>: a story video (monogram, invitation, functions, save the date) in six painted looks. <b>Card video</b>: films the card itself. Both have music, are ready for WhatsApp and Instagram, and are saved to this device, and can be shared from here (WhatsApp, Instagram, Mail) where the browser allows it.</small>
         </div>
         <div>
           <div class="results-head" id="resultsHead" hidden>
@@ -317,6 +318,7 @@
         <video id="recVideo" controls playsinline hidden></video>
         <div class="link-actions">
           <a class="btn-small go" id="recDownload" hidden>⬇ Download again</a>
+          <button type="button" class="btn-small" id="recShare" hidden>📤 Share</button>
           <button type="button" class="btn-small" id="recClose">Close</button>
         </div>
       </div>
@@ -418,7 +420,10 @@
         <p class="muted" id="stStatus">Watch it on the left, then make the video. It records in real time, so keep this tab open.</p>
         <div class="rec-progress"><i id="stRecBar"></i></div>
         <video id="stVideo" controls playsinline hidden></video>
-        <a class="btn-small go" id="stDownload" hidden>⬇ Download again</a>
+        <div class="link-actions">
+          <a class="btn-small go" id="stDownload" hidden>⬇ Download again</a>
+          <button type="button" class="btn-small" id="stShare" hidden>📤 Share</button>
+        </div>
       </div>
     </div>
   </div>
