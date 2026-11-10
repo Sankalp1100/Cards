@@ -385,7 +385,6 @@
     $('#filmGrid').innerHTML = Films.LIST.slice(0, filmShown).map(f => `
     <button type="button" class="vid-tile film-tile" data-film="${f.id}" aria-label="Play the ${esc(f.name)} premium film">
       <img src="img/films/${f.id}.jpg" alt="" loading="lazy" decoding="async" width="270" height="480">
-      <span class="vid-badge">👑 Premium</span>
       <span class="vid-play" aria-hidden="true">▶</span>
       <span class="vid-cap"><b>${esc(f.name)}</b><small>${esc(Films.describe(f))}</small></span>
     </button>`).join('');
@@ -400,9 +399,11 @@
   const script = src => new Promise((resolve, reject) => {
     document.head.appendChild(Object.assign(document.createElement('script'), { src, onload: resolve, onerror: () => reject(new Error('offline')) }));
   });
-  let filmsScript = null;
-  const loadFilms = () => filmsScript || (filmsScript = script('js/tunes.js').catch(e => { filmsScript = null; throw e; }));
-  const loadStudio = () => studioScript || (studioScript = Promise.all([script('js/studio.js'), script('js/tunes.js')]).catch(e => { studioScript = null; throw e; }));
+  // js/tunes.js is loaded once, for whichever video opens first
+  let tunesScript = null;
+  const loadTunes = () => tunesScript || (tunesScript = script('js/tunes.js').catch(e => { tunesScript = null; throw e; }));
+  const loadFilms = loadTunes;
+  const loadStudio = () => studioScript || (studioScript = Promise.all([script('js/studio.js'), loadTunes()]).catch(e => { studioScript = null; throw e; }));
   // The look's music while the video plays; 🔇 mutes it (and stays muted for the next video)
   let tune = null, muted = false;
   const tuneOff = () => { if (tune) { tune.close(); tune = null; } };

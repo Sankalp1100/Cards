@@ -879,13 +879,13 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       await page.eval(`document.querySelector('#stScreens details[data-i="0"] [data-quote]').click()`);
       assert.match(await page.eval(`document.querySelector('#stScreens textarea[data-i="0"]').value`), /turmeric/i, 'a tap puts the quote in');
       // Every function on its own screen by default; all on one page when chosen
-      assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stScenes .chip')].map(b => b.textContent)`), ['Opening', 'Title', 'Invitation', 'Haldi', 'Mehendi', 'Sangeet', 'Pheras', 'Reception', 'Venue', 'Regards', 'Thank You']);
+      assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stScenes .st-seg')].map(b => b.textContent)`), ['Opening', 'Title', 'Invitation', 'Haldi', 'Mehendi', 'Sangeet', 'Pheras', 'Reception', 'Venue', 'Regards', 'Thank You']);
       await page.eval(`document.querySelector('[data-ev="list"]').click()`);
-      assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stScenes .chip')].map(b => b.textContent)`), ['Opening', 'Title', 'Invitation', 'Functions', 'Venue', 'Regards', 'Thank You']);
+      assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stScenes .st-seg')].map(b => b.textContent)`), ['Opening', 'Title', 'Invitation', 'Functions', 'Venue', 'Regards', 'Thank You']);
       await page.eval(`document.querySelector('[data-ev="each"]').click()`);
       await page.eval(`document.querySelector('#stScenes [data-scene="4"]').click()`);
       // Lit by the next painted frame (waited for, not guessed: a busy machine paints later)
-      await page.waitFor(`(document.querySelector('#stScenes .chip.on') || {}).textContent === 'Mehendi'`, 5000)
+      await page.waitFor(`(document.querySelector('#stScenes .st-seg.on') || {}).textContent === 'Mehendi'`, 5000)
         .catch(() => assert.fail('a scene button jumps there'));
       await page.eval(`document.querySelector('#stLooks [data-look="lotusnight"]').click()`);
       assert.equal(await page.eval(`document.querySelector('#stLooks .on').dataset.look`), 'lotusnight');
@@ -912,6 +912,13 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
         const input = document.querySelector('#stMusicFile'); input.files = dt.files; input.dispatchEvent(new Event('change'));
       })()`);
       await page.waitFor(`document.querySelectorAll('#stMusic [data-music^="song:"]').length === 3`, 5000);
+      // the first new song is picked for this video, and can be cut
+      assert.match(await page.eval(`document.querySelector('#stSongNow').textContent`), /^This video’s song: Song A$/);
+      assert.equal(await page.eval(`document.querySelector('#stCrop').hidden`), false, 'the song can be cut');
+      await page.eval(`(() => { const r = document.querySelector('#cropEnd'); r.value = 0.6; r.dispatchEvent(new Event('input')); })()`);
+      assert.match(await page.eval(`document.querySelector('#stSongNow').textContent`), /Song A \(0:00–0:00\)|Song A/);
+      await page.eval(`document.querySelector('#cropAll').click()`);
+      await page.eval(`document.querySelector('#stMusic [data-music="auto"]').click()`);
       const songOf = async sel => { await page.eval(`document.querySelector(${JSON.stringify(sel)}).click()`); return page.eval(`document.querySelector('#stSongNow').textContent`); };
       const songs = [await songOf('#stStories [data-story="story-rajwada"]'), await songOf('#stStories [data-story="story-rajwada"] + [data-story]'), await songOf('#stLooks [data-look="lotusnight"]')];
       assert.ok(songs.every(s => /^This video’s song: Song [ABC]$/.test(s)), songs.join(' | '));
@@ -955,7 +962,56 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       await page.eval(`document.querySelector('#stClose').click()`);
       assert.equal(await page.eval(`document.querySelector('#studio').hidden`), true);
       noErrors();
-      fs.rmSync(dir, { recursive: true, force: true });
+      try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* Chrome may still hold the folder */ }
+    });
+
+    test('Video Studio: a card’s details (as read from its PDF) → pick a premium film → the video is made by itself; steps, timeline and the bottom strip', async () => {
+      const fs = await import('node:fs'), os = await import('node:os');
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wc-film-'));
+      await page.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: dir });
+      await page.viewport(1300, 900);
+      await page.goto(origin + '/admin.html?offline', 1000);
+      await page.eval(`document.querySelector('#studioBtn').click()`);
+      await page.waitFor(`!document.querySelector('#studio').hidden && document.querySelectorAll('#stScenes [data-scene]').length > 0`, 8000);
+      assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stTabs [data-tab]')].map(b => b.dataset.tab)`), ['details', 'look', 'music', 'brand', 'pictures'], 'the steps in the top bar');
+      assert.equal(await page.eval(`document.querySelectorAll('#stFilms [data-film]').length`), 81, 'all premium films to pick from');
+      // what PdfCard read from a card, put in the form (here typed, as the PDF reader is tested on its own)
+      await page.eval(`(() => {
+        const s = (id, v) => { document.getElementById(id).value = v; };
+        document.querySelector('#stForm').hidden = false;
+        s('fType', 'wedding'); s('fLang', 'en'); s('fHost1', 'Rohit'); s('fHost2', 'Ananya'); s('fParents1', 'Mr. & Mrs. Mahesh Sharma'); s('fParents2', 'Mr. & Mrs. Rakesh Gupta');
+        s('fVenue', 'Sunshine Banquet Hall, MG Road, Lucknow'); s('fAddress', '45, Green Park, Lucknow'); s('fPhones', '98765 12345');
+        document.querySelector('#fEvents').innerHTML = '';
+        document.querySelector('#fAddEv').click(); document.querySelector('#fAddEv').click();
+        const rows = document.querySelectorAll('#fEvents .st-ev');
+        [['Haldi', '2026-12-11T11:00'], ['Baraat', '2026-12-12T19:30']].forEach(([n, d], i) => { rows[i].querySelector('[data-f="name"]').value = n; rows[i].querySelector('[data-f="date"]').value = d; });
+        document.querySelector('#fPick').click();
+      })()`);
+      assert.equal(await page.eval(`document.querySelector('#pickSheet').hidden`), false, 'it asks which video to make');
+      assert.match(await page.eval(`document.querySelector('#pickWho').textContent`), /Rohit & Ananya · Wedding/);
+      assert.equal(await page.eval(`document.querySelectorAll('#pickGrid [data-film]').length`), 81);
+      // the bottom strip: only the designer line, in other words
+      await page.eval(`document.querySelector('#stStrip [data-strip="credit"]').click()`);
+      await page.eval(`(() => { const i = document.querySelector('#stCredit'); i.value = 'Made by Sankalp Studio'; i.dispatchEvent(new Event('input')); })()`);
+      assert.match(await page.eval(`document.querySelector('#stStripDemo').textContent`), /^Made by Sankalp Studio$/);
+      await page.eval(`document.querySelector('#pickGrid [data-film="film-royal-darbar"]').click()`);
+      assert.equal(await page.eval(`document.querySelector('#pickSheet').hidden`), true);
+      await page.waitFor(`/Recording/.test(document.querySelector('#stStatus').textContent)`, 5000);
+      assert.deepEqual(await page.eval(`[...document.querySelectorAll('#stScenes .st-seg')].map(b => b.textContent)`), ['Opening', 'Opening', 'Names', 'Invitation', 'Functions 1', 'Functions 2', 'Venue', 'Families', 'Note', 'Finale']);
+      await page.waitFor(`/Saved|Could not/.test(document.querySelector('#stStatus').textContent)`, 90000);
+      assert.match(await page.eval(`document.querySelector('#stStatus').textContent`), /Saved "Rohit & Ananya Royal Darbar English video\.mp4"/);
+      assert.equal(await page.eval(`document.querySelector('#stRemake').hidden`), false, 'it can be made again with other music');
+      for (let i = 0; i < 20 && !fs.readdirSync(dir).some(f => f.endsWith('.mp4')); i++) await sleep(250);
+      assert.ok(fs.readdirSync(dir).some(f => f.endsWith('.mp4')), 'MP4 saved to Downloads');
+      // the timeline: screen by screen and 5 seconds on
+      await page.eval(`document.querySelector('#stPlay').click()`);
+      await page.eval(`document.querySelector('#stNext').click()`);
+      await page.eval(`document.querySelector('#stNext').click()`);
+      await page.waitFor(`(document.querySelector('#stScenes .st-seg.on') || {}).textContent === 'Names'`, 3000).catch(() => assert.fail('⏭ goes to the next screen'));
+      await page.eval(`document.querySelector('#stBrandReset').click()`);
+      await page.eval(`document.querySelector('#stClose').click()`);
+      noErrors();
+      try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* Chrome may still hold the folder */ }
     });
 
     test('refuses publishing from another website', async () => {

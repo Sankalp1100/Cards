@@ -853,7 +853,9 @@
   // Story videos painted on a canvas (js/studio.js), on their own full screen: pick a look, the words and the music,
   // watch it, then record it straight from the canvas as an MP4 (no screen sharing, so it also works on a phone).
   const stCanvas = $('#stCanvas');
-  const st = { player: null, card: null, opt: null, t: 0, playing: true, last: 0, raf: 0, rec: null };
+  const st = { player: null, fplayer: null, card: null, opt: null, t: 0, playing: true, last: 0, raf: 0, rec: null, made: false };
+  // The player on screen: a premium film (js/films.js) or a story film / look (js/studio.js)
+  const SP = () => (st.opt && st.opt.film ? st.fplayer : st.player);
   const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
   const stStatus = (text, progress) => {
     $('#stStatus').textContent = text;
@@ -931,18 +933,21 @@
   // ---- Your own songs ----
   // Every video has a song: by default each look and story film gets one of your songs in turn (neighbours differ),
   // or, while you have none, the look's own tune. The songs stay on this PC and never go to the website.
-  let songs = []; // [{ name, bytes, buffer }]
-  async function decodeSong(name, bytes) {
+  let songs = []; // [{ name, bytes, buffer, cut: { start, end } | null }]
+  async function decodeSong(name, bytes, cut = null) {
     const AC = window.AudioContext || window.webkitAudioContext, c = new AC();
-    try { return { name, bytes, buffer: await c.decodeAudioData(bytes.slice(0)) }; } finally { c.close(); }
+    try { return { name, bytes, cut, buffer: await c.decodeAudioData(bytes.slice(0)) }; } finally { c.close(); }
   }
-  const saveSongs = () => musicStore('put', songs.map(({ name, bytes }) => ({ name, bytes })));
+  const saveSongs = () => musicStore('put', songs.map(({ name, bytes, cut }) => ({ name, bytes, cut: cut || null })));
   // The song a look gets: its place among the story films and looks, so neighbouring videos never share one
-  const songFor = (story, look) => {
+  const songFor = (story, look, film) => {
     if (!songs.length) return null;
-    const i = [...Object.keys(Studio.STORIES), ...Object.keys(Studio.LOOKS)].indexOf(story || look);
+    const i = [...Films.LIST.map(f => f.id), ...Object.keys(Studio.STORIES), ...Object.keys(Studio.LOOKS)].indexOf(film || story || look);
     return songs[Math.max(0, i) % songs.length];
   };
+  // The song this video plays (if one of yours), and its own tune otherwise
+  const videoSong = () => { const m = st.opt.music; return m === 'auto' ? songFor(st.opt.story, st.opt.look, st.opt.film) : /^song:/.test(m) ? songs[+m.slice(5)] || null : null; };
+  const videoTune = () => st.opt.film ? Films.byId[st.opt.film].tune : st.opt.story ? Studio.STORIES[st.opt.story].tune : Studio.LOOKS[st.opt.look].music;
   // A tiny IndexedDB store for the songs (too big for localStorage)
   function musicStore(op, value, key = 'songs') {
     return new Promise(resolve => {
@@ -962,13 +967,13 @@
     // The list of songs (an older single song is taken in too)
     const saved = (await musicStore('get')) || [], old = await musicStore('get', null, 'song');
     if (old && !saved.some(s => s.name === old.name)) saved.push(old);
-    for (const s of saved) { try { songs.push(await decodeSong(s.name, s.bytes)); } catch (e) { /* a file this browser cannot play */ } }
+    for (const s of saved) { try { songs.push(await decodeSong(s.name, s.bytes, s.cut)); } catch (e) { /* a file this browser cannot play */ } }
     if (old) saveSongs();
     if (st.player) { renderMusicChips(); refreshStudio(); }
   })();
   function renderMusicChips() {
     const auto = songs.length ? `🎵 My songs, a different one per video (${songs.length})` : '🎵 The look’s own tune';
-    $('#stMusic').innerHTML = '<button type="button" class="chip add-song" data-music-add>＋ 🎵 Add your own song</button>' + [['auto', auto], ...songs.map((s, i) => [`song:${i}`, `🎶 ${s.name}`]), ...(songs.length ? [['look', 'The look’s own tune']] : []),
+    $('#stMusic').innerHTML = [['auto', auto], ...songs.map((s, i) => [`song:${i}`, `🎶 ${s.name}`]), ...(songs.length ? [['look', 'The look’s own tune']] : []),
       ...Object.entries(TUNES).map(([k, T]) => [k, T.label]), ['card', 'The card’s music box']]
       .map(([k, label]) => `<button type="button" class="chip" data-music="${k}">${esc(label)}</button>`).join('')
       + (songs.length ? '<button type="button" class="chip" data-music-clear>🗑 Remove my songs</button>' : '');
@@ -977,10 +982,9 @@
   // Which music this video gets, in words
   function songNow() {
     if (!st.opt) return '';
-    const m = st.opt.music, s = m === 'auto' ? songFor(st.opt.story, st.opt.look) : /^song:/.test(m) ? songs[+m.slice(5)] : null;
-    const tune = st.opt.story ? Studio.STORIES[st.opt.story].tune : Studio.LOOKS[st.opt.look].music;
-    return s ? `This video’s song: ${s.name}` : m === 'card' ? 'This video’s music: the card’s music box'
-      : `This video’s music: ${TUNES[TUNES[m] ? m : tune].label}`;
+    const m = st.opt.music, s = videoSong(), cut = s && s.cut ? ` (${mmss(s.cut.start)}–${mmss(s.cut.end)})` : '';
+    return s ? `This video’s song: ${s.name}${cut}` : m === 'card' ? 'This video’s music: the card’s music box'
+      : `This video’s music: ${TUNES[TUNES[m] ? m : videoTune()].label}`;
   }
 
   // `video`: the look or story film the customer chose on the website, if any (it wins over the occasion's look);
@@ -992,10 +996,11 @@
     st.lang = lang === 'hi' || lang === 'en' ? lang : st.lang || 'en';
     const auto = Studio.defaults(st.card, st.lang);
     const kept = st.picked && st.opt;
+    const film = Films.byId[video] ? video : Studio.STORIES[video] || Studio.LOOKS[video] ? '' : st.opt ? st.opt.film || '' : '';
     const story = Studio.STORIES[video] ? video : kept ? st.opt.story : '';
     // The look the occasion suits, unless one was picked by hand in this visit
     const look = story ? Studio.STORIES[story].open : Studio.LOOKS[video] ? video : kept ? st.opt.look : auto.look;
-    st.opt = { ...auto, look, story, music: st.opt ? st.opt.music : 'auto', ...studioArt(),
+    st.opt = { ...auto, look, story, film, music: st.opt ? st.opt.music : 'auto', ...studioArt(),
       screens: same ? st.opt.screens : [], swapNames: same ? st.opt.swapNames : false };
     document.querySelectorAll('#stLang [data-lang]').forEach(b => b.classList.toggle('on', b.dataset.lang === st.lang));
     $('#stWho').textContent = `${who(st.card)} · ${occasion(st.card).label}`;
@@ -1071,12 +1076,13 @@
   async function openStudio() {
     st.picked = false;
     const orders = studioOrders();
-    if (!state.host1 && !orders.length) return cardReady();
     if (state.host1 && !cardReady()) return;
     $('#stOrder').innerHTML = (state.host1 ? `<option value="">✏️ The invite in the editor: ${esc(who(state))}</option>` : '') +
       orders.map(o => `<option value="${esc(o.code)}">${o.done ? '✓ ' : '🆕 '}${esc(o.name)} · ${esc(occasion(o).label)}${Catalog.refOf(o.code) ? ` · ${Catalog.refOf(o.code)}` : ''}</option>`).join('');
     $('#stOrderRow').hidden = !orders.length;
-    studioLoad(state.host1 ? clone(state) : orderCard(orders[0].code), state.host1 ? '' : orderVideo(orders[0].code), state.host1 ? '' : orderLang(orders[0].code));
+    if (state.host1) studioLoad(clone(state), '', '');
+    else if (orders.length) studioLoad(orderCard(orders[0].code), orderVideo(orders[0].code), orderLang(orders[0].code));
+    else studioLoad({ ...Core.blankCard(), ...Studio.sample('vrindavan') }, Films.LIST[0].id, 'en'); // a sample until a card PDF is added
     $('#stVideo').hidden = $('#stDownload').hidden = $('#stShare').hidden = true;
     stShareFile = null;
     stStatus('Watch it on the left, then make the video. It records in real time, so keep this tab open.');
@@ -1084,9 +1090,10 @@
     document.body.classList.add('studio-open');
     showArt();
     // Make video waits for this too: its frames come from the preview loop started below
-    st.ready = Studio.fontsReady();
+    st.ready = Promise.all([Studio.fontsReady(), Films.fontsReady()]);
     await st.ready;
     st.player = st.player || new Studio.Player(stCanvas);
+    st.fplayer = st.fplayer || new Films.Player(stCanvas, 1);
     st.t = 0;
     st.playing = true;
     refreshStudio();
@@ -1097,7 +1104,7 @@
   }
   function closeStudio() {
     if (st.rec) return toast('Please wait: the video is still recording');
-    soundOff();
+    soundOff(); stopCropSound();
     $('#stSound').textContent = '🔇';
     cancelAnimationFrame(st.raf);
     $('#studio').hidden = true;
@@ -1108,17 +1115,21 @@
 
   // Applies the chosen options; the preview keeps its place.
   function refreshStudio() {
-    st.player.set(st.card, st.opt, cfg.site);
-    st.t = Math.min(st.t, st.player.total - .05);
-    $('#stScenes').innerHTML = st.player.tl.scenes.map((s, i) =>
-      `<button type="button" class="chip" data-scene="${i}">${esc(Studio.sceneName(s))}</button>`).join('');
+    if (st.opt.film) st.fplayer.set(st.opt.film, st.lang, st.card, filmOpts());
+    else st.player.set(st.card, st.opt, cfg.site);
+    const P = SP();
+    st.t = Math.min(st.t, P.total - .05);
+    $('#stScenes').innerHTML = P.tl.scenes.map((s, i) =>
+      `<button type="button" class="st-seg" data-scene="${i}" style="flex:${s.d.toFixed(2)} 1 0"><span>${esc(st.opt.film ? Films.SCENE_NAME[s.k] + (s.k === 'day' && s.n > 1 ? ' ' + (s.i + 1) : '') : Studio.sceneName(s))}</span></button>`).join('');
     document.querySelectorAll('#stEvents [data-ev]').forEach(b => b.classList.toggle('on', b.dataset.ev === st.opt.events));
     document.querySelectorAll('#stMusic [data-music]').forEach(b => b.classList.toggle('on', b.dataset.music === st.opt.music));
     $('#stSongNow').textContent = songNow();
     const scene = Studio.LOOKS[st.opt.look].scene;
-    document.querySelectorAll('#stStories [data-story]').forEach(b => b.classList.toggle('on', b.dataset.story === st.opt.story));
-    document.querySelectorAll('#stLooks [data-look]').forEach(b => b.classList.toggle('on', !st.opt.story && b.dataset.look === scene));
-    $('#stMoods').innerHTML = st.opt.story ? '' : Object.entries(Studio.LOOKS).filter(([, L]) => L.scene === scene)
+    document.querySelectorAll('#stFilms [data-film]').forEach(b => b.classList.toggle('on', b.dataset.film === st.opt.film));
+    document.querySelectorAll('#stStories [data-story]').forEach(b => b.classList.toggle('on', !st.opt.film && b.dataset.story === st.opt.story));
+    document.querySelectorAll('#stLooks [data-look]').forEach(b => b.classList.toggle('on', !st.opt.film && !st.opt.story && b.dataset.look === scene));
+    renderCrop();
+    $('#stMoods').innerHTML = st.opt.story || st.opt.film ? '' : Object.entries(Studio.LOOKS).filter(([, L]) => L.scene === scene)
       .map(([id, L]) => `<button type="button" class="chip${id === st.opt.look ? ' on' : ''}" data-look="${id}">${esc(L.mood)}</button>`).join('');
   }
 
@@ -1131,6 +1142,7 @@
       return `<button type="button" class="st-look" data-look="${id}" title="${esc(L.note)}"><canvas width="135" height="240"></canvas><span>${esc(L.name)}</span></button>`; }).join('');
     $('#stStories').innerHTML = Object.entries(Studio.STORIES).map(([id, S]) =>
       `<button type="button" class="st-look" data-story="${id}" data-look="${S.title}" title="${esc(S.note)} · ${esc(TUNES[S.tune].label)}"><canvas width="135" height="240"></canvas><span>${esc(S.name)}</span></button>`).join('');
+    $('#stFilms').innerHTML = Films.LIST.map(f => `<button type="button" class="st-film" data-film="${f.id}" title="${esc(Films.describe(f))}"><img src="img/films/${f.id}.jpg" alt="" loading="lazy" width="135" height="240"><span>${esc(f.name)}</span></button>`).join('');
     renderMusicChips();
     // Painted after the preview has started, one at a time in idle moments, so the preview never stalls
     const idle = fn => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 800 }) : setTimeout(fn, 60));
@@ -1141,12 +1153,13 @@
 
   function studioFrame(now) {
     // The preview keeps real time, even when a frame comes late (only a long pause, like a hidden tab, is skipped)
-    const p = st.player, dt = Math.max(0, Math.min(.5, (now - st.last) / 1000));
+    const p = SP(), dt = Math.max(0, Math.min(.5, (now - st.last) / 1000));
     st.last = now;
     if (st.rec) st.t = Math.max(0, now - st.rec.t0) / 1000;
     else if (st.playing) st.t = (st.t + dt) % p.total;
     const scene = p.draw(st.t);
     $('#stBar').style.width = `${Math.min(100, st.t / p.total * 100)}%`;
+    $('#stHeadMark').style.left = `${Math.min(100, st.t / p.total * 100)}%`;
     $('#stTime').textContent = `${mmss(st.t)} / ${mmss(p.total)}`;
     const on = p.tl.scenes.indexOf(scene);
     document.querySelectorAll('#stScenes [data-scene]').forEach(b => b.classList.toggle('on', +b.dataset.scene === on));
@@ -1163,23 +1176,63 @@
     document.querySelectorAll('#stTabs [data-tab]').forEach(x => x.classList.toggle('on', x === b));
     document.querySelectorAll('.st-tab').forEach(t => { t.hidden = t.dataset.tab !== b.dataset.tab; });
   });
-  $('#stPlay').addEventListener('click', () => {
-    st.playing = !st.playing;
+  $('#stPlay').addEventListener('click', () => { if (st.rec) return; st.playing = !st.playing; showPlay(); });
+  // The timeline: press and drag anywhere to look at that moment (the video holds still while dragging)
+  const scrubAt = e => { const r = $('#stScrub').getBoundingClientRect(); return Math.max(0, Math.min(.999, (e.clientX - r.left) / r.width)) * SP().total; };
+  let scrubbing = null, scrubMoved = false;
+  $('#stScrub').addEventListener('pointerdown', e => {
+    if (st.rec || !SP()) return;
+    scrubbing = { was: st.playing, x: e.clientX }; scrubMoved = false;
+    st.playing = false; st.t = scrubAt(e);
+    e.currentTarget.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  $('#stScrub').addEventListener('pointermove', e => {
+    if (!SP()) return;
+    const t = scrubAt(e), h = $('#stHover');
+    h.textContent = mmss(t); h.style.left = `${t / SP().total * 100}%`;
+    if (scrubbing) { st.t = t; if (Math.abs(e.clientX - scrubbing.x) > 4) scrubMoved = true; }
+  });
+  const endScrub = () => { if (!scrubbing) return; st.playing = scrubbing.was; scrubbing = null; showPlay(); };
+  $('#stScrub').addEventListener('pointerup', endScrub);
+  $('#stScrub').addEventListener('pointercancel', endScrub);
+  // Screen by screen, and 5 seconds back or on
+  const sceneIndex = () => { const S = SP().tl.scenes; let i = S.findIndex(s => st.t < s.t0 + s.d); return i < 0 ? S.length - 1 : i; };
+  const jump = t => { if (!st.rec && SP()) st.t = Math.max(0, Math.min(SP().total - .05, t)); };
+  const prevScene = () => { const S = SP().tl.scenes, i = sceneIndex(); jump(st.t - S[i].t0 > 1 || !i ? S[i].t0 + .01 : S[i - 1].t0 + .01); };
+  const nextScene = () => { const S = SP().tl.scenes, i = sceneIndex(); if (S[i + 1]) jump(S[i + 1].t0 + .01); };
+  function showPlay() {
     $('#stPlay').textContent = st.playing ? '❚❚' : '▶';
     $('#stPlay').setAttribute('aria-label', st.playing ? 'Pause' : 'Play');
+  }
+  $('#stPrev').addEventListener('click', prevScene);
+  $('#stNext').addEventListener('click', nextScene);
+  $('#stBack').addEventListener('click', () => jump(st.t - 5));
+  $('#stFwd').addEventListener('click', () => jump(st.t + 5));
+  document.addEventListener('keydown', e => {
+    if ($('#studio').hidden || !$('#pickSheet').hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
+    const k = e.key;
+    if (k === ' ') { e.preventDefault(); if (!st.rec) { st.playing = !st.playing; showPlay(); } }
+    else if (k === 'ArrowLeft') { e.preventDefault(); jump(st.t - (e.shiftKey ? 1 : 5)); }
+    else if (k === 'ArrowRight') { e.preventDefault(); jump(st.t + (e.shiftKey ? 1 : 5)); }
+    else if (k === 'j' || k === 'J') prevScene();
+    else if (k === 'l' || k === 'L') nextScene();
+    else if (k === 'Home') jump(0);
+    else if (k === 'End') jump(SP().total);
+    else if (k === 'm' || k === 'M') $('#stSound').click();
+    else if (k === 'Escape' && !st.rec) closeStudio();
   });
-  $('#stScrub').addEventListener('click', e => {
-    if (st.rec) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    st.t = Math.max(0, Math.min(.999, (e.clientX - r.left) / r.width)) * st.player.total;
-  });
+  // A tap on a screen's block (without dragging) starts that screen
   $('#stScenes').addEventListener('click', e => {
     const b = e.target.closest('[data-scene]');
-    if (b && !st.rec) st.t = st.player.tl.scenes[+b.dataset.scene].t0 + .01;
+    if (!b || st.rec || scrubMoved) return;
+    st.t = SP().tl.scenes[+b.dataset.scene].t0 + .01;
   });
   const pickLook = e => {
     const b = e.target.closest('[data-look]');
     if (!b || st.rec) return;
+    st.opt.film = '';
     st.opt.story = b.dataset.story || '';
     st.opt.look = st.opt.story ? Studio.STORIES[st.opt.story].open : b.dataset.look;
     st.picked = true;
@@ -1187,6 +1240,13 @@
     if (previewSound && (st.opt.music === 'look' || st.opt.music === 'auto')) soundOn();
   };
   $('#stStories').addEventListener('click', pickLook);
+  $('#stFilms').addEventListener('click', e => {
+    const b = e.target.closest('[data-film]');
+    if (!b || st.rec) return;
+    st.opt.film = b.dataset.film; st.picked = true; st.t = 0;
+    refreshStudio();
+    if (previewSound && (st.opt.music === 'look' || st.opt.music === 'auto')) soundOn();
+  });
   // English or Hindi: every fixed word, the dates and times, and the invitation line follow
   $('#stLang').addEventListener('click', e => {
     const b = e.target.closest('[data-lang]');
@@ -1202,7 +1262,6 @@
   });
   $('#stMusic').addEventListener('click', e => {
     if (st.rec) return;
-    if (e.target.closest('[data-music-add]')) { $('#stMusicFile').click(); return; }
     if (e.target.closest('[data-music-clear]')) {
       if (!confirm(`Remove your ${songs.length} song${songs.length === 1 ? '' : 's'} from this PC? The videos go back to the looks’ own tunes.`)) return;
       songs = []; saveSongs(); st.opt.music = 'auto';
@@ -1226,10 +1285,10 @@
     }
     if (!added) return;
     saveSongs();
-    st.opt.music = 'auto';
+    st.opt.music = `song:${songs.length - added}`; // the first new song plays in this video
     renderMusicChips();
     refreshStudio(); if (previewSound) soundOn();
-    toast(`🎵 ${added} song${added === 1 ? '' : 's'} added: each video gets a different one`);
+    toast(`🎵 ${added === 1 ? 'Song added' : added + ' songs added'}: cut the part you want below`);
   });
   [['stBless', 'blessing', 'checked'], ['stBlessText', 'blessingText', 'value'], ['stInvite', 'inviteLine', 'value'], ['stParents', 'parents', 'checked']]
     .forEach(([id, key, prop]) => $('#' + id).addEventListener('input', e => {
@@ -1240,10 +1299,10 @@
 
   // The music for the video (always some): one of your songs, a story tune (js/tunes.js) or the card's music box.
   function studioMusic() {
-    const m = st.opt.music, song = m === 'auto' ? songFor(st.opt.story, st.opt.look) : /^song:/.test(m) ? songs[+m.slice(5)] : null;
-    if (song) { const f = new FileTune(song.buffer); return f.start() ? f : null; }
+    const m = st.opt.music, song = videoSong();
+    if (song) { const f = new FileTune(song.buffer, song.cut); return f.start() ? f : null; }
     if (m === 'card') { const b = new MusicBox(design().tempo, design().song); return b.start() ? b : null; }
-    const t = new Tune(TUNES[m] ? m : st.opt.story ? Studio.STORIES[st.opt.story].tune : Studio.LOOKS[st.opt.look].music);
+    const t = new Tune(TUNES[m] ? m : videoTune());
     return t.start() ? t : null;
   }
   // 🔊 on the preview: hear the music while watching (it follows the music choice)
@@ -1290,14 +1349,14 @@
         const dest = box.ctx.createMediaStreamDestination();
         box.master.connect(dest);
         dest.stream.getAudioTracks().forEach(tr => stream.addTrack(tr));
-        if (box.fadeOut) box.fadeOut(st.player.total - 2.6, 2.4); // the music fades away with the closing scene
+        if (box.fadeOut) box.fadeOut(SP().total - 2.6, 2.4); // the music fades away with the closing scene
       }
       const mimeType = VIDEO_TYPES.find(t => MediaRecorder.isTypeSupported(t)) || '';
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 5e6 } : { videoBitsPerSecond: 5e6 });
       const chunks = [];
       recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
       const stopped = new Promise(r => { recorder.onstop = r; });
-      const total = st.player.total;
+      const total = SP().total;
       await new Promise(resolve => {
         st.rec = { t0: performance.now(), done: resolve };
         recorder.start(500);
@@ -1317,7 +1376,7 @@
       }
       if (!(await playable(blob))) throw new Error('the recording did not come out right (it would not play)');
       const ext = type.includes('mp4') ? 'mp4' : 'webm';
-      const name = `${who(st.card)} ${st.opt.story ? Studio.STORIES[st.opt.story].name : Studio.LOOKS[st.opt.look].name} ${st.lang === 'hi' ? 'Hindi' : 'English'} video.${ext}`.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ');
+      const name = `${who(st.card)} ${st.opt.film ? Films.byId[st.opt.film].name : st.opt.story ? Studio.STORIES[st.opt.story].name : Studio.LOOKS[st.opt.look].name} ${st.lang === 'hi' ? 'Hindi' : 'English'} video.${ext}`.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ');
       const url = URL.createObjectURL(blob);
       const v = $('#stVideo');
       if (v.src) URL.revokeObjectURL(v.src);
@@ -1330,6 +1389,8 @@
       stStatus(`✅ Saved "${name}" (${(blob.size / 1048576).toFixed(1)} MB) to your Downloads.` +
         (ext === 'webm' ? ' This browser can only make WebM, which WhatsApp does not accept: please update Chrome to get MP4.' : ''), 1);
       toast('Video downloaded 🎬');
+      st.made = true;
+      $('#stRemake').hidden = false;
     } catch (e) {
       st.rec = null;
       stStatus(`Could not make the video: ${e.message}. Please try again.`);
@@ -1339,6 +1400,211 @@
       if (hadSound) soundOn();
     }
   }
+
+  // ---------- Text & branding ----------
+  // The strip at the bottom (designer line, website, both or nothing, in any words), the film's screens, the venue.
+  const BRAND_KEY = 'cardalbum.studio.brand', BRAND0 = { strip: 'both', credit: 'Designed by Sankalp', site: 'cardalbum.vercel.app', skip: [], venueStyle: 'full' };
+  let brand = { ...BRAND0 };
+  try { brand = { ...BRAND0, ...JSON.parse(localStorage.getItem(BRAND_KEY) || '{}') }; } catch (e) { /* first visit */ }
+  const hasCredit = () => brand.strip === 'both' || brand.strip === 'credit', hasSite = () => brand.strip === 'both' || brand.strip === 'site';
+  const filmOpts = () => ({ credit: hasCredit() ? brand.credit.trim() : '', site: hasSite() ? brand.site.trim() : '', skip: brand.skip, venueStyle: brand.venueStyle });
+  function renderBrand() {
+    document.querySelectorAll('#stStrip [data-strip]').forEach(b => b.classList.toggle('on', b.dataset.strip === brand.strip));
+    document.querySelectorAll('#stVenueStyle [data-venue]').forEach(b => b.classList.toggle('on', b.dataset.venue === brand.venueStyle));
+    document.querySelectorAll('#stSkip [data-skip]').forEach(c => { c.checked = !brand.skip.includes(c.dataset.skip); });
+    if (document.activeElement !== $('#stCredit')) $('#stCredit').value = brand.credit;
+    if (document.activeElement !== $('#stSiteText')) $('#stSiteText').value = brand.site;
+    $('#stCredit').disabled = !hasCredit(); $('#stSiteText').disabled = !hasSite();
+    const o = filmOpts();
+    $('#stStripDemo').innerHTML = o.credit || o.site ? `<span><i>${esc(o.credit)}</i>${o.credit && o.site ? ' • ' : ''}<b>${esc(o.site)}</b></span>` : '<small class="muted">No strip at the bottom</small>';
+  }
+  function setBrand(change) {
+    if (st.rec) return;
+    Object.assign(brand, change);
+    try { localStorage.setItem(BRAND_KEY, JSON.stringify(brand)); } catch (e) { /* private window */ }
+    // story films and looks: the designer line and the website (QR) on or off
+    if (art.signature !== hasCredit() || art.brand !== hasSite()) setArt({ signature: hasCredit(), brand: hasSite() });
+    renderBrand();
+    if (st.opt) refreshStudio();
+  }
+  $('#stStrip').addEventListener('click', e => { const b = e.target.closest('[data-strip]'); if (b) setBrand({ strip: b.dataset.strip }); });
+  $('#stVenueStyle').addEventListener('click', e => { const b = e.target.closest('[data-venue]'); if (b) setBrand({ venueStyle: b.dataset.venue }); });
+  $('#stSkip').addEventListener('change', () => setBrand({ skip: [...document.querySelectorAll('#stSkip [data-skip]')].filter(c => !c.checked).map(c => c.dataset.skip) }));
+  $('#stCredit').addEventListener('input', e => setBrand({ credit: e.target.value }));
+  $('#stSiteText').addEventListener('input', e => setBrand({ site: e.target.value }));
+  $('#stBrandReset').addEventListener('click', () => setBrand({ strip: 'both', credit: BRAND0.credit, site: BRAND0.site }));
+  renderBrand();
+
+  // ---------- Card PDF → video ----------
+  // Drop a card PDF: its details are read (PdfCard) into a form to check, and a picker asks which video to make;
+  // the video is then made by itself with those details.
+  const stepTo = tab => {
+    document.querySelectorAll('#stTabs [data-tab]').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
+    document.querySelectorAll('.st-tab').forEach(t => { t.hidden = t.dataset.tab !== tab; });
+  };
+  const pdfStatus = (msg, bad) => { const p = $('#stPdfStatus'); p.hidden = !msg; p.textContent = msg || ''; p.classList.toggle('bad', !!bad); };
+  $('#fType').innerHTML = Object.entries(PRESETS).map(([k, P]) => `<option value="${k}">${esc(P.label || k)}</option>`).join('');
+  function evRow(e = {}) {
+    return `<div class="st-ev"><input data-f="name" placeholder="Function (e.g. Haldi)" maxlength="40" value="${esc(e.name || '')}">
+      <input data-f="date" type="datetime-local" value="${esc(/T/.test(e.date || '') ? e.date : e.date ? e.date + 'T00:00' : '')}">
+      <input data-f="venue" placeholder="Venue (if different)" maxlength="120" value="${esc(e.venue || '')}">
+      <button type="button" class="btn-small danger" data-ev-del title="Remove">✕</button></div>`;
+  }
+  function fillDetails(d, pictures = []) {
+    $('#fType').value = PRESETS[d.type] ? d.type : 'wedding';
+    $('#fLang').value = d.lang === 'hi' ? 'hi' : 'en';
+    $('#fHost1').value = d.host1 || ''; $('#fHost2').value = d.host2 || '';
+    $('#fParents1').value = d.parents1 || ''; $('#fParents2').value = d.parents2 || '';
+    $('#fEvents').innerHTML = (d.events.length ? d.events : [{}]).map(evRow).join('');
+    $('#fVenue').value = d.venue || ''; $('#fAddress').value = d.address || '';
+    $('#fPhones').value = (d.phones || []).join(', ');
+    $('#stPages').innerHTML = pictures.map((u, i) => `<a href="${u}" target="_blank" rel="noopener" title="Page ${i + 1}"><img src="${u}" alt="Card page ${i + 1}"></a>`).join('');
+    $('#stForm').hidden = false;
+  }
+  function readDetails() {
+    const evs = [...document.querySelectorAll('#fEvents .st-ev')].map(r => ({ name: r.querySelector('[data-f="name"]').value.trim(),
+      date: r.querySelector('[data-f="date"]').value.replace(/T00:00$/, ''), venue: r.querySelector('[data-f="venue"]').value.trim() })).filter(e => e.name);
+    return { type: $('#fType').value, lang: $('#fLang').value, host1: $('#fHost1').value.trim(), host2: $('#fHost2').value.trim(),
+      parents1: $('#fParents1').value.trim(), parents2: $('#fParents2').value.trim(), events: evs, venue: $('#fVenue').value.trim(),
+      address: $('#fAddress').value.trim(), phones: $('#fPhones').value.split(/[,;]+/).map(x => x.trim()).filter(Boolean), hashtag: (st.pdf && st.pdf.hashtag) || '' };
+  }
+  // The details into the Studio (the chosen video stays)
+  function useDetails() {
+    const d = readDetails();
+    if (!d.host1) { toast('Please write at least the first name'); $('#fHost1').focus(); return false; }
+    studioLoad({ ...Core.blankCard(), ...PdfCard.toCard(d), theme: design().no }, '', d.lang);
+    return true;
+  }
+  $('#fEvents').addEventListener('click', e => { const b = e.target.closest('[data-ev-del]'); if (b) b.parentElement.remove(); });
+  $('#fAddEv').addEventListener('click', () => $('#fEvents').insertAdjacentHTML('beforeend', evRow()));
+  $('#stForm').addEventListener('submit', e => { e.preventDefault(); if (st.rec) return; if (useDetails()) { stepTo('look'); toast('✅ Details in: now pick a style'); } });
+  $('#fPick').addEventListener('click', () => { if (!st.rec && useDetails()) openPick(); });
+  async function readPdf(file) {
+    if (!file) return;
+    if (st.rec) return toast('Please wait: a video is still recording');
+    if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') return pdfStatus('Please choose a PDF file of the card.', true);
+    stepTo('details');
+    pdfStatus(`📄 Reading “${file.name}”…`);
+    try {
+      await st.ready;
+      const r = await PdfCard.read(file);
+      st.pdf = r.details || { lang: 'en', type: 'wedding', events: [], phones: [] };
+      fillDetails(st.pdf, r.pictures);
+      if (!r.readable) {
+        pdfStatus('⚠️ This PDF has no readable text (it is a picture, or uses an old Hindi font). Please type the details from the page shown, then pick a video.', true);
+        $('#fHost1').focus();
+        return;
+      }
+      const n = st.pdf.events.length;
+      pdfStatus(`✅ Read: ${[st.pdf.host1, st.pdf.host2].filter(Boolean).join(' & ') || 'no names found'} · ${n} function${n === 1 ? '' : 's'}${st.pdf.venue ? ' · ' + st.pdf.venue : ''}. Check below if you like.`);
+      if (st.pdf.host1) { useDetails(); openPick(); }
+    } catch (e) {
+      pdfStatus(`Could not read this PDF: ${e.message}`, true);
+    }
+  }
+  $('#stPdfFile').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; readPdf(f); });
+  const drop = $('#stPdfDrop');
+  ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, () => drop.classList.remove('over')));
+  drop.addEventListener('drop', e => { e.preventDefault(); readPdf(e.dataTransfer.files[0]); });
+  // From the main page: choose the PDF straight away (the Studio opens behind the file chooser)
+  $('#pdfVideoBtn').addEventListener('click', () => { $('#stPdfFile').click(); openStudio().then(() => stepTo('details')); });
+  $('#stHeadPdf').addEventListener('click', () => { stepTo('details'); $('#stPdfFile').click(); });
+
+  // The picker: premium films or story films; a tap makes the video
+  let pickTab = 'films';
+  function openPick() {
+    $('#pickWho').textContent = ` · ${who(st.card)} · ${occasion(st.card).label}`;
+    renderPick();
+    $('#pickSheet').hidden = false;
+  }
+  function renderPick() {
+    document.querySelectorAll('#pickTabs [data-pick]').forEach(b => b.classList.toggle('on', b.dataset.pick === pickTab));
+    $('#pickGrid').innerHTML = pickTab === 'films'
+      ? Films.LIST.map(f => `<button type="button" class="pick-tile" data-film="${f.id}"><img src="img/films/${f.id}.jpg" alt="" loading="lazy" width="135" height="240"><span><b>${esc(f.name)}</b><small>👑 Premium film</small></span></button>`).join('')
+      : Object.entries(Studio.STORIES).map(([id, S]) => `<button type="button" class="pick-tile" data-story="${id}"><img src="img/stories/${id}.jpg" alt="" loading="lazy" width="135" height="240" onerror="this.style.visibility='hidden'"><span><b>${esc(S.name)}</b><small>${esc(TUNES[S.tune].label)}</small></span></button>`).join('');
+  }
+  $('#pickTabs').addEventListener('click', e => { const b = e.target.closest('[data-pick]'); if (b) { pickTab = b.dataset.pick; renderPick(); } });
+  $('#pickClose').addEventListener('click', () => { $('#pickSheet').hidden = true; });
+  $('#pickSheet').addEventListener('click', e => { if (e.target === e.currentTarget) $('#pickSheet').hidden = true; });
+  $('#pickGrid').addEventListener('click', e => {
+    const b = e.target.closest('.pick-tile');
+    if (!b || st.rec) return;
+    $('#pickSheet').hidden = true;
+    st.opt.film = b.dataset.film || '';
+    st.opt.story = b.dataset.story || '';
+    if (st.opt.story) st.opt.look = Studio.STORIES[st.opt.story].open;
+    st.picked = true; st.t = 0;
+    refreshStudio();
+    stepTo('music');
+    makeStudioVideo();
+  });
+
+  // ---------- Cutting a song ----------
+  // The song this video plays, drawn as a wave; two sliders (or a tap on the wave) set where it starts and ends.
+  let cropSound = null, cropRaf = 0;
+  function peaks(song, n = 900) {
+    if (song.peaks) return song.peaks;
+    const d = song.buffer.getChannelData(0), step = Math.max(1, Math.floor(d.length / n)), out = new Float32Array(n);
+    for (let i = 0; i < n; i++) { let m = 0; for (let j = i * step, e = Math.min(d.length, j + step); j < e; j += 16) m = Math.max(m, Math.abs(d[j])); out[i] = m; }
+    return (song.peaks = out);
+  }
+  function drawWave(song) {
+    const c = $('#cropWave'), g = c.getContext('2d'), W = c.width, H = c.height, pk = peaks(song, W), len = song.buffer.duration;
+    const cut = song.cut || { start: 0, end: len }, x0 = cut.start / len * W, x1 = cut.end / len * W;
+    g.clearRect(0, 0, W, H);
+    g.fillStyle = 'rgba(232,184,74,.12)'; g.fillRect(x0, 0, x1 - x0, H);
+    for (let x = 0; x < W; x++) { const h = Math.max(1, pk[x] * H * .9); g.fillStyle = x >= x0 && x <= x1 ? '#e8b84a' : 'rgba(255,255,255,.25)'; g.fillRect(x, (H - h) / 2, 1, h); }
+    g.fillStyle = '#ff3d8b'; g.fillRect(x0 - 1, 0, 3, H); g.fillRect(x1 - 2, 0, 3, H);
+  }
+  function renderCrop() {
+    const song = videoSong(), box = $('#stCrop');
+    box.hidden = !song;
+    if (!song) return;
+    const len = song.buffer.duration, cut = song.cut || { start: 0, end: len };
+    $('#cropName').textContent = `✂️ ${song.name}`;
+    $('#cropLen').textContent = ` · ${mmss(len)} long · the video is ${mmss(SP() ? SP().total : 0)}`;
+    [['cropStart', cut.start], ['cropEnd', cut.end]].forEach(([id, v]) => { const r = $('#' + id); r.max = len.toFixed(1); r.value = v.toFixed(1); });
+    $('#cropStartOut').textContent = mmss(cut.start); $('#cropEndOut').textContent = mmss(cut.end);
+    const part = cut.end - cut.start, video = SP() ? SP().total : 0;
+    $('#cropNote').textContent = part + .5 < video ? `This part is ${mmss(part)}: it repeats to fill the ${mmss(video)} video. Tap “Fit to the video” for one long part.` : `This part plays from ${mmss(cut.start)}; the music fades out with the last scene.`;
+    drawWave(song);
+  }
+  let saveTimer = 0;
+  function setCut(start, end) {
+    const song = videoSong();
+    if (!song || st.rec) return;
+    const len = song.buffer.duration;
+    start = Math.max(0, Math.min(start, len - 1)); end = Math.max(start + 1, Math.min(end, len));
+    song.cut = start <= .05 && end >= len - .05 ? null : { start: Math.round(start * 10) / 10, end: Math.round(end * 10) / 10 };
+    renderCrop();
+    $('#stSongNow').textContent = songNow();
+    clearTimeout(saveTimer); saveTimer = setTimeout(() => { saveSongs(); if (previewSound) soundOn(); }, 400);
+  }
+  $('#cropStart').addEventListener('input', e => { const s2 = videoSong(); if (s2) setCut(+e.target.value, (s2.cut || { end: s2.buffer.duration }).end); });
+  $('#cropEnd').addEventListener('input', e => { const s2 = videoSong(); if (s2) setCut((s2.cut || { start: 0 }).start, +e.target.value); });
+  // a tap on the wave moves the nearer edge there
+  $('#cropWave').addEventListener('pointerdown', e => {
+    const s2 = videoSong(); if (!s2) return;
+    const r = e.currentTarget.getBoundingClientRect(), t = (e.clientX - r.left) / r.width * s2.buffer.duration, cut = s2.cut || { start: 0, end: s2.buffer.duration };
+    if (Math.abs(t - cut.start) < Math.abs(t - cut.end)) setCut(t, cut.end); else setCut(cut.start, t);
+  });
+  $('#cropFit').addEventListener('click', () => { const s2 = videoSong(); if (s2) { const a = (s2.cut || { start: 0 }).start; setCut(a, a + SP().total); } });
+  $('#cropAll').addEventListener('click', () => { const s2 = videoSong(); if (s2) setCut(0, s2.buffer.duration); });
+  function stopCropSound() { cancelAnimationFrame(cropRaf); if (cropSound) { cropSound.close(); cropSound = null; } $('#cropPlay').textContent = '▶ Listen'; $('#cropHead').style.left = '-10px'; }
+  $('#cropPlay').addEventListener('click', () => {
+    const song = videoSong();
+    if (cropSound || !song) return stopCropSound();
+    soundOff(); $('#stSound').textContent = '🔇';
+    cropSound = new FileTune(song.buffer, song.cut);
+    if (!cropSound.start()) { cropSound = null; return; }
+    $('#cropPlay').textContent = '■ Stop';
+    const t0 = cropSound.ctx.currentTime, from = cropSound.from, part = cropSound.to - cropSound.from, len = song.buffer.duration;
+    const move = () => { if (!cropSound) return; const at = from + ((cropSound.ctx.currentTime - t0) % part); $('#cropHead').style.left = `${at / len * 100}%`; cropRaf = requestAnimationFrame(move); };
+    move();
+  });
+  $('#stSongDrop').addEventListener('click', () => $('#stMusicFile').click());
+  $('#stRemake').addEventListener('click', () => { stopCropSound(); makeStudioVideo(); });
 
   // ---------- Link history ----------
   // Logged in: kept in the database (the same on your phone and PC). Offline: in this browser.
@@ -1688,11 +1954,12 @@
   });
 
   // ---------- Ready videos ----------
-  // Finished client videos kept in videos/ (720×1280 MP4 with a poster). Add a new one here.
-  const READY_VIDEOS = [
-    { file: 'videos/shivam-aanya.mp4', poster: 'videos/shivam-aanya.jpg', name: 'Shivam ✦ Aanya', note: 'Wedding invite · 55 sec', save: 'Shivam-Aanya-Wedding-Invite.mp4' },
-  ];
+  // Finished videos kept in videos/ (720×1280 MP4 with a poster). Add one here, e.g.
+  // { file: 'videos/name.mp4', poster: 'videos/name.jpg', name: 'Rahul ✦ Priya', note: 'Wedding invite · 55 sec', save: 'Rahul-Priya.mp4' }
+  // Everything in videos/ is public once the site is published: use sample names, never a client's address or phone.
+  const READY_VIDEOS = [];
   function renderReady() {
+    if (!READY_VIDEOS.length) { $('#readyGrid').innerHTML = '<p class="muted">No ready videos yet. The 81 premium films are on the website under Story videos.</p>'; return; }
     $('#readyGrid').innerHTML = READY_VIDEOS.map((v, i) => `
       <figure class="ready-card panel">
         <video src="${esc(v.file)}" poster="${esc(v.poster)}" controls playsinline preload="none"></video>

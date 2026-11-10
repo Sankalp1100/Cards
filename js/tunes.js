@@ -298,8 +298,14 @@ class Tune {
 
 // Your own music (an MP3, M4A or WAV picked in the admin Video Studio), played like a tune: it fades in, loops if
 // the video is longer, and fades out with the closing scene. `buffer` is a decoded AudioBuffer.
+// A song from the PC. `cut` = { start, end } in seconds plays only that part (it repeats if the video is longer).
 class FileTune {
-  constructor(buffer) { this.buffer = buffer; this.on = false; }
+  constructor(buffer, cut = null) {
+    this.buffer = buffer; this.on = false;
+    const len = buffer ? buffer.duration : 0, s = cut ? Math.max(0, Math.min(len, +cut.start || 0)) : 0;
+    const e = cut && +cut.end > s + .5 ? Math.min(len, +cut.end) : len;
+    this.from = s; this.to = e;
+  }
   start() {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC || !this.buffer) return false;
@@ -310,10 +316,11 @@ class FileTune {
     this.src = c.createBufferSource();
     this.src.buffer = this.buffer;
     this.src.loop = true;
+    if (this.from > 0 || this.to < this.buffer.duration) { this.src.loopStart = this.from; this.src.loopEnd = this.to; }
     this.src.connect(this.master);
     c.resume();
     const now = c.currentTime;
-    this.src.start(now);
+    this.src.start(now, this.from);
     this.master.gain.linearRampToValueAtTime(1, now + .8);
     this.on = true;
     return true;

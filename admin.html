@@ -213,6 +213,7 @@
           <div class="link-actions">
             <button type="button" class="btn-glow" id="generate-btn">⚡ Get links</button>
             <button type="button" class="btn-line" id="studioBtn" data-studio>✨ Video Studio</button>
+            <button type="button" class="btn-line" id="pdfVideoBtn">📄 Card PDF → Video</button>
             <button type="button" class="btn-line" id="videoBtn">🎬 Card video</button>
             <button type="button" class="btn-glow" id="lastVideoBtn" disabled title="Make a video first, then download it here">⬇ Download video for sharing</button>
           </div>
@@ -335,49 +336,126 @@
   <!-- Video Studio: its own full screen, away from the card form -->
   <div class="studio" id="studio" hidden>
     <header class="st-head">
-      <b>🎬 Video Studio</b>
-      <span class="muted" id="stWho"></span>
-      <button type="button" class="btn-small" id="stClose">✕ Close</button>
+      <div class="st-brandmark"><b>🎬 Video Studio</b><span class="muted" id="stWho"></span></div>
+      <!-- Steps: 1 the details (a card PDF or an order), 2 the style, 3 the music, 4 the words at the bottom; Extras -->
+      <nav class="st-steps" id="stTabs" aria-label="Video steps">
+        <button type="button" class="st-step on" data-tab="details"><b>1</b><span>Details</span></button>
+        <button type="button" class="st-step" data-tab="look"><b>2</b><span>Style</span></button>
+        <button type="button" class="st-step" data-tab="music"><b>3</b><span>Music</span></button>
+        <button type="button" class="st-step" data-tab="brand"><b>4</b><span>Text &amp; branding</span></button>
+        <button type="button" class="st-step" data-tab="pictures"><b>⚙</b><span>Extras</span></button>
+      </nav>
+      <div class="st-head-actions">
+        <button type="button" class="btn-small" id="stHeadPdf" title="Make a video from a card PDF">📄 New from PDF</button>
+        <button type="button" class="btn-small" id="stClose">✕ Close</button>
+      </div>
     </header>
     <div class="st-body">
       <div class="st-stage">
         <canvas id="stCanvas" aria-label="Video preview"></canvas>
-        <div class="st-play">
-          <button type="button" id="stPlay" aria-label="Pause">❚❚</button>
-          <button type="button" id="stSound" aria-label="Sound on" title="Hear the music">🔇</button>
-          <div class="st-scrub" id="stScrub"><i id="stBar"></i></div>
-          <span id="stTime">0:00</span>
+        <!-- Transport and timeline: every screen is a block; drag to look anywhere -->
+        <div class="st-transport">
+          <button type="button" id="stPrev" title="Previous screen (J)" aria-label="Previous screen">⏮</button>
+          <button type="button" id="stBack" title="Back 5 seconds (←)" aria-label="Back 5 seconds">⏪</button>
+          <button type="button" id="stPlay" class="st-big" title="Play / pause (Space)" aria-label="Pause">❚❚</button>
+          <button type="button" id="stFwd" title="Forward 5 seconds (→)" aria-label="Forward 5 seconds">⏩</button>
+          <button type="button" id="stNext" title="Next screen (L)" aria-label="Next screen">⏭</button>
+          <span class="st-time" id="stTime">0:00</span>
+          <button type="button" id="stSound" aria-label="Sound on" title="Hear the music (M)">🔇</button>
         </div>
-        <div class="chips st-scenes" id="stScenes"></div>
+        <div class="st-scrub" id="stScrub" title="Drag to look anywhere in the video">
+          <div class="st-segs" id="stScenes"></div>
+          <i class="st-fill" id="stBar"></i>
+          <i class="st-playhead" id="stHeadMark"></i>
+          <span class="st-hover" id="stHover"></span>
+        </div>
+        <small class="muted st-keys">Space play/pause · ← → 5 s · J / L screen by screen · M sound</small>
       </div>
       <div class="st-side">
-        <div class="st-order" id="stOrderRow" hidden>
-          <h3>0 · From an order</h3>
-          <select id="stOrder" aria-label="Whose video"></select>
-          <button type="button" class="btn-glow" id="stAuto">⚡ Make video from this order</button>
-          <small class="muted">Picks up the customer’s names, parents, functions, date and venue from their order, then makes the video by itself.</small>
+
+        <div class="st-tab" data-tab="details">
+          <label class="st-drop" id="stPdfDrop">
+            <input type="file" id="stPdfFile" accept="application/pdf,.pdf" hidden>
+            <span class="st-drop-icon">📄</span>
+            <b>Drop the card PDF here</b>
+            <small>or tap to choose it. The names, functions, dates and venue are read from it, then you pick a video and it is made by itself.</small>
+          </label>
+          <p class="muted st-pdf-status" id="stPdfStatus" hidden></p>
+          <div class="st-order" id="stOrderRow" hidden>
+            <h3>… or from an order</h3>
+            <select id="stOrder" aria-label="Whose video"></select>
+            <button type="button" class="btn-line" id="stAuto">⚡ Make video from this order</button>
+          </div>
+          <!-- What was read from the PDF (or the order): check and correct before making the video -->
+          <form class="st-form" id="stForm" hidden>
+            <h3>✍️ Check the details <small class="muted">change anything that was read wrong</small></h3>
+            <div class="st-pages" id="stPages"></div>
+            <div class="st-grid2">
+              <label>Occasion <select id="fType"></select></label>
+              <label>Language <select id="fLang"><option value="en">English</option><option value="hi">हिन्दी</option></select></label>
+              <label>Name 1 <input id="fHost1" maxlength="30"></label>
+              <label>Name 2 <input id="fHost2" maxlength="30" placeholder="(leave empty for one name)"></label>
+              <label>Parents of name 1 <input id="fParents1" maxlength="120"></label>
+              <label>Parents of name 2 <input id="fParents2" maxlength="120"></label>
+            </div>
+            <span class="muted">Functions</span>
+            <div class="st-evs" id="fEvents"></div>
+            <button type="button" class="btn-small" id="fAddEv">＋ Add a function</button>
+            <label>Venue <input id="fVenue" maxlength="120" placeholder="Hall name, area, city"></label>
+            <label>Home address <input id="fAddress" maxlength="160"></label>
+            <label>Phone numbers <input id="fPhones" maxlength="80" placeholder="98765 43210, 91234 56789"></label>
+            <div class="link-actions">
+              <button type="submit" class="btn-glow">✅ Use these details</button>
+              <button type="button" class="btn-line" id="fPick">🎬 Choose a video and make it</button>
+            </div>
+          </form>
+          <h3>Language</h3>
+          <div class="chips" id="stLang">
+            <button type="button" class="chip on" data-lang="en">English</button>
+            <button type="button" class="chip" data-lang="hi">हिन्दी</button>
+          </div>
         </div>
-        <h3>Language</h3>
-        <div class="chips" id="stLang">
-          <button type="button" class="chip on" data-lang="en">English</button>
-          <button type="button" class="chip" data-lang="hi">हिन्दी</button>
-        </div>
-        <nav class="chips st-tabs" id="stTabs" aria-label="Video options">
-          <button type="button" class="chip on" data-tab="look">🎨 Look</button>
-          <button type="button" class="chip" data-tab="pictures">🖼️ Pictures</button>
-          <button type="button" class="chip" data-tab="words">✍️ Words</button>
-          <button type="button" class="chip" data-tab="functions">🎉 Functions</button>
-          <button type="button" class="chip" data-tab="music">🎵 Music</button>
-        </nav>
-        <div class="st-tab" data-tab="look">
-        <h3>1 · A story film <small class="muted">(the scenery changes with every part)</small></h3>
+
+        <div class="st-tab" data-tab="look" hidden>
+        <h3>👑 Premium films <small class="muted">palace doors, toran, gold foil: 81 styles</small></h3>
+        <div class="st-films" id="stFilms"></div>
+        <h3>Story films <small class="muted">(the scenery changes with every part)</small></h3>
         <div class="st-looks" id="stStories"></div>
-        <h3>… or one scene and its mood <small class="muted">(20 scenes × 15 moods = 300 looks)</small></h3>
+        <h3>… or one scene and its mood</h3>
         <div class="st-looks" id="stLooks"></div>
         <div class="chips st-moods" id="stMoods" aria-label="Mood"></div>
         </div>
+        <div class="st-tab" data-tab="brand" hidden>
+          <h3>🔤 The strip at the bottom</h3>
+          <div class="st-strip-demo" id="stStripDemo"></div>
+          <div class="chips" id="stStrip">
+            <button type="button" class="chip" data-strip="both">Both</button>
+            <button type="button" class="chip" data-strip="credit">Only the designer line</button>
+            <button type="button" class="chip" data-strip="site">Only the website</button>
+            <button type="button" class="chip" data-strip="none">Nothing</button>
+          </div>
+          <div class="st-form st-form-plain">
+            <label>Designer line <input id="stCredit" maxlength="40" placeholder="Designed by Sankalp"></label>
+            <label>Website line <input id="stSiteText" maxlength="40" placeholder="cardalbum.vercel.app"></label>
+            <button type="button" class="btn-small" id="stBrandReset">↺ Back to “Designed by Sankalp” and the website</button>
+          </div>
+          <small class="muted">Premium films show these words on every screen and at the end. Story films and looks show them on or off.</small>
+          <h3>🎞️ Screens in the film <small class="muted">(premium films)</small></h3>
+          <div class="st-shows st-skip" id="stSkip">
+            <label class="st-check"><input type="checkbox" data-skip="card" checked> Invitation card</label>
+            <label class="st-check"><input type="checkbox" data-skip="day" checked> Functions (day by day)</label>
+            <label class="st-check"><input type="checkbox" data-skip="venue" checked> Venue</label>
+            <label class="st-check"><input type="checkbox" data-skip="regards" checked> Families</label>
+            <label class="st-check"><input type="checkbox" data-skip="note" checked> Address &amp; phone numbers</label>
+          </div>
+          <h3>📍 How the venue shows</h3>
+          <div class="chips" id="stVenueStyle">
+            <button type="button" class="chip" data-venue="full">Name and address</button>
+            <button type="button" class="chip" data-venue="name">Only the name</button>
+          </div>
+        </div>
         <div class="st-tab" data-tab="pictures" hidden>
-        <h3>Pictures &amp; branding</h3>
+        <h3>🖼️ Pictures &amp; branding</h3>
         <div class="st-art">
           <span>Ganesh ji</span>
           <div class="chips" id="stGanesha">
@@ -393,22 +471,18 @@
             <button type="button" class="chip" data-art="none">None</button>
           </div>
           <label class="btn-small st-upload">⬆ Upload the couple's photo (sent by the customer) <input type="file" id="stCoupleFile" accept="image/*" hidden></label>
-          <label class="st-check st-brand"><input type="checkbox" id="stBrand" checked> Show my website (QR code) at the end</label>
-          <label class="st-check st-brand"><input type="checkbox" id="stSign" checked> Show “Designed by Sankalp”</label>
+          <label class="st-check st-brand" hidden><input type="checkbox" id="stBrand" checked> Show my website (QR code) at the end</label>
+          <label class="st-check st-brand" hidden><input type="checkbox" id="stSign" checked> Show “Designed by Sankalp”</label>
           <small class="muted" id="stArtNote">Photos show in a gold frame. The couple appears only when you upload their own photo (or choose Drawn). Branding off: no QR code, no website, no signature anywhere in the video.</small>
         </div>
-        </div>
-        <div class="st-tab" data-tab="words" hidden>
-        <h3>2 · Words</h3>
+        <h3>✍️ Words</h3>
         <label class="st-check"><input type="checkbox" id="stBless"> Blessing at the top</label>
         <input id="stBlessText" maxlength="60" aria-label="Blessing line">
         <label>Invitation line <textarea id="stInvite" rows="2" maxlength="120"></textarea></label>
         <label class="st-check"><input type="checkbox" id="stParents"> Parents’ names under the couple (from Families)</label>
         <span class="muted">Whose name comes first</span>
         <div class="chips" id="stNameOrder"></div>
-        </div>
-        <div class="st-tab" data-tab="functions" hidden>
-        <h3>3 · Functions</h3>
+        <h3>🎉 Functions</h3>
         <div class="chips" id="stEvents">
           <button type="button" class="chip" data-ev="each">One by one</button>
           <button type="button" class="chip" data-ev="list">All on one page</button>
@@ -417,11 +491,31 @@
         <div id="stScreens" class="st-screens"></div>
         </div>
         <div class="st-tab" data-tab="music" hidden>
-        <h3>4 · Music</h3>
-        <div class="chips" id="stMusic"></div>
+        <label class="st-drop st-drop-small" id="stSongDrop">
+          <span class="st-drop-icon">🎵</span>
+          <b>Add a song from this PC</b>
+          <small>MP3, M4A or WAV. Then cut the part you want.</small>
+        </label>
         <input type="file" id="stMusicFile" accept="audio/*" multiple hidden>
+        <!-- Cut the song: drag on the wave or move the two sliders -->
+        <div class="st-crop" id="stCrop" hidden>
+          <div class="st-crop-head"><b id="cropName"></b><small class="muted" id="cropLen"></small></div>
+          <div class="st-wave"><canvas id="cropWave" width="900" height="140"></canvas><i id="cropHead"></i></div>
+          <div class="st-crop-sliders">
+            <label>Start <input type="range" id="cropStart" min="0" max="100" step="0.1" value="0"><output id="cropStartOut">0:00</output></label>
+            <label>End <input type="range" id="cropEnd" min="0" max="100" step="0.1" value="100"><output id="cropEndOut">0:00</output></label>
+          </div>
+          <div class="link-actions">
+            <button type="button" class="btn-small" id="cropPlay">▶ Listen</button>
+            <button type="button" class="btn-small" id="cropFit">⏱ Fit to the video</button>
+            <button type="button" class="btn-small" id="cropAll">↺ Whole song</button>
+          </div>
+          <small class="muted" id="cropNote"></small>
+        </div>
+        <h3>All music</h3>
+        <div class="chips" id="stMusic"></div>
         <small class="muted" id="stSongNow"></small>
-        <small class="muted">🎵 Every video has music. Add your songs (MP3, M4A, WAV, several at once): each look and story film then gets a different one, which fades in, repeats if needed and fades out at the end. They stay on this PC.</small>
+        <button type="button" class="btn-glow" id="stRemake" hidden>🔁 Make the video again with this music</button>
         </div>
         <button type="button" class="btn-glow" id="stMake">🎬 Make video</button>
         <p class="muted" id="stStatus">Watch it on the left, then make the video. It records in real time, so keep this tab open.</p>
@@ -432,6 +526,22 @@
           <button type="button" class="btn-small" id="stShare" hidden>📤 Share</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- After a card PDF is read: pick the video, and it is made straight away -->
+  <div class="pick-sheet" id="pickSheet" hidden>
+    <div class="pick-box" role="dialog" aria-modal="true" aria-labelledby="pickTitle">
+      <header>
+        <div><b id="pickTitle">🎬 Which video should we make?</b><small class="muted" id="pickWho"></small></div>
+        <button type="button" class="btn-small" id="pickClose">✕</button>
+      </header>
+      <nav class="chips" id="pickTabs">
+        <button type="button" class="chip on" data-pick="films">👑 Premium films</button>
+        <button type="button" class="chip" data-pick="stories">✨ Story films</button>
+      </nav>
+      <div class="pick-grid" id="pickGrid"></div>
+      <footer class="muted">Tap a video: it is made with this card's details and saved to your Downloads. You can change the song after.</footer>
     </div>
   </div>
 
@@ -463,6 +573,8 @@
   <script src="js/couples.js"></script>
   <script src="js/tunes.js"></script>
   <script src="js/studio.js"></script>
+  <script src="js/films.js"></script>
+  <script src="js/pdfcard.js"></script>
   <script src="js/admin.js"></script>
 </body>
 </html>

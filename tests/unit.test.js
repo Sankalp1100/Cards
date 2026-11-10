@@ -1182,3 +1182,50 @@ test.describe('premium films (js/films.js)', () => {
     for (const f of Films.LIST) assert.ok(fs.existsSync(path.join(ROOT, 'img', 'films', f.id + '.jpg')), f.id);
   });
 });
+
+test.describe('card PDF → details (js/pdfcard.js)', () => {
+  const PdfCard = require('../js/pdfcard.js'), Films = require('../js/films.js');
+  test('an English card: names, parents, functions with dates and times, venue, address, phones', () => {
+    const d = PdfCard.parse(['|| Shri Ganeshaya Namah ||', 'Wedding Invitation', 'Rohit weds Ananya', 'S/o Smt. Sunita & Shri Mahesh Sharma', 'D/o Smt. Kiran & Shri Rakesh Gupta',
+      'Haldi: Friday, 11 December 2026, 11:00 AM', 'Mehendi: 11 December 2026, 5:00 PM', 'Baraat: Saturday, 12 December 2026, 7:30 PM',
+      'Venue: Sunshine Banquet Hall, MG Road, Lucknow', 'Residence: 45, Green Park Colony, Lucknow - 226010', 'RSVP: 98765 12345, +91 99887-76655']);
+    assert.equal(d.lang, 'en'); assert.equal(d.type, 'wedding');
+    assert.deepEqual([d.host1, d.host2], ['Rohit', 'Ananya']);
+    assert.equal(d.parents1, 'Smt. Sunita & Shri Mahesh Sharma'); assert.equal(d.parents2, 'Smt. Kiran & Shri Rakesh Gupta');
+    assert.deepEqual(d.events.map(e => [e.name, e.date]), [['Haldi', '2026-12-11T11:00'], ['Mehendi', '2026-12-11T17:00'], ['Baraat', '2026-12-12T19:30']]);
+    assert.equal(d.venue, 'Sunshine Banquet Hall, MG Road, Lucknow');
+    assert.equal(d.address, '45, Green Park Colony, Lucknow - 226010');
+    assert.deepEqual(d.phones, ['98765 12345', '99887 76655']);
+  });
+  test('a Hindi card as PDFs give its text back (pieces, "ि" before its letter, empty joined letters)', () => {
+    const lines = ['॥ \u0000ी गणेशाय नमः ॥', 'शुभ िववाह', '\u0000च॰ अंिकत', 'सुपुत्र \u0000ीमती रेखा एवं \u0000ी िवनोद अग्रवाल', 'संग', 'आयु॰ नेहा',
+      'सुपुत्र ी \u0000ीमती मीना एवं \u0000ी अजय बंसल', 'ह\u0000ी · बुधवार, 9 िदसम्ब र 2026 ·  प्र ातः 11 बजे', 'मेहँदी · 9 िदसम्ब र 2026 · सायं 5 बजे',
+      'बारात  प्र स्थ ान · 10 िदसम्ब र 2026 · सायं 7 बजे', 'समारोह  स्थ ल: आनन्द वािटका, \u0000सिवल लाइन्स , आगरा', 'िनवास: 12, शा\u0000\u0000 नगर, आगरा 282001', 'सम्प क\u0000 : 91234 56780'];
+    const d = PdfCard.parse(lines);
+    assert.equal(d.lang, 'hi');
+    assert.deepEqual([d.host1, d.host2], ['अंकित', 'नेहा']);
+    assert.equal(d.parents1, 'श्रीमती रेखा एवं श्री विनोद अग्रवाल');
+    assert.equal(d.parents2, 'श्रीमती मीना एवं श्री अजय बंसल');
+    assert.deepEqual(d.events.map(e => [e.name, e.date]), [['हल्दी', '2026-12-09T11:00'], ['मेहँदी', '2026-12-09T17:00'], ['बारात', '2026-12-10T19:00']]);
+    assert.equal(d.venue, 'आनन्द वाटिका, सिविल लाइन्स, आगरा');
+    assert.equal(d.address, '12, शान्ति नगर, आगरा 282001');
+    assert.deepEqual(d.phones, ['91234 56780']);
+  });
+  test('times and dates in many ways', () => {
+    assert.equal(PdfCard.findTime('7:30 pm'), '19:30'); assert.equal(PdfCard.findTime('सायं 7 बजे'), '19:00');
+    assert.equal(PdfCard.findTime('प्रातः 10:30 बजे'), '10:30'); assert.equal(PdfCard.findTime('दोपहर 1 बजे'), '13:00');
+    for (const s of ['12th Dec, 2026', 'Dec 12, 2026', '12/12/2026', '12 दिसम्बर 2026']) assert.deepEqual(PdfCard.findDate(s), { d: 12, m: 11, y: 2026 }, s);
+  });
+  test('a premium film shows the card, with nothing made up left in it', () => {
+    const card = PdfCard.toCard(PdfCard.parse(['Rohit weds Ananya', 'S/o Smt. Sunita & Shri Mahesh Sharma', 'Haldi 11 December 2026 11 AM', 'Baraat 12 December 2026 7:30 PM', 'Venue: Sunshine Banquet Hall, Lucknow', 'Contact: 98765 12345']));
+    for (const f of Films.LIST.slice(0, 12)) for (const lang of ['en', 'hi']) {
+      const { D, scenes } = Films.script(f, lang, card);
+      assert.deepEqual([D.A, D.B, D.V], ['Rohit', 'Ananya', 'Sunshine Banquet Hall']);
+      assert.equal(scenes.filter(s => s.k === 'day').length, 2, 'one screen per day');
+      assert.doesNotMatch(JSON.stringify(D), /Rahul|Priya|Rose Garden|98765 43210|Aarav|Kiara|Grand Palace/, `${f.id} ${lang}`);
+    }
+    const strip = Films.script(Films.LIST[0], 'en', card, { credit: 'Made by Me', site: '', skip: ['card', 'regards'], venueStyle: 'name' });
+    assert.deepEqual([strip.D.credit, strip.D.site, strip.D.venueStyle], ['Made by Me', '', 'name']);
+    assert.ok(!strip.scenes.some(s => s.k === 'card' || s.k === 'regards'), 'screens can be left out');
+  });
+});

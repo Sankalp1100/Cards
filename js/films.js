@@ -163,15 +163,82 @@ const Films = (() => {
   }
 
   // ---------- The order of scenes ----------
-  function script(film, lang) {
-    const D = details(film, lang), s = [];
+  // ---------- A real card's details in a film (from an order or a card PDF, in the Video Studio) ----------
+  // The film keeps its look; every name, date, place and number comes from the card (nothing made up is left).
+  const OCC_OF = { bday: 'birthday', kid: 'birthday', kitty: 'birthday', ceremony: 'puja', festive: 'puja', corporate: 'reception', retirement: 'reception',
+    roka: 'engagement', mundan: 'naming', janeu: 'puja' };
+  const MONTH = { en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    hi: ['जनवरी', 'फरवरी', 'मार्च', 'अप्रैल', 'मई', 'जून', 'जुलाई', 'अगस्त', 'सितम्बर', 'अक्टूबर', 'नवम्बर', 'दिसम्बर'] };
+  const WEEKDAY = { en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], hi: ['रविवार', 'सोमवार', 'मंगलवार', 'बुधवार', 'गुरुवार', 'शुक्रवार', 'शनिवार'] };
+  const ICON_OF = [[/haldi|हल्दी|ubtan/i, 'pot'], [/mehe?n?di|मेहँदी|मेहंदी/i, 'leaf'], [/sangeet|संगीत|dj/i, 'note'], [/baraat|बारात|ghud|घुड़/i, 'drum'],
+    [/ring|sagai|सगाई|engagement/i, 'ring'], [/reception|स्वागत|cocktail/i, 'glass'], [/dinner|lunch|bhoj|भोज|prasad|प्रसाद/i, 'dish'], [/kirtan|कीर्तन/i, 'bell'],
+    [/cake|birthday|जन्मदिन/i, 'cake'], [/phere|फेरे|mandap|मण्डप|jaimala|जयमाला/i, 'ring']];
+  const iconFor = name => (ICON_OF.find(([re]) => re.test(name)) || [0, 'diya'])[1];
+  function when(s) {
+    const m = typeof s === 'string' && s.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+    return m ? { date: new Date(+m[1], m[2] - 1, +m[3]), h: m[4] != null ? +m[4] : null, min: m[5] != null ? +m[5] : 0 } : null;
+  }
+  function clock(h, min, hi) {
+    if (h == null) return '';
+    const hh = h % 12 || 12, mm = String(min).padStart(2, '0');
+    return hi ? `${h < 12 ? 'प्रातः' : h < 17 ? 'दोपहर' : 'सायं'} ${hh}:${mm}` : `${hh}:${mm} ${h < 12 ? 'AM' : 'PM'}`;
+  }
+  function fromCard(film, lang, card) {
+    const hi = lang === 'hi', L = (en, h) => hi ? h : en;
+    const occ = OCC_OF[card.type] || (OCC_LABEL[card.type] ? card.type : 'wedding');
+    const base = details({ ...film, occ }, lang);
+    const A = String(card.host1 || '').trim() || base.A, B = String(card.host2 || '').trim(), solo = !B;
+    const fam = (card.families || []).map(f => String(f.parents || '').trim()).filter(Boolean);
+    // functions grouped by day (at most four days, three functions a day)
+    const groups = [];
+    (card.events || []).filter(e => e && String(e.name || '').trim()).forEach(e => {
+      const w = when(e.date), key = w ? w.date.toDateString() : 'later';
+      let g = groups.find(x => x.key === key);
+      if (!g) groups.push(g = { key, w, events: [] });
+      g.events.push({ name: String(e.name).trim(), icon: iconFor(e.name), time: w ? clock(w.h, w.min, hi) : '' });
+    });
+    groups.sort((a, b) => (a.w ? a.w.date : Infinity) - (b.w ? b.w.date : Infinity));
+    const days = groups.slice(0, 4).map(g => ({ d: g.w ? g.w.date.getDate() : '✦', month: g.w ? MONTH[lang][g.w.date.getMonth()] : '', wd: g.w ? WEEKDAY[lang][g.w.date.getDay()] : '', events: g.events.slice(0, 3) }));
+    if (!days.length) { const w = when(card.date); if (w) days.push({ d: w.date.getDate(), month: MONTH[lang][w.date.getMonth()], wd: WEEKDAY[lang][w.date.getDay()], events: [{ name: base.heading, icon: 'glass', time: clock(w.h, w.min, hi) }] }); }
+    const dated = groups.filter(g => g.w).map(g => g.w.date), first = dated[0] || (when(card.date) || {}).date, last = dated[dated.length - 1] || first;
+    const fmt = d => `${d.getDate()} ${MONTH[lang][d.getMonth()]}`;
+    const date = !first ? '' : first.toDateString() === last.toDateString() ? `${WEEKDAY[lang][first.getDay()]}, ${fmt(first)} ${first.getFullYear()}`
+      : first.getMonth() === last.getMonth() ? `${first.getDate()} – ${last.getDate()} ${MONTH[lang][first.getMonth()]} ${first.getFullYear()}` : `${fmt(first)} – ${fmt(last)} ${last.getFullYear()}`;
+    const venue = String(card.venue || '').trim(), cut = venue.indexOf(',');
+    const V = cut > 0 ? venue.slice(0, cut).trim() : venue, venueAddr = cut > 0 ? venue.slice(cut + 1).trim() : '';
+    const phones = (card.phones && card.phones.length ? card.phones : card.rsvp ? [card.rsvp] : []).map(p => String(p).replace(/^91(?=\d{10}$)/, '')).join(' · ');
+    const address = String(card.address || '').trim();
+    const initial = s => (s.match(/[A-Za-z\u0900-\u097F]/) || [''])[0];
+    const out = { ...base, solo, A, B, CITY: '', V, venueAddr, date, days, phones, address, compliments: null, kids: '',
+      mono: solo ? initial(A) : `${initial(A)} | ${initial(B)}`, hashtag: card.hashtag || (B && /^[A-Za-z]+$/.test(A + B) ? `#${A}Weds${B}` : ''),
+      full1: A, full2: B, sub1: '', sub2: '', top: L('With the blessings of our elders', 'बड़ों के आशीर्वाद से'), line1: L('You are warmly invited to celebrate with us', 'आप सादर आमन्त्रित हैं') };
+    if (occ === 'wedding') {
+      out.line1 = fam[0] ? L(`${fam[0]} request the honour of your presence at the wedding of`, `${fam[0]} आपको शुभ विवाह में सादर आमन्त्रित करते हैं`) : L('request the honour of your presence at the wedding of', 'शुभ विवाह में आप सादर आमन्त्रित हैं');
+      out.sub1 = fam[0] ? L(`Son of ${fam[0]}`, `सुपुत्र ${fam[0]}`) : '';
+      out.sub2 = fam[1] ? L(`Daughter of ${fam[1]}`, `सुपुत्री ${fam[1]}`) : '';
+    }
+    if (occ === 'anniversary') out.heading = L('Anniversary', 'वर्षगाँठ');
+    out.regards = fam.length ? [L('WITH BLESSINGS FROM', 'आशीर्वाद सहित'), ...fam.slice(0, 3)] : null;
+    out.note = phones || address ? { label: L('With love', 'सादर'), lines: L(['We look forward to', 'celebrating with you'], ['आपकी उपस्थिति', 'हमारा सौभाग्य']), by: `— ${solo ? A : `${A} & ${B}`}` } : null;
+    return out;
+  }
+  // The scene buttons' names in the Studio
+  const SCENE_NAME = { open: 'Opening', title: 'Names', card: 'Invitation', day: 'Functions', venue: 'Venue', regards: 'Families', note: 'Note', finale: 'Finale' };
+
+  // opts: { skip: ['card', 'day', 'venue', 'regards', 'note'], venueStyle: 'full' | 'name', credit, site }
+  function script(film, lang, card, opts = {}) {
+    const D = card ? fromCard(film, lang, card) : details(film, lang), s = [];
+    D.credit = opts.credit == null ? 'Designed by Sankalp' : opts.credit;
+    D.site = opts.site == null ? 'cardalbum.vercel.app' : opts.site;
+    D.venueStyle = opts.venueStyle || 'full';
     film.open.forEach(o => s.push({ k: 'open', o, d: o === 'burst' ? 3 : 3.6 }));
     s.push({ k: 'title', d: 5 });
-    s.push({ k: 'card', d: 6 });
-    D.days.forEach((day, i) => s.push({ k: 'day', day, i, n: D.days.length, d: D.days.length > 1 ? 3.4 : 4.2 }));
-    s.push({ k: 'venue', d: 4.5 });
-    if (D.regards) s.push({ k: 'regards', d: 4.5 });
-    if (D.note) s.push({ k: 'note', d: 5 });
+    const skip = new Set(opts.skip || []);
+    if (!skip.has('card')) s.push({ k: 'card', d: 6 });
+    if (!skip.has('day')) D.days.forEach((day, i) => s.push({ k: 'day', day, i, n: D.days.length, d: D.days.length > 1 ? 3.4 : 4.2 }));
+    if (!skip.has('venue') && D.V) s.push({ k: 'venue', d: 4.5 });
+    if (D.regards && !skip.has('regards')) s.push({ k: 'regards', d: 4.5 });
+    if (D.note && !skip.has('note')) s.push({ k: 'note', d: 5 });
     s.push({ k: 'finale', d: 6 });
     let t = 0;
     s.forEach(x => { x.t0 = t; t += x.d; });
@@ -334,15 +401,20 @@ const Films = (() => {
     });
     ctx.restore();
   }
-  function signature(ctx, th) {
+  // The strip at the foot of every screen: the designer's credit and the website (either, both, or neither)
+  function signature(ctx, th, credit, site) {
+    if (!credit && !site) return;
     ctx.save();
-    const w = 560, x = (W - w) / 2, y = H - 118;
+    const F1 = `italic 400 26px "Cormorant Garamond", ${isHi(credit) ? '"Tiro Devanagari Hindi", ' : ''}serif`, F2 = '400 21px "Cinzel", serif';
+    ctx.font = F1; const w1 = credit ? ctx.measureText(credit).width : 0;
+    ctx.font = F2; const sep = credit && site ? '  •  ' : '', w2 = site ? ctx.measureText(sep + site).width : 0;
+    const w = Math.min(W - 160, w1 + w2 + 64), x = (W - w) / 2, y = H - 118;
     rr(ctx, x, y, w, 54, 27); ctx.fillStyle = th.dark ? 'rgba(0,0,0,.45)' : 'rgba(255,255,255,.6)'; ctx.fill();
     stroke(ctx, th.dark ? th.gold[2] : th.gold[1], 2);
-    ctx.font = 'italic 400 26px "Cormorant Garamond", serif'; ctx.textAlign = 'right'; ctx.fillStyle = th.dark ? th.gold[0] : th.ink;
-    ctx.fillText('Designed by Sankalp', W / 2 - 6, y + 35);
-    ctx.font = '400 21px "Cinzel", serif'; ctx.textAlign = 'left'; ctx.fillStyle = th.dark ? '#fff' : th.ink;
-    ctx.fillText('• cardalbum.vercel.app', W / 2 + 6, y + 35);
+    let tx = x + 32;
+    ctx.textAlign = 'left';
+    if (credit) { ctx.font = F1; ctx.fillStyle = th.dark ? th.gold[0] : th.ink; ctx.fillText(credit, tx, y + 35, w - 64); tx += w1; }
+    if (site) { ctx.font = F2; ctx.fillStyle = th.dark ? '#fff' : th.ink; ctx.fillText(sep + site, tx, y + 35, x + w - 32 - tx); }
     ctx.restore();
   }
   const PANEL = { x: 100, y: 230, w: 880, h: 1420 };
@@ -603,7 +675,7 @@ const Films = (() => {
     ctx.strokeStyle = th.dark ? th.gold[1] : th.gold[2]; ctx.lineWidth = 2; ctx.strokeRect(cx - dw / 2, by - 44, dw, 64); ctx.strokeRect(cx - dw / 2 + 6, by - 38, dw - 12, 52);
     ctx.restore();
     text(ctx, th, D.date, cx, by, { z: 30, font: 'caps', color: ink, a: ap(lt, 1.7), maxW: 640 });
-    text(ctx, th, `${D.V} · ${D.CITY}`, cx, by + 76, { z: 34, font: 'body', color: c, a: ap(lt, 2) });
+    text(ctx, th, [D.V, D.CITY].filter(Boolean).join(' · '), cx, by + 76, { z: 34, font: 'body', color: c, a: ap(lt, 2) });
     diyas(ctx, th, cx, 1500, ap(lt, 2.2), lt);
   }
   function sceneCard(ctx, film, th, D, sc, lt) {
@@ -682,7 +754,7 @@ const Films = (() => {
     y += 130;
     text(ctx, lightTh, D.venueLabel, cx, y, { z: 32, font: 'caps', color: th.gold[2], a: ap(lt, .8), ls: 2 }); y += 110;
     y += para(ctx, lightTh, D.lang === 'hi' ? D.V : D.V.toUpperCase(), cx, y, { z: 70, font: D.lang === 'hi' ? 'name' : 'head', color: th.accent, a: ap(lt, 1), maxW: c.w - 120, lines: 2, lh: 1.15 }) + 10;
-    y += para(ctx, lightTh, D.venueAddr, cx, y, { z: 36, font: 'body', color: th.ink, a: ap(lt, 1.3), maxW: c.w - 160, lines: 2 }) + 20;
+    if (D.venueStyle !== 'name') y += para(ctx, lightTh, D.venueAddr, cx, y, { z: 36, font: 'body', color: th.ink, a: ap(lt, 1.3), maxW: c.w - 160, lines: 2 }) + 20;
     text(ctx, lightTh, '— ✦ —', cx, y + 10, { z: 30, font: 'caps', color: th.gold[1], a: ap(lt, 1.5) });
     text(ctx, lightTh, D.date, cx, y + 90, { z: 40, font: 'caps', color: th.ink, a: ap(lt, 1.6), maxW: c.w - 120 }); y += 130;
     mandalaAt(ctx, th, cx, y + 70, 86, ap(lt, 1.8) * .7); monogram(ctx, th, cx, y + 70, 46, D.mono, ap(lt, 1.8), false); y += 170;
@@ -742,8 +814,8 @@ const Films = (() => {
       if (D.B) { text(ctx, th, D.join, cx, 980, { z: 68, font: 'script', color: c, a: ap(lt, 2.5) }); text(ctx, th, D.B, cx, 1080, { z: 96, font: 'name', color: ink, a: ap(lt, 2.7), maxW: 760 }); }
       text(ctx, th, D.date, cx, 1180, { z: 30, font: 'caps', color: ink, a: ap(lt, 2.9), maxW: 640 });
       diyas(ctx, th, cx, 1330, ap(lt, 3), lt);
-      text(ctx, th, 'Designed with ♥ by Sankalp', cx, 1470, { z: 46, font: 'script', color: c, a: ap(lt, 3.4), glow: th.dark ? 12 : 0 });
-      text(ctx, th, 'cardalbum.vercel.app', cx, 1530, { z: 30, font: 'caps', color: ink, a: ap(lt, 3.6), ls: 1 });
+      if (D.credit) text(ctx, th, D.credit === 'Designed by Sankalp' ? 'Designed with ♥ by Sankalp' : D.credit, cx, 1470, { z: 46, font: 'script', color: c, a: ap(lt, 3.4), glow: th.dark ? 12 : 0 });
+      if (D.site) text(ctx, th, D.site, cx, 1530, { z: 30, font: 'caps', color: ink, a: ap(lt, 3.6), ls: 1 });
     }
   }
   const SCENES = { open: sceneOpen, title: sceneTitle, card: sceneCard, day: sceneDay, venue: sceneVenue, regards: sceneRegards, note: sceneNote, finale: sceneFinale };
@@ -758,10 +830,13 @@ const Films = (() => {
       this.c = canvas; this.s = scale; canvas.width = Math.round(W * scale); canvas.height = Math.round(H * scale);
       this.ctx = canvas.getContext('2d'); this.total = 1;
     }
-    set(film, lang) {
+    // opts.sign = false leaves out "Designed by Sankalp" (the Studio's branding switch)
+    set(film, lang, card, opts = {}) {
       this.film = typeof film === 'string' ? byId[film] : film;
       this.lang = lang || this.film.lang;
-      this.P = script(this.film, this.lang); this.total = this.P.total;
+      this.P = script(this.film, this.lang, card, opts); this.total = this.P.total;
+      if (opts.sign === false) { this.P.D.credit = ''; this.P.D.site = ''; }
+      this.tl = { scenes: this.P.scenes }; // the Studio's scene buttons
     }
     // The moment shown as the film's picture: the names, fully arrived
     posterTime() { const s = this.P.scenes.find(x => x.k === 'title'); return s.t0 + s.d - .7; }
@@ -778,7 +853,8 @@ const Films = (() => {
         ctx.restore();
       }
       corners(ctx, th);
-      signature(ctx, th);
+      signature(ctx, th, this.P.D.credit, this.P.D.site);
+      return sc;
     }
   }
   // Fonts the films use (Hindi ones are added to the page when missing)
@@ -799,7 +875,7 @@ const Films = (() => {
     return Promise.race([Promise.all([...want, ...hindi]), new Promise(r => setTimeout(r, 6000))]).catch(() => {});
   }
 
-  return { W, H, THEMES, FRAMES, OPENINGS, FX, LIST, byId, describe, details, script, Player, fontsReady };
+  return { W, H, THEMES, FRAMES, OPENINGS, FX, LIST, byId, describe, details, fromCard, script, Player, fontsReady, SCENE_NAME };
 })();
 
 if (typeof module !== 'undefined') module.exports = Films;
