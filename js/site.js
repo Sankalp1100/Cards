@@ -553,8 +553,17 @@
   const enq = $('#enqForm');
   $('#enqOcc').innerHTML = ['wedding', 'engagement', 'reception', 'sangeet', 'haldi', 'mehendi', 'anniversary', 'bday', 'babyshower', 'naming', 'housewarming', 'ceremony', 'kitty', 'retirement', 'corporate']
     .filter(k => PRESETS[k]).map(k => `<option value="${esc(PRESETS[k].label)}">${PRESETS[k].icon || ''} ${esc(PRESETS[k].label)}</option>`).join('') + '<option value="Other">✨ Other</option>';
+  if (window.Pickers) { Pickers.select($('#enqOcc')); Pickers.date(enq.elements.date); }
   // chips light up when ticked (also where :has() is missing)
-  enq.addEventListener('change', e => { if (e.target.name === 'want') e.target.closest('.chip').classList.toggle('on', e.target.checked); });
+  enq.addEventListener('change', e => {
+    if (e.target.name !== 'want') return;
+    // At least one need stays chosen: the last one can't be switched off (it gives a little shake instead)
+    if (!e.target.checked && !enq.querySelector('[name="want"]:checked')) {
+      e.target.checked = true;
+      const chip = e.target.closest('.chip'); chip.classList.remove('nope'); void chip.offsetWidth; chip.classList.add('nope');
+    }
+    e.target.closest('.chip').classList.toggle('on', e.target.checked);
+  });
   enq.querySelectorAll('[name="want"]').forEach(c => c.closest('.chip').classList.toggle('on', c.checked));
   enq.addEventListener('input', e => { e.target.removeAttribute('aria-invalid'); if (!enq.querySelector('[aria-invalid]')) $('#enqErr').hidden = true; });
   // the mobile number: digits only, at most 10 (a pasted "+91 98765-43210" or "098765…" keeps the 10 digits)
