@@ -354,47 +354,31 @@
     ['haldi', 'Haldi Sunshine', 'Haldi'], ['clouds', 'Dreamy Clouds', 'Baby showers, naming'], ['disco', 'Disco Night', 'Kitty parties'],
     ['diwali', 'Diwali Lights', 'Pujas, Diwali'], ['rosegarden', 'Rose Garden', 'Weddings, anniversaries']
   ];
-  // All 300 looks (js/videolooks.js), mixed so neighbours differ: every scene's first mood, then every scene's
-  // second, and so on. A scene chip shows only that scene's fifteen. 20 at a time, "Show more" for the next.
+  // One tile per scene, no repeats: each scene's first mood (its other colours are picked inside the player),
+  // leaving out the scenes a story film already shows. The look data (js/videolooks.js) stays complete.
   const sceneInfo = Object.fromEntries(VIDEO_SCENES.map(([id, name, hint]) => [id, { name, hint }]));
-  const moodNo = {};
-  const allLooks = VIDEO_LOOKS.map(([id, scene, mood]) => ({ id, scene, mood, n: moodNo[scene] = (moodNo[scene] ?? -1) + 1 }))
-    .sort((a, b) => a.n - b.n || VIDEO_SCENES.findIndex(v => v[0] === a.scene) - VIDEO_SCENES.findIndex(v => v[0] === b.scene));
-  const VID_PAGE = 20;
-  let vidScene = '', vidShown = VID_PAGE;
-  $('#vidsChips').innerHTML = `<button type="button" class="chip on" data-vscene="">✨ All ${allLooks.length}</button>` +
-    VIDEO_SCENES.map(([id, name]) => `<button type="button" class="chip" data-vscene="${id}">${esc(name)}</button>`).join('');
-  function renderVideos() {
-    const list = allLooks.filter(l => !vidScene || l.scene === vidScene);
-    $('#vidsGrid').innerHTML = list.slice(0, vidShown).map(l => {
-      const sc = sceneInfo[l.scene];
-      return `
-    <button type="button" class="vid-tile" data-look="${l.id}" aria-label="Play the ${esc(sc.name)} story video, ${esc(l.mood)} mood">
+  const IN_A_STORY = new Set(['jharokha', 'palace', 'himalaya', 'beach', 'clouds', 'disco', 'diwali', 'temple', 'rosegarden', 'marigold']);
+  const seenScene = new Set();
+  const sceneLooks = VIDEO_LOOKS.filter(([, scene]) => !IN_A_STORY.has(scene) && !seenScene.has(scene) && seenScene.add(scene))
+    .map(([id, scene, mood]) => ({ id, scene, mood }));
+  $('#vidsGrid').innerHTML = sceneLooks.map(l => {
+    const sc = sceneInfo[l.scene];
+    return `
+    <button type="button" class="vid-tile" data-look="${l.id}" aria-label="Play the ${esc(sc.name)} story video">
       <img src="img/videos/${l.id}.jpg" alt="" loading="lazy" decoding="async" width="270" height="480">
       <span class="vid-play" aria-hidden="true">▶</span>
-      <span class="vid-cap"><b>${esc(sc.name)}</b><small>${esc(l.mood)} · ${esc(sc.hint)}</small></span>
+      <span class="vid-cap"><b>${esc(sc.name)}</b><small>${esc(sc.hint)}</small></span>
     </button>`;
-    }).join('');
-    $('#vidsCount').textContent = `Showing ${Math.min(vidShown, list.length)} of ${list.length} video looks`;
-    $('#vidsMore').hidden = vidShown >= list.length;
-  }
-  renderVideos();
-  $('#storyGrid').innerHTML = VIDEO_STORIES.map(([id, name, note, tuneLabel]) => `
+  }).join('');
+  // Story films that look like another one (same arch, same family) are left out of the grid
+  const LOOKALIKE_STORIES = new Set(['story-shahi', 'story-pastel', 'story-raag', 'story-utsav']);
+  $('#storyGrid').innerHTML = VIDEO_STORIES.filter(([id]) => !LOOKALIKE_STORIES.has(id)).map(([id, name, note, tuneLabel]) => `
     <button type="button" class="vid-tile story-tile" data-look="${id}" aria-label="Play the ${esc(name)} story film">
       <img src="img/stories/${id}.jpg" alt="" loading="lazy" decoding="async" width="270" height="480">
       <span class="vid-play" aria-hidden="true">▶</span>
       <span class="vid-cap"><b>${esc(name)}</b><small>🎵 ${esc(tuneLabel)} · ${esc(note)}</small></span>
     </button>`).join('');
   $('#storyGrid').addEventListener('click', e => { const b = e.target.closest('[data-look]'); if (b) openVideo(b.dataset.look); });
-  $('#vidsChips').addEventListener('click', e => {
-    const b = e.target.closest('[data-vscene]');
-    if (!b) return;
-    vidScene = b.dataset.vscene;
-    vidShown = VID_PAGE;
-    document.querySelectorAll('#vidsChips .chip').forEach(c => c.classList.toggle('on', c === b));
-    renderVideos();
-  });
-  $('#vidsMore').addEventListener('click', () => { vidShown += VID_PAGE; renderVideos(); });
 
   let studioScript = null;
   const script = src => new Promise((resolve, reject) => {
@@ -616,7 +600,7 @@
   function showVideo() {
     $('#osVideo').innerHTML = ord.video
       ? `🎬 Story video: <b>${esc(ord.video.name)}</b> · ${ord.video.lang === 'hi' ? 'हिन्दी' : 'English'} <button type="button" class="os-unvideo" data-unvideo aria-label="Remove the video">✕</button>`
-      : 'Want a story video for WhatsApp too? <a href="#videos" data-video-go>See the story films and 300 looks →</a>';
+      : 'Want a story video for WhatsApp too? <a href="#videos" data-video-go>See the story films →</a>';
   }
 
   // What each step needs before moving on.

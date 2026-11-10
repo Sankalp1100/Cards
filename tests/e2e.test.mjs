@@ -1071,18 +1071,17 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`getComputedStyle(document.querySelector('.see-all-wrap')).display`), 'none');
   });
 
-  test('story videos: 20 scenes; a tap plays one in its fifteen moods; "Order this video" puts it in the order', async () => {
+  test('story videos: a featured film, 9 story films and 10 scenes with no lookalikes; a tap plays one in its fifteen moods; "Order this video" puts it in the order', async () => {
     await page.viewport(390, 844);
     await page.goto(base + 'index.html');
     await page.eval(`document.querySelector('.bottom-nav [data-videos]').click()`);
     assert.equal(await page.eval(`document.body.dataset.tab`), 'videos');
-    assert.equal(await page.eval(`document.querySelectorAll('#vidsGrid .vid-tile').length`), 20, '20 at a time');
-    assert.match(await page.eval(`document.querySelector('#vidsCount').textContent`), /Showing 20 of 300 video looks/);
-    for (let i = 0; i < 20 && !(await page.eval(`document.querySelector('#vidsMore').hidden`)); i++) await page.eval(`document.querySelector('#vidsMore').click()`);
-    assert.equal(await page.eval(`new Set([...document.querySelectorAll('#vidsGrid .vid-tile')].map(t => t.dataset.look)).size`), 300, 'all 300 looks');
-    await page.eval(`document.querySelector('#vidsChips [data-vscene="party"]').click()`);
-    assert.equal(await page.eval(`document.querySelectorAll('#vidsGrid .vid-tile').length`), 15, 'a scene shows its fifteen moods');
-    assert.equal(await page.eval(`document.querySelector('#vidsMore').hidden`), true);
+    assert.equal(await page.eval(`document.querySelector('.vids-feature video').getAttribute('src')`), 'videos/shivam-aanya.mp4', 'the featured film is a real video');
+    assert.equal(await page.eval(`document.querySelectorAll('#storyGrid .vid-tile').length`), 9, 'lookalike story films left out');
+    assert.equal(await page.eval(`document.querySelectorAll('#vidsGrid .vid-tile').length`), 10, 'one tile per scene a story film does not already show');
+    const scenes = await page.eval(`[...document.querySelectorAll('#vidsGrid .vid-tile')].map(t => t.dataset.look)`);
+    assert.equal(new Set(scenes).size, scenes.length, 'no scene twice');
+    assert.equal(await page.eval(`!!document.querySelector('#vidsMore, #vidsChips')`), false, 'no repeats behind "Show more"');
     assert.equal(await page.eval(`!!document.querySelector('.hero').offsetParent`), false, 'the Videos tab shows only the videos');
     await page.eval(`document.querySelector('#vidsGrid [data-look="party"]').click()`);
     await page.waitFor(`document.querySelector('#vidWait').hidden`, 15000);
