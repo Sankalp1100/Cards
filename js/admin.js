@@ -1076,17 +1076,21 @@
 
   async function openStudio() {
     st.picked = false;
+    st.details = null; // set again by a card's details or the last project
     const orders = studioOrders();
     if (state.host1 && !cardReady()) return;
     $('#stOrder').innerHTML = (state.host1 ? `<option value="">✏️ The invite in the editor: ${esc(who(state))}</option>` : '') +
       orders.map(o => `<option value="${esc(o.code)}">${o.done ? '✓ ' : '🆕 '}${esc(o.name)} · ${esc(occasion(o).label)}${Catalog.refOf(o.code) ? ` · ${Catalog.refOf(o.code)}` : ''}</option>`).join('');
-    $('#stOrderRow').hidden = !orders.length;
-    if (state.host1) studioLoad(clone(state), '', '');
+    $('#stOrderRow').hidden = !orders.length && !state.host1;
+    if (stLoadDraft()) resumeDraft(); // the project left here last time comes back as it was (the list above still opens the editor's invite or an order)
+    else if (state.host1) studioLoad(clone(state), '', '');
     else if (orders.length) studioLoad(orderCard(orders[0].code), orderVideo(orders[0].code), orderLang(orders[0].code));
     else studioLoad({ ...Core.blankCard(), ...Studio.sample('vrindavan') }, Films.LIST[0].id, 'en'); // a sample until a card PDF is added
     $('#stVideo').hidden = $('#stDownload').hidden = $('#stShare').hidden = true;
     stShareFile = null;
-    stStatus('Watch it on the left, then make the video. It records in real time, so keep this tab open.');
+    stStatus(st.resumed ? '📂 Your last project is back, just as you left it. Make the video, or change anything first.' : 'Watch it on the left, then make the video. It records in real time, so keep this tab open.');
+    st.resumed = false;
+    $('#stResume').hidden = !stLoadDraft() || !!st.details;
     $('#studio').hidden = false;
     document.body.classList.add('studio-open');
     showArt();
@@ -1112,6 +1116,7 @@
   }
   function closeStudio() {
     if (st.rec) return toast('Please wait: the video is still recording');
+    if (st.details) { stSaveDraft(); toast('💾 Saved: your project opens here next time'); }
     soundOff(); stopCropSound();
     $('#stSound').textContent = '🔇';
     cancelAnimationFrame(st.raf);
@@ -1123,6 +1128,7 @@
 
   // Applies the chosen options; the preview keeps its place.
   function refreshStudio() {
+    if (st.details) setTimeout(stSaveDraft);
     if (st.opt.film) st.fplayer.set(st.opt.film, st.lang, st.card, filmOpts());
     else st.player.set(st.card, st.opt, cfg.site);
     const P = SP();
@@ -1331,7 +1337,9 @@
 
   $('#stOrder').addEventListener('change', e => {
     if (st.rec) return;
+    st.details = null; // another card: the saved project stays as it was (the 📂 button brings it back)
     studioLoad(e.target.value ? orderCard(e.target.value) : clone(state), orderVideo(e.target.value), orderLang(e.target.value));
+    $('#stResume').hidden = !stLoadDraft();
   });
   // One tap: take the chosen order's details and make the video straight away.
   $('#stAuto').addEventListener('click', () => {
@@ -1344,6 +1352,7 @@
   });
 
   $('#stMake').addEventListener('click', () => makeStudioVideo());
+  $('#stCancel').addEventListener('click', () => { if (st.rec) { st.rec.cancelled = true; st.rec.done(); } });
   async function makeStudioVideo() {
     if (st.rec) return;
     await st.ready; // the Studio may still be opening (a tap straight after opening it)
@@ -1371,17 +1380,23 @@
       recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
       const stopped = new Promise(r => { recorder.onstop = r; });
       const total = SP().total;
+      const rec = { t0: performance.now(), cancelled: false };
+      $('#stCancel').hidden = false;
       await new Promise(resolve => {
-        st.rec = { t0: performance.now(), done: resolve };
+        rec.done = resolve;
+        st.rec = rec;
         recorder.start(500);
         const tick = setInterval(() => {
           if (!st.rec) return clearInterval(tick);
-          stStatus(`🔴 Recording… ${Math.floor(st.t)}s of ${Math.round(total)}s. Keep this tab open.`, Math.min(.99, st.t / total));
+          const left = Math.max(0, Math.ceil(total - st.t));
+          stStatus(`🔴 Recording… ${mmss(st.t)} / ${mmss(total)} · ${left}s left. Keep this tab open.`, Math.min(.99, st.t / total));
         }, 250);
       });
       st.rec = null;
+      $('#stCancel').hidden = true;
       recorder.stop();
       await stopped;
+      if (rec.cancelled) { stStatus('Stopped. Nothing was saved: change anything you like, then make the video again.', 0); toast('Recording stopped'); return; }
       const type = recorder.mimeType || mimeType || 'video/webm';
       let blob = new Blob(chunks, { type });
       // Browsers record a 'fragmented' MP4 that WhatsApp treats as a broken document: rebuild it as a standard MP4.
@@ -1408,6 +1423,7 @@
       $('#stRemake').hidden = false;
     } catch (e) {
       st.rec = null;
+      $('#stCancel').hidden = true;
       stStatus(`Could not make the video: ${e.message}. Please try again.`);
     } finally {
       if (box) { box.stop(); if (box.close) box.close(); else box.ctx.close(); }
@@ -1488,8 +1504,33 @@
     const d = readDetails();
     if (!d.host1) { toast('Please write at least the first name'); $('#fHost1').focus(); return false; }
     studioLoad({ ...Core.blankCard(), ...PdfCard.toCard(d), theme: design().no }, '', d.lang);
+    st.details = d;
+    stSaveDraft();
+    $('#stResume').hidden = true;
     return true;
   }
+  // ---------- Draft: the project in the Studio is kept, so leaving never loses it ----------
+  const ST_DRAFT = 'cardalbum.studio.draft';
+  function stSaveDraft() {
+    if (!st.details || !st.opt) return;
+    try { localStorage.setItem(ST_DRAFT, JSON.stringify({ details: st.details, video: st.opt.film || st.opt.story || st.opt.look || '', lang: st.lang, at: Date.now() })); } catch (e) { /* storage full or blocked */ }
+  }
+  function stLoadDraft() {
+    try { const d = JSON.parse(localStorage.getItem(ST_DRAFT) || 'null'); return d && d.details && d.details.host1 ? d : null; } catch (e) { return null; }
+  }
+  function resumeDraft() {
+    const d = stLoadDraft();
+    if (!d) return false;
+    fillDetails(d.details);
+    studioLoad({ ...Core.blankCard(), ...PdfCard.toCard(d.details), theme: design().no }, d.video, d.lang);
+    st.details = d.details; st.picked = true; st.resumed = true;
+    if (st.player) refreshStudio();
+    return true;
+  }
+  $('#stResume').addEventListener('click', () => {
+    if (st.rec) return toast('Please wait: a video is still recording');
+    if (resumeDraft()) { $('#stResume').hidden = true; stStatus('📂 Your last project is back, just as you left it.'); toast('📂 Last project opened'); }
+  });
   $('#fEvents').addEventListener('click', e => { const b = e.target.closest('[data-ev-del]'); if (b) b.parentElement.remove(); });
   $('#fAddEv').addEventListener('click', () => $('#fEvents').insertAdjacentHTML('beforeend', evRow()));
   $('#stForm').addEventListener('submit', e => { e.preventDefault(); if (st.rec) return; if (useDetails()) { stepTo('look'); toast('✅ Details in: now pick a style'); } });

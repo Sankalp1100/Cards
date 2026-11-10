@@ -494,3 +494,8 @@ main > section[data-page][hidden] { display: none !important; }
 .btn-glow, .btn-line, .btn-small, .chip, .st-step, .st-tab, .st-look, .st-film, .pick-tile { -webkit-tap-highlight-color: transparent; }
 .btn-glow:active, .btn-line:active, .btn-small:active, .st-step:active, .st-tab:active { transform: scale(.95) !important; transition-duration: .08s !important; }
 .chip:active, .st-look:active, .st-film:active, .pick-tile:active { transform: scale(.94); transition: transform .08s; }
+
+/* Studio: stop a recording, reopen the last project */
+.st-cancel { margin-top: 8px; width: 100%; justify-content: center; border-color: rgba(255,107,139,.5) !important; color: #ffd0da; }
+.st-resume { border-color: rgba(74,222,128,.45) !important; color: #bbf7d0; animation: stResumeIn .5s cubic-bezier(.2,.9,.3,1.3); }
+@keyframes stResumeIn { from { opacity: 0; transform: scale(.8); } }

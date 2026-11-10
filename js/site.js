@@ -228,22 +228,41 @@
     document.body.classList.add('sheet-open');
   });
   // The demo sheet asks first: a link card (then the design picker) or a video (then a film plays)
-  function showDemoStep(cards) {
-    $('#dsChoose').hidden = cards;
+  function showDemoStep(step) { // false = the first question, 'cards' / true = designs, 'videos' = films by style
+    const cards = step === true || step === 'cards', videos = step === 'videos';
+    $('#dsChoose').hidden = cards || videos;
     $('#dsCards').hidden = !cards;
-    $('#dsTitle').textContent = cards ? 'Which design do you want to see?' : 'What do you want to see?';
+    $('#dsVideos').hidden = !videos;
+    $('#dsTitle').textContent = cards ? 'Which design do you want to see?' : videos ? 'Which video do you want to see?' : 'What do you want to see?';
+    if (videos) renderDemoFilms();
   }
+  // Story video demos, by style: Royal Heritage and the 11 other concepts
+  let demoCat = 'all';
+  const filmCats = () => {
+    const seen = [];
+    Films.LIST.forEach(f => { const c = f.concept || 'heritage'; if (!seen.includes(c)) seen.push(c); });
+    return seen;
+  };
+  function renderDemoFilms() {
+    const cats = filmCats();
+    const label = c => c === 'heritage' ? 'Royal Heritage' : (Films.CONCEPTS[c] && Films.CONCEPTS[c].name) || c;
+    const count = c => Films.LIST.filter(f => (f.concept || 'heritage') === c).length;
+    $('#dsCats').innerHTML = `<button type="button" class="chip${demoCat === 'all' ? ' on' : ''}" data-cat="all">✨ All <b class="n">${Films.LIST.length}</b></button>` +
+      cats.map(c => `<button type="button" class="chip${demoCat === c ? ' on' : ''}" data-cat="${c}">${esc(label(c))} <b class="n">${count(c)}</b></button>`).join('');
+    const list = demoCat === 'all' ? Films.LIST.slice(0, 24) : Films.LIST.filter(f => (f.concept || 'heritage') === demoCat);
+    $('#dsFilms').innerHTML = list.map(f => `<button type="button" class="ds-film" data-film="${f.id}" aria-label="Play ${esc(f.name)}">
+      <img src="img/films/${f.id}.jpg" alt="" loading="lazy" decoding="async" width="135" height="240"><span class="vid-play" aria-hidden="true">▶</span><b>${esc(f.name)}</b><small>${esc(Films.describe(f))}</small></button>`).join('') +
+      (demoCat === 'all' ? `<p class="ds-more muted">Showing 24 of ${Films.LIST.length}: pick a style above for more.</p>` : '');
+  }
+  $('#dsCats').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (b) { demoCat = b.dataset.cat; renderDemoFilms(); } });
+  $('#dsFilms').addEventListener('click', e => { const b = e.target.closest('[data-film]'); if (b) { closeDemo(); openFilm(b.dataset.film); } });
   $('#dsChoose').addEventListener('click', e => {
     const b = e.target.closest('[data-demo]');
     if (!b) return;
     if (window.Fun) Fun.buzz(10);
-    if (b.dataset.demo === 'card') return showDemoStep(true);
-    closeDemo();
-    const v = $('#videos'); v && v.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    const first = document.querySelector('#filmGrid > *');
-    if (first) setTimeout(() => first.click(), 500); // the first premium film plays straight away
+    showDemoStep(b.dataset.demo === 'card' ? 'cards' : 'videos');
   });
-  $('#dsBack').addEventListener('click', () => showDemoStep(false));
+  document.querySelectorAll('[data-ds-back]').forEach(b => b.addEventListener('click', () => showDemoStep(false)));
   $('#dsOcc').addEventListener('click', e => {
     const b = e.target.closest('[data-docc]');
     if (!b) return;
