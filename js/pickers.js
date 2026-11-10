@@ -109,5 +109,98 @@
     label();
   }
 
-  window.Pickers = { select, date, close: closeOpen };
+  // ---------- Floating calendar (+ time) for every date / date-and-time box inside `root` ----------
+  // The boxes stay real inputs (their value, events and validation are untouched); they are made read-only so the
+  // browser's own grey picker never opens, and a tap opens ours: Clear · Save · Today, past days off.
+  const DT = 'input[type="date"], input[type="datetime-local"]';
+  let fpop = null, fclose = null;
+  function floating(input) {
+    if (fclose) fclose();
+    const withTime = (input.getAttribute('type') || input.type) === 'datetime-local';
+    const today = iso(new Date());
+    const min = input.min || '';
+    const minDay = min.slice(0, 10);
+    let v = input.value || '';
+    let day = v.slice(0, 10), hh = 19, mm = 0;
+    if (/T\d\d:\d\d/.test(v)) { hh = +v.slice(11, 13); mm = +v.slice(14, 16); }
+    let view = day ? new Date(day + 'T00:00') : (minDay && minDay > today ? new Date(minDay + 'T00:00') : new Date());
+    const pop = document.createElement('div');
+    pop.className = 'fx-pop fx-cal fx-float' + (withTime ? ' with-time' : '');
+    pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', withTime ? 'Choose date and time' : 'Choose a date');
+    document.body.appendChild(pop);
+    const value = () => day ? (withTime ? `${day}T${String(hh).padStart(2, '0')}:${String(Math.round(mm)).padStart(2, '0')}` : day) : '';
+    const tooEarly = () => !!(day && min && value() < (withTime ? min : minDay));
+    function draw() {
+      const y = view.getFullYear(), m = view.getMonth();
+      const start = new Date(y, m, 1 - new Date(y, m, 1).getDay());
+      let days = '';
+      for (let i = 0; i < 42; i++) {
+        const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i), s = iso(d), past = minDay && s < minDay;
+        days += `<button type="button" data-d="${s}" class="${[d.getMonth() !== m && 'out', s === today && 'today', s === day && 'on', past && 'past'].filter(Boolean).join(' ')}" ${past ? 'disabled' : ''}>${d.getDate()}</button>`;
+      }
+      const canBack = !minDay || iso(new Date(y, m, 0)) >= minDay;
+      const h12 = hh % 12 || 12, pm = hh >= 12;
+      const col = (items, cur, k) => `<div class="fx-col" data-col="${k}">${items.map(([val, txt]) => `<button type="button" data-${k}="${val}" class="${val === cur ? 'on' : ''}">${txt}</button>`).join('')}</div>`;
+      const time = withTime ? `<div class="fx-time"><p>Time</p><div class="fx-cols">
+          ${col(Array.from({ length: 12 }, (_, i) => [i + 1, String(i + 1).padStart(2, '0')]), h12, 'h')}
+          ${col(Array.from({ length: 12 }, (_, i) => [i * 5, String(i * 5).padStart(2, '0')]), Math.round(mm / 5) * 5 % 60, 'm')}
+          ${col([['am', 'AM'], ['pm', 'PM']], pm ? 'pm' : 'am', 'ap')}</div></div>` : '';
+      pop.innerHTML = `<div class="fx-cal-main"><div class="fx-cal-head"><button type="button" data-nav="-1" aria-label="Previous month" ${canBack ? '' : 'disabled'}>‹</button><b>${MONTHS[m]} ${y}</b><button type="button" data-nav="1" aria-label="Next month">›</button></div>
+        <div class="fx-cal-week">${['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(w => `<span>${w}</span>`).join('')}</div>
+        <div class="fx-cal-days">${days}</div></div>${time}
+        <p class="fx-note">${tooEarly() ? 'That time has already passed: pick a later one.' : day ? (withTime ? new Date(value()).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : new Date(day + 'T00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })) : 'Pick a day' + (withTime ? ' and a time' : '')}</p>
+        <div class="fx-cal-foot"><button type="button" data-act="clear">Clear</button><button type="button" data-act="save" class="fx-save" ${day && !tooEarly() ? '' : 'disabled'}>Save</button><button type="button" data-act="today">Today</button></div>`;
+      pop.querySelectorAll('.fx-col .on').forEach(b => { b.parentNode.scrollTop = b.offsetTop - b.parentNode.clientHeight / 2 + b.offsetHeight / 2; });
+    }
+    function placeFloat() {
+      const r = input.getBoundingClientRect(), W = innerWidth, H = innerHeight;
+      const w = Math.min(pop.offsetWidth, W - 16);
+      pop.style.left = Math.max(8, Math.min(r.left, W - w - 8)) + 'px';
+      const below = H - r.bottom - 12, above = r.top - 12, h = pop.offsetHeight;
+      if (below >= h || below >= above) { pop.style.top = Math.min(r.bottom + 6, Math.max(8, H - h - 8)) + 'px'; pop.style.bottom = 'auto'; pop.classList.remove('up'); }
+      else { pop.style.top = 'auto'; pop.style.bottom = Math.min(H - r.top + 6, Math.max(8, H - h - 8)) + 'px'; pop.classList.add('up'); }
+      pop.style.maxHeight = (H - 16) + 'px';
+    }
+    const commit = val => {
+      input.value = val;
+      input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true }));
+      close(); try { input.focus({ preventScroll: true }); } catch (e) { /* old browser */ }
+    };
+    const onDown = e => { if (!pop.contains(e.target) && e.target !== input) close(); };
+    const onScroll = e => { if (!pop.contains(e.target)) placeFloat(); };
+    const onKey = e => { if (e.key === 'Escape') close(); };
+    function close() {
+      pop.remove(); fpop = fclose = null;
+      document.removeEventListener('pointerdown', onDown, true); document.removeEventListener('scroll', onScroll, true);
+      document.removeEventListener('keydown', onKey); removeEventListener('resize', close);
+    }
+    pop.addEventListener('click', e => {
+      const t = e.target.closest('button'); if (!t || t.disabled) return;
+      if (t.dataset.nav) { view = new Date(view.getFullYear(), view.getMonth() + +t.dataset.nav, 1); draw(); }
+      else if (t.dataset.d) { day = t.dataset.d; if (t.classList.contains('out')) view = new Date(day + 'T00:00'); draw(); }
+      else if (t.dataset.h) { const pm = hh >= 12; hh = (+t.dataset.h % 12) + (pm ? 12 : 0); draw(); }
+      else if (t.dataset.m != null && t.dataset.m !== undefined && t.hasAttribute('data-m')) { mm = +t.dataset.m; draw(); }
+      else if (t.dataset.ap) { const h12 = hh % 12; hh = h12 + (t.dataset.ap === 'pm' ? 12 : 0); draw(); }
+      else if (t.dataset.act === 'clear') commit('');
+      else if (t.dataset.act === 'today') { day = today; view = new Date(); if (withTime && tooEarly()) { const n = new Date(Date.now() + 3600e3); hh = n.getHours(); mm = 0; } draw(); }
+      else if (t.dataset.act === 'save' && day && !tooEarly()) commit(value());
+    });
+    pop.addEventListener('dblclick', e => { const t = e.target.closest('[data-d]'); if (t && !t.disabled && !withTime) commit(t.dataset.d); });
+    draw(); placeFloat();
+    document.addEventListener('pointerdown', onDown, true); document.addEventListener('scroll', onScroll, true);
+    document.addEventListener('keydown', onKey); addEventListener('resize', close);
+    fpop = pop; fclose = close;
+  }
+  function attach(root) {
+    if (!root || root.dataset.fxDates) return;
+    root.dataset.fxDates = '1';
+    const lock = e => { const i = e.target.closest && e.target.closest(DT); if (i) i.readOnly = true; };
+    root.addEventListener('pointerdown', lock, true);
+    root.addEventListener('focusin', lock);
+    root.querySelectorAll(DT).forEach(i => { i.readOnly = true; });
+    root.addEventListener('click', e => { const i = e.target.closest(DT); if (!i || i.disabled) return; e.preventDefault(); i.readOnly = true; floating(i); });
+    root.addEventListener('keydown', e => { const i = e.target.closest(DT); if (i && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); floating(i); } });
+  }
+
+  window.Pickers = { select, date, attach, close: () => { closeOpen(); if (fclose) fclose(); } };
 })();

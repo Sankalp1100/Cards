@@ -185,6 +185,17 @@
         <h2 class="section-h">Send an <span class="gradient-text">enquiry</span></h2>
         <p class="muted">Tell us what you need. It opens WhatsApp with everything filled in, so you only tap send. We reply within a few hours.</p>
         <p class="enq-live"><i aria-hidden="true"></i> Usually replies in a few hours</p>
+        <div class="enq-quick">
+          <p>⚡ Quick questions <small>tap one, it fills in for you</small></p>
+          <div class="enq-quick-list">
+            <button type="button" data-quick="What is the price for an invitation card?">💰 What's the price?</button>
+            <button type="button" data-quick="How soon can my card be ready?">⏱️ How soon is it ready?</button>
+            <button type="button" data-quick="Can you make a story video for WhatsApp as well?">🎬 Video too?</button>
+            <button type="button" data-quick="Can the card be in Hindi?">🇮🇳 Card in Hindi?</button>
+            <button type="button" data-quick="I already have my card as a PDF. Can you make it from that?">📄 I have a PDF</button>
+            <button type="button" data-quick="Can every guest get a link with their own name?">🙋 Names for each guest?</button>
+          </div>
+        </div>
       </div>
       <form class="enq-form" id="enqForm" novalidate>
         <label><span>Your name <b>*</b></span><input name="name" autocomplete="name" maxlength="60" placeholder="e.g. Priya Sharma" required></label>
@@ -302,19 +313,19 @@
       </header>
       <ol class="os-dots" id="osDots" aria-hidden="true"><li></li><li></li><li></li><li></li><li></li></ol>
       <p class="os-stepno" id="osStepNo"></p>
-      <!-- After a PDF is chosen: WhatsApp is open; attach the PDF there and send -->
+      <!-- After a PDF is chosen: the order message is ready; one tap opens WhatsApp in a new tab, then attach the PDF and send -->
       <div class="os-body os-pdf-done" id="osPdfDone" hidden>
         <div class="os-pdf-tick">✅</div>
-        <h3>Almost done: send it on WhatsApp</h3>
+        <h3>Your order is ready: send it on WhatsApp</h3>
         <p class="muted" id="osPdfWhat"></p>
         <ol class="os-pdf-steps">
-          <li>WhatsApp has opened with your order written in.</li>
+          <li>Tap <b>Send on WhatsApp</b> below: it opens in a new tab with your order written in.</li>
           <li>Tap <b>📎 Attach → Document</b> and pick <b id="osPdfName"></b>.</li>
           <li>Tap <b>Send</b>. That's your order submitted: we reply with the price and the time it takes.</li>
         </ol>
         <div class="os-pdf-actions">
-          <button type="button" class="btn-glow" id="osPdfShare" hidden>📤 Share the PDF on WhatsApp</button>
-          <a class="btn-line" id="osPdfWa" target="_blank" rel="noopener">💬 Open WhatsApp again</a>
+          <a class="btn-glow" id="osPdfWa" target="_blank" rel="noopener">💬 Send on WhatsApp</a>
+          <button type="button" class="btn-line" id="osPdfShare" hidden>📤 Share the PDF on WhatsApp</button>
           <button type="button" class="btn-line small" id="osPdfBack">← Fill the form instead</button>
         </div>
       </div>

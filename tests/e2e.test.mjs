@@ -1155,7 +1155,10 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.waitFor(`!document.querySelector('#osPdfDone').hidden`, 15000);
     assert.equal(await page.eval(`document.querySelector('#orderForm').hidden`), true);
     assert.match(await page.eval(`document.querySelector('#osPdfName').textContent`), /my-card\.pdf/);
-    const order = decodeURIComponent((await page.eval(`window.__opened.filter(Boolean).pop()`)).split('text=')[1]);
+    // WhatsApp opens in a NEW tab, from the customer's own tap (a tab the page opens by itself is blocked as a pop-up)
+    assert.equal(await page.eval(`document.querySelector('#osPdfWa').target`), '_blank');
+    assert.equal(await page.eval(`location.pathname.endsWith('index.html') || location.pathname.endsWith('/')`), true, 'this page stays the website');
+    const order = decodeURIComponent((await page.eval(`document.querySelector('#osPdfWa').href`)).split('text=')[1]);
     assert.match(order, /New Order - Card PDF/); assert.match(order, /my-card\.pdf/);
     await page.eval(`document.querySelector('#osPdfBack').click()`);
     assert.equal(await page.eval(`document.querySelector('#orderForm').hidden`), false, 'the form is still there');

@@ -611,6 +611,17 @@
     showCount();
   });
 
+  // Quick questions: one tap writes it into the enquiry box (tapping it again takes it out)
+  document.querySelectorAll('[data-quick]').forEach(b => b.addEventListener('click', () => {
+    const box = enq.elements.message, q = b.dataset.quick;
+    const lines = box.value.split(/\n/).map(s => s.trim()).filter(Boolean);
+    const had = lines.includes(q);
+    box.value = (had ? lines.filter(l => l !== q) : [...lines, q]).join('\n');
+    b.classList.toggle('on', !had);
+    box.dispatchEvent(new Event('input', { bubbles: true }));
+    box.classList.remove('enq-pulse'); void box.offsetWidth; box.classList.add('enq-pulse');
+    if (window.Fun) Fun.buzz(10);
+  }));
   // Every "Enquiry" button: glide to the form, make it glow once and put the cursor in the first field
   document.querySelectorAll('[data-enquiry]').forEach(a => a.addEventListener('click', e => {
     e.preventDefault();
@@ -622,6 +633,7 @@
 
   // ---------- Order form ----------
   const sheet = $('#orderSheet'), of = $('#orderForm'), STEPS = 5;
+  if (window.Pickers) Pickers.attach(of); // our calendar (with time) for every date box in the order form
   let step = 0, ord = null;
 
   let orderRef = ''; // the short order number shown in the WhatsApp message
@@ -732,12 +744,11 @@
     if (!file) return;
     if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') return toast('Please choose the PDF of your card');
     pdfFile = file;
-    // WhatsApp opens straight away (a browser allows a new tab only right after the tap); the details follow if they can be read in time
-    const win = window.open('', '_blank');
+    // The message is made here; WhatsApp opens (in a new tab) when they tap "Send on WhatsApp": a tab opened by
+    // the page itself after choosing a file gets blocked as a pop-up, and this page must never turn into WhatsApp
     let details = null;
     try { await loadPdfCard(); const r = await Promise.race([PdfCard.read(file), new Promise((_, no) => setTimeout(() => no(new Error('slow')), 6000))]); details = r.readable ? r.details : null; } catch (err) { /* sent without the details */ }
     const url = Core.orderUrl(SITE.whatsapp, pdfOrderMessage(file, details));
-    if (win) win.location.href = url; else location.href = url;
     $('#osPdfWa').href = url;
     $('#osPdfName').textContent = file.name;
     $('#osPdfWhat').textContent = details && details.host1 ? `We read: ${[details.host1, details.host2].filter(Boolean).join(' & ')}${details.events.length ? ` · ${details.events.length} function${details.events.length === 1 ? '' : 's'}` : ''}${details.venue ? ' · ' + details.venue : ''}.` : 'Your order message is ready in WhatsApp.';
