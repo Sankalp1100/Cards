@@ -1102,10 +1102,11 @@ input::-webkit-date-and-time-value { text-align: left; }
 /* Occasion chips: a long name ("Naming Ceremony") goes onto two lines instead of being cut off */
 .os-occ .chip { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.2; overflow-wrap: anywhere; }
 /* Nothing can widen the page sideways (a very big system font made the hero phones poke 3px out) */
-html { overflow-x: clip; }
-/* …and body must clip too: with html no longer "visible", body's overflow-x: hidden made it its own scroll box,
-   so the sticky nav scrolled away and left an empty dark band at the top */
-body { overflow-x: hidden; overflow-x: clip; }
+/* Nothing can widen the page sideways: body's overflow-x: hidden passes to the window (html stays "visible"),
+   which keeps phones at their width and the sticky nav working (overflow on html as well made body its own
+   scroll box, so the nav scrolled away and left an empty dark band at the top) */
+html { overflow-x: visible; }
+body { overflow-x: hidden; }
 
 /* ---------- Story videos (the Video Studio's scenes on the website) ---------- */
 .vids { width: min(1100px, calc(100% - 32px)); margin: 90px auto; }
@@ -1218,10 +1219,12 @@ html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; width: 0; heig
 .enq-form [aria-invalid="true"] { border-color: #ff6b8b !important; box-shadow: 0 0 0 4px rgba(255,107,139,.2) !important; }
 .enq-form textarea { resize: vertical; min-height: 110px; }
 .enq-wide, .enq-wants, .enq-err, .enq-actions { grid-column: 1 / -1; }
-.enq-wants { display: flex; flex-wrap: wrap; gap: 8px; border: 0; padding: 0; margin: 0; }
+.enq-wants { display: flex; flex-wrap: wrap; gap: 8px; border: 0; padding: 0; margin: 0; min-width: 0; min-inline-size: 0; }
+.enq-form > *, .enq-box > * { min-width: 0; }
 .enq-wants legend { width: 100%; margin-bottom: 8px; font-size: .9rem; color: var(--muted); }
 .enq-wants .chip { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
-.enq-wants .chip input { position: absolute; opacity: 0; pointer-events: none; }
+.enq-wants .chip { position: relative; }
+.enq-wants .chip input { position: absolute; left: 0; top: 0; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
 .enq-wants .chip:has(input:checked) { background: var(--grad); color: #140b1e; border-color: transparent; font-weight: 700; }
 .enq-wants .chip.on { background: var(--grad); color: #140b1e; border-color: transparent; font-weight: 700; }
 .enq-err { padding: 10px 14px; border-radius: 12px; background: rgba(255,107,139,.1); border: 1px solid rgba(255,107,139,.35); color: #ffd0da; font-size: .9rem; }

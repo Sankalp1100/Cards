@@ -1090,7 +1090,10 @@
     document.body.classList.add('studio-open');
     showArt();
     // Make video waits for this too: its frames come from the preview loop started below
-    st.ready = Promise.all([Studio.fontsReady(), Films.fontsReady()]);
+    // the preview starts once the Studio's letters are in; the premium films' letters keep loading meanwhile
+    // (a video waits for both before it records)
+    st.filmFonts = st.filmFonts || Films.fontsReady();
+    st.ready = Studio.fontsReady();
     await st.ready;
     st.player = st.player || new Studio.Player(stCanvas);
     st.fplayer = st.fplayer || new Films.Player(stCanvas, 1);
@@ -1334,6 +1337,7 @@
   async function makeStudioVideo() {
     if (st.rec) return;
     await st.ready; // the Studio may still be opening (a tap straight after opening it)
+    if (st.opt.film) { stStatus('Getting the film’s letters ready…'); await st.filmFonts; }
     if (!(window.MediaRecorder && stCanvas.captureStream)) return stStatus('This browser cannot make videos. Please use Chrome, Edge or Safari.');
     const btn = $('#stMake');
     btn.disabled = $('#stAuto').disabled = true;

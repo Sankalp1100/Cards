@@ -175,8 +175,8 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.match(await page.eval(`document.querySelector('#osReview').textContent`), /Names: Diya & Aarav[\s\S]*Nicknames: Diyu[\s\S]*Venue: Grand Ballroom[\s\S]*RSVP number: 919876543210[\s\S]*Guests \(2\)/);
     assert.equal(await page.eval(`document.querySelector('#osSend').hidden`), false);
     const href = await page.eval(`document.querySelector('#osSend').href`);
-    assert.match(href, /^https:\/\/wa\.me\/919999999999\?text=/);
-    const r = Catalog.readOrder(decodeURIComponent(new URL(href).search.slice(6)));
+    assert.match(href, /^https:\/\/api\.whatsapp\.com\/send\?phone=919999999999&text=/);
+    const r = Catalog.readOrder(new URL(href).searchParams.get('text'));
     assert.equal(r.card.theme, 10);
     assert.equal(r.card.type, 'sangeet');
     assert.equal(r.card.host2, 'Aarav');
@@ -358,7 +358,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
   test('RSVP button uses the cleaned WhatsApp number', async () => {
     await page.goto(cardLink({ ...PRESETS.kitty.card, rsvp: '+91 98765-43210' }, '?to=Neha&auto'));
     const href = await page.eval(`document.querySelector('#rsvpBtn').href`);
-    assert.match(href, /^https:\/\/wa\.me\/919876543210\?text=/);
+    assert.match(href, /^https:\/\/api\.whatsapp\.com\/send\?phone=919876543210&text=/);
     assert.match(decodeURIComponent(href), /Neha here/);
     // Just the button: no name, guests and meal form unless it is switched on for the card
     assert.equal(await page.eval(`document.querySelectorAll('#rsvpForm input, #rsvpForm select').length`), 0, 'no RSVP form by default');
