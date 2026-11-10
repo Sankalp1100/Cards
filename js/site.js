@@ -378,12 +378,30 @@
       <span class="vid-play" aria-hidden="true">▶</span>
       <span class="vid-cap"><b>${esc(name)}</b><small>🎵 ${esc(tuneLabel)} · ${esc(note)}</small></span>
     </button>`).join('');
+  // Premium films (js/films.js): Royal Darbar first, 20 at a time; each plays live with sample names
+  const FILM_PAGE = 20;
+  let filmShown = FILM_PAGE;
+  function renderFilms() {
+    $('#filmGrid').innerHTML = Films.LIST.slice(0, filmShown).map(f => `
+    <button type="button" class="vid-tile film-tile" data-film="${f.id}" aria-label="Play the ${esc(f.name)} premium film">
+      <img src="img/films/${f.id}.jpg" alt="" loading="lazy" decoding="async" width="270" height="480">
+      <span class="vid-badge">👑 Premium</span>
+      <span class="vid-play" aria-hidden="true">▶</span>
+      <span class="vid-cap"><b>${esc(f.name)}</b><small>${esc(Films.describe(f))}</small></span>
+    </button>`).join('');
+    $('#filmMore').hidden = filmShown >= Films.LIST.length;
+  }
+  renderFilms();
+  $('#filmMore').addEventListener('click', () => { filmShown += FILM_PAGE; renderFilms(); });
+  $('#filmGrid').addEventListener('click', e => { const b = e.target.closest('[data-film]'); if (b) openFilm(b.dataset.film); });
   $('#storyGrid').addEventListener('click', e => { const b = e.target.closest('[data-look]'); if (b) openVideo(b.dataset.look); });
 
   let studioScript = null;
   const script = src => new Promise((resolve, reject) => {
     document.head.appendChild(Object.assign(document.createElement('script'), { src, onload: resolve, onerror: () => reject(new Error('offline')) }));
   });
+  let filmsScript = null;
+  const loadFilms = () => filmsScript || (filmsScript = script('js/tunes.js').catch(e => { filmsScript = null; throw e; }));
   const loadStudio = () => studioScript || (studioScript = Promise.all([script('js/studio.js'), script('js/tunes.js')]).catch(e => { studioScript = null; throw e; }));
   // The look's music while the video plays; 🔇 mutes it (and stays muted for the next video)
   let tune = null, muted = false;
@@ -391,12 +409,12 @@
   function tuneOn() {
     tuneOff();
     if (muted || !vid.look || typeof Tune === 'undefined') return;
-    tune = new Tune(vid.story ? Studio.STORIES[vid.story].tune : Studio.LOOKS[vid.look].music);
+    tune = new Tune(vid.film ? Films.byId[vid.film].tune : vid.story ? Studio.STORIES[vid.story].tune : Studio.LOOKS[vid.look].music);
     if (!tune.start()) tune = null;
   }
   const showSound = () => { $('#vidSound').textContent = muted ? '🔇 Sound off' : '🔊 Sound on'; $('#vidSound').setAttribute('aria-pressed', String(!muted)); };
   $('#vidSound').addEventListener('click', () => { muted = !muted; showSound(); if (muted) tuneOff(); else tuneOn(); });
-  const vid = { player: null, card: null, scene: '', look: '', story: '', lang: 'en', t: 0, last: 0, raf: 0 };
+  const vid = { film: '', player: null, card: null, scene: '', look: '', story: '', lang: 'en', t: 0, last: 0, raf: 0 };
   // Story films play with the sample invitation of the occasion they suit
   const STORY_SAMPLE = { 'story-little': 'clouds', 'story-party': 'disco', 'story-sacred': 'temple', 'story-utsav': 'diwali' };
 
@@ -406,7 +424,7 @@
     const [, name, hint] = story ? [look, story[1], `Story film · ${story[3]}`] : VIDEO_SCENES.find(v => v[0] === scene) || VIDEO_SCENES[0];
     vid.scene = scene;
     tuneOff();
-    vid.look = ''; vid.story = '';
+    vid.look = ''; vid.story = ''; vid.film = '';
     $('#vidTitle').textContent = name;
     $('#vidKicker').textContent = story ? hint : `Story video · ${hint}`;
     $('#vidMoodsH').hidden = !!story;
@@ -420,12 +438,44 @@
     catch (e) { $('#vidWait').textContent = 'The video could not load. Please check your internet and try again.'; return; }
     if ($('#vidSheet').hidden || vid.scene !== scene) return; // closed, or another scene picked, while it loaded
     // Phones draw it smaller (it looks the same, and plays smoothly)
-    vid.player = vid.player || new Studio.Player($('#vidCanvas'), matchMedia('(max-width: 640px)').matches ? .5 : .75);
+    vid.player = vid.player instanceof Studio.Player ? vid.player : new Studio.Player($('#vidCanvas'), matchMedia('(max-width: 640px)').matches ? .5 : .75);
     vid.card = Studio.sample(scene);
     $('#vidMoods').innerHTML = story ? '' : Object.entries(Studio.LOOKS).filter(([, L]) => L.scene === scene)
       .map(([id, L]) => `<button type="button" class="chip" data-look="${id}">${esc(L.mood)}</button>`).join('');
     vid.t = 0;
     if (story) pickStory(look); else pickMood(look);
+    showSound();
+    $('#vidWait').hidden = true;
+    cancelAnimationFrame(vid.raf);
+    vid.last = performance.now();
+    vid.raf = requestAnimationFrame(videoFrame);
+  }
+  // A premium film: drawn by js/films.js in its own language (the switch can change it)
+  const FILM_TYPE = { birthday: 'bday', puja: 'ceremony' };
+  async function openFilm(id) {
+    const f = Films.byId[id];
+    tuneOff();
+    vid.look = ''; vid.story = ''; vid.film = id; vid.scene = 'film:' + id;
+    vid.lang = f.lang;
+    document.querySelectorAll('#vidLang [data-lang]').forEach(c => c.classList.toggle('on', c.dataset.lang === f.lang));
+    $('#vidTitle').textContent = f.name;
+    $('#vidKicker').textContent = `👑 Premium film · ${Films.describe(f)}`;
+    $('#vidMoodsH').hidden = true;
+    $('#vidMoods').innerHTML = '';
+    $('#vidNote').textContent = '';
+    $('#vidWait').hidden = false;
+    $('#vidWait').textContent = 'Loading the video…';
+    $('#vidSheet').hidden = false;
+    document.body.classList.add('sheet-open');
+    try { await loadFilms(); await Films.fontsReady(); }
+    catch (e) { $('#vidWait').textContent = 'The video could not load. Please check your internet and try again.'; return; }
+    if ($('#vidSheet').hidden || vid.film !== id) return;
+    vid.player = new Films.Player($('#vidCanvas'), matchMedia('(max-width: 640px)').matches ? .5 : .75);
+    vid.player.set(id, vid.lang);
+    vid.card = { type: FILM_TYPE[f.occ] || f.occ };
+    vid.look = id; vid.t = 0;
+    $('#vidNote').textContent = `🎵 ${typeof TUNES !== 'undefined' && TUNES[f.tune] ? TUNES[f.tune].label : ''} · Sample names: we make it with yours`;
+    tuneOn();
     showSound();
     $('#vidWait').hidden = true;
     cancelAnimationFrame(vid.raf);
@@ -460,7 +510,8 @@
     if (!vid.player || !vid.look) return;
     const keep = tune;
     tune = null;
-    if (vid.story) { vid.player.set(vid.card, { ...Studio.defaults(vid.card, vid.lang), look: vid.look, story: vid.story, events: 'each' }, SITE); }
+    if (vid.film) vid.player.set(vid.film, vid.lang);
+    else if (vid.story) { vid.player.set(vid.card, { ...Studio.defaults(vid.card, vid.lang), look: vid.look, story: vid.story, events: 'each' }, SITE); }
     else vid.player.set(vid.card, { ...Studio.defaults(vid.card, vid.lang), look: vid.look }, SITE);
     tune = keep;
     vid.t = Math.min(vid.t, vid.player.total - .05);
@@ -475,7 +526,7 @@
   }
   function closeVideo() {
     tuneOff();
-    vid.look = '';
+    vid.look = ''; vid.film = '';
     cancelAnimationFrame(vid.raf);
     vid.scene = '';
     $('#vidSheet').hidden = true;
@@ -488,7 +539,8 @@
   // Order this video: the order form opens with the video look chosen (and the occasion it was shown for)
   $('#vidOrder').addEventListener('click', () => {
     if (!vid.look) return;
-    const video = vid.story ? { id: vid.story, name: `Story film: ${Studio.STORIES[vid.story].name}`, type: vid.card.type, lang: vid.lang }
+    const video = vid.film ? { id: vid.film, name: `Premium film: ${Films.byId[vid.film].name}`, type: vid.card.type, lang: vid.lang }
+      : vid.story ? { id: vid.story, name: `Story film: ${Studio.STORIES[vid.story].name}`, type: vid.card.type, lang: vid.lang }
       : { id: vid.look, name: Studio.lookName(Studio.LOOKS[vid.look]), type: vid.card.type, lang: vid.lang };
     closeVideo();
     openOrder('', video);

@@ -1148,3 +1148,37 @@ test.describe('MP4Fix', () => {
     assert.equal(MP4Fix.defragment(junk), junk);
   });
 });
+
+test.describe('premium films (js/films.js)', () => {
+  const Films = require('../js/films.js');
+  test('81 films, Royal Darbar first, no two alike', () => {
+    assert.equal(Films.LIST.length, 81);
+    assert.equal(Films.LIST[0].id, 'film-royal-darbar');
+    const uniq = f => new Set(Films.LIST.map(f)).size;
+    assert.equal(uniq(f => f.id), 81, 'ids');
+    assert.equal(uniq(f => f.name), 81, 'names');
+    assert.equal(uniq(f => f.theme + '|' + f.frame), 81, 'every film its own palette × frame');
+    Films.LIST.slice(1).forEach((f, i) => {
+      const prev = Films.LIST[i];
+      assert.ok(f.theme !== prev.theme && f.frame !== prev.frame, `${f.id} looks different from the film before it`);
+    });
+  });
+  test('every film has its own sample names, and no real client details', () => {
+    const who = Films.LIST.map(f => { const d = Films.details(f, 'en'); return d.solo ? d.A : `${d.A} & ${d.B}`; });
+    assert.equal(new Set(who).size, 81);
+    for (const lang of ['en', 'hi']) for (const f of Films.LIST) {
+      const all = JSON.stringify(Films.script(f, lang));
+      assert.doesNotMatch(all, /Shivam|Aanya|Ashirwad|98180|91368|शिवम|आन्या/i, `${f.id} (${lang})`);
+    }
+  });
+  test('each film plays in English and Hindi with all its parts', () => {
+    for (const f of Films.LIST) for (const lang of ['en', 'hi']) {
+      const { scenes, total } = Films.script(f, lang);
+      assert.ok(total > 25 && total < 60, `${f.id} lasts ${total}s`);
+      for (const k of ['open', 'title', 'card', 'day', 'venue', 'finale']) assert.ok(scenes.some(s => s.k === k), `${f.id} has ${k}`);
+    }
+  });
+  test('every film has its picture', () => {
+    for (const f of Films.LIST) assert.ok(fs.existsSync(path.join(ROOT, 'img', 'films', f.id + '.jpg')), f.id);
+  });
+});

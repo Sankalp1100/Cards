@@ -49,7 +49,7 @@
   <header class="hero" id="top">
     <div class="hero-text">
       <p class="pill">✨ No app. No login. Just one magic link.</p>
-      <a class="pill pill-new" href="#videos" data-videos>🎬 New: story videos for WhatsApp, <b>watch them</b> →</a>
+      <a class="pill pill-new" href="#videos" data-videos>🎬 New: story videos for WhatsApp, <b>100 films</b> →</a>
       <h1 class="mega">
         <span class="line">Invites that</span>
         <span class="line">go <em class="gradient-text">viral</em></span>
@@ -82,23 +82,10 @@
       <h2 class="section-h">Story <span class="gradient-text">videos</span></h2>
       <p class="muted">A painted one-minute video for WhatsApp status and Instagram: doors that open on Shri Ganesh, the two of you, every function, the venue and a thank-you, with music. <b>In English or हिन्दी.</b> Tap any one to watch it play.</p>
     </div>
-    <!-- A finished film, played as a real video (the names in it are the client's; the details here are sample ones) -->
-    <div class="vids-feature">
-      <video class="vf-video" src="videos/shivam-aanya.mp4" poster="videos/shivam-aanya.jpg" controls playsinline preload="none" aria-label="Royal Darbar sample wedding film"></video>
-      <div class="vf-info">
-        <p class="eyebrow">⭐ Featured film · real video</p>
-        <h3 class="vf-title">Royal Darbar</h3>
-        <p class="muted">Palace doors swing open on Shri Ganesh, then the two of you, every function, the venue and a thank-you, with music all the way. Press play to watch the whole film.</p>
-        <ul class="vf-facts">
-          <li><b>💍 Occasion</b><span>Wedding</span></li>
-          <li><b>🎉 Functions</b><span>Haldi · Mehendi · Sangeet · Wedding · Reception</span></li>
-          <li><b>⏱ Length</b><span>55 seconds, 9:16 for WhatsApp status and Instagram reels</span></li>
-          <li><b>🌐 Language</b><span>English or हिन्दी</span></li>
-          <li><b>🎵 Music</b><span>Shehnai, fades in and out</span></li>
-        </ul>
-        <a class="btn-glow" href="#order" data-order>🎬 Order a film like this</a>
-      </div>
-    </div>
+    <!-- Premium films (js/films.js): Royal Darbar first, every film its own colours × frame, with sample names -->
+    <h3 class="vids-sub">👑 Premium films <small>palace doors, toran garlands and gold foil; every one in its own colours and frame</small></h3>
+    <div class="vids-grid" id="filmGrid"></div>
+    <div class="vids-more"><button type="button" class="btn-line" id="filmMore">Show more films ↓</button></div>
     <h3 class="vids-sub">✨ Story films <small>the scenery changes with every function, each with its own music</small></h3>
     <div class="vids-grid stories-grid" id="storyGrid"></div>
     <h3 class="vids-sub">🎨 More scenes <small>one painted scene each; pick its colours inside</small></h3>
@@ -182,7 +169,7 @@
       <details><summary>What do I need to send?</summary><p>Names, the date and venue. Everything else is optional: functions, your story, families, photos, dress code, UPI for gifts. The order form asks for it step by step.</p></details>
       <details><summary>The time isn't fixed yet. Can I still order?</summary><p>Yes. Tick <b>Time not decided yet</b> and the invitation shows only the date.</p></details>
       <details><summary>Can every guest get their own link?</summary><p>Yes. Send a list of names and each guest gets a link that greets them by name.</p></details>
-      <details><summary>Can I get a video for my WhatsApp status?</summary><p>Yes. Pick one of the films under <b>Story videos</b> and tap <b>Order this video</b>: we make it with your names, functions, date and venue. We can also send a video of your invitation card itself.</p></details>
+      <details><summary>Can I get a video for my WhatsApp status?</summary><p>Yes. Pick one of the 100 films under <b>Story videos</b> and tap <b>Order this video</b>: we make it with your names, functions, date and venue. We can also send a video of your invitation card itself.</p></details>
     </div>
   </section>
 
@@ -383,6 +370,7 @@
   <script src="js/catalog.js"></script>
   <script src="js/db.js"></script>
   <script src="js/videolooks.js"></script>
+  <script src="js/films.js"></script>
   <script src="js/site.js"></script>
 </body>
 </html>
