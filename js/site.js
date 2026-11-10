@@ -276,6 +276,7 @@
     });
   }
   reveal(document.querySelectorAll('.tile, .builder-head, .cta-band, .stepcard, .enq-box'));
+  if (window.Fun) Fun.progress();
   io.observe($('#signature')); // its own letter-by-letter animation starts on .in
 
   // ---------- Bottom tab bar (phones): Home and Designs are separate screens ----------
@@ -596,6 +597,7 @@
     // ('noopener' would make window.open return null, so the page itself would ALSO go to WhatsApp)
     const win = window.open(url, '_blank');
     if (win) { try { win.opener = null; } catch (e) { /* fine */ } } else location.href = url;
+    if (window.Fun) { Fun.burstAt(enq.querySelector('[type=submit], button:not([type=button])')); Fun.buzz(); }
     $('#enqNote').textContent = '✅ WhatsApp opened with your enquiry: just tap send.';
     showCount();
   });
@@ -693,6 +695,7 @@
     $('#osPdfWhat').textContent = details && details.host1 ? `We read: ${[details.host1, details.host2].filter(Boolean).join(' & ')}${details.events.length ? ` · ${details.events.length} function${details.events.length === 1 ? '' : 's'}` : ''}${details.venue ? ' · ' + details.venue : ''}.` : 'Your order message is ready in WhatsApp.';
     $('#osPdfShare').hidden = !(navigator.canShare && navigator.canShare({ files: [file] }));
     showPdfDone(true);
+    if (window.Fun) { Fun.burst(); Fun.buzz(); }
   });
   // Phones: send the PDF itself to WhatsApp from the share sheet
   $('#osPdfShare').addEventListener('click', async () => {
@@ -863,6 +866,7 @@
   // After sending: a celebration screen while WhatsApp opens.
   $('#osSend').addEventListener('click', () => {
     navigator.vibrate?.([20, 50, 20, 50, 60]);
+    if (window.Fun) Fun.burstAt($('#osSend'), 120);
     // Also file the order in the owner's order list (keepalive: it still goes through while WhatsApp opens).
     if (online) {
       const o = collect();

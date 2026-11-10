@@ -654,6 +654,7 @@
     renderResults();
     renderLinks();
     toast(`${lastResults.length} link${lastResults.length > 1 ? 's' : ''} ready 🎉`);
+    if (window.Fun) Fun.burstAt($('#generate-btn'));
   });
 
   function linkActions(r) {
@@ -1402,6 +1403,7 @@
       stStatus(`✅ Saved "${name}" (${(blob.size / 1048576).toFixed(1)} MB) to your Downloads.` +
         (ext === 'webm' ? ' This browser can only make WebM, which WhatsApp does not accept: please update Chrome to get MP4.' : ''), 1);
       toast('Video downloaded 🎬');
+      if (window.Fun) Fun.burst(null, null, 140);
       st.made = true;
       $('#stRemake').hidden = false;
     } catch (e) {

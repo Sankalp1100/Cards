@@ -489,3 +489,8 @@ main > section[data-page][hidden] { display: none !important; }
   .st-time { min-width: 0; font-size: .78rem; }
   .st-ev input[type="datetime-local"] { min-width: 0; }
 }
+
+/* Joy: buttons press in when tapped */
+.btn-glow, .btn-line, .btn-small, .chip, .st-step, .st-tab, .st-look, .st-film, .pick-tile { -webkit-tap-highlight-color: transparent; }
+.btn-glow:active, .btn-line:active, .btn-small:active, .st-step:active, .st-tab:active { transform: scale(.95) !important; transition-duration: .08s !important; }
+.chip:active, .st-look:active, .st-film:active, .pick-tile:active { transform: scale(.94); transition: transform .08s; }

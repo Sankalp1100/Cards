@@ -1297,3 +1297,43 @@ html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; width: 0; heig
 }
 @media (max-width: 370px) { .nav-enq-dot { display: none; } .nav-enq { padding: 7px 9px; } }
 @media (max-width: 480px) { .nav-now { display: none; } }
+/* Enquiry: every field the same height; the 0/10 counter sits inside the phone box, so the row stays level */
+.enq-form input:not([type="checkbox"]), .enq-form select { height: 54px; box-sizing: border-box; }
+.enq-phone { position: relative; }
+.enq-phone i { height: 54px; box-sizing: border-box; }
+.enq-phone input { padding-right: 62px !important; }
+.enq-phone .enq-count { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--muted); font-size: .75rem; }
+.enq-phone .enq-count.ok { color: #4ade80; }
+/* Safari: a fixed-height select clips its text and paints grey; draw it ourselves */
+.enq-form select { -webkit-appearance: none; appearance: none; padding-block: 0 !important; line-height: 52px; padding-right: 40px !important;
+  background: rgba(8,6,20,.7) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 16px center; }
+.enq-form input[type="date"] { -webkit-appearance: none; appearance: none; line-height: normal; display: flex; align-items: center; }
+/* Small phones: the logo keeps its full name next to both buttons */
+@media (max-width: 420px) {
+  .nav { padding: 6px 6px 6px 10px; }
+  .nav .logo { font-size: .86rem; }
+  .nav-enq { padding: 7px 10px; }
+  .nav-enq-dot { display: none; }
+  .nav-cta { padding: 8px 12px; }
+}
+@media (max-width: 374px) { .nav .logo { font-size: .8rem; } .nav-enq, .nav-cta { font-size: .74rem; } }
+/* Swapped looks: Enquiry is the solid white pill, Order now the glowing gradient one */
+.nav-enq { background: #fff; color: #000; border: 2px solid #fff; }
+.nav-enq:hover { box-shadow: 0 6px 22px rgba(255,255,255,.25); }
+.nav-enq::after { background: linear-gradient(100deg, transparent, rgba(255,61,139,.25), transparent); }
+.nav-cta { position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 7px; color: var(--ink);
+  border: 2px solid transparent; background: linear-gradient(#141127, #141127) padding-box, var(--grad) border-box; }
+.nav-cta b { font-weight: 800; }
+.nav-cta:hover { box-shadow: 0 6px 22px rgba(255,61,139,.35); }
+.nav-cta::after { content: ''; position: absolute; top: 0; left: 0; width: 40%; height: 100%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.35), transparent); transform: translateX(-160%) skewX(-20deg); animation: enqShine 4s ease-in-out infinite; }
+@media (max-width: 420px) { .nav-cta .nav-enq-dot { display: none; } }
+
+/* ---------- Joy: press-in on every button, scroll-progress line ---------- */
+.btn-glow, .btn-line, .btn-enq, .nav-enq, .nav-cta, .chip, .btn-small, .os-send, .bottom-nav a { -webkit-tap-highlight-color: transparent; }
+.btn-glow:active, .btn-line:active, .btn-enq:active, .nav-enq:active, .nav-cta:active, .btn-small:active, .os-send:active { transform: scale(.95) !important; transition-duration: .08s !important; }
+.chip:active { transform: scale(.92); transition: transform .08s; }
+.bottom-nav a:active i { transform: scale(.85) !important; }
+.fun-progress { position: fixed; left: 0; top: 0; z-index: 60; width: 100%; height: 3px; background: var(--grad); transform-origin: 0 50%; transform: scaleX(0); pointer-events: none; box-shadow: 0 0 10px rgba(255,61,139,.6); }
+body.studio-open .fun-progress { display: none; }
+@media (prefers-reduced-motion: reduce) { .fun-progress { display: none; } }
