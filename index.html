@@ -191,7 +191,7 @@
             <button type="button" data-quick="What is the price for an invitation card?">💰 What's the price?</button>
             <button type="button" data-quick="How soon can my card be ready?">⏱️ How soon is it ready?</button>
             <button type="button" data-quick="Can you make a story video for WhatsApp as well?">🎬 Video too?</button>
-            <button type="button" data-quick="Can the card be in Hindi?">🇮🇳 Card in Hindi?</button>
+            <button type="button" data-quick="Can the card be in Hindi?">अ Card in Hindi?</button>
             <button type="button" data-quick="I already have my card as a PDF. Can you make it from that?">📄 I have a PDF</button>
             <button type="button" data-quick="Can every guest get a link with their own name?">🙋 Names for each guest?</button>
           </div>
@@ -287,10 +287,19 @@
   <div class="order-sheet" id="demoSheet" hidden>
     <div class="os-box" role="dialog" aria-modal="true" aria-labelledby="dsTitle">
       <header class="os-head">
-        <b id="dsTitle">Which design do you want to see?</b>
+        <b id="dsTitle">What do you want to see?</b>
         <button type="button" class="os-x" id="dsClose" aria-label="Close">✕</button>
       </header>
-      <div class="os-body ds-body">
+      <!-- First: a live link card or a video; then the right demos -->
+      <div class="os-body os-choose" id="dsChoose">
+        <p class="muted">Pick one and we show you a live sample right away.</p>
+        <div class="os-choices">
+          <button type="button" class="os-choice hot" data-demo="card" style="--i:0"><i>💌</i><b>Invitation link card</b><small>Open a real animated invitation, the way your guests see it</small><em>600 designs</em></button>
+          <button type="button" class="os-choice" data-demo="video" style="--i:1"><i>🎬</i><b>Story video</b><small>Watch a premium film made for WhatsApp status and groups</small></button>
+        </div>
+      </div>
+      <div class="os-body ds-body" id="dsCards" hidden>
+        <button type="button" class="ds-back" id="dsBack">← Back</button>
         <p class="ds-h">1. What are you celebrating?</p>
         <div class="os-occ" id="dsOcc"></div>
         <p class="ds-h">2. Tap a design to play its live demo</p>

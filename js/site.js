@@ -223,9 +223,27 @@
     $('#dsMsg').textContent = '';
     $('#dsNum').reset();
     renderDemoPicker();
+    showDemoStep(false);
     demoSheet.hidden = false;
     document.body.classList.add('sheet-open');
   });
+  // The demo sheet asks first: a link card (then the design picker) or a video (then a film plays)
+  function showDemoStep(cards) {
+    $('#dsChoose').hidden = cards;
+    $('#dsCards').hidden = !cards;
+    $('#dsTitle').textContent = cards ? 'Which design do you want to see?' : 'What do you want to see?';
+  }
+  $('#dsChoose').addEventListener('click', e => {
+    const b = e.target.closest('[data-demo]');
+    if (!b) return;
+    if (window.Fun) Fun.buzz(10);
+    if (b.dataset.demo === 'card') return showDemoStep(true);
+    closeDemo();
+    const v = $('#videos'); v && v.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const first = document.querySelector('#filmGrid > *');
+    if (first) setTimeout(() => first.click(), 500); // the first premium film plays straight away
+  });
+  $('#dsBack').addEventListener('click', () => showDemoStep(false));
   $('#dsOcc').addEventListener('click', e => {
     const b = e.target.closest('[data-docc]');
     if (!b) return;
