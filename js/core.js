@@ -212,7 +212,8 @@ const Core = {
   // WhatsApp chat with the business, or the page's order section when no number is set yet.
   orderUrl(whatsapp, text) {
     const number = Core.waNumber(whatsapp);
-    return number ? `https://wa.me/${number}?text=${encodeURIComponent(text)}` : '#order';
+    // api.whatsapp.com, not wa.me: wa.me's redirect turns emoji into “�” on WhatsApp Web
+    return number ? `https://api.whatsapp.com/send?phone=${number}&text=${encodeURIComponent(text)}` : '#order';
   },
 
   // The WhatsApp message that goes with an invitation link, written for the occasion:

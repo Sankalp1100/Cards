@@ -581,7 +581,7 @@
         if (f.att && f.att.value === 'no') msg += 'Sadly I can’t make it, but sending all my love. 🙏';
         else msg += `I'll be there! 🎉${f.guests ? `\nGuests: ${f.guests.value}\nMeal: ${f.meal.value}` : ''}`;
         if (f.note && f.note.value.trim()) msg += `\nMessage: ${f.note.value.trim()}`;
-        $('#rsvpBtn').href = `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+        $('#rsvpBtn').href = `https://api.whatsapp.com/send?phone=${num}&text=${encodeURIComponent(msg)}`;
       };
       rsvpLink();
       form.addEventListener('input', rsvpLink);

@@ -1135,12 +1135,14 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.match(await page.eval(`document.querySelector('#enqErr').textContent`), /your name.*WhatsApp number.*enquiry/);
     assert.equal(await page.eval(`window.__opened.length`), 0, 'nothing is sent while something needed is missing');
     await page.eval(`(() => { const f = document.querySelector('#enqForm');
-      f.elements.name.value = 'Priya Sharma'; f.elements.phone.value = '98765 43210'; f.elements.city.value = 'Jaipur'; f.elements.date.value = '2026-12-12';
+      f.elements.name.value = 'Priya Sharma'; f.elements.phone.value = '9876543210'; f.elements.city.value = 'Jaipur'; f.elements.date.value = '2026-12-12';
       f.elements.message.value = 'A Hindi card and a video, what is the price?'; f.querySelector('[value="Story video"]').click();
       f.querySelector('button[type="submit"]').click(); })()`);
     const url = await page.eval(`window.__opened.pop()`), msg = decodeURIComponent(url.split('text=')[1]);
-    assert.match(url, /^https:\/\/wa\.me\/\d{10,}\?text=/);
-    for (const bit of ['New enquiry', 'Priya Sharma', '98765 43210', 'Wedding', 'Jaipur', '12 December 2026', 'Invitation card, Story video', 'what is the price?']) assert.ok(msg.includes(bit), bit);
+    assert.match(url, /^https:\/\/api\.whatsapp\.com\/send\?phone=91\d{10}&text=/);
+    for (const bit of ['New Enquiry', 'Priya Sharma', '+91 98765 43210', 'Wedding', 'Jaipur', '12 December 2026', 'Invitation card, Story video', 'what is the price?']) assert.ok(msg.includes(bit), bit);
+    assert.doesNotMatch(msg, /[\u{1F000}-\u{1FFFF}\u2600-\u27BF]/u, 'no emoji: every WhatsApp shows it right');
+    assert.ok(msg.includes('\n'), 'one detail per line');
     // ordering with a card PDF: the form steps aside, WhatsApp opens, and it says how to attach the PDF
     await page.eval(`document.querySelector('.bn-order').click()`);
     await page.eval(`(() => { const dt = new DataTransfer(); dt.items.add(new File(['%PDF-1.4 not a real card'], 'my-card.pdf', { type: 'application/pdf' }));
@@ -1149,7 +1151,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`document.querySelector('#orderForm').hidden`), true);
     assert.match(await page.eval(`document.querySelector('#osPdfName').textContent`), /my-card\.pdf/);
     const order = decodeURIComponent((await page.eval(`window.__opened.filter(Boolean).pop()`)).split('text=')[1]);
-    assert.match(order, /New order with a card PDF/); assert.match(order, /my-card\.pdf/);
+    assert.match(order, /New Order - Card PDF/); assert.match(order, /my-card\.pdf/);
     await page.eval(`document.querySelector('#osPdfBack').click()`);
     assert.equal(await page.eval(`document.querySelector('#orderForm').hidden`), false, 'the form is still there');
     await page.eval(`document.querySelector('#osClose').click()`);

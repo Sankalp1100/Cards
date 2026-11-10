@@ -1204,6 +1204,11 @@ html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; width: 0; heig
 .enq-head { display: grid; gap: 12px; position: sticky; top: 110px; min-width: 0; }
 .enq-head .section-h { font-size: clamp(2rem, 3.6vw, 3.2rem); line-height: 1.05; overflow-wrap: anywhere; }
 .enq-form label > span { display: block; }
+.enq-phone { display: flex !important; align-items: stretch; }
+.enq-phone i { display: grid; place-items: center; padding: 0 12px; border: 1px solid var(--line); border-right: 0; border-radius: 14px 0 0 14px; background: rgba(255,255,255,.06); color: var(--ink); font-style: normal; font-weight: 600; }
+.enq-phone input { border-radius: 0 14px 14px 0 !important; letter-spacing: .06em; }
+.enq-count { justify-self: end; font-size: .75rem; }
+.enq-count.ok { color: #4ade80; }
 .enq-form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .enq-form label:not(.chip) { display: grid; gap: 6px; font-size: .9rem; color: var(--muted); }
 .enq-form label b { color: var(--pink); }

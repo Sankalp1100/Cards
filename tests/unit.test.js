@@ -544,7 +544,7 @@ test.describe('Catalog', () => {
   test('order message names the design number', () => {
     const e = Catalog.entries(site, {})[46];
     assert.equal(Catalog.orderText(e), "Hi! I'd like to order design #047 (Cobalt Milestone) 💌");
-    assert.equal(Core.orderUrl('+91 98765 43210', 'Hi'), 'https://wa.me/919876543210?text=Hi');
+    assert.equal(Core.orderUrl('+91 98765 43210', 'Hi'), 'https://api.whatsapp.com/send?phone=919876543210&text=Hi');
     assert.equal(Core.orderUrl('', 'Hi'), '#order');
   });
 

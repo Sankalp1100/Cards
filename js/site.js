@@ -556,14 +556,21 @@
   enq.addEventListener('change', e => { if (e.target.name === 'want') e.target.closest('.chip').classList.toggle('on', e.target.checked); });
   enq.querySelectorAll('[name="want"]').forEach(c => c.closest('.chip').classList.toggle('on', c.checked));
   enq.addEventListener('input', e => { e.target.removeAttribute('aria-invalid'); if (!enq.querySelector('[aria-invalid]')) $('#enqErr').hidden = true; });
-  enq.querySelector('[name="phone"]').addEventListener('input', e => { e.target.value = e.target.value.replace(/[^\d+\s-]/g, ''); });
+  // the mobile number: digits only, at most 10 (a pasted "+91 98765-43210" or "098765…" keeps the 10 digits)
+  const phoneBox = enq.querySelector('[name="phone"]');
+  const tenDigits = v => { let d = String(v || '').replace(/\D/g, ''); if (d.length > 10 && d.startsWith('91')) d = d.slice(2); if (d.length > 10 && d.startsWith('0')) d = d.slice(1); return d.slice(0, 10); };
+  const showCount = () => { const n = phoneBox.value.length; $('#enqCount').textContent = `${n} / 10`; $('#enqCount').classList.toggle('ok', /^[6-9]\d{9}$/.test(phoneBox.value)); };
+  phoneBox.addEventListener('input', () => { phoneBox.value = tenDigits(phoneBox.value); showCount(); });
+  phoneBox.addEventListener('paste', e => { e.preventDefault(); phoneBox.value = tenDigits((e.clipboardData || window.clipboardData).getData('text')); showCount(); phoneBox.dispatchEvent(new Event('input', { bubbles: true })); });
   function enquiryMessage(f) {
     const d = f.date ? new Date(f.date + 'T00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }) : '';
-    const lines = ['*New enquiry from the website* 💌', '', `👤 *Name:* ${f.name}`, `📱 *WhatsApp:* ${f.phone}`, `🎉 *Occasion:* ${f.occasion}`];
-    if (d) lines.push(`📅 *Date:* ${d}`);
-    if (f.city) lines.push(`📍 *City:* ${f.city}`);
-    if (f.wants.length) lines.push(`🛍️ *Needs:* ${f.wants.join(', ')}`);
-    lines.push('', '💬 *Enquiry:*', f.message);
+    // plain words, one detail per line (no emoji: some WhatsApp versions show them as “�”)
+    const p = f.phone.replace(/\D/g, '');
+    const lines = [`*New Enquiry - ${SITE.brand || 'CardAlbum'} Website*`, '', `*Name:* ${f.name}`, `*WhatsApp:* +91 ${p.slice(0, 5)} ${p.slice(5)}`, `*Occasion:* ${f.occasion}`];
+    if (d) lines.push(`*Event date:* ${d}`);
+    if (f.city) lines.push(`*City:* ${f.city}`);
+    if (f.wants.length) lines.push(`*Needs:* ${f.wants.join(', ')}`);
+    lines.push('', '*Enquiry:*', f.message.replace(/\r/g, ''));
     return lines.join('\n');
   }
   enq.addEventListener('submit', e => {
@@ -574,7 +581,7 @@
     const bad = [];
     enq.querySelectorAll('[aria-invalid]').forEach(x => x.removeAttribute('aria-invalid'));
     if (!f.name) bad.push(['name', 'your name']);
-    if (!Core.mobile(f.phone)) bad.push(['phone', 'a 10-digit WhatsApp number']);
+    if (!/^[6-9]\d{9}$/.test(f.phone)) bad.push(['phone', 'a 10-digit WhatsApp number (starting with 6, 7, 8 or 9)']);
     if (f.message.length < 5) bad.push(['message', 'your enquiry']);
     if (bad.length) {
       bad.forEach(([n]) => enq.elements[n].setAttribute('aria-invalid', 'true'));
@@ -588,6 +595,7 @@
     if (url === '#order') { $('#enqErr').textContent = 'WhatsApp is not set up on this website yet. Please call us instead.'; $('#enqErr').hidden = false; return; }
     window.open(url, '_blank', 'noopener') || (location.href = url);
     $('#enqNote').textContent = '✅ WhatsApp opened with your enquiry: just tap send.';
+    showCount();
   });
 
   // ---------- Order form ----------
@@ -642,18 +650,19 @@
     $('#osDots').hidden = $('#osStepNo').hidden = on;
   }
   function pdfOrderMessage(file, d) {
-    const lines = ['*New order with a card PDF* 📄', ''];
+    const lines = [`*New Order - Card PDF*`, ''];
     if (d) {
       const names = [d.host1, d.host2].filter(Boolean).join(' & ');
-      if (names) lines.push(`👤 *Names:* ${names}`);
-      if (d.type) lines.push(`🎉 *Occasion:* ${(PRESETS[d.type] || {}).label || d.type}`);
-      d.events.slice(0, 6).forEach(e => { const w = e.date ? new Date(e.date).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', ...(/T\d/.test(e.date) ? { hour: 'numeric', minute: '2-digit' } : {}) }) : ''; lines.push(`📅 ${e.name}${w ? ': ' + w : ''}`); });
-      if (d.venue) lines.push(`📍 *Venue:* ${d.venue}`);
+      if (names) lines.push(`*Names:* ${names}`);
+      if (d.type) lines.push(`*Occasion:* ${(PRESETS[d.type] || {}).label || d.type}`);
+      if (d.events.length) lines.push('*Functions:*');
+      d.events.slice(0, 6).forEach(e => { const w = e.date ? new Date(e.date).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', ...(/T\d/.test(e.date) ? { hour: 'numeric', minute: '2-digit' } : {}) }) : ''; lines.push(`- ${e.name}${w ? ': ' + w : ''}`); });
+      if (d.venue) lines.push(`*Venue:* ${d.venue}`);
       lines.push('');
     }
-    if (ord && ord.design) lines.push(`🎨 *Design:* ${ord.design}`);
-    if (ord && ord.video) lines.push(`🎬 *Video:* ${ord.video.name}`);
-    lines.push(`📎 I'm attaching my card here: *${file.name}*`, '', 'Please tell me the price and how soon it can be ready. 🙏');
+    if (ord && ord.design) lines.push(`*Design:* ${ord.design}`);
+    if (ord && ord.video) lines.push(`*Video:* ${ord.video.name}`);
+    lines.push(`I am attaching my card here: *${file.name}*`, '', 'Please share the price and how soon it can be ready. Thank you!');
     return lines.join('\n');
   }
   $('#osPdfFile').addEventListener('change', async e => {

@@ -184,7 +184,7 @@
       </div>
       <form class="enq-form" id="enqForm" novalidate>
         <label><span>Your name <b>*</b></span><input name="name" autocomplete="name" maxlength="60" placeholder="e.g. Priya Sharma" required></label>
-        <label><span>WhatsApp number <b>*</b></span><input name="phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="16" placeholder="98765 43210" required></label>
+        <label><span>WhatsApp number <b>*</b></span><span class="enq-phone"><i>+91</i><input name="phone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" pattern="[6-9][0-9]{9}" placeholder="10-digit mobile number" required></span><small class="enq-count" id="enqCount">0 / 10</small></label>
         <label><span>Occasion</span><select name="occasion" id="enqOcc"></select></label>
         <label><span>Event date <small>(if fixed)</small></span><input name="date" type="date"></label>
         <label><span>City</span><input name="city" maxlength="40" placeholder="e.g. Jaipur"></label>

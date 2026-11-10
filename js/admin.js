@@ -660,7 +660,7 @@
     return `
       <button type="button" class="btn-small" data-copy="${esc(r.url)}">Copy</button>
       <button type="button" class="btn-small" data-copy="${esc(Core.inviteText({ guest: r.guest, card: r.card, who: r.who, label: occasion(r).label, link: r.url }))}">Copy message</button>
-      <a class="btn-small wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(Core.inviteText({ guest: r.guest, card: r.card, who: r.who, label: occasion(r).label, link: r.url }))}">WhatsApp</a>
+      <a class="btn-small wa" target="_blank" rel="noopener" href="https://api.whatsapp.com/send?text=${encodeURIComponent(Core.inviteText({ guest: r.guest, card: r.card, who: r.who, label: occasion(r).label, link: r.url }))}">WhatsApp</a>
       <a class="btn-small" target="_blank" rel="noopener" href="${esc(r.url)}">Open</a>`;
   }
 
