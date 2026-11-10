@@ -64,14 +64,14 @@ const Films = (() => {
     for (let i = pairs.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [pairs[i], pairs[j]] = [pairs[j], pairs[i]]; }
     // neighbours never share a palette or a frame
     const picked = [];
-    while (picked.length < 14) {
+    while (picked.length < 10) {
       const last = picked[picked.length - 1] || list[0];
       const k = pairs.findIndex(([t, f]) => !last || (t !== (last[0] || last.theme) && f !== (last[1] || last.frame)));
       picked.push(pairs.splice(k < 0 ? 0 : k, 1)[0]);
     }
     const SOLO = ['birthday', 'naming', 'housewarming', 'puja'];
     let solo = 0;
-    const groups = { heritage: picked.slice(0, 14).map(([theme, frame], n) => ({ concept: 'heritage', theme, frame, occ: OCC_SEQ[(n + 1) % OCC_SEQ.length], n })) };
+    const groups = { heritage: picked.slice(0, 10).map(([theme, frame], n) => ({ concept: 'heritage', theme, frame, occ: OCC_SEQ[(n + 1) % OCC_SEQ.length], n })) };
     Object.keys(CONCEPT_OCC).forEach(c => { groups[c] = CONCEPT_OCC[c].map((occ, n) => ({ concept: c, pal: n, occ, n })); });
     // smooth weighted round robin: each concept comes up in proportion, never twice in a row
     const keys = Object.keys(groups), weight = Object.fromEntries(keys.map(k => [k, groups[k].length])), total = keys.reduce((s, k) => s + weight[k], 0), cur = Object.fromEntries(keys.map(k => [k, 0]));
@@ -1598,19 +1598,286 @@ const Films = (() => {
     }
   };
 
-  const CONCEPTS = { minimal: MINIMAL, floral: FLORAL, cinema: CINEMA, deco: DECO, polaroid: POLAROID, neon: NEON, rangoli: RANGOLI, botanical: BOTANICAL, marquee: MARQUEE, editorial: EDITORIAL, scroll: SCROLL };
+  // ---------- Trend concepts: what sells most in Indian e-invites right now ----------
+  const goldGrad = (ctx, th, x0, y0, x1, y1) => {
+    const g = ctx.createLinearGradient(x0, y0, x1, y1);
+    g.addColorStop(0, th.gold[2]); g.addColorStop(.35, th.gold[1]); g.addColorStop(.5, th.gold[0]); g.addColorStop(.65, th.gold[1]); g.addColorStop(1, th.gold[2]);
+    return g;
+  };
+  const initials = D => D.solo ? D.A.slice(0, 1) : `${D.A.slice(0, 1)}${D.B.slice(0, 1)}`;
+  // Two laurel branches hugging a circle, leaf by leaf as k goes 0 → 1
+  function laurel(ctx, th, cx, cy, r, k) {
+    if (k <= 0) return;
+    ctx.save(); ctx.fillStyle = goldGrad(ctx, th, cx - r, cy - r, cx + r, cy + r);
+    const n = 12;
+    for (const side of [-1, 1]) for (let i = 0; i < n * k; i++) {
+      const ang = Math.PI / 2 + side * (.42 + i * .19), x = cx + Math.cos(ang) * r, y = cy + Math.sin(ang) * r;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(ang + Math.PI / 2 + side * .55);
+      ctx.beginPath(); ctx.ellipse(side * 14, 0, 24, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    }
+    ctx.restore();
+  }
+  function crest(ctx, th, D, cx, cy, r, k, lt) {
+    if (k <= 0) return;
+    ctx.save(); ctx.strokeStyle = goldGrad(ctx, th, cx - r, cy - r, cx + r, cy + r); ctx.lineWidth = Math.max(3, r * .035);
+    ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ease(k)); ctx.stroke();
+    ctx.lineWidth = Math.max(1.5, r * .015); ctx.beginPath(); ctx.arc(cx, cy, r * .88, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ease(k)); ctx.stroke();
+    ctx.restore();
+    laurel(ctx, th, cx, cy, r * 1.18, (k - .4) / .6);
+    const s = initials(D);
+    text(ctx, th, s.length > 1 ? `${s[0]}·${s[1]}` : s, cx, cy + r * .28, { z: r * (s.length > 1 ? .62 : .9), font: 'name', color: 'gold', a: ap(lt, .9), maxW: r * 1.6 });
+  }
+  const MONOGRAM = {
+    short: 'Monogram', name: 'Monogram Luxe', trans: 'fade', fx: 'sparkle',
+    face: face('700 {z}px "Playfair Display", serif', '400 {z}px "Cinzel", serif', '400 {z}px "Cinzel", serif', 'italic 400 {z}px "Cormorant Garamond", serif', '400 {z}px "Pinyon Script", cursive'),
+    pals: [P6('Noir', true, ['#161616', '#050505'], GOLD, '#1b1b1b', '#f5efe2', '#d9b25e'),
+      P6('Ivory', false, ['#fbf7ef', '#efe5d1'], GOLD, '#fffdf8', '#2b2216', '#a37a2c'),
+      P6('Emerald', true, ['#0e3d2f', '#03140f'], GOLD, '#10392c', '#f4ecd8', '#e2bf6a'),
+      P6('Midnight', true, ['#14213f', '#050a17'], GOLD, '#16223f', '#f2ecdc', '#e0bd6c'),
+      P6('Blush', false, ['#fcf0ec', '#f1dad3'], ROSE, '#fffaf8', '#3c2420', '#a5604a'),
+      P6('Wine', true, ['#4a0f20', '#13030a'], GOLD, '#460e1e', '#f6ebdc', '#e3b866')],
+    bg(ctx, th, t) {
+      const g = ctx.createRadialGradient(W / 2, H * .42, 80, W / 2, H / 2, H * .8); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]);
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.save(); ctx.globalAlpha = th.dark ? .06 : .09; ctx.strokeStyle = th.gold[1]; ctx.lineWidth = 1.5;
+      for (let y = 0; y < H + 90; y += 90) for (let x = (y / 90 % 2) * 45; x < W + 90; x += 90) { ctx.beginPath(); ctx.moveTo(x, y - 20); ctx.lineTo(x + 14, y); ctx.lineTo(x, y + 20); ctx.lineTo(x - 14, y); ctx.closePath(); ctx.stroke(); }
+      ctx.restore();
+      ctx.save(); ctx.strokeStyle = goldGrad(ctx, th, 0, 0, W, H); ctx.globalAlpha = .7; ctx.lineWidth = 3; ctx.strokeRect(44, 44, W - 88, H - 88); ctx.lineWidth = 1.2; ctx.strokeRect(60, 60, W - 120, H - 120); ctx.restore();
+    },
+    open(ctx, film, th, D, sc, lt) {
+      crest(ctx, th, D, W / 2, H / 2 - 80, 230, lt / 1.6, lt);
+      text(ctx, th, D.heading.toUpperCase(), W / 2, H / 2 + 300, { z: 34, font: 'caps', color: th.ink, a: ap(lt, 1.8), ls: 6 });
+      text(ctx, th, D.lang === 'hi' ? 'आपको सादर आमंत्रित करते हैं' : 'request the pleasure of your company', W / 2, H / 2 + 370, { z: 40, font: 'body', color: th.accent, a: ap(lt, 2.2) });
+    },
+    title(ctx, film, th, D, sc, lt) {
+      const cx = W / 2, hi = D.lang === 'hi';
+      crest(ctx, th, D, cx, 380, 110, 1, 99);
+      text(ctx, th, hi ? D.heading : D.heading.toUpperCase(), cx, 640, { z: 34, font: 'caps', color: th.accent, a: ap(lt, .2), ls: 6 });
+      if (D.solo) text(ctx, th, D.A, cx, 900, { z: 150, font: 'name', color: th.ink, a: ap(lt, .5), rise: 30 });
+      else {
+        text(ctx, th, D.A, cx, 830, { z: 130, font: 'name', color: th.ink, a: ap(lt, .5), rise: 30 });
+        text(ctx, th, hi ? 'संग' : '&', cx, 965, { z: hi ? 60 : 96, font: hi ? 'caps' : 'name', color: 'gold', a: ap(lt, .8) });
+        text(ctx, th, D.B, cx, 1110, { z: 130, font: 'name', color: th.ink, a: ap(lt, 1.1), rise: 30 });
+      }
+      const k = ap(lt, 1.3, 1);
+      ctx.save(); ctx.strokeStyle = goldGrad(ctx, th, cx - 260, 0, cx + 260, 0); ctx.lineWidth = 2.5; ctx.globalAlpha = k;
+      ctx.beginPath(); ctx.moveTo(cx - 260 * k, 1210); ctx.lineTo(cx - 22, 1210); ctx.moveTo(cx + 22, 1210); ctx.lineTo(cx + 260 * k, 1210); ctx.stroke();
+      ctx.fillStyle = th.gold[1]; ctx.beginPath(); ctx.moveTo(cx, 1196); ctx.lineTo(cx + 12, 1210); ctx.lineTo(cx, 1224); ctx.lineTo(cx - 12, 1210); ctx.closePath(); ctx.fill(); ctx.restore();
+      text(ctx, th, D.date, cx, 1300, { z: 44, font: 'caps', color: th.ink, a: ap(lt, 1.5), ls: 2 });
+      text(ctx, th, [D.V, D.CITY].filter(Boolean).join(', '), cx, 1370, { z: 40, font: 'body', color: th.accent, a: ap(lt, 1.7) });
+    },
+    panel(ctx, film, th, a) {
+      const r = { x: 110, y: 270, w: W - 220, h: 1380 }; r.cx = r.x + r.w / 2;
+      ctx.save(); ctx.globalAlpha *= clamp(a); ctx.fillStyle = th.paper; ctx.globalAlpha *= .92; ctx.fillRect(r.x, r.y, r.w, r.h);
+      ctx.globalAlpha = clamp(a); ctx.strokeStyle = goldGrad(ctx, th, r.x, r.y, r.x + r.w, r.y + r.h); ctx.lineWidth = 3; ctx.strokeRect(r.x + 18, r.y + 18, r.w - 36, r.h - 36);
+      ctx.lineWidth = 1.2; ctx.strokeRect(r.x + 30, r.y + 30, r.w - 60, r.h - 60); ctx.restore();
+      return r;
+    },
+    day(ctx, film, th, D, sc, lt) {
+      const b = dateBits(D, sc), cx = W / 2;
+      crest(ctx, th, D, cx, 330, 80, 1, 99);
+      text(ctx, th, dayLabel(D, sc), cx, 530, { z: 36, font: 'caps', color: th.accent, a: ap(lt, .1), ls: 6 });
+      text(ctx, th, b.d, cx, 800, { z: 260, font: 'name', color: 'gold', a: ap(lt, .3), rise: 40 });
+      text(ctx, th, `${b.m} · ${b.wd}`, cx, 880, { z: 40, font: 'caps', color: th.ink, a: ap(lt, .5), ls: 4 });
+      rows(ctx, th, sc.day, 170, 1040, W - 340, lt, { z: 62, gap: 140, start: .7, col: th.ink, tcol: th.accent });
+    }
+  };
+
+  // Mughal / Rajasthani palace window: an ogee arch with a lobed crown
+  function archPath(ctx, x, y, w, h) {
+    const cx = x + w / 2, spring = y + w * .5;
+    ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x, spring);
+    ctx.bezierCurveTo(x, spring - w * .3, cx - w * .14, y + w * .14, cx, y);
+    ctx.bezierCurveTo(cx + w * .14, y + w * .14, x + w, spring - w * .3, x + w, spring);
+    ctx.lineTo(x + w, y + h); ctx.closePath();
+  }
+  function jaali(ctx, th, x, y, w, h, col, a = .5) {
+    ctx.save(); ctx.globalAlpha *= a; ctx.strokeStyle = col; ctx.lineWidth = 2;
+    const s = 46;
+    for (let yy = y; yy < y + h; yy += s) for (let xx = x; xx < x + w; xx += s) {
+      ctx.beginPath(); ctx.arc(xx + s / 2, yy + s / 2, s * .32, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(xx + s / 2, yy); ctx.lineTo(xx + s, yy + s / 2); ctx.lineTo(xx + s / 2, yy + s); ctx.lineTo(xx, yy + s / 2); ctx.closePath(); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function palaceArch(ctx, th, x, y, w, h, a = 1) {
+    ctx.save(); ctx.globalAlpha *= clamp(a);
+    archPath(ctx, x - 22, y - 22, w + 44, h + 44); ctx.fillStyle = goldGrad(ctx, th, x, y, x + w, y + h); ctx.fill();
+    archPath(ctx, x, y, w, h); ctx.fillStyle = th.paper; ctx.fill();
+    ctx.strokeStyle = th.accent; ctx.lineWidth = 3; archPath(ctx, x + 18, y + 26, w - 36, h - 44); ctx.stroke();
+    // the little lobed crown on top
+    ctx.fillStyle = th.gold[1]; ctx.beginPath(); ctx.arc(x + w / 2, y - 34, 16, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x + w / 2, y - 92); ctx.lineTo(x + w / 2 + 10, y - 52); ctx.lineTo(x + w / 2 - 10, y - 52); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    return { x: x + 40, y: y + w * .32, w: w - 80, h: h - w * .32 - 30, cx: x + w / 2 };
+  }
+  const JHAROKHA = {
+    short: 'Jharokha', name: 'Palace Jharokha', trans: 'zoom', fx: 'lanterns',
+    face: face('400 {z}px "Great Vibes", cursive', '700 {z}px "Cinzel Decorative", serif', '400 {z}px "Marcellus", serif', 'italic 400 {z}px "Cormorant Garamond", serif', '400 {z}px "Great Vibes", cursive'),
+    pals: [P6('Peacock', true, ['#0b3a4a', '#02121a'], GOLD, '#f6ead2', '#1e2a2e', '#0f6b7a'),
+      P6('Rani', true, ['#5a0f3c', '#1a0312'], GOLD, '#f8e9dc', '#3a1028', '#b0185a'),
+      P6('Marigold', true, ['#7a3b05', '#211002'], GOLD, '#fbedd2', '#3a1f06', '#c0620a'),
+      P6('Sandstone', false, ['#f4e6cf', '#e3cba5'], GOLD, '#fff8ec', '#3a2a14', '#9a4f16'),
+      P6('Jade', true, ['#0f4a3a', '#031711'], GOLD, '#f2ecd6', '#1d2e26', '#1f7a5e'),
+      P6('Dusk', true, ['#3b1d3d', '#100510'], GOLD, '#f7e8ee', '#2e1630', '#a5487a')],
+    bg(ctx, th, t) {
+      const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.save(); ctx.globalAlpha = .13; ctx.fillStyle = th.gold[1];
+      for (let i = 0; i < 6; i++) { archPath(ctx, -40 + i * 200, H - 300, 160, 320); ctx.fill(); }
+      ctx.restore();
+      jaali(ctx, th, 0, 0, W, 180, th.gold[1], .12);
+    },
+    open(ctx, film, th, D, sc, lt) {
+      const x = 170, y = 380, w = W - 340, h = 1200;
+      const r = palaceArch(ctx, th, x, y, w, h, ap(lt, 0, .5));
+      text(ctx, th, D.lang === 'hi' ? 'शुभ विवाह' : D.heading.toUpperCase(), W / 2, r.y + 260, { z: 40, font: 'caps', color: th.accent, a: ap(lt, 1.6), ls: 4, maxW: r.w });
+      text(ctx, th, who2(D, D.lang === 'hi'), W / 2, r.y + 460, { z: 120, font: 'name', color: th.ink, a: ap(lt, 1.9), maxW: r.w });
+      // the two carved shutters swing open
+      const k = ease((lt - .5) / 1.4), half = w / 2;
+      ctx.save(); archPath(ctx, x, y, w, h); ctx.clip();
+      for (const side of [-1, 1]) {
+        const sw = half * (1 - k); if (sw < 2) continue;
+        const sx = side < 0 ? x : x + w - sw;
+        ctx.fillStyle = th.accent; ctx.fillRect(sx, y - 40, sw, h + 80);
+        jaali(ctx, th, sx, y - 40, sw, h + 80, th.gold[0], .55);
+        ctx.fillStyle = shade(th.accent, -.4); ctx.fillRect(side < 0 ? sx + sw - 8 : sx, y - 40, 8, h + 80);
+      }
+      ctx.restore();
+    },
+    title(ctx, film, th, D, sc, lt) {
+      const r = palaceArch(ctx, th, 130, 300, W - 260, 1250), cx = W / 2, hi = D.lang === 'hi';
+      text(ctx, th, D.sacred ? '॥ श्री गणेशाय नमः ॥' : (hi ? D.heading : D.heading.toUpperCase()), cx, r.y + 120, { z: 34, font: D.sacred ? 'deva' : 'caps', color: th.accent, a: ap(lt, .2), ls: 3, maxW: r.w });
+      if (D.solo) text(ctx, th, D.A, cx, r.y + 420, { z: 160, font: 'name', color: th.ink, a: ap(lt, .5), maxW: r.w });
+      else {
+        text(ctx, th, D.A, cx, r.y + 350, { z: 140, font: 'name', color: th.ink, a: ap(lt, .5), maxW: r.w });
+        text(ctx, th, hi ? 'संग' : 'weds', cx, r.y + 450, { z: 44, font: 'caps', color: th.accent, a: ap(lt, .8), ls: 4 });
+        text(ctx, th, D.B, cx, r.y + 600, { z: 140, font: 'name', color: th.ink, a: ap(lt, 1.1), maxW: r.w });
+      }
+      jaali(ctx, th, r.x + 60, r.y + 660, r.w - 120, 46, th.accent, .35 * ap(lt, 1.3));
+      text(ctx, th, D.date, cx, r.y + 800, { z: 42, font: 'caps', color: th.ink, a: ap(lt, 1.5), ls: 2, maxW: r.w });
+      text(ctx, th, [D.V, D.CITY].filter(Boolean).join(' · '), cx, r.y + 870, { z: 38, font: 'body', color: th.accent, a: ap(lt, 1.7), maxW: r.w });
+    },
+    panel(ctx, film, th, a) { const r = palaceArch(ctx, th, 120, 250, W - 240, 1430, a); return { x: r.x - 10, y: 250 + 200, w: r.w + 20, h: 1180, cx: r.cx }; },
+    day(ctx, film, th, D, sc, lt) {
+      const b = dateBits(D, sc), r = palaceArch(ctx, th, 140, 300, W - 280, 1380), cx = W / 2;
+      text(ctx, th, dayLabel(D, sc), cx, r.y + 110, { z: 38, font: 'caps', color: th.accent, a: ap(lt, .1), ls: 4, maxW: r.w });
+      text(ctx, th, b.d, cx, r.y + 330, { z: 220, font: 'head', color: th.ink, a: ap(lt, .3), rise: 30 });
+      text(ctx, th, `${b.m} · ${b.wd}`, cx, r.y + 410, { z: 40, font: 'caps', color: th.accent, a: ap(lt, .5), ls: 4 });
+      rows(ctx, th, sc.day, r.x + 20, r.y + 560, r.w - 40, lt, { z: 78, gap: 165, align: 'center', col: th.ink, tcol: th.accent, start: .7 });
+    }
+  };
+
+  // South Indian temple: a diya that flickers, kolam, a gopuram, a zig-zag temple border
+  function diya(ctx, th, x, y, s, lt, k = 1) {
+    if (k <= 0) return;
+    ctx.save(); ctx.globalAlpha *= clamp(k);
+    const fl = 1 + Math.sin(lt * 11 + x) * .08 + Math.sin(lt * 17) * .05;
+    const glow = ctx.createRadialGradient(x, y - s * .9, 2, x, y - s * .9, s * 2.4); glow.addColorStop(0, 'rgba(255,200,90,.55)'); glow.addColorStop(1, 'rgba(255,200,90,0)');
+    ctx.fillStyle = glow; ctx.fillRect(x - s * 2.5, y - s * 3.4, s * 5, s * 5);
+    ctx.fillStyle = goldGrad(ctx, th, x - s, y, x + s, y + s * .6);
+    ctx.beginPath(); ctx.moveTo(x - s, y); ctx.quadraticCurveTo(x, y + s * 1.05, x + s, y); ctx.quadraticCurveTo(x + s * .55, y - s * .12, x + s * 1.2, y - s * .28); ctx.lineTo(x - s, y); ctx.closePath(); ctx.fill();
+    ctx.translate(x + s * .1, y - s * .08); ctx.scale(1, fl);
+    const f = ctx.createLinearGradient(0, -s * 1.4, 0, 0); f.addColorStop(0, '#fff6c8'); f.addColorStop(.5, '#ffb23b'); f.addColorStop(1, '#e8541c');
+    ctx.fillStyle = f; ctx.beginPath(); ctx.moveTo(0, -s * 1.4); ctx.bezierCurveTo(s * .45, -s * .7, s * .32, 0, 0, 0); ctx.bezierCurveTo(-s * .32, 0, -s * .45, -s * .7, 0, -s * 1.4); ctx.fill();
+    ctx.restore();
+  }
+  function templeBorder(ctx, th, y, flip, a = 1) {
+    ctx.save(); ctx.globalAlpha *= a; ctx.fillStyle = goldGrad(ctx, th, 0, y, W, y);
+    const s = 54;
+    ctx.fillRect(0, flip ? y : y - 10, W, 10);
+    for (let x = 0; x < W + s; x += s) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + s / 2, y + (flip ? -s * .6 : s * .6)); ctx.lineTo(x + s, y); ctx.closePath(); ctx.fill(); }
+    ctx.globalAlpha *= .9; for (let x = s / 2; x < W; x += s) { ctx.beginPath(); ctx.arc(x, y + (flip ? -s * .95 : s * .95), 6, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+  }
+  function gopuram(ctx, th, cx, base, w, a) {
+    ctx.save(); ctx.globalAlpha *= a; ctx.fillStyle = th.gold[1];
+    let ww = w, y = base;
+    for (let i = 0; i < 6; i++) { const hh = 70 - i * 4, top = ww * .86; ctx.beginPath(); ctx.moveTo(cx - ww / 2, y); ctx.lineTo(cx - top / 2, y - hh); ctx.lineTo(cx + top / 2, y - hh); ctx.lineTo(cx + ww / 2, y); ctx.closePath(); ctx.fill(); y -= hh + 6; ww = top * .92; }
+    ctx.beginPath(); ctx.ellipse(cx, y - 24, ww * .6, 30, 0, Math.PI, 0); ctx.fill();
+    ctx.fillRect(cx - 4, y - 90, 8, 40);
+    ctx.restore();
+  }
+  function kolam(ctx, th, cx, cy, r, k) {
+    if (k <= 0) return;
+    ctx.save(); ctx.fillStyle = th.paper; ctx.globalAlpha = .9 * clamp(k * 2);
+    for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) if (Math.abs(i) + Math.abs(j) <= 3) { ctx.beginPath(); ctx.arc(cx + i * r / 2.5, cy + j * r / 2.5, 6, 0, Math.PI * 2); ctx.fill(); }
+    ctx.strokeStyle = th.paper; ctx.lineWidth = 4; ctx.globalAlpha = .85;
+    const n = Math.floor(clamp((k - .2) / .8) * 8);
+    for (let i = 0; i < n; i++) { ctx.save(); ctx.translate(cx, cy); ctx.rotate(i * Math.PI / 4); ctx.beginPath(); ctx.ellipse(0, -r * .55, r * .2, r * .5, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
+    ctx.restore();
+  }
+  const TEMPLE = {
+    short: 'Temple', name: 'Temple Gold', trans: 'fade', fx: 'sparkle',
+    face: face('700 {z}px "Cinzel Decorative", serif', '400 {z}px "Cinzel", serif', '400 {z}px "Cinzel", serif', '400 {z}px "Marcellus", serif', '400 {z}px "Great Vibes", cursive'),
+    pals: [P6('Kumkum', true, ['#5e0b0b', '#1c0202'], GOLD, '#fff1d6', '#f8ecd0', '#f0b429'),
+      P6('Banana Leaf', true, ['#0f3d1c', '#03130a'], GOLD, '#fff1d6', '#f4ecd2', '#e6b422'),
+      P6('Turmeric', true, ['#7a4a00', '#231500'], GOLD, '#fff3d8', '#fbf0d6', '#ffcf4a'),
+      P6('Kanjivaram', true, ['#4a0d4a', '#150315'], GOLD, '#fff0dc', '#f7ead6', '#e9b23a'),
+      P6('Sandal', false, ['#fbf1dc', '#efdcb4'], GOLD, '#7a3b05', '#3f2008', '#a0520b'),
+      P6('Temple Night', true, ['#141a3a', '#050714'], GOLD, '#fff1d6', '#f2ecdc', '#f0b429')],
+    bg(ctx, th, t) {
+      const g = ctx.createRadialGradient(W / 2, H * .55, 60, W / 2, H / 2, H * .8); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      gopuram(ctx, th, W / 2, H - 120, 760, th.dark ? .1 : .14);
+      templeBorder(ctx, th, 70, false, .9);
+      templeBorder(ctx, th, H - 70, true, .9);
+    },
+    open(ctx, film, th, D, sc, lt) {
+      kolam(ctx, th, W / 2, H / 2 - 120, 300, lt / 1.6);
+      diya(ctx, th, W / 2 - 300, H / 2 + 330, 60, lt, ap(lt, .3));
+      diya(ctx, th, W / 2 + 300, H / 2 + 330, 60, lt, ap(lt, .6));
+      text(ctx, th, D.sacred || D.lang === 'hi' ? '॥ शुभ मंगल ॥' : 'WITH THE BLESSINGS OF THE DIVINE', W / 2, H / 2 + 420, { z: 34, font: D.sacred || D.lang === 'hi' ? 'deva' : 'caps', color: th.accent, a: ap(lt, 1.5), ls: 2 });
+      text(ctx, th, who2(D, D.lang === 'hi'), W / 2, H / 2 + 560, { z: 110, font: 'name', color: 'gold', a: ap(lt, 1.9), maxW: 860 });
+    },
+    title(ctx, film, th, D, sc, lt) {
+      const cx = W / 2, hi = D.lang === 'hi';
+      text(ctx, th, D.sacred ? '॥ श्री गणेशाय नमः ॥' : (hi ? '॥ शुभ विवाह ॥' : '— AUSPICIOUS INVITATION —'), cx, 330, { z: 36, font: D.sacred || hi ? 'deva' : 'caps', color: th.accent, a: ap(lt, .2), ls: 2 });
+      text(ctx, th, hi ? D.heading : D.heading.toUpperCase(), cx, 440, { z: 46, font: 'caps', color: th.ink, a: ap(lt, .4), ls: 3 });
+      if (D.solo) text(ctx, th, D.A, cx, 760, { z: 150, font: 'name', color: 'gold', a: ap(lt, .6), glow: 18 });
+      else {
+        text(ctx, th, D.A, cx, 700, { z: 128, font: 'name', color: 'gold', a: ap(lt, .6), glow: 18 });
+        text(ctx, th, hi ? 'संग' : 'with', cx, 810, { z: 48, font: 'script', color: th.ink, a: ap(lt, .9) });
+        text(ctx, th, D.B, cx, 950, { z: 128, font: 'name', color: 'gold', a: ap(lt, 1.1), glow: 18 });
+      }
+      diya(ctx, th, cx - 340, 1110, 46, lt, ap(lt, 1.2)); diya(ctx, th, cx, 1110, 46, lt, ap(lt, 1.35)); diya(ctx, th, cx + 340, 1110, 46, lt, ap(lt, 1.5));
+      text(ctx, th, D.date, cx, 1270, { z: 44, font: 'caps', color: th.ink, a: ap(lt, 1.6), ls: 2 });
+      text(ctx, th, [D.V, D.CITY].filter(Boolean).join(' · '), cx, 1340, { z: 40, font: 'body', color: th.accent, a: ap(lt, 1.8) });
+    },
+    panel(ctx, film, th, a) {
+      const r = { x: 110, y: 270, w: W - 220, h: 1380 }; r.cx = r.x + r.w / 2;
+      ctx.save(); ctx.globalAlpha *= clamp(a);
+      ctx.fillStyle = th.dark ? 'rgba(0,0,0,.35)' : 'rgba(255,255,255,.55)'; ctx.fillRect(r.x, r.y, r.w, r.h);
+      ctx.strokeStyle = goldGrad(ctx, th, r.x, r.y, r.x + r.w, r.y + r.h); ctx.lineWidth = 4; ctx.strokeRect(r.x + 14, r.y + 14, r.w - 28, r.h - 28);
+      ctx.fillStyle = th.gold[1]; for (const [qx, qy] of [[r.x + 14, r.y + 14], [r.x + r.w - 14, r.y + 14], [r.x + 14, r.y + r.h - 14], [r.x + r.w - 14, r.y + r.h - 14]]) { ctx.beginPath(); ctx.arc(qx, qy, 12, 0, Math.PI * 2); ctx.fill(); }
+      ctx.restore();
+      return r;
+    },
+    day(ctx, film, th, D, sc, lt) {
+      const b = dateBits(D, sc), cx = W / 2;
+      text(ctx, th, dayLabel(D, sc), cx, 300, { z: 40, font: 'caps', color: th.accent, a: ap(lt, .1), ls: 4 });
+      kolam(ctx, th, cx, 500, 110, ap(lt, .2, 1.2));
+      text(ctx, th, b.d, cx, 800, { z: 170, font: 'name', color: 'gold', a: ap(lt, .5), glow: 16 });
+      text(ctx, th, `${b.m} · ${b.wd}`, cx, 890, { z: 40, font: 'caps', color: th.ink, a: ap(lt, .6), ls: 4 });
+      rows(ctx, th, sc.day, 170, 1040, W - 340, lt, { z: 66, gap: 145, start: .8, col: th.ink, tcol: th.accent });
+      diya(ctx, th, cx, 1640, 44, lt, ap(lt, 1));
+    }
+  };
+
+  const CONCEPTS = { minimal: MINIMAL, floral: FLORAL, cinema: CINEMA, deco: DECO, polaroid: POLAROID, neon: NEON, rangoli: RANGOLI, botanical: BOTANICAL, marquee: MARQUEE, editorial: EDITORIAL, scroll: SCROLL, monogram: MONOGRAM, jharokha: JHAROKHA, temple: TEMPLE };
   const CONCEPT_OCC = {
-    minimal: ['wedding', 'engagement', 'reception', 'anniversary', 'wedding', 'engagement'],
-    floral: ['wedding', 'mehendi', 'babyshower', 'engagement', 'haldi', 'wedding'],
-    cinema: ['wedding', 'reception', 'engagement', 'anniversary', 'sangeet', 'wedding'],
-    deco: ['reception', 'anniversary', 'wedding', 'engagement', 'sangeet', 'birthday'],
-    polaroid: ['engagement', 'birthday', 'anniversary', 'babyshower', 'wedding', 'naming'],
-    neon: ['birthday', 'sangeet', 'reception', 'birthday', 'engagement', 'sangeet'],
-    rangoli: ['wedding', 'haldi', 'mehendi', 'housewarming', 'puja', 'naming'],
-    botanical: ['wedding', 'engagement', 'haldi', 'babyshower', 'reception', 'wedding'],
-    marquee: ['wedding', 'sangeet', 'reception', 'birthday', 'engagement', 'anniversary'],
-    editorial: ['wedding', 'engagement', 'anniversary', 'birthday', 'reception', 'babyshower'],
-    scroll: ['wedding', 'engagement', 'puja', 'housewarming', 'reception', 'wedding']
+    minimal: ['wedding', 'engagement', 'reception', 'anniversary', 'wedding'],
+    floral: ['wedding', 'mehendi', 'babyshower', 'engagement', 'haldi'],
+    cinema: ['wedding', 'reception', 'engagement', 'anniversary', 'sangeet'],
+    deco: ['reception', 'anniversary', 'wedding', 'engagement', 'sangeet'],
+    polaroid: ['engagement', 'birthday', 'anniversary', 'babyshower', 'wedding'],
+    neon: ['birthday', 'sangeet', 'reception', 'birthday', 'engagement'],
+    rangoli: ['wedding', 'haldi', 'mehendi', 'housewarming', 'puja'],
+    botanical: ['wedding', 'engagement', 'haldi', 'babyshower', 'reception'],
+    marquee: ['wedding', 'sangeet', 'reception', 'birthday', 'engagement'],
+    editorial: ['wedding', 'engagement', 'anniversary', 'birthday', 'reception'],
+    scroll: ['wedding', 'engagement', 'puja', 'housewarming', 'reception'],
+    monogram: ['wedding', 'engagement', 'reception', 'anniversary', 'wedding'],
+    jharokha: ['wedding', 'sangeet', 'mehendi', 'reception', 'engagement'],
+    temple: ['wedding', 'puja', 'housewarming', 'naming', 'engagement']
   };
   const themeOf = film => film.concept && CONCEPTS[film.concept] ? CONCEPTS[film.concept].pals[film.pal] : THEMES[film.theme];
   // The words' holder in a concept (a card in Royal Heritage)

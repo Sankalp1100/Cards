@@ -1230,12 +1230,13 @@ test.describe('card PDF → details (js/pdfcard.js)', () => {
   });
 });
 
-test('premium films: 12 different concepts, at least 6 films each, never the same concept twice in a row', () => {
+test('premium films: 15 different concepts (with the trend ones: monogram, palace jharokha, temple gold), at least 5 films each, never the same concept twice in a row', () => {
   const Films = require('../js/films.js');
   const by = {};
   Films.LIST.forEach(f => { by[f.concept] = (by[f.concept] || 0) + 1; });
-  assert.equal(Object.keys(by).length, 12, Object.keys(by).join(', '));
-  for (const [c, n] of Object.entries(by)) assert.ok(n >= 6, `${c}: ${n} films`);
+  assert.equal(Object.keys(by).length, 15, Object.keys(by).join(', '));
+  for (const c of ['monogram', 'jharokha', 'temple']) assert.ok(by[c], `trend concept ${c}`);
+  for (const [c, n] of Object.entries(by)) assert.ok(n >= 5, `${c}: ${n} films`);
   Films.LIST.slice(1).forEach((f, i) => assert.notEqual(f.concept, Films.LIST[i].concept, `${Films.LIST[i].id} then ${f.id}`));
   for (const f of Films.LIST) assert.ok(Films.themeOf(f) && Films.themeOf(f).bg, `${f.id} has its colours`);
 });

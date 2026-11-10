@@ -641,10 +641,13 @@
     const url = Core.orderUrl(SITE.whatsapp, enquiryMessage(f));
     if (url === '#order') { $('#enqErr').textContent = 'WhatsApp is not set up on this website yet. Please call us instead.'; $('#enqErr').hidden = false; return; }
     // ('noopener' would make window.open return null, so the page itself would ALSO go to WhatsApp)
+    // WhatsApp always opens in a NEW tab: this page never turns into WhatsApp. If the browser blocks the tab,
+    // a button opens it instead (a tap on a link with target=_blank is never blocked).
     const win = window.open(url, '_blank');
-    if (win) { try { win.opener = null; } catch (e) { /* fine */ } } else location.href = url;
+    if (win) { try { win.opener = null; } catch (e) { /* fine */ } }
     if (window.Fun) { Fun.burstAt(enq.querySelector('[type=submit], button:not([type=button])')); Fun.buzz(); }
-    $('#enqNote').textContent = '✅ WhatsApp opened with your enquiry: just tap send.';
+    $('#enqNote').innerHTML = win ? '✅ WhatsApp opened in a new tab with your enquiry: just tap send. <a href="' + esc(url) + '" target="_blank" rel="noopener">Open it again</a>'
+      : '✅ Your enquiry is ready. <a class="btn-glow enq-wa" href="' + esc(url) + '" target="_blank" rel="noopener">💬 Open WhatsApp</a>';
     showCount();
   });
 
