@@ -1103,6 +1103,9 @@ input::-webkit-date-and-time-value { text-align: left; }
 .os-occ .chip { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.2; overflow-wrap: anywhere; }
 /* Nothing can widen the page sideways (a very big system font made the hero phones poke 3px out) */
 html { overflow-x: clip; }
+/* …and body must clip too: with html no longer "visible", body's overflow-x: hidden made it its own scroll box,
+   so the sticky nav scrolled away and left an empty dark band at the top */
+body { overflow-x: hidden; overflow-x: clip; }
 
 /* ---------- Story videos (the Video Studio's scenes on the website) ---------- */
 .vids { width: min(1100px, calc(100% - 32px)); margin: 90px auto; }
@@ -1190,3 +1193,7 @@ html { overflow-x: clip; }
 
 /* A library picture used for the second time round is mirrored, so it looks new */
 .hero-couple.flip, .p-couple.flip { transform: scaleX(-1); }
+
+/* No visible page scrollbar on the website and admin (it still scrolls by touch, wheel, trackpad and keys) */
+html { scrollbar-width: none; }
+html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; width: 0; height: 0; }

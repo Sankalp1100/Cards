@@ -1687,6 +1687,35 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
 
+  // ---------- Ready videos ----------
+  // Finished client videos kept in videos/ (720×1280 MP4 with a poster). Add a new one here.
+  const READY_VIDEOS = [
+    { file: 'videos/shivam-aanya.mp4', poster: 'videos/shivam-aanya.jpg', name: 'Shivam ✦ Aanya', note: 'Wedding invite · 55 sec', save: 'Shivam-Aanya-Wedding-Invite.mp4' },
+  ];
+  function renderReady() {
+    $('#readyGrid').innerHTML = READY_VIDEOS.map((v, i) => `
+      <figure class="ready-card panel">
+        <video src="${esc(v.file)}" poster="${esc(v.poster)}" controls playsinline preload="none"></video>
+        <figcaption><b>${esc(v.name)}</b><small class="muted">${esc(v.note)}</small></figcaption>
+        <div class="link-actions">
+          <a class="btn-small go" href="${esc(v.file)}" download="${esc(v.save)}">⬇ Download</a>
+          <button type="button" class="btn-small" data-ready-share="${i}">📤 Share</button>
+        </div>
+      </figure>`).join('');
+  }
+  $('#readyGrid').addEventListener('click', async e => {
+    const b = e.target.closest('[data-ready-share]');
+    if (!b) return;
+    const v = READY_VIDEOS[+b.dataset.readyShare];
+    b.disabled = true;
+    try {
+      const file = new File([await (await fetch(v.file)).blob()], v.save, { type: 'video/mp4' });
+      if (canShareFile(file)) await shareFile(file, v.name);
+      else { await copy(new URL(v.file, location.href).href, 'Sharing is not available here: video link copied'); }
+    } catch (err) { toast(`Could not load the video: ${err.message}`); }
+    b.disabled = false;
+  });
+
   async function copy(text, msg) {
     try { await navigator.clipboard.writeText(text); }
     catch (e) {
@@ -1708,7 +1737,7 @@
   // ---------- Pages ----------
   // One page at a time (Orders, Create, Designs, History, Catalog, Settings) instead of one very long page.
   // A link to any part (#generate, #settings…) opens its page and scrolls to it.
-  const PAGES = ['orders', 'create', 'designs', 'links', 'catalog', 'settings'];
+  const PAGES = ['orders', 'create', 'designs', 'ready', 'links', 'catalog', 'settings'];
   let page = '', navigated = false;
   function showPage(p) {
     if (!PAGES.includes(p)) return;
@@ -1755,6 +1784,7 @@
     fillSettings();
     renderCatalog();
     renderLinks();
+    renderReady();
     renderOrders();
     saveDraft();
     detectServer();

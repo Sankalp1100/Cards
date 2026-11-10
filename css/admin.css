@@ -380,3 +380,9 @@ main > section[data-page][hidden] { display: none !important; }
   #galFilters::-webkit-scrollbar { display: none; }
   #galFilters .chip { flex: none; }
 }
+
+/* Ready videos: finished client videos to play, download or share */
+.ready-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.ready-card { margin: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px; }
+.ready-card video { width: 100%; aspect-ratio: 9 / 16; border-radius: 10px; background: #000; object-fit: cover; }
+.ready-card figcaption { display: flex; flex-direction: column; gap: 2px; }
