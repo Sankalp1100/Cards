@@ -275,7 +275,7 @@
       io.observe(el);
     });
   }
-  reveal(document.querySelectorAll('.tile, .builder-head, .cta-band, .stepcard'));
+  reveal(document.querySelectorAll('.tile, .builder-head, .cta-band, .stepcard, .enq-box'));
   io.observe($('#signature')); // its own letter-by-letter animation starts on .in
 
   // ---------- Bottom tab bar (phones): Home and Designs are separate screens ----------
@@ -593,10 +593,21 @@
     $('#enqErr').hidden = true;
     const url = Core.orderUrl(SITE.whatsapp, enquiryMessage(f));
     if (url === '#order') { $('#enqErr').textContent = 'WhatsApp is not set up on this website yet. Please call us instead.'; $('#enqErr').hidden = false; return; }
-    window.open(url, '_blank', 'noopener') || (location.href = url);
+    // ('noopener' would make window.open return null, so the page itself would ALSO go to WhatsApp)
+    const win = window.open(url, '_blank');
+    if (win) { try { win.opener = null; } catch (e) { /* fine */ } } else location.href = url;
     $('#enqNote').textContent = '✅ WhatsApp opened with your enquiry: just tap send.';
     showCount();
   });
+
+  // Every "Enquiry" button: glide to the form, make it glow once and put the cursor in the first field
+  document.querySelectorAll('[data-enquiry]').forEach(a => a.addEventListener('click', e => {
+    e.preventDefault();
+    const box = document.querySelector('#enquiry .enq-box');
+    document.getElementById('enquiry').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    box.classList.remove('enq-flash'); void box.offsetWidth; box.classList.add('enq-flash');
+    setTimeout(() => { try { enq.elements.name.focus({ preventScroll: true }); } catch (err) { /* old browser */ } }, 700);
+  }));
 
   // ---------- Order form ----------
   const sheet = $('#orderSheet'), of = $('#orderForm'), STEPS = 5;

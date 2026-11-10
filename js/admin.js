@@ -1094,7 +1094,11 @@
     // (a video waits for both before it records)
     st.filmFonts = st.filmFonts || Films.fontsReady();
     st.ready = Studio.fontsReady();
-    await st.ready;
+    // The preview starts at once (Safari took ~8s to fetch every letter); when the letters arrive, the
+    // screens are laid out again with them. Recording still waits for st.ready / st.filmFonts.
+    const relayout = () => { if (!$('#studio').hidden && st.player && !st.rec) refreshStudio(); };
+    st.ready.then(relayout, () => {});
+    st.filmFonts.then(relayout, () => {});
     st.player = st.player || new Studio.Player(stCanvas);
     st.fplayer = st.fplayer || new Films.Player(stCanvas, 1);
     st.t = 0;
@@ -1149,8 +1153,13 @@
     renderMusicChips();
     // Painted after the preview has started, one at a time in idle moments, so the preview never stalls
     const idle = fn => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 800 }) : setTimeout(fn, 60));
-    [...box.querySelectorAll('[data-look]'), ...$('#stStories').querySelectorAll('[data-look]')]
-      .forEach((b, i) => setTimeout(() => idle(() => Studio.thumb(b.dataset.look, b.querySelector('canvas'))), 1200 + i * 250));
+    // ...and only once its tile is actually on screen (they sit in the Look tab, hidden when the Studio opens)
+    const paint = b => idle(() => Studio.thumb(b.dataset.look, b.querySelector('canvas')));
+    const tiles = [...box.querySelectorAll('[data-look]'), ...$('#stStories').querySelectorAll('[data-look]')];
+    if ('IntersectionObserver' in window) {
+      const seen = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { seen.unobserve(e.target); paint(e.target); } }), { rootMargin: '200px' });
+      tiles.forEach(b => seen.observe(b));
+    } else tiles.forEach((b, i) => setTimeout(() => paint(b), 1200 + i * 250));
     refreshStudio();
   }
 

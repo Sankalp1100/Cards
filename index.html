@@ -42,9 +42,11 @@
       <a href="#templates">Designs</a>
       <a href="#how">How it works</a>
       <a href="#faq">FAQ</a>
-      <a href="#enquiry">Enquiry</a>
     </div>
-    <a class="nav-cta" data-order href="#order">Order now</a>
+    <div class="nav-btns">
+      <a class="nav-enq" href="#enquiry" data-enquiry><i class="nav-enq-dot" aria-hidden="true"></i><b>Enquiry</b></a>
+      <a class="nav-cta" data-order href="#order">Order<span class="nav-now"> now</span></a>
+    </div>
   </nav>
 
   <header class="hero" id="top">
@@ -178,13 +180,15 @@
   <section class="showcase enq" id="enquiry">
     <div class="enq-box">
       <div class="enq-head">
+        <div class="enq-mail" aria-hidden="true"><span class="enq-env">✉️</span><i>💬</i><i>✨</i><i>💌</i></div>
         <p class="eyebrow">Have a question?</p>
         <h2 class="section-h">Send an <span class="gradient-text">enquiry</span></h2>
         <p class="muted">Tell us what you need. It opens WhatsApp with everything filled in, so you only tap send. We reply within a few hours.</p>
+        <p class="enq-live"><i aria-hidden="true"></i> Usually replies in a few hours</p>
       </div>
       <form class="enq-form" id="enqForm" novalidate>
         <label><span>Your name <b>*</b></span><input name="name" autocomplete="name" maxlength="60" placeholder="e.g. Priya Sharma" required></label>
-        <label><span>WhatsApp number <b>*</b></span><span class="enq-phone"><i>+91</i><input name="phone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" pattern="[6-9][0-9]{9}" placeholder="10-digit mobile number" required></span><small class="enq-count" id="enqCount">0 / 10</small></label>
+        <label><span>WhatsApp number <b>*</b></span><span class="enq-phone"><i>+91</i><input name="phone" type="tel" inputmode="numeric" autocomplete="tel-national" pattern="[6-9][0-9]{9}" placeholder="10-digit mobile number" required></span><small class="enq-count" id="enqCount">0 / 10</small></label>
         <label><span>Occasion</span><select name="occasion" id="enqOcc"></select></label>
         <label><span>Event date <small>(if fixed)</small></span><input name="date" type="date"></label>
         <label><span>City</span><input name="city" maxlength="40" placeholder="e.g. Jaipur"></label>
@@ -208,7 +212,10 @@
     <div class="cta-band">
       <h3>Ready for yours?</h3>
       <p class="muted">Wedding, kitty party, birthday or puja: message us and we'll design an invitation your guests will talk about.</p>
-      <a class="btn-glow" data-order href="#order">💬 Order on WhatsApp</a>
+      <div class="cta-btns">
+        <a class="btn-glow" data-order href="#order">💬 Order on WhatsApp</a>
+        <a class="btn-enq" href="#enquiry" data-enquiry><span>📝 <b>Send an enquiry</b></span></a>
+      </div>
     </div>
   </section>
 

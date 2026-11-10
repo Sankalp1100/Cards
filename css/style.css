@@ -1258,3 +1258,42 @@ html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; width: 0; heig
 .site-toast { position: fixed; left: 50%; bottom: 96px; z-index: 400; max-width: calc(100% - 32px); padding: 12px 18px; border-radius: 14px; background: #1b1530; border: 1px solid var(--line);
   color: var(--ink); font-size: .92rem; box-shadow: 0 12px 40px rgba(0,0,0,.5); transform: translate(-50%, 160%); transition: transform .3s; pointer-events: none; }
 .site-toast.show { transform: translate(-50%, 0); }
+
+/* ---------- Enquiry buttons + a little life (transform/opacity only: cheap, composited) ---------- */
+.nav-btns { display: flex; align-items: center; gap: 8px; }
+.nav-enq { position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 999px; font-size: .9rem; color: var(--ink);
+  border: 2px solid transparent; background: linear-gradient(#141127, #141127) padding-box, var(--grad) border-box; transition: transform .2s, box-shadow .2s; }
+.nav-enq b { font-weight: 800; letter-spacing: .01em; }
+.nav-enq:hover { transform: scale(1.05); box-shadow: 0 6px 22px rgba(255,61,139,.35); }
+.nav-enq::after, .btn-enq::after { content: ''; position: absolute; top: 0; left: 0; width: 40%; height: 100%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.35), transparent); transform: translateX(-160%) skewX(-20deg); animation: enqShine 4s ease-in-out infinite; }
+.nav-enq-dot { position: relative; width: 8px; height: 8px; border-radius: 50%; background: #4ade80; flex: none; }
+.nav-enq-dot::after, .enq-live i::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: inherit; animation: enqPing 1.8s ease-out infinite; }
+.cta-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.btn-enq { position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; padding: 15px 28px; border-radius: 999px; font-size: 1rem; color: var(--ink);
+  border: 2px solid transparent; background: linear-gradient(#141127, #141127) padding-box, var(--grad) border-box; transition: transform .25s, box-shadow .25s; }
+.btn-enq b { font-weight: 800; }
+.btn-enq:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 14px 44px rgba(255,61,139,.4); }
+.enq-mail { position: relative; width: 74px; height: 64px; justify-self: start; }
+.enq-env { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 20px; font-size: 2rem; background: var(--grad); box-shadow: 0 12px 30px rgba(255,61,139,.35); animation: bob 3s ease-in-out infinite; }
+.enq-mail i { position: absolute; left: 44px; top: 18px; font-style: normal; font-size: 1.05rem; opacity: 0; animation: enqFly 3.6s ease-out infinite; }
+.enq-mail i:nth-child(3) { animation-delay: 1.2s; } .enq-mail i:nth-child(4) { animation-delay: 2.4s; }
+.enq-live { display: inline-flex; align-items: center; gap: 9px; justify-self: start; padding: 7px 13px; border-radius: 999px; font-size: .82rem; font-weight: 600; color: #bbf7d0;
+  background: rgba(74,222,128,.1); border: 1px solid rgba(74,222,128,.3); }
+.enq-live i { position: relative; width: 8px; height: 8px; border-radius: 50%; background: #4ade80; }
+.enq-actions .btn-glow { position: relative; overflow: hidden; }
+.enq-box { position: relative; }
+.enq-box.enq-flash::before { content: ''; position: absolute; inset: -3px; border-radius: inherit; pointer-events: none; border: 3px solid var(--gold); animation: enqFlash 1.6s ease-out forwards; }
+@keyframes enqShine { 0%, 55% { transform: translateX(-160%) skewX(-20deg); } 85%, 100% { transform: translateX(360%) skewX(-20deg); } }
+@keyframes enqPing { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(2.8); opacity: 0; } }
+@keyframes enqFly { 0% { opacity: 0; transform: translate(0, 0) scale(.6); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(34px, -40px) scale(1.15) rotate(14deg); } }
+@keyframes enqFlash { 0% { opacity: 0; transform: scale(1.03); } 25% { opacity: 1; transform: scale(1); } 100% { opacity: 0; } }
+@media (max-width: 820px) { .enq-mail, .enq-live { justify-self: center; } }
+@media (max-width: 640px) {
+  .nav-btns { gap: 6px; }
+  .nav-enq { padding: 7px 11px; font-size: .78rem; gap: 6px; }
+  .nav-enq-dot { width: 6px; height: 6px; }
+  .cta-btns > * { width: 100%; }
+}
+@media (max-width: 370px) { .nav-enq-dot { display: none; } .nav-enq { padding: 7px 9px; } }
+@media (max-width: 480px) { .nav-now { display: none; } }
