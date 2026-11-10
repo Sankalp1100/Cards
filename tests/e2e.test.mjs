@@ -206,6 +206,11 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
   test('order form: without a business WhatsApp number it says ordering is not set up', async () => {
     await page.eval(`SITE.whatsapp = ''`);
     await page.eval(`document.querySelector('[data-order]').click()`);
+    // "Order now" first asks what they want; the invitation card goes on to the form
+    assert.equal(await page.eval(`document.querySelector('#osChoose').hidden`), false, 'the choice comes first');
+    assert.equal(await page.eval(`document.querySelectorAll('#osChoose [data-choose]').length`), 5);
+    await page.eval(`document.querySelector('[data-choose="card"]').click()`);
+    assert.equal(await page.eval(`document.querySelector('#orderForm').hidden`), false);
     assert.equal(await page.eval(`document.querySelector('#orderForm [name=design]').value`), '', 'general Order: no design yet');
     await next();
     await page.eval(fill('host1', 'Neha'));

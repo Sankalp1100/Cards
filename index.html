@@ -318,6 +318,18 @@
           <button type="button" class="btn-line small" id="osPdfBack">← Fill the form instead</button>
         </div>
       </div>
+      <!-- First question: what would you like? The rest of the sheet follows the answer -->
+      <div class="os-body os-choose" id="osChoose" hidden>
+        <h3>What would you like to order?</h3>
+        <p class="muted">Pick one: we take you straight to the right place.</p>
+        <div class="os-choices">
+          <button type="button" class="os-choice" data-choose="card" style="--i:0"><i>💌</i><b>Invitation link card</b><small>An animated invitation website, shared as one WhatsApp link</small></button>
+          <button type="button" class="os-choice" data-choose="video" style="--i:1"><i>🎬</i><b>Story video</b><small>A film for WhatsApp status and groups: pick one you like</small></button>
+          <button type="button" class="os-choice hot" data-choose="combo" style="--i:2"><i>✨</i><b>Card + video</b><small>Both together, matching: the favourite</small><em>Popular</em></button>
+          <button type="button" class="os-choice" data-choose="pdf" style="--i:3"><i>📄</i><b>I have my card PDF</b><small>Send it and we make the card or video from it</small></button>
+          <button type="button" class="os-choice" data-choose="ask" style="--i:4"><i>💬</i><b>Just a question</b><small>Price, time, anything: send an enquiry</small></button>
+        </div>
+      </div>
       <form id="orderForm" class="os-body" autocomplete="on" onsubmit="return false">
         <section class="os-step" data-step="0">
           <!-- Already have the card as a PDF: send it on WhatsApp and skip the form -->

@@ -5,7 +5,7 @@
   const PAGE = 24;
 
   // Every "Order" button opens the order form; it ends in one complete WhatsApp message.
-  document.querySelectorAll('[data-order]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); openOrder(); }));
+  document.querySelectorAll('[data-order]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); openChooser(); }));
 
   // ---------- Catalog ----------
   // Drawn at once from js/config.js, then again if the live settings in the database differ (catalog changes
@@ -629,13 +629,15 @@
   function openOrder(design, video = null) {
     orderRef = '';
     const e = Templates.get(design) ? allEntries[Templates.get(design).no - 1] : null;
-    ord = { design: e ? e.no : '', type: e ? e.occasion : video ? video.type : 'wedding', events: [], video };
+    ord = { design: e ? e.no : '', type: e ? e.occasion : video ? video.type : 'wedding', events: [], video, want: video ? 'Story video (+ invitation if wanted)' : '' };
     of.reset();
     of.elements.design.value = e ? e.no : '';
     of.elements.date.type = 'datetime-local';
     of.elements.date.min = nowLocal(); // past dates can't be picked
     dateHint(of.elements.date);
     $('#osDone').hidden = true;
+    $('#osChoose').hidden = true; of.hidden = false; $('#osVideo').hidden = false;
+    $('#osTitle').textContent = 'Order your invitation';
     $('.os-foot').hidden = false;
     $('#osDots').hidden = $('#osStepNo').hidden = false;
     renderOccasions();
@@ -646,6 +648,42 @@
     sheet.hidden = false;
     document.body.classList.add('sheet-open');
   }
+  // "Order now": first ask what they want, then go on from there
+  const WANTS = { card: 'Invitation link card', combo: 'Invitation card + story video' };
+  function showChooser(on) {
+    $('#osChoose').hidden = !on;
+    of.hidden = on;
+    $('.os-foot').hidden = on;
+    $('#osDots').hidden = $('#osStepNo').hidden = on;
+    $('#osTitle').textContent = on ? 'Let’s get started' : 'Order your invitation';
+  }
+  function openChooser() {
+    openOrder();
+    showChooser(true);
+  }
+  $('#osChoose').addEventListener('click', e => {
+    const b = e.target.closest('[data-choose]');
+    if (!b) return;
+    const c = b.dataset.choose;
+    if (window.Fun) Fun.buzz(12);
+    if (c === 'card' || c === 'combo') {
+      ord.want = WANTS[c];
+      showChooser(false);
+      $('#osVideo').hidden = c === 'card';
+      goTo(0);
+    } else if (c === 'pdf') {
+      ord.want = 'From my card PDF';
+      showChooser(false);
+      $('#osPdfFile').click();
+    } else if (c === 'video') {
+      closeOrder();
+      const v = $('#videos'); v && v.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      toast('🎬 Tap any film you like, then "Order this video"');
+    } else if (c === 'ask') {
+      closeOrder();
+      const a = document.querySelector('[data-enquiry]'); a && a.click();
+    }
+  });
   function closeOrder() {
     sheet.hidden = true;
     document.body.classList.remove('sheet-open');
@@ -667,6 +705,7 @@
   const loadPdfCard = () => typeof PdfCard !== 'undefined' ? Promise.resolve() : script('js/pdfcard.js');
   function showPdfDone(on) {
     $('#osPdfDone').hidden = !on;
+    if (on) $('#osChoose').hidden = true;
     of.hidden = on;
     $('.os-foot').hidden = on;
     $('#osDots').hidden = $('#osStepNo').hidden = on;
@@ -782,6 +821,7 @@
       ...Catalog.specialLines({ story: v('xStory'), families: v('xFamilies'), attire: v('xAttire') }), upi: v('xUpi'), hashtag: v('xHashtag'),
       giftNote: v('xGiftNote'), venueNote: v('xVenueNote'), thanks: v('xThanks'), title: v('xTitle'), tagline: v('xTagline'),
       gallery: of.elements.xGallery.checked, music: of.elements.xMusic.checked,
+      want: ord.want || '',
       video: ord.video ? ord.video.id : '', videoName: ord.video ? ord.video.name : '', videoLang: ord.video ? ord.video.lang : ''
     };
   }

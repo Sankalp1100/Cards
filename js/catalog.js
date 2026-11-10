@@ -95,6 +95,7 @@ const Catalog = {
     const guests = (order.guests || []).map(plain).filter(Boolean);
     const lines = ['*NEW INVITATION ORDER*', `• Design: ${e ? `*${Templates.serial(e.no)}* ${plain(e.name)}` : 'please suggest one'}`, `• Occasion: ${p.label}`];
     const add = (show, line) => { if (show) lines.push(line); };
+    add(order.want, `• Wants: ${plain(order.want)}`);
     add(names, `• Names: ${names}`);
     const nicks = [order.nick1, order.nick2].map(plain).filter(Boolean).join(' & ');
     add(nicks, `• Nicknames: ${nicks}`);

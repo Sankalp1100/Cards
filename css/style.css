@@ -1383,3 +1383,22 @@ body.studio-open .fun-progress { display: none; }
 .enq-wants .chip.nope { animation: chipNope .4s; }
 @keyframes chipNope { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
 .enq-form .fx-cal-head b { color: var(--ink); }
+
+/* ---------- Order: "what would you like?" first ---------- */
+.os-choose h3 { margin: 0 0 4px; }
+.os-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+.os-choice { position: relative; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 12px; row-gap: 3px; align-items: center; text-align: left;
+  padding: 16px; border-radius: 18px; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--ink); font: inherit; cursor: pointer;
+  opacity: 0; animation: choiceIn .45s cubic-bezier(.2,.9,.3,1.2) forwards; animation-delay: calc(var(--i) * 60ms); transition: border-color .2s, background .2s, transform .15s; -webkit-tap-highlight-color: transparent; }
+.os-choice i { grid-row: 1 / 3; display: grid; place-items: center; width: 50px; height: 50px; border-radius: 15px; background: rgba(255,255,255,.07); font-style: normal; font-size: 1.6rem; transition: transform .3s cubic-bezier(.3,1.6,.5,1); }
+.os-choice b { font-size: 1rem; }
+.os-choice small { color: var(--muted); font-size: .8rem; line-height: 1.35; }
+.os-choice:hover { border-color: rgba(255,201,92,.6); background: rgba(255,201,92,.07); }
+.os-choice:hover i { transform: scale(1.12) rotate(-6deg); }
+.os-choice:active { transform: scale(.97); }
+.os-choice.hot { border-color: transparent; background: linear-gradient(#1a1530, #1a1530) padding-box, var(--grad) border-box; border: 2px solid transparent; }
+.os-choice.hot i { background: var(--grad); }
+.os-choice em { position: absolute; top: -9px; right: 14px; padding: 2px 9px; border-radius: 999px; background: var(--grad); color: #140b1e; font: 800 .68rem 'Space Grotesk', sans-serif; font-style: normal; letter-spacing: .03em; }
+.os-choice:last-child:nth-child(odd) { grid-column: 1 / -1; }
+@keyframes choiceIn { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
+@media (max-width: 560px) { .os-choices { grid-template-columns: 1fr; gap: 10px; } .os-choice { padding: 13px 14px; } .os-choice i { width: 44px; height: 44px; font-size: 1.4rem; } }
