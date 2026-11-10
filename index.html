@@ -42,6 +42,7 @@
       <a href="#templates">Designs</a>
       <a href="#how">How it works</a>
       <a href="#faq">FAQ</a>
+      <a href="#enquiry">Enquiry</a>
     </div>
     <a class="nav-cta" data-order href="#order">Order now</a>
   </nav>
@@ -173,6 +174,36 @@
     </div>
   </section>
 
+  <!-- Enquiry: a few fields, sent to our WhatsApp as one tidy message -->
+  <section class="showcase enq" id="enquiry">
+    <div class="enq-box">
+      <div class="enq-head">
+        <p class="eyebrow">Have a question?</p>
+        <h2 class="section-h">Send an <span class="gradient-text">enquiry</span></h2>
+        <p class="muted">Tell us what you need. It opens WhatsApp with everything filled in, so you only tap send. We reply within a few hours.</p>
+      </div>
+      <form class="enq-form" id="enqForm" novalidate>
+        <label><span>Your name <b>*</b></span><input name="name" autocomplete="name" maxlength="60" placeholder="e.g. Priya Sharma" required></label>
+        <label><span>WhatsApp number <b>*</b></span><input name="phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="16" placeholder="98765 43210" required></label>
+        <label><span>Occasion</span><select name="occasion" id="enqOcc"></select></label>
+        <label><span>Event date <small>(if fixed)</small></span><input name="date" type="date"></label>
+        <label><span>City</span><input name="city" maxlength="40" placeholder="e.g. Jaipur"></label>
+        <fieldset class="enq-wants"><legend>What do you need?</legend>
+          <label class="chip"><input type="checkbox" name="want" value="Invitation card" checked> 💌 Invitation card</label>
+          <label class="chip"><input type="checkbox" name="want" value="Story video"> 🎬 Story video</label>
+          <label class="chip"><input type="checkbox" name="want" value="Printed card design"> 🖨️ Printed card design</label>
+          <label class="chip"><input type="checkbox" name="want" value="Something else"> ✨ Something else</label>
+        </fieldset>
+        <label class="enq-wide"><span>Your enquiry <b>*</b></span><textarea name="message" rows="4" maxlength="600" placeholder="e.g. We want a Hindi wedding card and a video for 3 functions. What will it cost and how soon can you make it?" required></textarea></label>
+        <p class="enq-err" id="enqErr" role="alert" hidden></p>
+        <div class="enq-actions">
+          <button type="submit" class="btn-glow">💬 Send on WhatsApp</button>
+          <small class="muted" id="enqNote">Your details go only to us, on WhatsApp.</small>
+        </div>
+      </form>
+    </div>
+  </section>
+
   <section class="showcase" id="order">
     <div class="cta-band">
       <h3>Ready for yours?</h3>
@@ -264,8 +295,32 @@
       </header>
       <ol class="os-dots" id="osDots" aria-hidden="true"><li></li><li></li><li></li><li></li><li></li></ol>
       <p class="os-stepno" id="osStepNo"></p>
+      <!-- After a PDF is chosen: WhatsApp is open; attach the PDF there and send -->
+      <div class="os-body os-pdf-done" id="osPdfDone" hidden>
+        <div class="os-pdf-tick">✅</div>
+        <h3>Almost done: send it on WhatsApp</h3>
+        <p class="muted" id="osPdfWhat"></p>
+        <ol class="os-pdf-steps">
+          <li>WhatsApp has opened with your order written in.</li>
+          <li>Tap <b>📎 Attach → Document</b> and pick <b id="osPdfName"></b>.</li>
+          <li>Tap <b>Send</b>. That's your order submitted: we reply with the price and the time it takes.</li>
+        </ol>
+        <div class="os-pdf-actions">
+          <button type="button" class="btn-glow" id="osPdfShare" hidden>📤 Share the PDF on WhatsApp</button>
+          <a class="btn-line" id="osPdfWa" target="_blank" rel="noopener">💬 Open WhatsApp again</a>
+          <button type="button" class="btn-line small" id="osPdfBack">← Fill the form instead</button>
+        </div>
+      </div>
       <form id="orderForm" class="os-body" autocomplete="on" onsubmit="return false">
         <section class="os-step" data-step="0">
+          <!-- Already have the card as a PDF: send it on WhatsApp and skip the form -->
+          <label class="os-pdf" id="osPdfPick">
+            <input type="file" id="osPdfFile" accept="application/pdf,.pdf" hidden>
+            <span class="os-pdf-icon">📄</span>
+            <span><b>Have your card as a PDF?</b><small>Choose it and we open WhatsApp with your order: no form to fill.</small></span>
+            <span class="os-pdf-go">Choose PDF</span>
+          </label>
+          <p class="os-or"><span>or fill in the details</span></p>
           <h3>What are we celebrating?</h3>
           <div class="os-occ" id="osOcc"></div>
           <p class="os-pick-h"><b>Pick a design</b> <small>(optional, we can suggest one)</small></p>

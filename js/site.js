@@ -547,6 +547,49 @@
     openOrder('', video);
   });
 
+  // ---------- Enquiry ----------
+  // A few fields, sent to our WhatsApp as one message (nothing is stored anywhere else)
+  const enq = $('#enqForm');
+  $('#enqOcc').innerHTML = ['wedding', 'engagement', 'reception', 'sangeet', 'haldi', 'mehendi', 'anniversary', 'bday', 'babyshower', 'naming', 'housewarming', 'ceremony', 'kitty', 'retirement', 'corporate']
+    .filter(k => PRESETS[k]).map(k => `<option value="${esc(PRESETS[k].label)}">${PRESETS[k].icon || ''} ${esc(PRESETS[k].label)}</option>`).join('') + '<option value="Other">✨ Other</option>';
+  // chips light up when ticked (also where :has() is missing)
+  enq.addEventListener('change', e => { if (e.target.name === 'want') e.target.closest('.chip').classList.toggle('on', e.target.checked); });
+  enq.querySelectorAll('[name="want"]').forEach(c => c.closest('.chip').classList.toggle('on', c.checked));
+  enq.addEventListener('input', e => { e.target.removeAttribute('aria-invalid'); if (!enq.querySelector('[aria-invalid]')) $('#enqErr').hidden = true; });
+  enq.querySelector('[name="phone"]').addEventListener('input', e => { e.target.value = e.target.value.replace(/[^\d+\s-]/g, ''); });
+  function enquiryMessage(f) {
+    const d = f.date ? new Date(f.date + 'T00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    const lines = ['*New enquiry from the website* 💌', '', `👤 *Name:* ${f.name}`, `📱 *WhatsApp:* ${f.phone}`, `🎉 *Occasion:* ${f.occasion}`];
+    if (d) lines.push(`📅 *Date:* ${d}`);
+    if (f.city) lines.push(`📍 *City:* ${f.city}`);
+    if (f.wants.length) lines.push(`🛍️ *Needs:* ${f.wants.join(', ')}`);
+    lines.push('', '💬 *Enquiry:*', f.message);
+    return lines.join('\n');
+  }
+  enq.addEventListener('submit', e => {
+    e.preventDefault();
+    const v = n => enq.elements[n].value.trim();
+    const f = { name: v('name'), phone: v('phone'), occasion: v('occasion'), date: v('date'), city: v('city'), message: v('message'),
+      wants: [...enq.querySelectorAll('[name="want"]:checked')].map(c => c.value) };
+    const bad = [];
+    enq.querySelectorAll('[aria-invalid]').forEach(x => x.removeAttribute('aria-invalid'));
+    if (!f.name) bad.push(['name', 'your name']);
+    if (!Core.mobile(f.phone)) bad.push(['phone', 'a 10-digit WhatsApp number']);
+    if (f.message.length < 5) bad.push(['message', 'your enquiry']);
+    if (bad.length) {
+      bad.forEach(([n]) => enq.elements[n].setAttribute('aria-invalid', 'true'));
+      $('#enqErr').textContent = `Please add ${bad.map(b => b[1]).join(', ')}.`;
+      $('#enqErr').hidden = false;
+      enq.elements[bad[0][0]].focus();
+      return;
+    }
+    $('#enqErr').hidden = true;
+    const url = Core.orderUrl(SITE.whatsapp, enquiryMessage(f));
+    if (url === '#order') { $('#enqErr').textContent = 'WhatsApp is not set up on this website yet. Please call us instead.'; $('#enqErr').hidden = false; return; }
+    window.open(url, '_blank', 'noopener') || (location.href = url);
+    $('#enqNote').textContent = '✅ WhatsApp opened with your enquiry: just tap send.';
+  });
+
   // ---------- Order form ----------
   const sheet = $('#orderSheet'), of = $('#orderForm'), STEPS = 5;
   let step = 0, ord = null;
@@ -576,7 +619,68 @@
   function closeOrder() {
     sheet.hidden = true;
     document.body.classList.remove('sheet-open');
+    showPdfDone(false);
   }
+
+  // ---------- Order with a card PDF ----------
+  // The customer picks their card's PDF: its names, date and venue are read (js/pdfcard.js, when it can) into a
+  // WhatsApp message to us, WhatsApp opens, and they attach the PDF there and send (a link cannot carry a file).
+  let pdfFile = null;
+  // a short note at the bottom of the screen
+  let toastTimer = 0;
+  function toast(msg) {
+    let t = document.getElementById('siteToast');
+    if (!t) { t = Object.assign(document.createElement('div'), { id: 'siteToast', className: 'site-toast', role: 'status' }); document.body.appendChild(t); }
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+  }
+  const loadPdfCard = () => typeof PdfCard !== 'undefined' ? Promise.resolve() : script('js/pdfcard.js');
+  function showPdfDone(on) {
+    $('#osPdfDone').hidden = !on;
+    of.hidden = on;
+    $('.os-foot').hidden = on;
+    $('#osDots').hidden = $('#osStepNo').hidden = on;
+  }
+  function pdfOrderMessage(file, d) {
+    const lines = ['*New order with a card PDF* 📄', ''];
+    if (d) {
+      const names = [d.host1, d.host2].filter(Boolean).join(' & ');
+      if (names) lines.push(`👤 *Names:* ${names}`);
+      if (d.type) lines.push(`🎉 *Occasion:* ${(PRESETS[d.type] || {}).label || d.type}`);
+      d.events.slice(0, 6).forEach(e => { const w = e.date ? new Date(e.date).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', ...(/T\d/.test(e.date) ? { hour: 'numeric', minute: '2-digit' } : {}) }) : ''; lines.push(`📅 ${e.name}${w ? ': ' + w : ''}`); });
+      if (d.venue) lines.push(`📍 *Venue:* ${d.venue}`);
+      lines.push('');
+    }
+    if (ord && ord.design) lines.push(`🎨 *Design:* ${ord.design}`);
+    if (ord && ord.video) lines.push(`🎬 *Video:* ${ord.video.name}`);
+    lines.push(`📎 I'm attaching my card here: *${file.name}*`, '', 'Please tell me the price and how soon it can be ready. 🙏');
+    return lines.join('\n');
+  }
+  $('#osPdfFile').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') return toast('Please choose the PDF of your card');
+    pdfFile = file;
+    // WhatsApp opens straight away (a browser allows a new tab only right after the tap); the details follow if they can be read in time
+    const win = window.open('', '_blank');
+    let details = null;
+    try { await loadPdfCard(); const r = await Promise.race([PdfCard.read(file), new Promise((_, no) => setTimeout(() => no(new Error('slow')), 6000))]); details = r.readable ? r.details : null; } catch (err) { /* sent without the details */ }
+    const url = Core.orderUrl(SITE.whatsapp, pdfOrderMessage(file, details));
+    if (win) win.location.href = url; else location.href = url;
+    $('#osPdfWa').href = url;
+    $('#osPdfName').textContent = file.name;
+    $('#osPdfWhat').textContent = details && details.host1 ? `We read: ${[details.host1, details.host2].filter(Boolean).join(' & ')}${details.events.length ? ` · ${details.events.length} function${details.events.length === 1 ? '' : 's'}` : ''}${details.venue ? ' · ' + details.venue : ''}.` : 'Your order message is ready in WhatsApp.';
+    $('#osPdfShare').hidden = !(navigator.canShare && navigator.canShare({ files: [file] }));
+    showPdfDone(true);
+  });
+  // Phones: send the PDF itself to WhatsApp from the share sheet
+  $('#osPdfShare').addEventListener('click', async () => {
+    if (!pdfFile) return;
+    try { await navigator.share({ files: [pdfFile], title: 'My card', text: `My card for the order: ${pdfFile.name}` }); }
+    catch (err) { if (err.name !== 'AbortError') toast('Could not share: attach it in WhatsApp with 📎'); }
+  });
+  $('#osPdfBack').addEventListener('click', () => showPdfDone(false));
 
   function renderOccasions() {
     $('#osOcc').innerHTML = Object.entries(PRESETS).map(([k, p]) =>
