@@ -28,6 +28,10 @@ const page = await launch();
 try {
   await page.goto(`http://127.0.0.1:${port}/poster`);
   await page.eval('Films.fontsReady()');
+  // every concept's letters must be in before a picture is drawn
+  const fams = ['Playfair Display', 'Cinzel', 'Great Vibes', 'Cormorant Garamond', 'Jost', 'DM Serif Display', 'Caveat', 'Righteous', 'Bebas Neue', 'Poiret One', 'UnifrakturMaguntia', 'Cinzel Decorative', 'Marcellus', 'Pacifico', 'Pinyon Script', 'Amita', 'Tiro Devanagari Hindi', 'Yatra One'];
+  await page.waitFor(`${JSON.stringify(fams)}.every(f => [...document.fonts].some(x => x.family.replace(/"/g, '') === f && x.status === 'loaded'))`, 30000)
+    .catch(() => console.warn('some fonts did not load: pictures may use a stand-in letter'));
   const ids = await page.eval('Films.LIST.map(f => f.id)');
   for (const id of ids) {
     const url = await page.eval(`(() => {

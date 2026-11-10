@@ -56,31 +56,45 @@ const Films = (() => {
   const OCC_LABEL = { wedding: 'Wedding', engagement: 'Engagement', reception: 'Reception', sangeet: 'Sangeet', haldi: 'Haldi', mehendi: 'Mehendi',
     anniversary: 'Anniversary', birthday: 'Birthday', babyshower: 'Baby shower', naming: 'Naming ceremony', housewarming: 'Griha pravesh', puja: 'Puja' };
   function rng(seed) { return () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }; }
-  const LIST = (() => {
-    const list = [{ id: 'film-royal-darbar', name: 'Royal Darbar', occ: 'wedding', theme: 'maroon', frame: 'toran', open: ['burst', 'doors'], layout: 'stack', fx: 'sparkle', tune: 'shehnai', lang: 'en', cast: 0 }];
+  function buildList() {
+    const list = [{ id: 'film-royal-darbar', name: 'Royal Darbar', concept: 'heritage', occ: 'wedding', theme: 'maroon', frame: 'toran', open: ['burst', 'doors'], layout: 'stack', fx: 'sparkle', tune: 'shehnai', lang: 'en', cast: 0 }];
     const pairs = [];
     Object.keys(THEMES).forEach(t => Object.keys(FRAMES).forEach(f => { if (!(t === 'maroon' && f === 'toran')) pairs.push([t, f]); }));
     const r = rng(20261110);
     for (let i = pairs.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [pairs[i], pairs[j]] = [pairs[j], pairs[i]]; }
     // neighbours never share a palette or a frame
     const picked = [];
-    while (picked.length < 80) {
+    while (picked.length < 14) {
       const last = picked[picked.length - 1] || list[0];
       const k = pairs.findIndex(([t, f]) => !last || (t !== (last[0] || last.theme) && f !== (last[1] || last.frame)));
       picked.push(pairs.splice(k < 0 ? 0 : k, 1)[0]);
     }
     const SOLO = ['birthday', 'naming', 'housewarming', 'puja'];
     let solo = 0;
-    picked.forEach(([theme, frame], n) => {
-      const i = n + 1, occ = OCC_SEQ[i % OCC_SEQ.length], tunes = TUNE_FOR[occ];
-      const name = `${THEMES[theme].word} ${FRAMES[frame]}`;
-      list.push({ id: 'film-' + name.toLowerCase().replace(/\s+/g, '-'), name, occ, theme, frame, open: [OPENINGS[i % OPENINGS.length]],
-        layout: ['stack', 'mono', 'split'][i % 3], fx: FX[(i * 5 + Math.floor(i / 6)) % FX.length], tune: tunes[i % tunes.length], lang: i % 3 === 2 ? 'hi' : 'en', cast: i, solo: SOLO.includes(occ) ? solo++ : 0 });
-    });
+    const groups = { heritage: picked.slice(0, 14).map(([theme, frame], n) => ({ concept: 'heritage', theme, frame, occ: OCC_SEQ[(n + 1) % OCC_SEQ.length], n })) };
+    Object.keys(CONCEPT_OCC).forEach(c => { groups[c] = CONCEPT_OCC[c].map((occ, n) => ({ concept: c, pal: n, occ, n })); });
+    // smooth weighted round robin: each concept comes up in proportion, never twice in a row
+    const keys = Object.keys(groups), weight = Object.fromEntries(keys.map(k => [k, groups[k].length])), total = keys.reduce((s, k) => s + weight[k], 0), cur = Object.fromEntries(keys.map(k => [k, 0]));
+    let last = 'heritage';
+    for (let i = 1; i <= total; i++) {
+      keys.forEach(k => { cur[k] += weight[k]; });
+      const k = keys.filter(x => groups[x].length && x !== last).sort((a, b) => cur[b] - cur[a])[0] || keys.find(x => groups[x].length);
+      cur[k] -= total; last = k;
+      const g = groups[k].shift(), occ = g.occ, tunes = TUNE_FOR[occ];
+      const base = { occ, tune: tunes[i % tunes.length], lang: i % 3 === 2 ? 'hi' : 'en', cast: i, solo: SOLO.includes(occ) ? solo++ : 0 };
+      if (k === 'heritage') {
+        const name = `${THEMES[g.theme].word} ${FRAMES[g.frame]}`;
+        list.push({ id: 'film-' + name.toLowerCase().replace(/\s+/g, '-'), name, concept: 'heritage', theme: g.theme, frame: g.frame, open: [OPENINGS[i % OPENINGS.length]],
+          layout: ['stack', 'mono', 'split'][i % 3], fx: FX[(i * 5 + Math.floor(i / 6)) % FX.length], ...base });
+      } else {
+        const C = CONCEPTS[k], pal = C.pals[g.pal], name = `${pal.word} ${C.short}`;
+        list.push({ id: 'film-' + `${k}-${pal.word}`.toLowerCase().replace(/\s+/g, '-'), name, concept: k, pal: g.pal, theme: `${k}:${pal.word}`, frame: k, open: [k], fx: C.fx, ...base });
+      }
+    }
     return list;
-  })();
-  const byId = Object.fromEntries(LIST.map(f => [f.id, f]));
-  const describe = f => `${OCC_LABEL[f.occ]} · ${f.lang === 'hi' ? 'हिन्दी' : 'English'}`;
+  }
+  const conceptName = f => f.concept && f.concept !== 'heritage' ? CONCEPTS[f.concept].name : 'Royal Heritage';
+  const describe = f => `${conceptName(f)} · ${OCC_LABEL[f.occ]}${f.lang === 'hi' ? ' · हिन्दी' : ''}`;
 
   // ---------- What each film says (sample details, in English or Hindi) ----------
   function details(film, lang) {
@@ -251,12 +265,17 @@ const Films = (() => {
   const out = x => 1 - Math.pow(1 - clamp(x), 3);
   const ap = (lt, start, dur = .7) => out((lt - start) / dur); // 0 → 1 as an element arrives
   function hash(n) { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+  // The letters (each concept has its own; Hindi always in Amita / Yatra One / Tiro Devanagari Hindi)
+  const FACE0 = { name: '700 {z}px "Playfair Display", serif', head: '400 {z}px "Cinzel", serif', caps: '400 {z}px "Cinzel", serif',
+    body: 'italic 400 {z}px "Cormorant Garamond", serif', script: '400 {z}px "Great Vibes", cursive' };
+  let FACE = FACE0;
+  const lat = (k, z) => FACE[k].replace('{z}', z);
   const FONT = {
-    name: (z, hi) => hi ? `700 ${z}px "Amita", serif` : `700 ${z}px "Playfair Display", serif`,
-    head: (z, hi) => hi ? `${z}px "Yatra One", serif` : `400 ${z}px "Cinzel", serif`,
-    caps: (z, hi) => hi ? `${z}px "Tiro Devanagari Hindi", serif` : `400 ${z}px "Cinzel", serif`,
-    body: (z, hi) => hi ? `${z}px "Tiro Devanagari Hindi", serif` : `italic 400 ${z}px "Cormorant Garamond", serif`,
-    script: (z, hi) => hi ? `700 ${z}px "Amita", serif` : `400 ${z}px "Great Vibes", cursive`,
+    name: (z, hi) => hi ? `700 ${z}px "Amita", serif` : lat('name', z),
+    head: (z, hi) => hi ? `${z}px "Yatra One", serif` : lat('head', z),
+    caps: (z, hi) => hi ? `${z}px "Tiro Devanagari Hindi", serif` : lat('caps', z),
+    body: (z, hi) => hi ? `${z}px "Tiro Devanagari Hindi", serif` : lat('body', z),
+    script: (z, hi) => hi ? `700 ${z}px "Amita", serif` : lat('script', z),
     deva: z => `${z}px "Tiro Devanagari Hindi", "Yatra One", serif`
   };
   let NOW = 0; // the film's clock, for the foil shimmer
@@ -679,8 +698,7 @@ const Films = (() => {
     diyas(ctx, th, cx, 1500, ap(lt, 2.2), lt);
   }
   function sceneCard(ctx, film, th, D, sc, lt) {
-    frame(ctx, film, th, 1, lt);
-    const c = card(ctx, film, th, ap(lt, 0, .8), 120);
+    const c = holder(ctx, film, th, lt, 120); th = c.th || th;
     const top = c.y + (film.frame === 'arch' ? 170 : 110), room = c.y + c.h - 130 - top;
     const used = cardBody(ctx, film, th, D, c, top, lt, true) - top;
     cardBody(ctx, film, th, D, c, top + Math.max(0, (room - used) / 2), lt, false);
@@ -736,8 +754,7 @@ const Films = (() => {
     diyas(ctx, th, cx, y + h + 330, ap(lt, 1.5), lt);
   }
   function sceneVenue(ctx, film, th, D, sc, lt) {
-    frame(ctx, film, th, 1, lt);
-    const c = card(ctx, film, th, ap(lt, 0, .8), 100);
+    const c = holder(ctx, film, th, lt, 100); th = c.th || th;
     const top = c.y + (film.frame === 'arch' ? 230 : 130), room = c.y + c.h - 130 - top;
     const used = venueBody(ctx, film, th, D, c, top, lt, true) - top;
     venueBody(ctx, film, th, D, c, top + Math.max(0, (room - used) / 2), lt, false);
@@ -762,9 +779,8 @@ const Films = (() => {
     return y;
   }
   function sceneRegards(ctx, film, th, D, sc, lt) {
+    const c = holder(ctx, film, th, lt, 100), cx = c.cx; th = c.th || th;
     const lightTh = { ...th, dark: false };
-    frame(ctx, film, th, 1, lt);
-    const c = card(ctx, film, th, ap(lt, 0, .8), 100), cx = c.cx;
     const groups = [D.regards, D.compliments].filter(Boolean);
     const blockH = groups.reduce((h, g) => h + 90 + (g.length - 1) * 76, 0) + (groups.length - 1) * 70 + 220;
     let y = c.y + (film.frame === 'arch' ? 90 : 20) + (c.h - blockH) / 2 + 60, n = 0;
@@ -776,9 +792,8 @@ const Films = (() => {
     monogram(ctx, th, cx, y + 120, 62, D.mono, ap(lt, 1.8), false);
   }
   function sceneNote(ctx, film, th, D, sc, lt) {
+    const c = holder(ctx, film, th, lt, 100), cx = c.cx; th = c.th || th;
     const lightTh = { ...th, dark: false };
-    frame(ctx, film, th, 1, lt);
-    const c = card(ctx, film, th, ap(lt, 0, .8), 100), cx = c.cx;
     const by = c.y + (film.frame === 'arch' ? 230 : 150), bw = c.w - 100, bh = 330;
     ctx.save(); ctx.globalAlpha = ap(lt, .3); rr(ctx, cx - bw / 2, by, bw, bh, 18); ctx.fillStyle = th.accent; ctx.fill(); stroke(ctx, th.gold[1], 3);
     rr(ctx, cx - 150, by - 26, 300, 52, 26); ctx.fillStyle = goldFill(ctx, th, by + 10, 60); ctx.fill(); ctx.restore();
@@ -820,10 +835,813 @@ const Films = (() => {
   }
   const SCENES = { open: sceneOpen, title: sceneTitle, card: sceneCard, day: sceneDay, venue: sceneVenue, regards: sceneRegards, note: sceneNote, finale: sceneFinale };
 
+  // ---------- Concepts: eleven more ways to tell the story (Royal Heritage is the frames above) ----------
+  // Each concept has its own palettes, letters, opening, names screen, day screens, a holder for the words
+  // (a card, a polaroid note, a ticket, a scroll, a newspaper column…) and its own way from one screen to the next.
+  const P6 = (word, dark, bg, gold, paper, ink, accent, x = {}) => ({ word, dark, bg, gold, paper, ink, accent, days: [accent, accent, accent], ...x });
+  const face = (name, head, caps, body, script) => ({ name, head, caps, body, script });
+  const tw = (th, dark) => ({ ...th, dark });
+  const credit = (ctx, th, D, lt, y, col) => {
+    if (D.credit) text(ctx, th, D.credit === 'Designed by Sankalp' ? 'Designed with ♥ by Sankalp' : D.credit, W / 2, y, { z: 44, font: 'script', color: col, a: ap(lt, 2.6) });
+    if (D.site) text(ctx, th, D.site, W / 2, y + 56, { z: 28, font: 'caps', color: col, a: ap(lt, 2.8), ls: 1 });
+  };
+  const who2 = (D, hi) => D.solo ? D.A : `${D.A} ${hi ? 'संग' : '&'} ${D.B}`;
+  const dayLabel = (D, sc) => sc.n > 1 ? (D.lang === 'hi' ? `दिन ${sc.i + 1}` : `DAY 0${sc.i + 1}`) : (D.lang === 'hi' ? 'कार्यक्रम' : 'THE CELEBRATION');
+  // a day's functions as rows: name on the left, time on the right
+  function rows(ctx, th, day, x, y, w, lt, o = {}) {
+    const { z = 58, gap = 120, col = th.ink, tcol = th.accent, start = .7, align = 'split' } = o;
+    day.events.forEach((e, i) => {
+      const a = ap(lt, start + i * .22), yy = y + i * gap;
+      if (align === 'center') {
+        text(ctx, th, e.name, x + w / 2, yy, { z, font: 'name', color: col, a, rise: 24, maxW: w });
+        text(ctx, th, e.time, x + w / 2, yy + z * .75, { z: z * .5, font: 'caps', color: tcol, a, maxW: w });
+      } else {
+        text(ctx, th, e.name, x, yy, { z, font: 'name', color: col, align: 'left', a, rise: 24, maxW: w * .62 });
+        text(ctx, th, e.time, x + w, yy, { z: z * .52, font: 'caps', color: tcol, align: 'right', a, maxW: w * .36 });
+        ctx.save(); ctx.globalAlpha = a * .35; ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, yy + 30); ctx.lineTo(x + w, yy + 30); ctx.stroke(); ctx.restore();
+      }
+    });
+  }
+  const dateBits = (D, sc) => ({ d: String(sc.day.d).padStart(2, '0'), m: String(sc.day.month).toUpperCase(), wd: sc.day.wd });
+
+  // ===== Minimal Modern: white space, big serif names set to the left, thin lines =====
+  const MINIMAL = {
+    short: 'Minimal', name: 'Minimal Modern', trans: 'up', fx: 'none',
+    face: face('400 {z}px "DM Serif Display", serif', '600 {z}px "Jost", sans-serif', '600 {z}px "Jost", sans-serif', '400 {z}px "Jost", sans-serif', '400 {z}px "Great Vibes", cursive'),
+    pals: [P6('Ivory', false, ['#f8f5ef', '#eee7dc'], ['#c9a46a', '#8c6d3f', '#5a4426'], '#ffffff', '#1f1f1f', '#8c6d3f'),
+      P6('Sage', false, ['#f0f3ec', '#e0e7d8'], ['#93a57f', '#5f7350', '#3d4a33'], '#fbfcf9', '#22301c', '#5f7350'),
+      P6('Terracotta', false, ['#f7efe7', '#ecdbca'], ['#d9926b', '#b05f3a', '#6e3720'], '#fffaf6', '#3a2218', '#b05f3a'),
+      P6('Dusk', false, ['#f8efef', '#eddada'], ['#d29c9c', '#a86868', '#6b3d3d'], '#fffafa', '#3b2626', '#a86868'),
+      P6('Ink', false, ['#f0f2f7', '#dfe4ee'], ['#7d8fb3', '#34466b', '#1d2a45'], '#ffffff', '#16213a', '#34466b'),
+      P6('Noir', true, ['#181818', '#0b0b0b'], ['#ffffff', '#d9c7a7', '#9a8462'], '#1d1d1d', '#f4f4f4', '#d9c7a7')],
+    bg(ctx, th, t) {
+      const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]);
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.save(); ctx.globalAlpha = .18; ctx.strokeStyle = th.ink; ctx.lineWidth = 1.5; ctx.strokeRect(60, 60, W - 120, H - 120); ctx.restore();
+    },
+    open(ctx, film, th, D, sc, lt) {
+      const cx = W / 2, cy = H / 2, k1 = ease(lt / 1.1), k2 = ease((lt - 1) / 1.1);
+      ctx.save(); ctx.strokeStyle = th.ink; ctx.lineWidth = 2.5; ctx.globalAlpha = .8;
+      const hw = 340 * k1;
+      if (k2 <= 0) { ctx.beginPath(); ctx.moveTo(cx - hw, cy); ctx.lineTo(cx + hw, cy); ctx.stroke(); }
+      else { const hh = 420 * k2; ctx.strokeRect(cx - 340, cy - hh, 680, hh * 2); }
+      ctx.restore();
+      text(ctx, th, D.solo ? D.A.slice(0, 1) : `${D.A.slice(0, 1)} & ${D.B.slice(0, 1)}`, cx, cy + 50, { z: 170, font: 'name', color: th.ink, a: ap(lt, 1.8, .9) });
+      text(ctx, th, D.heading.toUpperCase(), cx, cy + 200, { z: 30, font: 'caps', color: th.accent, a: ap(lt, 2.2), ls: 6 });
+    },
+    title(ctx, film, th, D, sc, lt) {
+      const x = 140, sl = s => (1 - ap(lt, s)) * -70, hi = D.lang === 'hi';
+      text(ctx, th, (hi ? D.heading : D.heading.toUpperCase()), x + sl(.1), 470, { z: 34, font: 'caps', color: th.accent, align: 'left', a: ap(lt, .1), ls: 6 });
+      if (D.solo) text(ctx, th, D.A, x + sl(.4), 820, { z: 170, font: 'name', color: th.ink, align: 'left', a: ap(lt, .4), maxW: 820 });
+      else {
+        text(ctx, th, D.A, x + sl(.4), 740, { z: 160, font: 'name', color: th.ink, align: 'left', a: ap(lt, .4), maxW: 820 });
+        text(ctx, th, '&', x + 10 + sl(.7), 900, { z: 150, font: 'script', color: th.accent, align: 'left', a: ap(lt, .7) });
+        text(ctx, th, D.B, x + sl(1), 1080, { z: 160, font: 'name', color: th.ink, align: 'left', a: ap(lt, 1), maxW: 820 });
+      }
+      ctx.save(); ctx.globalAlpha = ap(lt, 1.3); ctx.strokeStyle = th.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, 1160); ctx.lineTo(x + 320 * ap(lt, 1.3, 1), 1160); ctx.stroke(); ctx.restore();
+      text(ctx, th, D.date, x, 1240, { z: 42, font: 'caps', color: th.ink, align: 'left', a: ap(lt, 1.5), maxW: 780, ls: 2 });
+      text(ctx, th, [D.V, D.CITY].filter(Boolean).join(', '), x, 1305, { z: 34, font: 'body', color: th.accent, align: 'left', a: ap(lt, 1.7), maxW: 780 });
+      ctx.save(); ctx.translate(W - 110, 960); ctx.rotate(-Math.PI / 2);
+      text(ctx, th, hi ? 'तारीख़ याद रखें' : 'SAVE THE DATE', 0, 0, { z: 28, font: 'caps', color: th.ink, a: ap(lt, 1.9) * .6, ls: 10 });
+      ctx.restore();
+    },
+    panel(ctx, film, th, a) {
+      const r = { x: 120, y: 290, w: W - 240, h: 1330 }; r.cx = r.x + r.w / 2;
+      ctx.save(); ctx.globalAlpha *= clamp(a); ctx.strokeStyle = th.ink; ctx.globalAlpha *= .3; ctx.lineWidth = 2; ctx.strokeRect(r.x, r.y, r.w, r.h); ctx.restore();
+      return r;
+    },
+    day(ctx, film, th, D, sc, lt) {
+      const x = 140, b = dateBits(D, sc);
+      text(ctx, th, dayLabel(D, sc), x, 430, { z: 32, font: 'caps', color: th.accent, align: 'left', a: ap(lt, .1), ls: 6 });
+      ctx.save(); ctx.globalAlpha = ap(lt, .2); ctx.font = `400 360px "DM Serif Display", serif`; ctx.lineWidth = 3; ctx.strokeStyle = th.accent; ctx.textAlign = 'left'; ctx.strokeText(b.d, x - 10, 780); ctx.restore();
+      text(ctx, th, `${b.m} · ${b.wd}`, x, 860, { z: 40, font: 'caps', color: th.ink, align: 'left', a: ap(lt, .4), ls: 3 });
+      rows(ctx, th, sc.day, x, 1040, W - 2 * x, lt, { z: 66, gap: 150, start: .6 });
+    }
+  };
+
+  // ===== Watercolor Bloom: soft washes, roses blooming at the corners, names in script =====
+  function flower(ctx, x, y, r, cols, rot, k) {
+    if (k <= 0) return;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(k, k);
+    for (let ring = 0; ring < 3; ring++) {
+      const n = [8, 7, 5][ring], rr2 = r * [1, .72, .45][ring];
+      ctx.fillStyle = cols[ring % cols.length]; ctx.globalAlpha = .82;
+      for (let i = 0; i < n; i++) { ctx.save(); ctx.rotate(i * Math.PI * 2 / n + ring * .4); ctx.beginPath(); ctx.ellipse(0, -rr2 * .55, rr2 * .42, rr2 * .6, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+    }
+    ctx.globalAlpha = 1; ctx.fillStyle = '#f6d48a'; ctx.beginPath(); ctx.arc(0, 0, r * .16, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  function leaf(ctx, x, y, len, ang, col, k = 1) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(k, k); ctx.fillStyle = col; ctx.globalAlpha = .85;
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(len * .5, -len * .28, len, 0); ctx.quadraticCurveTo(len * .5, len * .28, 0, 0); ctx.fill(); ctx.restore();
+  }
+  function bouquet(ctx, th, x, y, s, t, k, flip = 1) {
+    const sw = Math.sin(t * 1.2) * .04;
+    [[-.9, .2], [-.3, -.8], [.6, -.5], [1, .5], [-.5, 1], [.3, 1.05]].forEach(([a, b], i) => leaf(ctx, x + a * 40 * s * flip, y + b * 40 * s, 120 * s, Math.atan2(b, a * flip) + sw, i % 2 ? th.leaf : shade(th.leaf, -.2), k));
+    flower(ctx, x, y, 80 * s, th.fl, sw, k);
+    flower(ctx, x + 105 * s * flip, y + 60 * s, 58 * s, [th.fl[1], th.fl[2], th.fl[0]], .6 + sw, ease(k * 1.2 - .2));
+    flower(ctx, x - 70 * s * flip, y + 95 * s, 48 * s, [th.fl[2], th.fl[0], th.fl[1]], 1.2 + sw, ease(k * 1.4 - .4));
+  }
+  const FLORAL = {
+    short: 'Bloom', name: 'Watercolor Bloom', trans: 'zoom', fx: 'petals',
+    face: face('400 {z}px "Great Vibes", cursive', 'italic 400 {z}px "Cormorant Garamond", serif', '400 {z}px "Cinzel", serif', 'italic 400 {z}px "Cormorant Garamond", serif', '400 {z}px "Great Vibes", cursive'),
+    pals: [P6('Rose', false, ['#fff8f6', '#fbe4e1'], ['#e7b98a', '#c48b52', '#7a5226'], '#ffffff', '#6b2f3a', '#c45c74', { fl: ['#f4a6b5', '#f9cdd5', '#e07b92'], leaf: '#8fb08a' }),
+      P6('Peony', false, ['#fff6fa', '#f8dceb'], ['#e7b98a', '#b8875a', '#704a26'], '#ffffff', '#5e1f45', '#c2407e', { fl: ['#e86aa8', '#f6b3d2', '#c93d84'], leaf: '#7fa37a' }),
+      P6('Lavender', false, ['#faf7ff', '#e9e0f8'], ['#cdb48a', '#a28a5c', '#5e4a2a'], '#ffffff', '#3f2a63', '#8a63c9', { fl: ['#b79ae6', '#dccdf6', '#8f6cd1'], leaf: '#88a98c' }),
+      P6('Apricot', false, ['#fff8f1', '#fde3cc'], ['#e9b16a', '#c47f26', '#6e420c'], '#ffffff', '#6a2f12', '#d9733d', { fl: ['#f7a76c', '#fcd0aa', '#e8834a'], leaf: '#91ad7c' }),
+      P6('Buttercup', false, ['#fffdf3', '#fbf1c9'], ['#e3c35d', '#b89a2e', '#6b5810'], '#ffffff', '#4f4310', '#c9a227', { fl: ['#f8d55c', '#fff0a8', '#f0b72f'], leaf: '#8db27a' }),
+      P6('Hydrangea', false, ['#f6fbff', '#dcebf9'], ['#c9b07a', '#9c8452', '#5b4a24'], '#ffffff', '#1f3a5c', '#4a7fc0', { fl: ['#8db8ea', '#c7defa', '#6a96d9'], leaf: '#86ab92' })],
+    bg(ctx, th, t) {
+      const g = ctx.createLinearGradient(0, 0, W, H); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      [[120, 160, 420, th.fl[1]], [W - 80, H - 220, 480, th.fl[0]], [W - 160, 360, 260, th.leaf], [140, H - 420, 300, th.fl[2]]].forEach(([x, y, r, c]) => {
+        const w2 = ctx.createRadialGradient(x, y, 10, x, y, r); w2.addColorStop(0, c + '55'); w2.addColorStop(1, c + '00'); ctx.fillStyle = w2; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      });
+    },
+    open(ctx, film, th, D, sc, lt) {
+      bouquet(ctx, th, 170, 230, 1.5, lt, ease(lt / 1.4));
+      bouquet(ctx, th, W - 170, H - 330, 1.6, lt, ease((lt - .4) / 1.4), -1);
+      text(ctx, th, D.heading, W / 2, H / 2 - 40, { z: 70, font: 'head', color: th.accent, a: ap(lt, 1.4) });
+      text(ctx, th, who2(D, D.lang === 'hi'), W / 2, H / 2 + 110, { z: 120, font: 'name', color: th.ink, a: ap(lt, 1.9), maxW: 860 });
+    },
+    title(ctx, film, th, D, sc, lt) {
+      const cx = W / 2;
+      for (let i = 0; i < 7; i++) { const a = Math.PI * (1.08 + i * .14), x = cx + Math.cos(a) * 520, y = 600 + Math.sin(a) * 300; flower(ctx, x, y, 46 + (i % 2) * 18, i % 2 ? th.fl : [th.fl[2], th.fl[1], th.fl[0]], i, ease(lt * 1.6 - i * .15)); leaf(ctx, x + 30, y + 30, 70, a + 2, th.leaf, ease(lt * 1.6 - i * .15)); }
+      text(ctx, th, D.heading, cx, 560, { z: 64, font: 'head', color: th.accent, a: ap(lt, .4) });
+      if (D.solo) text(ctx, th, D.A, cx, 900, { z: 190, font: 'name', color: th.ink, a: ap(lt, .7), rise: 30, maxW: 900 });
+      else {
+        text(ctx, th, D.A, cx, 820, { z: 180, font: 'name', color: th.ink, a: ap(lt, .7), rise: 30, maxW: 900 });
+        text(ctx, th, D.lang === 'hi' ? 'संग' : 'and', cx, 920, { z: 44, font: 'caps', color: th.accent, a: ap(lt, 1), ls: 4 });
+        text(ctx, th, D.B, cx, 1090, { z: 180, font: 'name', color: th.ink, a: ap(lt, 1.2), rise: 30, maxW: 900 });
+      }
+      text(ctx, th, D.date, cx, 1240, { z: 40, font: 'caps', color: th.ink, a: ap(lt, 1.6), ls: 2, maxW: 820 });
+      text(ctx, th, [D.V, D.CITY].filter(Boolean).join(' · '), cx, 1310, { z: 40, font: 'body', color: th.accent, a: ap(lt, 1.8), maxW: 820 });
+      bouquet(ctx, th, cx, 1520, 1.1, lt, ease((lt - 1.6) / 1));
+    },
+    panel(ctx, film, th, a) {
+      const r = { x: 130, y: 340, w: W - 260, h: 1240 }; r.cx = r.x + r.w / 2;
+      ctx.save(); ctx.globalAlpha *= clamp(a); ctx.shadowColor = 'rgba(120,60,60,.18)'; ctx.shadowBlur = 50; rr(ctx, r.x, r.y, r.w, r.h, 40); ctx.fillStyle = th.paper; ctx.fill(); ctx.restore();
+      bouquet(ctx, th, r.x + 40, r.y + 40, .9, NOW, clamp(a)); bouquet(ctx, th, r.x + r.w - 40, r.y + r.h - 40, .7, NOW, clamp(a), -1);
+      return r;
+    },
+    day(ctx, film, th, D, sc, lt) {
+      const cx = W / 2, cy = 700, b = dateBits(D, sc);
+      for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2 + lt * .1; flower(ctx, cx + Math.cos(a) * 260, cy + Math.sin(a) * 260, 40 + (i % 3) * 8, i % 2 ? th.fl : [th.fl[1], th.fl[2], th.fl[0]], a, ease(lt * 2 - i * .08)); leaf(ctx, cx + Math.cos(a + .2) * 250, cy + Math.sin(a + .2) * 250, 60, a + 1.8, th.leaf, ease(lt * 2 - i * .08)); }
+      text(ctx, th, dayLabel(D, sc), cx, cy - 80, { z: 40, font: 'caps', color: th.accent, a: ap(lt, .4), ls: 3 });
+      text(ctx, th, b.d, cx, cy + 70, { z: 170, font: 'head', color: th.ink, a: ap(lt, .5) });
+      text(ctx, th, `${b.m} · ${b.wd}`, cx, cy + 130, { z: 32, font: 'caps', color: th.accent, a: ap(lt, .6), maxW: 380 });
+      rows(ctx, th, sc.day, 140, 1150, W - 280, lt, { z: 92, gap: 170, align: 'center', start: .8 });
+    }
+  };
+
+  // ===== Cinema Night: letterbox, sweeping lights, "starring", credits that roll =====
+  const CINEMA = {
+    short: 'Cinema', name: 'Cinema Night', trans: 'fade', fx: 'stars',
+    face: face('700 {z}px "Cinzel Decorative", serif', '400 {z}px "Cinzel", serif', '400 {z}px "Cinzel", serif', 'italic 400 {z}px "Cormorant Garamond", serif', '400 {z}px "Great Vibes", cursive'),
+    pals: [P6('Midnight', true, ['#16204a', '#02040d'], GOLD, 'rgba(255,255,255,.06)', '#f6efe0', '#e8b84a'),
+      P6('Obsidian', true, ['#262626', '#000000'], GOLD, 'rgba(255,255,255,.06)', '#f3f3f3', '#e0c27a'),
+      P6('Bordeaux', true, ['#4a0f22', '#0c0205'], ROSE, 'rgba(255,255,255,.06)', '#fbeee8', '#e9a587'),
+      P6('Lagoon', true, ['#0b3a44', '#010c10'], GOLD, 'rgba(255,255,255,.06)', '#eefbfb', '#7fe0d8'),
+      P6('Jade', true, ['#0e3d2a', '#010d07'], GOLD, 'rgba(255,255,255,.06)', '#f0f8f2', '#e8c66a'),
+      P6('Royal', true, ['#33134f', '#07020d'], SILVER, 'rgba(255,255,255,.06)', '#f6f0ff', '#c8b6ff')],
+    bg(ctx, th, t) {
+      const g = ctx.createRadialGradient(W / 2, H * .45, 50, W / 2, H * .5, H * .8); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      [-1, 1].forEach(s => {
+        ctx.save(); ctx.translate(W / 2 + s * 460, H); ctx.rotate(s * (-.35 + Math.sin(t * .5 + s) * .18));
+        const b = ctx.createLinearGradient(0, 0, 0, -H * 1.1); b.addColorStop(0, th.accent + '40'); b.addColorStop(1, th.accent + '00');
+        ctx.fillStyle = b; ctx.beginPath(); ctx.moveTo(-30, 0); ctx.lineTo(-260, -H * 1.1); ctx.lineTo(260, -H * 1.1); ctx.lineTo(30, 0); ctx.fill(); ctx.restore();
+      });
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, 150); ctx.fillRect(0, H - 170, W, 170);
+    },
+    open(ctx, film, th, D, sc, lt) {
+      const k = ease((lt - .3) / 1.2), cy = H / 2;
+      const g = ctx.createLinearGradient(W / 2 - 540 * k, 0, W / 2 + 540 * k, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.5, 'rgba(255,250,230,.95)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.save(); ctx.fillStyle = g; ctx.shadowColor = th.accent; ctx.shadowBlur = 40; ctx.fillRect(0, cy - 3, W, 6); ctx.restore();
+      const glow = ctx.createRadialGradient(W / 2, cy, 0, W / 2, cy, 260 * k); glow.addColorStop(0, 'rgba(255,245,220,.6)'); glow.addColorStop(1, 'rgba(255,245,220,0)');
+      ctx.fillStyle = glow; ctx.fillRect(0, cy - 300, W, 600);
+      text(ctx, tw(th, true), D.lang === 'hi' ? 'एक प्रेम कहानी' : 'A  LOVE  STORY', W / 2, cy - 90, { z: 40, font: 'caps', color: '#fff', a: ap(lt, 1.3), ls: 4 });
+      text(ctx, tw(th, true), D.heading, W / 2, cy + 130, { z: 64, font: 'head', color: 'gold', a: ap(lt, 1.9), glow: 18 });
+    },
+    title(ctx, film, th, D, sc, lt) {
+      const t2 = tw(th, true), cx = W / 2, hi = D.lang === 'hi';
+      text(ctx, t2, hi ? 'प्रस्तुत करते हैं' : 'STARRING', cx, 620, { z: 34, font: 'caps', color: th.accent, a: ap(lt, .2), ls: 10 });
+      if (D.solo) text(ctx, t2, D.A, cx, 860, { z: 120, font: 'name', color: 'gold', a: ap(lt, .5), glow: 22, maxW: 900 });
+      else {
+        text(ctx, t2, D.A, cx, 800, { z: 112, font: 'name', color: 'gold', a: ap(lt, .5), glow: 22, maxW: 900 });
+        text(ctx, t2, hi ? 'और' : 'AND', cx, 890, { z: 34, font: 'caps', color: '#fff', a: ap(lt, .8), ls: 8 });
+        text(ctx, t2, D.B, cx, 1010, { z: 112, font: 'name', color: 'gold', a: ap(lt, 1), glow: 22, maxW: 900 });
+      }
+      ctx.save(); ctx.globalAlpha = ap(lt, 1.3) * .7; ctx.strokeStyle = th.accent; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - 200, 1080); ctx.lineTo(cx + 200, 1080); ctx.stroke(); ctx.restore();
+      text(ctx, t2, `${hi ? '' : 'IN CINEMAS · '}${D.date}`, cx, 1160, { z: 38, font: 'caps', color: '#fff', a: ap(lt, 1.5), ls: 3, maxW: 880 });
+      text(ctx, t2, [D.V, D.CITY].filter(Boolean).join(' · '), cx, 1230, { z: 38, font: 'body', color: th.accent, a: ap(lt, 1.7), maxW: 880 });
+      text(ctx, t2, '★ ★ ★ ★ ★', cx, 1360, { z: 36, font: 'caps', color: th.accent, a: ap(lt, 2) });
+    },
+    panel(ctx, film, th, a) {
+      const r = { x: 120, y: 260, w: W - 240, h: 1360 }; r.cx = r.x + r.w / 2;
+      ctx.save(); ctx.globalAlpha *= clamp(a); rr(ctx, r.x, r.y, r.w, r.h, 18); ctx.fillStyle = 'rgba(255,255,255,.06)'; ctx.fill(); stroke(ctx, th.accent + 'aa', 1.5); ctx.restore();
+      return r;
+    },
+    day(ctx, film, th, D, sc, lt) {
+      const t2 = tw(th, true), cx = W / 2, b = dateBits(D, sc), hi = D.lang === 'hi';
+      text(ctx, t2, sc.n > 1 ? (hi ? `अध्याय ${sc.i + 1}` : `CHAPTER ${['ONE', 'TWO', 'THREE', 'FOUR'][sc.i]}`) : (hi ? 'आज की शाम' : 'TONIGHT'), cx, 560, { z: 36, font: 'caps', color: th.accent, a: ap(lt, .2), ls: 10 });
+      text(ctx, t2, sc.day.events.map(e => e.name).join(' · '), cx, 760, { z: 96, font: 'name', color: 'gold', a: ap(lt, .4), glow: 20, maxW: 900 });
+      text(ctx, t2, `${b.wd}, ${b.d} ${b.m}`, cx, 860, { z: 40, font: 'caps', color: '#fff', a: ap(lt, .6), ls: 3, maxW: 880 });
+      sc.day.events.forEach((e, i) => text(ctx, t2, `${e.name}  —  ${e.time}`, cx, 1040 + i * 90 - (lt * 12), { z: 44, font: 'body', color: '#fff', a: ap(lt, .9 + i * .2) }));
+    },
+    finale(ctx, film, th, D, sc, lt) {
+      const t2 = tw(th, true), cx = W / 2, hi = D.lang === 'hi', roll = Math.max(0, lt - .3) * 140;
+      const lines = [[hi ? 'निर्देशन' : 'DIRECTED BY', 'caps', 30, th.accent], [hi ? 'प्यार' : 'Love', 'name', 70, 'gold'], ['', 'caps', 20, '#fff'],
+        [hi ? 'मुख्य भूमिका' : 'STARRING', 'caps', 30, th.accent], [D.A, 'name', 90, 'gold'], ...(D.B ? [[D.B, 'name', 90, 'gold']] : []), ['', 'caps', 20, '#fff'],
+        ...(D.regards ? [[D.regards[0], 'caps', 30, th.accent], ...D.regards.slice(1).map(r => [r, 'body', 40, '#fff'])] : []), ['', 'caps', 20, '#fff'],
+        [D.date, 'caps', 36, '#fff'], [[D.V, D.CITY].filter(Boolean).join(' · '), 'body', 40, th.accent]];
+      let y = 1500 - roll;
+      lines.forEach(([s, f, z, c]) => { if (y > 160 && y < H - 180) text(ctx, t2, s, cx, y, { z, font: f, color: c, maxW: 880, glow: c === 'gold' ? 14 : 0 }); y += z * 1.6; });
+      const end = clamp((lt - 3.2) / .8);
+      if (end > 0) { ctx.save(); ctx.globalAlpha = end; ctx.fillStyle = th.bg[1]; ctx.fillRect(0, 150, W, H - 320); ctx.restore(); text(ctx, t2, who2(D, hi), cx, 900, { z: 90, font: 'name', color: 'gold', a: end, glow: 20, maxW: 900 }); credit(ctx, t2, D, lt - 1.2, 1140, '#fff'); }
+    }
+  };
+
+  // ===== Gatsby Deco: black and gold, a fan that opens, eight-cornered frames =====
+  function octagon(ctx, x, y, w, h, c) { ctx.beginPath(); ctx.moveTo(x + c, y); ctx.lineTo(x + w - c, y); ctx.lineTo(x + w, y + c); ctx.lineTo(x + w, y + h - c); ctx.lineTo(x + w - c, y + h); ctx.lineTo(x + c, y + h); ctx.lineTo(x, y + h - c); ctx.lineTo(x, y + c); ctx.closePath(); }
+  function fan(ctx, th, cx, cy, R, k, up = true) {
+    ctx.save(); ctx.strokeStyle = th.gold[1]; ctx.lineWidth = 2.5;
+    const a0 = up ? Math.PI : 0, span = Math.PI * k;
+    for (let i = 0; i <= 18; i++) { const a = a0 + (Math.PI - span) / 2 + span * i / 18; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R); ctx.stroke(); }
+    for (let r = R * .35; r <= R; r += R * .22) { ctx.beginPath(); ctx.arc(cx, cy, r, a0 + (Math.PI - span) / 2, a0 + (Math.PI + span) / 2); ctx.stroke(); }
+    ctx.restore();
+  }
+  function diamond(ctx, th, x, y, s) { ctx.save(); ctx.fillStyle = goldFill(ctx, th, y + s, s * 2); ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + s, y); ctx.lineTo(x, y + s); ctx.lineTo(x - s, y); ctx.closePath(); ctx.fill(); ctx.restore(); }
+  const DECO = {
+    short: 'Gatsby', name: 'Gatsby Deco', trans: 'wipe', fx: 'sparkle',
+    face: face('400 {z}px "Poiret One", sans-serif', '400 {z}px "Poiret One", sans-serif', '400 {z}px "Cinzel", serif', '400 {z}px "Jost", sans-serif', '400 {z}px "Great Vibes", cursive'),
+    pals: [P6('Jet', true, ['#1a1a1a', '#050505'], GOLD, '#111111', '#f4ead2', '#e8b84a'),
+      P6('Emerald', true, ['#0c3b2c', '#03140e'], GOLD, '#08281e', '#f4ead2', '#e8b84a'),
+      P6('Navy', true, ['#13234a', '#050a18'], GOLD, '#0c1733', '#f4ead2', '#e8b84a'),
+      P6('Burgundy', true, ['#4b0f1f', '#140306'], GOLD, '#320a15', '#f4ead2', '#e8b84a'),
+      P6('Teal', true, ['#0d3c42', '#031214'], GOLD, '#0a2a2e', '#f4ead2', '#e8b84a'),
+      P6('Champagne', false, ['#f6efe0', '#e7d9bc'], ['#d4a64a', '#9c7424', '#5a400e'], '#fbf6ea', '#1c1712', '#9c7424')],
+    bg(ctx, th, t) {
+      const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.save(); ctx.globalAlpha = th.dark ? .08 : .12; ctx.strokeStyle = th.gold[1]; ctx.lineWidth = 2;
+      for (let x = 40; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+      ctx.restore();
+      ctx.save(); ctx.strokeStyle = th.gold[1]; ctx.lineWidth = 3; octagon(ctx, 50, 50, W - 100, H - 100, 70); ctx.stroke(); ctx.lineWidth = 1.5; octagon(ctx, 66, 66, W - 132, H - 132, 62); ctx.stroke(); ctx.restore();
+    },
+    open(ctx, film, th, D, sc, lt) {
+      fan(ctx, th, W / 2, H * .62, 520, ease(lt / 1.6));
+      diamond(ctx, th, W / 2, H * .62 - 30, 70 * ap(lt, 1.2));
+      text(ctx, th, D.mono, W / 2, H * .62 - 16, { z: 44, font: 'caps', color: th.dark ? '#111' : '#fff', a: ap(lt, 1.5), maxW: 120 });
+      text(ctx, th, D.heading.toUpperCase(), W / 2, H * .62 + 160, { z: 64, font: 'head', color: 'gold', a: ap(lt, 1.8), ls: 4 });
+    },
+    title(ctx, film, th, D, sc, lt) {
+      const cx = W / 2;
+      ctx.save(); ctx.globalAlpha = ap(lt, 0, 1.2); ctx.strokeStyle = th.gold[1]; ctx.lineWidth = 3; octagon(ctx, 150, 380, W - 300, 1100, 90); ctx.stroke(); ctx.lineWidth = 1.2; octagon(ctx, 170, 400, W - 340, 1060, 82); ctx.stroke(); ctx.restore();
+      fan(ctx, th, cx, 400, 170, ap(lt, .2, 1.2));
+      text(ctx, th, D.heading.toUpperCase(), cx, 560, { z: 44, font: 'caps', color: th.accent, a: ap(lt, .4), ls: 8, maxW: 700 });
+      if (D.solo) text(ctx, th, D.A, cx, 860, { z: 150, font: 'name', color: 'gold', a: ap(lt, .7), maxW: 700, glow: 10 });
+      else {
+        text(ctx, th, D.A, cx, 790, { z: 140, font: 'name', color: 'gold', a: ap(lt, .7), maxW: 700, glow: 10 });
+        diamond(ctx, th, cx, 880, 22 * ap(lt, .9));
+        text(ctx, th, D.B, cx, 1030, { z: 140, font: 'name', color: 'gold', a: ap(lt, 1.1), maxW: 700, glow: 10 });
+      }
+      text(ctx, th, D.date, cx, 1180, { z: 38, font: 'caps', color: th.ink, a: ap(lt, 1.4), ls: 3, maxW: 680 });
+      text(ctx, th, [D.V, D.CITY].filter(Boolean).join(' · '), cx, 1250, { z: 36, font: 'body', color: th.accent, a: ap(lt, 1.6), maxW: 680 });
+      [-1, 1].forEach(s => { ctx.save(); ctx.globalAlpha = ap(lt, 1.8); ctx.strokeStyle = th.gold[1]; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx + s * 60, 1340); ctx.lineTo(cx + s * 260, 1340); ctx.stroke(); ctx.restore(); diamond(ctx, th, cx + s * 30, 1340, 10); });
+    },
+    panel(ctx, film, th, a) {
+      const r = { x: 130, y: 300, w: W - 260, h: 1300 }; r.cx = r.x + r.w / 2;
+      ctx.save(); ctx.globalAlpha *= clamp(a); octagon(ctx, r.x, r.y, r.w, r.h, 80); ctx.fillStyle = th.paper; ctx.fill(); ctx.strokeStyle = th.gold[1]; ctx.lineWidth = 3; ctx.stroke();
+      octagon(ctx, r.x + 16, r.y + 16, r.w - 32, r.h - 32, 72); ctx.lineWidth = 1.2; ctx.stroke(); ctx.restore();
+      fan(ctx, th, r.cx, r.y + r.h - 16, 110, clamp(a));
+      return r;
+    },
+    day(ctx, film, th, D, sc, lt) {
+      const cx = W / 2, b = dateBits(D, sc), x = 220, w = W - 440, top = 420;
+      ctx.save(); ctx.globalAlpha = ap(lt, 0, 1); ctx.strokeStyle = th.gold[1]; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(x, 1500); ctx.lineTo(x, top + w / 2); ctx.arc(cx, top + w / 2, w / 2, Math.PI, 0); ctx.lineTo(x + w, 1500); ctx.closePath(); ctx.stroke(); ctx.restore();
+      text(ctx, th, dayLabel(D, sc), cx, 600, { z: 34, font: 'caps', color: th.accent, a: ap(lt, .2), ls: 6 });
+      text(ctx, th, b.d, cx, 830, { z: 240, font: 'name', color: 'gold', a: ap(lt, .4), glow: 10 });
+      text(ctx, th, `${b.m} · ${b.wd}`, cx, 910, { z: 34, font: 'caps', color: th.ink, a: ap(lt, .6), ls: 3, maxW: w - 40 });
+      sc.day.events.forEach((e, i) => { const y = 1070 + i * 140, a = ap(lt, .8 + i * .2); diamond(ctx, th, cx, y - 70, 9 * a); text(ctx, th, e.name, cx, y, { z: 70, font: 'name', color: th.ink, a, maxW: w - 60 }); text(ctx, th, e.time, cx, y + 44, { z: 30, font: 'caps', color: th.accent, a, maxW: w - 60 }); });
+    }
+  };
+
+  // ===== Polaroid Memories: kraft paper, taped polaroids, handwriting =====
+  function tape(ctx, x, y, w, ang) { ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.fillStyle = 'rgba(240,226,190,.75)'; ctx.fillRect(-w / 2, -22, w, 44); ctx.restore(); }
+  function polaroid(ctx, th, x, y, w, h, ang, k, draw) {
+    if (k <= 0) return;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.globalAlpha *= clamp(k);
+    ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 12; ctx.fillStyle = '#fffdf8'; ctx.fillRect(-w / 2, -h / 2, w, h); ctx.shadowColor = 'transparent';
+    const pw = w - 60, ph = h - 190, g = ctx.createLinearGradient(0, -h / 2, 0, -h / 2 + ph); g.addColorStop(0, shade(th.accent, .25)); g.addColorStop(1, shade(th.accent, -.25));
+    ctx.fillStyle = g; ctx.fillRect(-pw / 2, -h / 2 + 30, pw, ph);
+    if (draw) draw(-pw / 2, -h / 2 + 30, pw, ph);
+    ctx.restore();
+  }
+  function heart(ctx, x, y, s, col, fill = true) { ctx.save(); ctx.translate(x, y); ctx.scale(s / 100, s / 100); ctx.beginPath(); ctx.moveTo(0, 30); ctx.bezierCurveTo(-60, -10, -40, -70, 0, -38); ctx.bezierCurveTo(40, -70, 60, -10, 0, 30); ctx.closePath(); if (fill) { ctx.fillStyle = col; ctx.fill(); } else { ctx.strokeStyle = col; ctx.lineWidth = 6; ctx.stroke(); } ctx.restore(); }
+  const POLAROID = {
+    short: 'Polaroid', name: 'Polaroid Memories', trans: 'slide', fx: 'none',
+    face: face('700 {z}px "Caveat", cursive', '700 {z}px "Caveat", cursive', '500 {z}px "Caveat", cursive', '500 {z}px "Caveat", cursive', '700 {z}px "Caveat", cursive'),
+    pals: [P6('Kraft', false, ['#d2b48c', '#b8956a'], ['#6b4a2a', '#4a321a', '#2a1a0a'], '#fffdf6', '#3a2a1a', '#c0524a'),
+      P6('Linen', false, ['#f3ece0', '#e4d8c4'], ['#8a6a4a', '#5a4430', '#2e2216'], '#fffefb', '#2e2620', '#3f7fa8'),
+      P6('Sage Board', false, ['#c9d3bf', '#aebba2'], ['#4a5a3a', '#34422a', '#1e2818'], '#fffffa', '#26301e', '#c76b4a'),
+      P6('Blush Board', false, ['#efd3d0', '#dfb7b2'], ['#7a4a46', '#5a3230', '#341a18'], '#fffafa', '#3a2220', '#7a5ac0'),
+      P6('Sky Board', false, ['#cfe1ee', '#b1cbde'], ['#3a5a74', '#28425a', '#14263a'], '#fffffd', '#1e2e3e', '#e0864a'),
+      P6('Chalk', true, ['#2d3a33', '#1c2420'], ['#ffffff', '#e8e8e0', '#b8b8b0'], '#fffdf6', '#f4f4ec', '#f2c94c')],
+    bg(ctx, th, t) {
+      ctx.fillStyle = th.bg[0]; ctx.fillRect(0, 0, W, H);
+      ctx.save();
+      for (let i = 0; i < 260; i++) { ctx.globalAlpha = .12; ctx.fillStyle = i % 2 ? '#000' : '#fff'; ctx.fillRect(hash(i) * W, hash(i + 300) * H, 2 + hash(i + 7) * 3, 2); }
+      ctx.globalAlpha = th.dark ? .25 : .18; ctx.strokeStyle = th.dark ? '#fff' : th.ink; ctx.lineWidth = 3;
+      for (let i = 0; i < 9; i++) { const x = hash(i + 41) * W, y = hash(i + 91) * H; if (i % 3) heart(ctx, x, y, 40, ctx.strokeStyle, false); else { ctx.beginPath(); for (let p = 0; p < 5; p++) { const a = -Math.PI / 2 + p * Math.PI * 4 / 5; ctx.lineTo(x + Math.cos(a) * 24, y + Math.sin(a) * 24); } ctx.closePath(); ctx.stroke(); } }
+      ctx.restore();
+    },
+    open(ctx, film, th, D, sc, lt) {
+      const drop = (s, y0) => y0 - (1 - out((lt - s) / .7)) * 1400;
+      polaroid(ctx, th, W / 2 - 160, drop(.1, 820), 460, 560, -.16, ap(lt, .1, .2));
+      polaroid(ctx, th, W / 2 + 170, drop(.5, 900), 460, 560, .12, ap(lt, .5, .2));
+      polaroid(ctx, th, W / 2, drop(.9, 1000), 500, 610, -.03, ap(lt, .9, .2), (x, y, w, h) => { heart(ctx, x + w / 2, y + h / 2, 220, 'rgba(255,255,255,.85)'); });
+      tape(ctx, W / 2, drop(.9, 1000) - 300, 180, .08);
+      text(ctx, th, D.lang === 'hi' ? 'हमारी कहानी…' : 'our story…', W / 2, 1520, { z: 96, font: 'script', color: th.dark ? '#fff' : th.ink, a: ap(lt, 1.8) });
+    },
+    title(ctx, film, th, D, sc, lt) {
+      const cx = W / 2, k = out(lt / .8);
+      polaroid(ctx, th, cx, 800 - (1 - k) * 300, 700, 860, -.05, k, (x, y, w, h) => {
+        heart(ctx, x + w / 2, y + h / 2 + 30, 260, 'rgba(255,255,255,.22)');
+        text(ctx, tw(th, true), D.mono.replace(' | ', ' ♥ '), x + w / 2, y + h / 2 + 50, { z: 150, font: 'name', color: '#fff', maxW: w - 40 });
+      });
+      ctx.save(); ctx.translate(cx, 800 - (1 - k) * 300); ctx.rotate(-.05);
+      text(ctx, { ...th, dark: false }, who2(D, D.lang === 'hi'), 0, 370, { z: 92, font: 'name', color: '#2a2a2a', a: ap(lt, .6), maxW: 620 });
+      ctx.restore();
+      tape(ctx, cx - 250, 390, 170, -.5); tape(ctx, cx + 250, 390, 170, .5);
+      ctx.save(); ctx.translate(cx + 250, 1440); ctx.rotate(.07); ctx.globalAlpha = ap(lt, 1.2); ctx.shadowColor = 'rgba(0,0,0,.2)'; ctx.shadowBlur = 20; ctx.fillStyle = '#fff3a6'; ctx.fillRect(-190, -150, 380, 300); ctx.restore();
+      ctx.save(); ctx.translate(cx + 250, 1440); ctx.rotate(.07);
+      text(ctx, { ...th, dark: false }, D.lang === 'hi' ? 'याद रखना!' : 'save the date!', 0, -70, { z: 50, font: 'script', color: th.accent, a: ap(lt, 1.3) });
+      text(ctx, { ...th, dark: false }, D.date, 0, 10, { z: 40, font: 'body', color: '#2a2a2a', a: ap(lt, 1.4), maxW: 340 });
+      text(ctx, { ...th, dark: false }, D.V, 0, 70, { z: 34, font: 'body', color: '#2a2a2a', a: ap(lt, 1.5), maxW: 340 });
+      ctx.restore();
+      text(ctx, th, D.heading, cx - 220, 1460, { z: 64, font: 'head', color: th.dark ? '#fff' : th.ink, a: ap(lt, 1), maxW: 440 });
+    },
+    panel(ctx, film, th, a) {
+      const r = { x: 120, y: 300, w: W - 240, h: 1320 }; r.cx = r.x + r.w / 2;
+      ctx.save(); ctx.globalAlpha *= clamp(a); ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 30; ctx.fillStyle = th.paper; ctx.fillRect(r.x, r.y, r.w, r.h); ctx.shadowColor = 'transparent';
+      ctx.strokeStyle = 'rgba(80,130,200,.25)'; ctx.lineWidth = 2; for (let y = r.y + 120; y < r.y + r.h; y += 64) { ctx.beginPath(); ctx.moveTo(r.x, y); ctx.lineTo(r.x + r.w, y); ctx.stroke(); }
+      ctx.strokeStyle = 'rgba(220,80,80,.45)'; ctx.beginPath(); ctx.moveTo(r.x + 80, r.y); ctx.lineTo(r.x + 80, r.y + r.h); ctx.stroke(); ctx.restore();
+      tape(ctx, r.cx, r.y, 220, -.04);
+      return { ...r, th: { ...th, ink: '#2a2a2a', dark: false } };
+    },
+    day(ctx, film, th, D, sc, lt) {
+      const cx = W / 2, b = dateBits(D, sc), x = 160, w = W - 320, y = 360, k = out(lt / .6);
+      ctx.save(); ctx.globalAlpha = k; ctx.translate(0, (1 - k) * 200); ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 30; ctx.fillStyle = '#fffdf8'; ctx.fillRect(x, y, w, 1160); ctx.shadowColor = 'transparent';
+      ctx.fillStyle = th.accent; ctx.fillRect(x, y, w, 170);
+      ctx.fillStyle = '#555'; for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.arc(x + 60 + i * (w - 120) / 8, y, 14, 0, Math.PI * 2); ctx.fill(); }
+      ctx.restore();
+      const t3 = { ...th, dark: false };
+      text(ctx, tw(th, true), `${b.m}  ·  ${dayLabel(D, sc)}`, cx, y + 110, { z: 60, font: 'name', color: '#fff', a: k, maxW: w - 40 });
+      text(ctx, t3, b.d, cx, y + 470, { z: 260, font: 'name', color: '#2a2a2a', a: k });
+      const c = ap(lt, .6, .9);
+      ctx.save(); ctx.strokeStyle = th.accent; ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.beginPath(); ctx.ellipse(cx, y + 390, 210, 150, -.1, -1.2, -1.2 + Math.PI * 2.1 * c); ctx.stroke(); ctx.restore();
+      text(ctx, t3, b.wd, cx, y + 610, { z: 50, font: 'body', color: '#555', a: k });
+      rows(ctx, t3, sc.day, x + 60, y + 780, w - 120, lt, { z: 74, gap: 120, col: '#2a2a2a', tcol: th.accent, start: .8 });
+    }
+  };
+
+  // ===== Neon Nights: a sign that buzzes on, glowing tubes, a dark wall =====
+  function neon(ctx, s, x, y, z, font, col, a = 1, flick = 0) {
+    if (!s || a <= 0) return;
+    const hi = isHi(s);
+    ctx.save(); ctx.globalAlpha *= a * (flick && hash(Math.floor(NOW * 18) + flick) < .25 ? .35 : 1);
+    ctx.font = FONT[font](z, hi); ctx.textAlign = 'center';
+    let size = z; while (ctx.measureText(s).width > 900 && size > 20) { size -= 4; ctx.font = FONT[font](size, hi); }
+    ctx.shadowColor = col; ctx.fillStyle = col; ctx.shadowBlur = 50; ctx.fillText(s, x, y); ctx.shadowBlur = 20; ctx.fillText(s, x, y);
+    ctx.shadowBlur = 6; ctx.fillStyle = '#fff'; ctx.globalAlpha *= .85; ctx.fillText(s, x, y);
+    ctx.restore();
+  }
+  function neonBox(ctx, x, y, w, h, col, a) { ctx.save(); ctx.globalAlpha *= a; ctx.strokeStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 30; ctx.lineWidth = 6; rr(ctx, x, y, w, h, 40); ctx.stroke(); ctx.shadowBlur = 0; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.globalAlpha *= .7; ctx.stroke(); ctx.restore(); }
+  const NEON = {
+    short: 'Neon', name: 'Neon Nights', trans: 'zoom', fx: 'bokeh',
+    face: face('400 {z}px "Righteous", sans-serif', '400 {z}px "Righteous", sans-serif', '600 {z}px "Jost", sans-serif', '400 {z}px "Jost", sans-serif', '400 {z}px "Pacifico", cursive'),
+    pals: [P6('Hot Pink', true, ['#1c0a22', '#060208'], ['#ffd1ea', '#ff2e93', '#9a0d55'], 'rgba(255,255,255,.04)', '#ffffff', '#ff2e93', { n2: '#29e6ff' }),
+      P6('Electric', true, ['#071a24', '#020609'], ['#c9faff', '#29e6ff', '#0b7d8f'], 'rgba(255,255,255,.04)', '#ffffff', '#29e6ff', { n2: '#ff4fd8' }),
+      P6('Ultraviolet', true, ['#160a2c', '#05020c'], ['#ead6ff', '#b34dff', '#5a1a99'], 'rgba(255,255,255,.04)', '#ffffff', '#b34dff', { n2: '#ffe14d' }),
+      P6('Lime', true, ['#0e1a08', '#030602'], ['#efffc9', '#a6ff1a', '#4f8a00'], 'rgba(255,255,255,.04)', '#ffffff', '#a6ff1a', { n2: '#ff4fa3' }),
+      P6('Tangerine', true, ['#22100a', '#080302'], ['#ffe2c4', '#ff8a1f', '#a04400'], 'rgba(255,255,255,.04)', '#ffffff', '#ff8a1f', { n2: '#3df0ff' }),
+      P6('Crimson', true, ['#220a0e', '#080203'], ['#ffd0d6', '#ff3350', '#9a0d20'], 'rgba(255,255,255,.04)', '#ffffff', '#ff3350', { n2: '#ffd23d' })],
+    bg(ctx, th, t) {
+      ctx.fillStyle = th.bg[1]; ctx.fillRect(0, 0, W, H);
+      ctx.save(); ctx.globalAlpha = .07; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+      for (let r = 0; r < 40; r++) { const y = r * 50; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); for (let x = (r % 2) * 60; x < W; x += 120) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 50); ctx.stroke(); } }
+      ctx.restore();
+      const g = ctx.createRadialGradient(W / 2, H * .45, 0, W / 2, H * .45, 700); g.addColorStop(0, th.accent + '33'); g.addColorStop(1, th.accent + '00'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      const f = ctx.createLinearGradient(0, H - 320, 0, H); f.addColorStop(0, 'rgba(0,0,0,0)'); f.addColorStop(1, th.accent + '30'); ctx.fillStyle = f; ctx.fillRect(0, H - 320, W, 320);
+    },
+    open(ctx, film, th, D, sc, lt) {
+      const k = clamp(lt / 1.6);
+      ctx.save(); ctx.translate(W / 2, H * .42); ctx.scale(4.2, 4.2);
+      ctx.beginPath(); ctx.moveTo(0, 30); ctx.bezierCurveTo(-60, -10, -40, -70, 0, -38); ctx.bezierCurveTo(40, -70, 60, -10, 0, 30);
+      ctx.setLineDash([400 * k, 400]); ctx.strokeStyle = th.accent; ctx.shadowColor = th.accent; ctx.shadowBlur = 12; ctx.lineWidth = 2.4; ctx.stroke(); ctx.restore();
+      neon(ctx, D.lang === 'hi' ? 'जश्न की रात' : "let's celebrate", W / 2, H * .64, 110, 'script', th.n2, ap(lt, 1.5), 3);
+      neon(ctx, D.heading.toUpperCase(), W / 2, H * .72, 60, 'head', th.accent, ap(lt, 2.1), 5);
+    },
+    title(ctx, film, th, D, sc, lt) {
+      const cx = W / 2, hi = D.lang === 'hi';
+      neon(ctx, D.heading.toUpperCase(), cx, 520, 58, 'head', th.n2, ap(lt, .1), 7);
+      if (D.solo) neon(ctx, D.A.toUpperCase(), cx, 860, 170, 'name', th.accent, ap(lt, .4), 9);
+      else {
+        neon(ctx, hi ? D.A : D.A.toUpperCase(), cx, 790, 150, 'name', th.accent, ap(lt, .4), 9);
+        neon(ctx, '&', cx, 920, 120, 'script', th.n2, ap(lt, .8), 11);
+        neon(ctx, hi ? D.B : D.B.toUpperCase(), cx, 1080, 150, 'name', th.accent, ap(lt, 1.1), 13);
+      }
+      neonBox(ctx, 170, 1170, W - 340, 210, th.n2, ap(lt, 1.4));
+      text(ctx, th, D.date, cx, 1260, { z: 44, font: 'caps', color: '#fff', a: ap(lt, 1.6), maxW: 680, ls: 2 });
+      text(ctx, th, [D.V, D.CITY].filter(Boolean).join(' · '), cx, 1330, { z: 36, font: 'body', color: '#fff', a: ap(lt, 1.8), maxW: 680 });
+    },
+    panel(ctx, film, th, a) {
+      const r = { x: 120, y: 290, w: W - 240, h: 1330 }; r.cx = r.x + r.w / 2;
+      ctx.save(); ctx.globalAlpha *= clamp(a); rr(ctx, r.x, r.y, r.w, r.h, 40); ctx.fillStyle = 'rgba(10,4,16,.6)'; ctx.fill(); ctx.restore();
+      neonBox(ctx, r.x, r.y, r.w, r.h, th.accent, clamp(a));
+      return { ...r, th: { ...th, ink: '#ffffff', accent: th.n2, gold: th.gold, dark: true } };
+    },
+    day(ctx, film, th, D, sc, lt) {
+      const cx = W / 2, b = dateBits(D, sc);
+      neon(ctx, dayLabel(D, sc), cx, 470, 56, 'head', th.n2, ap(lt, .1), 2);
+      neon(ctx, b.d, cx, 860, 360, 'name', th.accent, ap(lt, .3), 4);
+      text(ctx, th, `${b.m} · ${b.wd}`, cx, 960, { z: 46, font: 'caps', color: '#fff', a: ap(lt, .5), ls: 4 });
+      sc.day.events.forEach((e, i) => { const y = 1150 + i * 150; neon(ctx, e.name.toUpperCase(), cx, y, 76, 'head', i % 2 ? th.n2 : th.accent, ap(lt, .7 + i * .2), 6 + i); text(ctx, th, e.time, cx, y + 56, { z: 34, font: 'caps', color: '#fff', a: ap(lt, .8 + i * .2) }); });
+    }
+  };
+
+  // ===== Rangoli Utsav: a rangoli that draws itself, diyas, bright festive colours =====
+  function rangoli(ctx, cx, cy, R, cols, k, t) {
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(t * .06);
+    const ringsN = [8, 12, 16, 24];
+    ringsN.forEach((n, ri) => {
+      const kr = clamp(k * 4 - ri), r = R * (.28 + ri * .22), len = R * .26;
+      for (let i = 0; i < n * kr; i++) {
+        ctx.save(); ctx.rotate(i * Math.PI * 2 / n + ri * .2);
+        ctx.beginPath(); ctx.moveTo(0, -r + len * .5); ctx.quadraticCurveTo(-len * .4, -r - len * .1, 0, -r - len * .6); ctx.quadraticCurveTo(len * .4, -r - len * .1, 0, -r + len * .5);
+        ctx.fillStyle = cols[(i + ri) % cols.length]; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.stroke();
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, -r - len * .8, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+    });
+    ctx.fillStyle = cols[0]; ctx.globalAlpha = clamp(k * 3); ctx.beginPath(); ctx.arc(0, 0, R * .2, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.stroke();
+    ctx.restore();
+  }
+  function scallop(ctx, x, y, w, h, cols) {
+    const s = 34; let i = 0;
+    for (let xx = x; xx <= x + w; xx += s * 1.6) { [[xx, y], [xx, y + h]].forEach(([px, py]) => { ctx.fillStyle = cols[i++ % cols.length]; ctx.beginPath(); ctx.arc(px, py, s * .75, 0, Math.PI * 2); ctx.fill(); }); }
+    for (let yy = y; yy <= y + h; yy += s * 1.6) { [[x, yy], [x + w, yy]].forEach(([px, py]) => { ctx.fillStyle = cols[i++ % cols.length]; ctx.beginPath(); ctx.arc(px, py, s * .75, 0, Math.PI * 2); ctx.fill(); }); }
+  }
+  const RANGOLI = {
+    short: 'Rangoli', name: 'Rangoli Utsav', trans: 'zoom', fx: 'petals',
+    face: face('400 {z}px "Yatra One", serif', '400 {z}px "Yatra One", serif', '400 {z}px "Marcellus", serif', '400 {z}px "Marcellus", serif', '400 {z}px "Yatra One", serif'),
+    pals: [P6('Festive', false, ['#fff3df', '#ffd9a8'], GOLD, '#ffffff', '#5a1030', '#d81b60', { rg: ['#d81b60', '#ff9800', '#fdd835', '#43a047'] }),
+      P6('Peacock', false, ['#eafaf7', '#c6ece6'], GOLD, '#ffffff', '#0b3a5a', '#00838f', { rg: ['#1565c0', '#00897b', '#7cb342', '#fbc02d'] }),
+      P6('Lotus', false, ['#fff0f3', '#ffd2dc'], GOLD, '#ffffff', '#6a0f2a', '#e91e63', { rg: ['#e91e63', '#f06292', '#ffffff', '#66bb6a'] }),
+      P6('Sunset', false, ['#fff1e6', '#ffcfa8'], GOLD, '#ffffff', '#5a1a0a', '#e65100', { rg: ['#e65100', '#c62828', '#7b1fa2', '#ffb300'] }),
+      P6('Royal', false, ['#f6efff', '#e0cdfa'], GOLD, '#ffffff', '#36125a', '#7b1fa2', { rg: ['#7b1fa2', '#ffb300', '#ec407a', '#26a69a'] }),
+      P6('Tulsi', false, ['#f1fae8', '#d6efc0'], GOLD, '#ffffff', '#1f3a10', '#2e7d32', { rg: ['#2e7d32', '#fdd835', '#e53935', '#fb8c00'] })],
+    bg(ctx, th, t) {
+      const g = ctx.createRadialGradient(W / 2, H / 2, 100, W / 2, H / 2, H * .7); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.save(); ctx.globalAlpha = .18; ctx.fillStyle = th.ink; for (let y = 40; y < H; y += 60) for (let x = 40 + ((y / 60) % 2) * 30; x < W; x += 60) { ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill(); } ctx.restore();
+    },
+    open(ctx, film, th, D, sc, lt) {
+      rangoli(ctx, W / 2, H * .45, 430, th.rg, ease(lt / 2.6), lt);
+      diyas(ctx, th, W / 2, H * .45 + 30, ap(lt, 2.2), lt, 1);
+      text(ctx, th, D.heading, W / 2, H * .8, { z: 90, font: 'head', color: th.accent, a: ap(lt, 2.4) });
+    },
+    title(ctx, film, th, D, sc, lt) {
+      const cx = W / 2, cy = 820;
+      ctx.save(); ctx.globalAlpha = .9; rangoli(ctx, cx, cy, 500, th.rg, 1, lt); ctx.restore();
+      ctx.save(); ctx.globalAlpha = ap(lt, .2); ctx.fillStyle = '#fff'; ctx.shadowColor = 'rgba(0,0,0,.2)'; ctx.shadowBlur = 30; ctx.beginPath(); ctx.arc(cx, cy, 330, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      text(ctx, th, D.heading, cx, cy - 190, { z: 64, font: 'head', color: th.accent, a: ap(lt, .4), maxW: 520 });
+      if (D.solo) text(ctx, th, D.A, cx, cy + 40, { z: 120, font: 'name', color: th.ink, a: ap(lt, .6), maxW: 560 });
+      else {
+        text(ctx, th, D.A, cx, cy - 40, { z: 110, font: 'name', color: th.ink, a: ap(lt, .6), maxW: 560 });
+        text(ctx, th, D.lang === 'hi' ? 'संग' : 'weds', cx, cy + 40, { z: 44, font: 'caps', color: th.accent, a: ap(lt, .8) });
+        text(ctx, th, D.B, cx, cy + 150, { z: 110, font: 'name', color: th.ink, a: ap(lt, 1), maxW: 560 });
+      }
+      const by = 1400; ctx.save(); ctx.globalAlpha = ap(lt, 1.3); ctx.fillStyle = th.accent;
+      ctx.beginPath(); ctx.moveTo(140, by - 60); ctx.lineTo(W - 140, by - 60); ctx.lineTo(W - 190, by); ctx.lineTo(W - 140, by + 60); ctx.lineTo(140, by + 60); ctx.lineTo(190, by); ctx.closePath(); ctx.fill(); ctx.restore();
+      text(ctx, tw(th, true), D.date, cx, by + 14, { z: 44, font: 'caps', color: '#fff', a: ap(lt, 1.4), maxW: 680 });
+      text(ctx, th, [D.V, D.CITY].filter(Boolean).join(' · '), cx, by + 130, { z: 40, font: 'body', color: th.ink, a: ap(lt, 1.6), maxW: 820 });
+      diyas(ctx, th, cx, 1640, ap(lt, 1.8), lt, 5);
+    },
+    panel(ctx, film, th, a) {
+      const r = { x: 140, y: 320, w: W - 280, h: 1280 }; r.cx = r.x + r.w / 2;
+      ctx.save(); ctx.globalAlpha *= clamp(a); scallop(ctx, r.x, r.y, r.w, r.h, th.rg); ctx.fillStyle = th.paper; ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeStyle = th.accent; ctx.lineWidth = 4; ctx.strokeRect(r.x + 14, r.y + 14, r.w - 28, r.h - 28); ctx.restore();
+      return r;
+    },
+    day(ctx, film, th, D, sc, lt) {
+      const cx = W / 2, b = dateBits(D, sc);
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, 760); ctx.clip(); rangoli(ctx, cx, 330, 420, th.rg, ease(lt / 1.4), lt); ctx.restore();
+      ctx.save(); ctx.globalAlpha = ap(lt, .2); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, 330, 170, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      text(ctx, th, b.d, cx, 370, { z: 150, font: 'name', color: th.accent, a: ap(lt, .4) });
+      text(ctx, th, `${b.m} · ${b.wd}`, cx, 430, { z: 30, font: 'caps', color: th.ink, a: ap(lt, .5), maxW: 300 });
+      text(ctx, th, dayLabel(D, sc), cx, 870, { z: 56, font: 'head', color: th.ink, a: ap(lt, .6) });
+      sc.day.events.forEach((e, i) => {
+        const y = 1050 + i * 190, a = ap(lt, .8 + i * .2);
+        ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = th.rg[i % th.rg.length]; rr(ctx, 150, y - 90, W - 300, 150, 75); ctx.fill(); ctx.restore();
+        text(ctx, tw(th, true), e.name, cx, y - 2, { z: 64, font: 'name', color: '#fff', a, maxW: W - 360 });
+        text(ctx, tw(th, true), e.time, cx, y + 42, { z: 30, font: 'caps', color: '#fff', a, maxW: W - 360 });
+      });
+    }
+  };
+
+  // ===== Botanical Green: eucalyptus sprigs, an arch of leaves, airy white =====
+  function sprig(ctx, x, y, len, ang, col, k, round = false) {
+    if (k <= 0) return;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.strokeStyle = shade(col, -.25); ctx.lineWidth = 3;
+    const L = len * clamp(k); ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(L * .5, -L * .08, L, 0); ctx.stroke();
+    for (let i = 1; i < 9; i++) {
+      const p = i / 9; if (p > clamp(k)) break; const px = len * p, s = (1 - p * .5) * Math.min(len * .11, 30);
+      [-1, 1].forEach(sd => { ctx.save(); ctx.translate(px, -len * .04 * Math.sin(p * Math.PI)); ctx.rotate(sd * .7); ctx.fillStyle = sd > 0 ? col : shade(col, -.12);
+        ctx.beginPath(); if (round) ctx.arc(s * .9, 0, s * .8, 0, Math.PI * 2); else ctx.ellipse(s * 1.1, 0, s * 1.2, s * .5, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); });
+    }
+    ctx.restore();
+  }
+  const BOTANICAL = {
+    short: 'Botanical', name: 'Botanical Green', trans: 'up', fx: 'none',
+    face: face('italic 400 {z}px "Cormorant Garamond", serif', '600 {z}px "Jost", sans-serif', '600 {z}px "Jost", sans-serif', '400 {z}px "Jost", sans-serif', '400 {z}px "Great Vibes", cursive'),
+    pals: [P6('Sage', false, ['#fbfaf5', '#eef0e6'], ['#a8b78f', '#6f8456', '#3f4f2c'], '#ffffff', '#24331b', '#6f8456', { lf: '#8fa67a' }),
+      P6('Forest', false, ['#f7f9f6', '#e3ece2'], ['#5f8a63', '#3b6640', '#1f3d23'], '#ffffff', '#162b19', '#3b6640', { lf: '#4f7d55' }),
+      P6('Olive', false, ['#fbf9f0', '#efead6'], ['#a3a35a', '#7a7a32', '#4a4a14'], '#ffffff', '#2e2e10', '#7a7a32', { lf: '#8c8c48' }),
+      P6('Blush Sage', false, ['#fdf6f4', '#f3e3df'], ['#c7a49a', '#9c7268', '#5e3e36'], '#ffffff', '#3a2622', '#b07a70', { lf: '#93a888' }),
+      P6('Eucalyptus', false, ['#f6faf9', '#dfece9'], ['#9cc0b6', '#5f8f84', '#2f5850'], '#ffffff', '#183a33', '#4f8478', { lf: '#86aea4', round: true }),
+      P6('Moss', false, ['#f9f8f2', '#e8e8d8'], ['#9aa86a', '#66763a', '#38441a'], '#ffffff', '#252e12', '#66763a', { lf: '#77894a', round: true })],
+    bg(ctx, th, t) {
+      ctx.fillStyle = th.bg[0]; ctx.fillRect(0, 0, W, H);
+      const g = ctx.createLinearGradient(0, H * .6, 0, H); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]); ctx.fillStyle = g; ctx.fillRect(0, H * .6, W, H * .4);
+      ctx.save(); ctx.globalAlpha = .7; sprig(ctx, -10, 200, 300, -.3 + Math.sin(t) * .02, th.lf, 1, th.round); sprig(ctx, W + 10, H - 200, 300, Math.PI + .3 + Math.sin(t + 1) * .02, th.lf, 1, th.round); ctx.restore();
+    },
+    open(ctx, film, th, D, sc, lt) {
+      sprig(ctx, 160, 1500, 900, -1.1, th.lf, ease(lt / 1.6), th.round);
+      sprig(ctx, W - 160, 420, 700, 2.1, th.lf, ease((lt - .5) / 1.4), th.round);
+      text(ctx, th, D.heading.toUpperCase(), W / 2, H * .46, { z: 36, font: 'caps', color: th.accent, a: ap(lt, 1.4), ls: 10 });
+      text(ctx, th, who2(D, D.lang === 'hi'), W / 2, H * .46 + 140, { z: 120, font: 'name', color: th.ink, a: ap(lt, 1.8), maxW: 860 });
+    },
+    title(ctx, film, th, D, sc, lt) {
+      const cx = W / 2, cy = 900, R = 400;
+      for (let i = 0; i < 12; i++) { const a = Math.PI + i / 11 * Math.PI, s = i < 6 ? 1 : -1; sprig(ctx, cx + Math.cos(a) * R, cy + Math.sin(a) * R, 180, a + s * 1.9, th.lf, ease(lt * 1.6 - i * .08), th.round); }
+      ctx.save(); ctx.globalAlpha = ap(lt, .2) * .5; ctx.strokeStyle = th.accent; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, R - 40, Math.PI, 0); ctx.lineTo(cx + R - 40, cy + 500); ctx.moveTo(cx - R + 40, cy); ctx.lineTo(cx - R + 40, cy + 500); ctx.stroke(); ctx.restore();
+      text(ctx, th, D.lang === 'hi' ? D.heading : D.heading.toUpperCase(), cx, 720, { z: 34, font: 'caps', color: th.accent, a: ap(lt, .4), ls: 8, maxW: 620 });
+      if (D.solo) text(ctx, th, D.A, cx, 960, { z: 160, font: 'name', color: th.ink, a: ap(lt, .7), maxW: 700 });
+      else {
+        text(ctx, th, D.A, cx, 890, { z: 150, font: 'name', color: th.ink, a: ap(lt, .7), maxW: 700 });
+        text(ctx, th, '&', cx, 990, { z: 110, font: 'script', color: th.accent, a: ap(lt, .9) });
+        text(ctx, th, D.B, cx, 1140, { z: 150, font: 'name', color: th.ink, a: ap(lt, 1.1), maxW: 700 });
+      }
+      text(ctx, th, D.date, cx, 1300, { z: 36, font: 'caps', color: th.ink, a: ap(lt, 1.4), ls: 4, maxW: 700 });
+      text(ctx, th, [D.V, D.CITY].filter(Boolean).join(', '), cx, 1360, { z: 34, font: 'body', color: th.accent, a: ap(lt, 1.6), maxW: 700 });
+    },
+    panel(ctx, film, th, a) {
+      const r = { x: 150, y: 330, w: W - 300, h: 1270 }; r.cx = r.x + r.w / 2;
+      ctx.save(); ctx.globalAlpha *= clamp(a); ctx.fillStyle = th.paper; ctx.beginPath(); ctx.moveTo(r.x, r.y + r.h); ctx.lineTo(r.x, r.y + r.w / 2); ctx.arc(r.cx, r.y + r.w / 2, r.w / 2, Math.PI, 0); ctx.lineTo(r.x + r.w, r.y + r.h); ctx.closePath(); ctx.fill(); ctx.strokeStyle = th.accent; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
+      sprig(ctx, r.x + 20, r.y + r.h - 20, 260, -.5, th.lf, clamp(a), th.round); sprig(ctx, r.x + r.w - 20, r.y + r.h - 20, 260, Math.PI + .5, th.lf, clamp(a), th.round);
+      return { ...r, y: r.y + 120, h: r.h - 160 };
+    },
+    day(ctx, film, th, D, sc, lt) {
+      const cx = W / 2, cy = 700, b = dateBits(D, sc);
+      for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; sprig(ctx, cx + Math.cos(a) * 260, cy + Math.sin(a) * 200, 170, a + 1.9, th.lf, ease(lt * 2 - i * .1), th.round); }
+      text(ctx, th, dayLabel(D, sc), cx, cy - 60, { z: 30, font: 'caps', color: th.accent, a: ap(lt, .3), ls: 6 });
+      text(ctx, th, b.d, cx, cy + 70, { z: 170, font: 'name', color: th.ink, a: ap(lt, .5) });
+      text(ctx, th, `${b.m} · ${b.wd}`, cx, cy + 130, { z: 30, font: 'caps', color: th.ink, a: ap(lt, .6), ls: 3, maxW: 400 });
+      rows(ctx, th, sc.day, 170, 1120, W - 340, lt, { z: 80, gap: 150, start: .8 });
+    }
+  };
+
+  // ===== Bollywood Marquee: chasing bulbs, NOW SHOWING, tickets =====
+  function bulbs(ctx, x, y, w, h, t, col = '#ffd36b') {
+    const step = 46, pts = [];
+    for (let xx = x; xx <= x + w; xx += step) pts.push([xx, y], [xx, y + h]);
+    for (let yy = y + step; yy < y + h; yy += step) pts.push([x, yy], [x + w, yy]);
+    pts.forEach(([px, py], i) => { const on = (Math.floor(t * 6) + i) % 3 !== 0; ctx.save(); ctx.fillStyle = on ? col : '#5a4a2a'; if (on) { ctx.shadowColor = col; ctx.shadowBlur = 18; } ctx.beginPath(); ctx.arc(px, py, 9, 0, Math.PI * 2); ctx.fill(); ctx.restore(); });
+  }
+  function ticket(ctx, th, x, y, w, h, a) {
+    ctx.save(); ctx.globalAlpha *= clamp(a); ctx.fillStyle = th.paper; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + 120); ctx.arc(x + w, y + 160, 40, -Math.PI / 2, Math.PI / 2, true);
+    ctx.lineTo(x + w, y + h); ctx.lineTo(x, y + h); ctx.lineTo(x, y + 200); ctx.arc(x, y + 160, 40, Math.PI / 2, -Math.PI / 2, true); ctx.closePath(); ctx.fill();
+    ctx.setLineDash([14, 12]); ctx.strokeStyle = th.accent; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 50, y + 160); ctx.lineTo(x + w - 50, y + 160); ctx.stroke(); ctx.restore();
+  }
+  const MARQUEE = {
+    short: 'Marquee', name: 'Bollywood Marquee', trans: 'slide', fx: 'sparkle',
+    face: face('400 {z}px "Bebas Neue", sans-serif', '400 {z}px "Bebas Neue", sans-serif', '400 {z}px "Bebas Neue", sans-serif', '400 {z}px "Jost", sans-serif', '400 {z}px "Great Vibes", cursive'),
+    pals: [P6('Ruby', true, ['#9b0f22', '#2a0207'], GOLD, '#fff6e6', '#2a0a0a', '#b3122a'),
+      P6('Midnight', true, ['#1a1a2e', '#05050c'], GOLD, '#fff6e6', '#1a1a2e', '#c9302c'),
+      P6('Purple', true, ['#4a1470', '#12031c'], GOLD, '#fff6e6', '#2a0a3a', '#7a1fb0'),
+      P6('Teal', true, ['#0c4a50', '#021214'], GOLD, '#fff6e6', '#0a2a2e', '#0c7a84'),
+      P6('Emerald', true, ['#0d4a2a', '#02140a'], GOLD, '#fff6e6', '#0a2a18', '#0f7a44'),
+      P6('Sunset', true, ['#a3360c', '#2a0c02'], GOLD, '#fff6e6', '#2a1004', '#d9480f')],
+    bg(ctx, th, t) {
+      for (let i = 0; i < 18; i++) { const x = i * W / 18, g = ctx.createLinearGradient(x, 0, x + W / 18, 0); g.addColorStop(0, shade(th.bg[0], -.45)); g.addColorStop(.5, th.bg[0]); g.addColorStop(1, shade(th.bg[0], -.45)); ctx.fillStyle = g; ctx.fillRect(x, 0, W / 18 + 1, H); }
+      const v = ctx.createRadialGradient(W / 2, H / 2, 200, W / 2, H / 2, H * .7); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.65)'); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+      [-1, 1].forEach(s => { ctx.save(); ctx.translate(W / 2 + s * 380, -40); ctx.rotate(s * (.25 + Math.sin(t * .8 + s) * .12)); const b = ctx.createLinearGradient(0, 0, 0, H); b.addColorStop(0, 'rgba(255,240,200,.28)'); b.addColorStop(1, 'rgba(255,240,200,0)'); ctx.fillStyle = b; ctx.beginPath(); ctx.moveTo(-20, 0); ctx.lineTo(-300, H); ctx.lineTo(300, H); ctx.lineTo(20, 0); ctx.fill(); ctx.restore(); });
+    },
+    open(ctx, film, th, D, sc, lt) {
+      const x = 120, y = 620, w = W - 240, h = 520;
+      ctx.save(); ctx.globalAlpha = ap(lt, 0, .5); ctx.fillStyle = '#140a04'; ctx.fillRect(x, y, w, h); ctx.restore();
+      bulbs(ctx, x, y, w, h, lt);
+      const word = D.lang === 'hi' ? 'अब परदे पर' : 'NOW SHOWING', n = Math.floor(clamp((lt - .4) / 1.6) * word.length);
+      text(ctx, tw(th, true), word.slice(0, Math.max(0, n)), W / 2, y + 230, { z: 150, font: 'name', color: 'gold', glow: 24, maxW: w - 80 });
+      text(ctx, tw(th, true), who2(D, D.lang === 'hi'), W / 2, y + 400, { z: 80, font: 'name', color: '#fff', a: ap(lt, 2.2), maxW: w - 80 });
+    },
+    title(ctx, film, th, D, sc, lt) {
+      const cx = W / 2, x = 110, y = 300, w = W - 220, h = 1300, t2 = tw(th, true), hi = D.lang === 'hi';
+      ctx.save(); ctx.globalAlpha = ap(lt, 0, .6); ctx.fillStyle = 'rgba(10,4,2,.7)'; ctx.fillRect(x, y, w, h); ctx.restore();
+      bulbs(ctx, x, y, w, h, lt);
+      text(ctx, t2, hi ? 'शुभ विवाह' : `THE ${D.heading.toUpperCase()} OF`, cx, 450, { z: 60, font: 'caps', color: '#fff', a: ap(lt, .2), ls: 3, maxW: w - 80 });
+      if (D.solo) text(ctx, t2, D.A.toUpperCase(), cx, 820, { z: 230, font: 'name', color: 'gold', a: ap(lt, .4), glow: 20, maxW: w - 80 });
+      else {
+        text(ctx, t2, hi ? D.A : D.A.toUpperCase(), cx, 720, { z: 210, font: 'name', color: 'gold', a: ap(lt, .4), glow: 20, maxW: w - 80 });
+        text(ctx, t2, '&', cx, 830, { z: 110, font: 'script', color: '#fff', a: ap(lt, .7) });
+        text(ctx, t2, hi ? D.B : D.B.toUpperCase(), cx, 1010, { z: 210, font: 'name', color: 'gold', a: ap(lt, 1), glow: 20, maxW: w - 80 });
+      }
+      text(ctx, t2, '★ ★ ★ ★ ★', cx, 1110, { z: 50, font: 'caps', color: '#ffd36b', a: ap(lt, 1.2) });
+      text(ctx, t2, hi ? 'जल्द आ रहा है' : 'COMING SOON', cx, 1200, { z: 56, font: 'caps', color: '#fff', a: ap(lt, 1.4), ls: 6 });
+      text(ctx, t2, D.date, cx, 1300, { z: 76, font: 'name', color: 'gold', a: ap(lt, 1.6), maxW: w - 80 });
+      text(ctx, t2, [D.V, D.CITY].filter(Boolean).join(' · '), cx, 1380, { z: 40, font: 'body', color: '#fff', a: ap(lt, 1.8), maxW: w - 80 });
+    },
+    panel(ctx, film, th, a) {
+      const r = { x: 130, y: 300, w: W - 260, h: 1320 }; r.cx = r.x + r.w / 2;
+      ticket(ctx, th, r.x, r.y, r.w, r.h, a);
+      text(ctx, { ...th, dark: false }, D_ADMIT, r.cx, r.y + 105, { z: 56, font: 'caps', color: th.accent, a: clamp(a), ls: 8 });
+      return { ...r, y: r.y + 170, h: r.h - 170, th: { ...th, dark: false } };
+    },
+    day(ctx, film, th, D, sc, lt) {
+      const b = dateBits(D, sc), x = 110, y = 560, w = W - 220, h = 820, k = out(lt / .6), t2 = { ...th, dark: false };
+      ctx.save(); ctx.translate((1 - k) * 600, 0); ticket(ctx, th, x, y, w, h, k);
+      text(ctx, t2, `${dayLabel(D, sc)} · ${D.lang === 'hi' ? 'शो टाइम' : 'SHOW TIME'}`, W / 2, y + 105, { z: 58, font: 'caps', color: th.accent, ls: 4, maxW: w - 80 });
+      text(ctx, t2, `${b.d} ${b.m}`, W / 2, y + 330, { z: 150, font: 'name', color: th.ink, maxW: w - 80 });
+      text(ctx, t2, b.wd, W / 2, y + 390, { z: 40, font: 'body', color: th.accent });
+      ctx.restore();
+      rows(ctx, t2, sc.day, x + 70, y + 520, w - 140, lt, { z: 76, gap: 120, col: th.ink, tcol: th.accent, start: .7 });
+    }
+  };
+  const D_ADMIT = 'ADMIT ONE  ·  FRONT ROW';
+
+  // ===== The Wedding Times: a front page with a masthead, a headline and columns =====
+  const EDITORIAL = {
+    short: 'Times', name: 'The Wedding Times', trans: 'slide', fx: 'none',
+    face: face('700 {z}px "Playfair Display", serif', '400 {z}px "UnifrakturMaguntia", serif', '600 {z}px "Jost", sans-serif', 'italic 400 {z}px "Cormorant Garamond", serif', '400 {z}px "Great Vibes", cursive'),
+    pals: [P6('Newsprint', false, ['#f4f0e4', '#e9e3d1'], ['#444', '#222', '#000'], '#f9f6ec', '#141414', '#b3121f'),
+      P6('Sepia', false, ['#f1e4c9', '#e2cfa8'], ['#7a5a2a', '#5a3e14', '#2e1e06'], '#f7ecd6', '#2e1e0c', '#8a4b14'),
+      P6('Evening', false, ['#ededed', '#dcdcdc'], ['#555', '#333', '#111'], '#f6f6f6', '#151515', '#0d4f8c'),
+      P6('Gazette', false, ['#f6f1e2', '#ebe1c6'], ['#2a3a5a', '#1a2a4a', '#0a1428'], '#fbf7ea', '#111a2e', '#1a2a4a'),
+      P6('Rose Daily', false, ['#fbefed', '#f1dcd8'], ['#7a2a3a', '#5a1a2a', '#2e0a14'], '#fdf6f5', '#231518', '#c2185b'),
+      P6('Garden Post', false, ['#eef3e8', '#dbe6cf'], ['#3a5a2a', '#2a4a1a', '#14280a'], '#f6f9f2', '#18241a', '#2e7d32')],
+    bg(ctx, th, t) {
+      ctx.fillStyle = th.bg[0]; ctx.fillRect(0, 0, W, H);
+      ctx.save(); ctx.globalAlpha = .07; ctx.fillStyle = '#000'; for (let y = 0; y < H; y += 9) for (let x = (y % 18); x < W; x += 18) ctx.fillRect(x, y, 2, 2);
+      ctx.globalAlpha = .12; ctx.fillStyle = '#000'; ctx.fillRect(W / 2 - 1, 0, 2, H); ctx.restore();
+    },
+    page(ctx, th, D, lt, small) {
+      const cx = W / 2, hi = D.lang === 'hi', a = s => small ? 1 : ap(lt, s);
+      text(ctx, th, hi ? 'शुभ समाचार' : 'The Wedding Times', cx, 380, { z: hi ? 110 : 120, font: hi ? 'name' : 'head', color: th.ink, a: a(0), maxW: 900 });
+      ctx.save(); ctx.globalAlpha = a(.1); ctx.fillStyle = th.ink; ctx.fillRect(90, 420, W - 180, 6); ctx.fillRect(90, 432, W - 180, 2); ctx.fillRect(90, 488, W - 180, 2); ctx.restore();
+      text(ctx, th, `${hi ? 'अंक 1' : 'VOL. I'}  ·  ${D.date}  ·  ${hi ? 'मूल्य: आपका आशीर्वाद' : 'PRICE: YOUR BLESSINGS'}`, cx, 470, { z: 24, font: 'caps', color: th.ink, a: a(.2), maxW: 880, ls: 1 });
+      text(ctx, th, who2(D, hi).toUpperCase(), cx, 650, { z: 150, font: 'name', color: th.ink, a: a(.4), maxW: 900, rise: 20 });
+      text(ctx, th, D.solo ? (hi ? 'का जश्न!' : 'CELEBRATES!') : (hi ? 'विवाह बंधन में बंधेंगे!' : 'TO TIE THE KNOT!'), cx, 760, { z: 80, font: 'name', color: th.accent, a: a(.6), maxW: 900 });
+      ctx.save(); ctx.globalAlpha = a(.8); ctx.fillStyle = th.accent; ctx.fillRect(90, 830, 440, 520); ctx.fillStyle = th.ink;
+      for (let i = 0; i < 16; i++) ctx.fillRect(570, 850 + i * 32, i % 5 === 4 ? 260 : 420, 12);
+      ctx.restore();
+      text(ctx, tw(th, true), D.mono, 310, 1130, { z: 150, font: 'name', color: '#fff', a: a(.9), maxW: 400 });
+      text(ctx, th, `${hi ? 'स्थान' : 'VENUE'}: ${[D.V, D.CITY].filter(Boolean).join(', ')}`, cx, 1420, { z: 34, font: 'body', color: th.ink, a: a(1.1), maxW: 900 });
+      ctx.save(); ctx.globalAlpha = a(1.2); ctx.fillStyle = th.ink; ctx.fillRect(90, 1460, W - 180, 2); ctx.restore();
+      text(ctx, th, D.heading, cx, 1540, { z: 60, font: 'script', color: th.accent, a: a(1.3) });
+    },
+    open(ctx, film, th, D, sc, lt) {
+      const k = ease(lt / 2.4);
+      ctx.save(); ctx.translate(W / 2, H / 2); ctx.rotate((1 - k) * Math.PI * 6); ctx.scale(.08 + .92 * k, .08 + .92 * k); ctx.translate(-W / 2, -H / 2);
+      ctx.fillStyle = th.paper; ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 60; ctx.fillRect(60, 260, W - 120, 1400); ctx.shadowColor = 'transparent';
+      EDITORIAL.page(ctx, th, D, lt, true); ctx.restore();
+      if (lt > 2.4) { ctx.save(); ctx.globalAlpha = ap(lt, 2.4, .3); ctx.translate(W / 2 + 230, 300); ctx.rotate(-.18); ctx.strokeStyle = th.accent; ctx.lineWidth = 6; ctx.strokeRect(-200, -60, 400, 120); ctx.restore(); text(ctx, th, D.lang === 'hi' ? 'ताज़ा ख़बर!' : 'EXTRA! EXTRA!', W / 2 + 230, 320, { z: 50, font: 'caps', color: th.accent, a: ap(lt, 2.4, .3) }); }
+    },
+    title(ctx, film, th, D, sc, lt) { EDITORIAL.page(ctx, th, D, lt, false); },
+    panel(ctx, film, th, a) {
+      const r = { x: 110, y: 300, w: W - 220, h: 1320 }; r.cx = r.x + r.w / 2;
+      ctx.save(); ctx.globalAlpha *= clamp(a); ctx.fillStyle = th.paper; ctx.fillRect(r.x, r.y, r.w, r.h); ctx.fillStyle = th.ink; ctx.fillRect(r.x, r.y, r.w, 8); ctx.fillRect(r.x, r.y + 16, r.w, 2); ctx.fillRect(r.x, r.y + r.h - 8, r.w, 8); ctx.restore();
+      return r;
+    },
+    day(ctx, film, th, D, sc, lt) {
+      const cx = W / 2, b = dateBits(D, sc), hi = D.lang === 'hi';
+      text(ctx, th, hi ? 'आज का कार्यक्रम' : "TODAY'S PROGRAMME", cx, 480, { z: 90, font: 'name', color: th.ink, a: ap(lt, .1), maxW: 900 });
+      ctx.save(); ctx.globalAlpha = ap(lt, .2); ctx.fillStyle = th.ink; ctx.fillRect(90, 530, W - 180, 6); ctx.fillRect(90, 542, W - 180, 2); ctx.restore();
+      text(ctx, th, `${dayLabel(D, sc)} — ${b.wd}, ${b.d} ${b.m}`, cx, 620, { z: 40, font: 'caps', color: th.accent, a: ap(lt, .3), maxW: 900 });
+      sc.day.events.forEach((e, i) => {
+        const y = 820 + i * 170, a = ap(lt, .5 + i * .2);
+        text(ctx, th, e.name, 110, y, { z: 80, font: 'name', color: th.ink, align: 'left', a, maxW: 560 });
+        text(ctx, th, e.time, W - 110, y, { z: 44, font: 'caps', color: th.ink, align: 'right', a, maxW: 300 });
+        ctx.save(); ctx.globalAlpha = a; ctx.setLineDash([4, 10]); ctx.strokeStyle = th.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(110, y + 40); ctx.lineTo(W - 110, y + 40); ctx.stroke(); ctx.restore();
+      });
+      text(ctx, th, [D.V, D.CITY].filter(Boolean).join(', '), cx, 1500, { z: 40, font: 'body', color: th.ink, a: ap(lt, 1.2), maxW: 900 });
+    }
+  };
+
+  // ===== Royal Farmaan: a scroll that unrolls on velvet, sealed with wax =====
+  function scroll(ctx, th, top, bottom, a = 1) {
+    const x = 150, w = W - 300;
+    ctx.save(); ctx.globalAlpha *= clamp(a);
+    const g = ctx.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, shade(th.paper, -.18)); g.addColorStop(.12, th.paper); g.addColorStop(.88, th.paper); g.addColorStop(1, shade(th.paper, -.18));
+    ctx.fillStyle = g; ctx.fillRect(x, top, w, bottom - top);
+    ctx.globalAlpha *= .25; ctx.fillStyle = '#7a5a2a'; for (let i = 0; i < 60; i++) ctx.fillRect(x + hash(i) * w, top + hash(i + 9) * (bottom - top), 3, 3);
+    ctx.restore();
+    [top, bottom].forEach(y => { ctx.save(); ctx.globalAlpha *= clamp(a); const r = ctx.createLinearGradient(0, y - 30, 0, y + 30); r.addColorStop(0, '#5a3214'); r.addColorStop(.5, '#c9883e'); r.addColorStop(1, '#4a280e'); ctx.fillStyle = r; rr(ctx, x - 50, y - 30, w + 100, 60, 30); ctx.fill();
+      ctx.fillStyle = goldFill(ctx, th, y + 20, 50); ctx.beginPath(); ctx.arc(x - 60, y, 34, 0, Math.PI * 2); ctx.arc(x + w + 60, y, 34, 0, Math.PI * 2); ctx.fill(); ctx.restore(); });
+    return { x: x + 30, y: top + 60, w: w - 60, h: bottom - top - 120, cx: W / 2 };
+  }
+  function seal(ctx, th, x, y, r, s, a) {
+    if (a <= 0) return;
+    ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y); ctx.scale(1 + (1 - a) * .6, 1 + (1 - a) * .6);
+    ctx.fillStyle = th.accent; ctx.beginPath(); for (let i = 0; i < 24; i++) { const ang = i / 24 * Math.PI * 2, rr2 = r * (i % 2 ? .92 : 1.04); ctx.lineTo(Math.cos(ang) * rr2, Math.sin(ang) * rr2); } ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = shade(th.accent, -.35); ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, r * .72, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+    text(ctx, tw(th, true), s, x, y + r * .2, { z: r * .55, font: 'caps', color: '#fff', a, maxW: r * 1.3 });
+  }
+  const SCROLL = {
+    short: 'Farmaan', name: 'Royal Farmaan', trans: 'fade', fx: 'sparkle',
+    face: face('400 {z}px "Pinyon Script", cursive', '400 {z}px "Cinzel", serif', '400 {z}px "Cinzel", serif', 'italic 400 {z}px "Cormorant Garamond", serif', '400 {z}px "Pinyon Script", cursive'),
+    pals: [P6('Maroon', true, ['#5c0f1e', '#1a0307'], GOLD, '#f3e2b8', '#4a2a10', '#9b1b30'),
+      P6('Emerald', true, ['#0f4a32', '#03140d'], GOLD, '#f2e3bd', '#3a2a10', '#1b6b45'),
+      P6('Indigo', true, ['#1b2560', '#05081a'], GOLD, '#f1e4c2', '#2a2410', '#2a3f9e'),
+      P6('Ebony', true, ['#2a2420', '#070605'], GOLD, '#efdfb4', '#3a2810', '#7a1a1a'),
+      P6('Aubergine', true, ['#4a1a4e', '#120414'], GOLD, '#f2e2c0', '#3a2414', '#7a2a7e'),
+      P6('Saffron', true, ['#8a3a0c', '#240c02'], GOLD, '#f4e4bc', '#4a2a10', '#c2570e')],
+    bg(ctx, th, t) {
+      const g = ctx.createRadialGradient(W / 2, H * .45, 60, W / 2, H / 2, H * .75); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.save(); ctx.globalAlpha = .08; ctx.strokeStyle = th.gold[1]; ctx.lineWidth = 2; for (let i = -H; i < W; i += 70) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + H, H); ctx.stroke(); ctx.beginPath(); ctx.moveTo(i + H, 0); ctx.lineTo(i, H); ctx.stroke(); } ctx.restore();
+    },
+    open(ctx, film, th, D, sc, lt) {
+      const k = ease((lt - .2) / 1.8), half = 650 * k, cy = H / 2;
+      const r = scroll(ctx, th, cy - Math.max(30, half), cy + Math.max(30, half));
+      if (k > .7) text(ctx, th, D.lang === 'hi' ? 'शाही निमन्त्रण' : 'A ROYAL INVITATION', W / 2, cy - 60, { z: 54, font: 'caps', color: th.ink, a: ap(lt, 1.6), ls: 3, maxW: r.w });
+      if (k > .7) text(ctx, th, who2(D, D.lang === 'hi'), W / 2, cy + 90, { z: 110, font: 'name', color: th.accent, a: ap(lt, 2), maxW: r.w });
+      seal(ctx, th, W / 2, cy + 400, 80, D.mono.replace(' | ', ''), ap(lt, 2.6, .5));
+    },
+    title(ctx, film, th, D, sc, lt) {
+      const r = scroll(ctx, th, 260, 1640), cx = W / 2, hi = D.lang === 'hi';
+      text(ctx, th, D.sacred ? '॥ श्री गणेशाय नमः ॥' : (hi ? 'शाही निमन्त्रण' : 'BY ROYAL INVITATION'), cx, 430, { z: 34, font: D.sacred ? 'deva' : 'caps', color: th.accent, a: ap(lt, .2), ls: 3 });
+      text(ctx, th, D.heading, cx, 560, { z: 70, font: 'caps', color: th.ink, a: ap(lt, .4), maxW: r.w });
+      if (D.solo) text(ctx, th, D.A, cx, 860, { z: 170, font: 'name', color: th.accent, a: ap(lt, .6), maxW: r.w });
+      else {
+        text(ctx, th, D.A, cx, 790, { z: 160, font: 'name', color: th.accent, a: ap(lt, .6), maxW: r.w });
+        text(ctx, th, hi ? 'संग' : 'with', cx, 880, { z: 44, font: 'body', color: th.ink, a: ap(lt, .8) });
+        text(ctx, th, D.B, cx, 1030, { z: 160, font: 'name', color: th.accent, a: ap(lt, 1), maxW: r.w });
+      }
+      text(ctx, th, D.date, cx, 1170, { z: 40, font: 'caps', color: th.ink, a: ap(lt, 1.3), ls: 2, maxW: r.w });
+      text(ctx, th, [D.V, D.CITY].filter(Boolean).join(' · '), cx, 1240, { z: 40, font: 'body', color: th.ink, a: ap(lt, 1.5), maxW: r.w });
+      seal(ctx, th, cx, 1440, 90, D.mono.replace(' | ', ''), ap(lt, 1.9, .4));
+    },
+    panel(ctx, film, th, a) { return scroll(ctx, th, 260, 1640, a); },
+    day(ctx, film, th, D, sc, lt) {
+      const b = dateBits(D, sc), k = ease(lt / .9), r = scroll(ctx, th, H / 2 - 620 * k - 30, H / 2 + 620 * k + 30);
+      if (k < .6) return;
+      text(ctx, th, dayLabel(D, sc), W / 2, 520, { z: 46, font: 'caps', color: th.accent, a: ap(lt, .6), ls: 4 });
+      text(ctx, th, `${b.wd}, ${b.d} ${b.m}`, W / 2, 610, { z: 44, font: 'body', color: th.ink, a: ap(lt, .7), maxW: r.w });
+      rows(ctx, th, sc.day, r.x + 40, 840, r.w - 80, lt, { z: 100, gap: 200, align: 'center', col: th.accent, tcol: th.ink, start: .9 });
+    }
+  };
+
+  const CONCEPTS = { minimal: MINIMAL, floral: FLORAL, cinema: CINEMA, deco: DECO, polaroid: POLAROID, neon: NEON, rangoli: RANGOLI, botanical: BOTANICAL, marquee: MARQUEE, editorial: EDITORIAL, scroll: SCROLL };
+  const CONCEPT_OCC = {
+    minimal: ['wedding', 'engagement', 'reception', 'anniversary', 'wedding', 'engagement'],
+    floral: ['wedding', 'mehendi', 'babyshower', 'engagement', 'haldi', 'wedding'],
+    cinema: ['wedding', 'reception', 'engagement', 'anniversary', 'sangeet', 'wedding'],
+    deco: ['reception', 'anniversary', 'wedding', 'engagement', 'sangeet', 'birthday'],
+    polaroid: ['engagement', 'birthday', 'anniversary', 'babyshower', 'wedding', 'naming'],
+    neon: ['birthday', 'sangeet', 'reception', 'birthday', 'engagement', 'sangeet'],
+    rangoli: ['wedding', 'haldi', 'mehendi', 'housewarming', 'puja', 'naming'],
+    botanical: ['wedding', 'engagement', 'haldi', 'babyshower', 'reception', 'wedding'],
+    marquee: ['wedding', 'sangeet', 'reception', 'birthday', 'engagement', 'anniversary'],
+    editorial: ['wedding', 'engagement', 'anniversary', 'birthday', 'reception', 'babyshower'],
+    scroll: ['wedding', 'engagement', 'puja', 'housewarming', 'reception', 'wedding']
+  };
+  const themeOf = film => film.concept && CONCEPTS[film.concept] ? CONCEPTS[film.concept].pals[film.pal] : THEMES[film.theme];
+  // The words' holder in a concept (a card in Royal Heritage)
+  function holder(ctx, film, th, lt, rise) {
+    const C = CONCEPTS[film.concept];
+    if (!C) { frame(ctx, film, th, 1, lt); return card(ctx, film, th, ap(lt, 0, .8), rise); }
+    return C.panel(ctx, film, th, ap(lt, 0, .8));
+  }
+  const LIST = buildList(), byId = Object.fromEntries(LIST.map(f => [f.id, f]));
+  // A concept's last screen: its names screen again, then the credit
+  function conceptFinale(ctx, film, th, D, sc, lt, C) {
+    if (C.finale) return C.finale(ctx, film, th, D, sc, lt);
+    C.title(ctx, film, th, D, sc, lt);
+    credit(ctx, th, D, lt, 1690, th.dark ? '#fff' : th.accent);
+  }
+
   // ---------- The player ----------
   function drawScene(ctx, film, th, P, sc, lt) {
-    if (sc.k !== 'day') { background(ctx, th, lt + sc.t0, null); particles(ctx, th, film.fx, lt + sc.t0, false); }
-    SCENES[sc.k](ctx, film, th, P.D, sc, lt);
+    const C = CONCEPTS[film.concept];
+    FACE = C ? C.face : FACE0;
+    if (!C) {
+      if (sc.k !== 'day') { background(ctx, th, lt + sc.t0, null); particles(ctx, th, film.fx, lt + sc.t0, false); }
+      return SCENES[sc.k](ctx, film, th, P.D, sc, lt);
+    }
+    C.bg(ctx, th, lt + sc.t0, sc);
+    if (C.fx !== 'none') particles(ctx, th, C.fx, lt + sc.t0, false);
+    if (sc.k === 'open') C.open(ctx, film, th, P.D, sc, lt);
+    else if (sc.k === 'title') C.title(ctx, film, th, P.D, sc, lt);
+    else if (sc.k === 'day') C.day(ctx, film, th, P.D, sc, lt);
+    else if (sc.k === 'finale') conceptFinale(ctx, film, th, P.D, sc, lt, C);
+    else SCENES[sc.k](ctx, film, th, P.D, sc, lt);
   }
   class Player {
     constructor(canvas, scale = .5) {
@@ -841,18 +1659,26 @@ const Films = (() => {
     // The moment shown as the film's picture: the names, fully arrived
     posterTime() { const s = this.P.scenes.find(x => x.k === 'title'); return s.t0 + s.d - .7; }
     draw(t) {
-      const { ctx, film } = this, th = THEMES[film.theme], S = this.P.scenes, FADE = .55;
+      const { ctx, film } = this, th = themeOf(film), C = CONCEPTS[film.concept], S = this.P.scenes, FADE = C && C.trans === 'slide' ? .7 : .55;
       t = clamp(t, 0, this.total - .001); NOW = t;
       ctx.setTransform(this.s, 0, 0, this.s, 0, 0);
       const i = S.findIndex(x => t < x.t0 + x.d), sc = S[i < 0 ? S.length - 1 : i], lt = t - sc.t0;
       drawScene(ctx, film, th, this.P, sc, lt);
       const next = S[i + 1];
       if (next && lt > sc.d - FADE) {
-        ctx.save(); ctx.globalAlpha = ease((lt - (sc.d - FADE)) / FADE);
+        // each concept moves to the next screen its own way
+        const a = ease((lt - (sc.d - FADE)) / FADE), tr = C ? C.trans : 'fade';
+        ctx.save();
+        if (tr === 'slide') ctx.translate((1 - a) * W, 0);
+        else if (tr === 'up') { ctx.globalAlpha = a; ctx.translate(0, (1 - a) * 180); }
+        else if (tr === 'zoom') { ctx.globalAlpha = a; const k = 1 + (1 - a) * .14; ctx.translate(W / 2, H / 2); ctx.scale(k, k); ctx.translate(-W / 2, -H / 2); }
+        else if (tr === 'wipe') { ctx.beginPath(); ctx.arc(W / 2, H / 2, Math.max(1, a * H * .62), 0, Math.PI * 2); ctx.clip(); }
+        else ctx.globalAlpha = a;
         drawScene(ctx, film, th, this.P, next, lt - (sc.d - FADE) - FADE);
         ctx.restore();
       }
-      corners(ctx, th);
+      FACE = FACE0;
+      if (!C) corners(ctx, th);
       signature(ctx, th, this.P.D.credit, this.P.D.site);
       return sc;
     }
@@ -862,7 +1688,7 @@ const Films = (() => {
     if (typeof document === 'undefined' || !document.fonts) return Promise.resolve();
     let link = document.querySelector('link[data-film-fonts]');
     if (!link) {
-      link = Object.assign(document.createElement('link'), { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Amita:wght@700&family=Tiro+Devanagari+Hindi&family=Yatra+One&family=Cinzel:wght@400&family=Great+Vibes&family=Playfair+Display:wght@700&family=Cormorant+Garamond:ital,wght@1,400&display=swap' });
+      link = Object.assign(document.createElement('link'), { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Amita:wght@700&family=Tiro+Devanagari+Hindi&family=Yatra+One&family=Cinzel:wght@400&family=Great+Vibes&family=Playfair+Display:wght@700&family=Cormorant+Garamond:ital,wght@1,400&family=Jost:wght@400;600&family=DM+Serif+Display&family=Caveat:wght@500;700&family=Righteous&family=Bebas+Neue&family=Poiret+One&family=UnifrakturMaguntia&family=Cinzel+Decorative:wght@700&family=Marcellus&family=Pacifico&family=Pinyon+Script&display=swap' });
       link.dataset.filmFonts = '1';
       link.loaded = new Promise(r => { link.onload = link.onerror = r; setTimeout(r, 5000); });
       document.head.appendChild(link);
@@ -870,12 +1696,13 @@ const Films = (() => {
     return Promise.resolve(link.loaded).then(() => loadFonts());
   }
   function loadFonts() {
-    const want = ['700 40px "Playfair Display"', '400 40px "Cinzel"', '40px "Great Vibes"', 'italic 400 40px "Cormorant Garamond"'].map(f => document.fonts.load(f));
+    const want = ['700 40px "Playfair Display"', '400 40px "Cinzel"', '40px "Great Vibes"', 'italic 400 40px "Cormorant Garamond"', '400 40px "Jost"', '600 40px "Jost"', '40px "DM Serif Display"',
+      '700 40px "Caveat"', '500 40px "Caveat"', '40px "Righteous"', '40px "Bebas Neue"', '40px "Poiret One"', '40px "UnifrakturMaguntia"', '700 40px "Cinzel Decorative"', '40px "Marcellus"', '40px "Pacifico"', '40px "Pinyon Script"'].map(f => document.fonts.load(f));
     const hindi = ['700 40px "Amita"', '40px "Tiro Devanagari Hindi"', '40px "Yatra One"'].map(f => document.fonts.load(f, 'ॐ शुभ विवाह'));
-    return Promise.race([Promise.all([...want, ...hindi]), new Promise(r => setTimeout(r, 6000))]).catch(() => {});
+    return Promise.race([Promise.all([...want, ...hindi]).then(() => document.fonts.ready), new Promise(r => setTimeout(r, 15000))]).catch(() => {});
   }
 
-  return { W, H, THEMES, FRAMES, OPENINGS, FX, LIST, byId, describe, details, fromCard, script, Player, fontsReady, SCENE_NAME };
+  return { W, H, THEMES, FRAMES, OPENINGS, FX, LIST, byId, describe, CONCEPTS, conceptName, themeOf, details, fromCard, script, Player, fontsReady, SCENE_NAME };
 })();
 
 if (typeof module !== 'undefined') module.exports = Films;
