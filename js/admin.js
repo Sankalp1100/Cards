@@ -1730,13 +1730,16 @@
         g.drawImage(img, 0, 0, w, h);
         const px = g.getImageData(0, 0, w, h).data, buckets = {}, bins = Array.from({ length: 24 }, () => ({ w: 0, h: 0, s: 0, l: 0 }));
         let all = 0;
+        for (let i = 0; i < px.length; i += 4) { const key = (px[i] >> 5) + ',' + (px[i + 1] >> 5) + ',' + (px[i + 2] >> 5); buckets[key] = (buckets[key] || 0) + 1; all++; }
+        const bgRGB = Object.entries(buckets).sort((a, b) => b[1] - a[1])[0][0].split(',').map(v => +v * 32 + 16);
         for (let i = 0; i < px.length; i += 4) {
           const r = px[i] / 255, gg = px[i + 1] / 255, b = px[i + 2] / 255, mx = Math.max(r, gg, b), mn = Math.min(r, gg, b), l = (mx + mn) / 2, d = mx - mn;
-          const key = (px[i] >> 5) + ',' + (px[i + 1] >> 5) + ',' + (px[i + 2] >> 5); buckets[key] = (buckets[key] || 0) + 1; all++;
-          if (!d) continue;
+          // the further from the background, the more a pixel counts (the soft edges of thin print mix both colours)
+          const far = Math.hypot(px[i] - bgRGB[0], px[i + 1] - bgRGB[1], px[i + 2] - bgRGB[2]) / 441, k = far * far;
+          if (!d || k < .02) continue;
           const s = d / (1 - Math.abs(2 * l - 1)); if (s < .25 || l < .1 || l > .85) continue;
           let hue = mx === r ? ((gg - b) / d) % 6 : mx === gg ? (b - r) / d + 2 : (r - gg) / d + 4; hue = (hue * 60 + 360) % 360;
-          const bin = bins[Math.floor(hue / 15) % 24]; bin.w += s; bin.h += hue * s; bin.s += s * s; bin.l += l * s;
+          const wt = s * k, bin = bins[Math.floor(hue / 15) % 24]; bin.w += wt; bin.h += hue * wt; bin.s += s * wt; bin.l += l * wt;
         }
         const top = Object.entries(buckets).sort((a, b) => b[1] - a[1])[0][0].split(',').map(v => (+v * 32 + 16) / 255);
         const bgL = (Math.max(...top) + Math.min(...top)) / 2;
@@ -1745,7 +1748,7 @@
         // the main colour: the strongest one, unless that is the gold work and another colour is clearly there too
         let main = ranked[0];
         if (main && isGold(main) && ranked[1] && ranked[1].w > main.w * .25 && !isGold(ranked[1])) main = ranked[1];
-        if (!main || main.w < all * .002) return resolve({ h: 40, s: .05, dark: bgL < .45, word: bgL < .45 ? 'Noir' : 'Ivory', gold: 'gold', swatch: bgL < .45 ? '#161616' : '#f4eee2' });
+        if (!main || main.w < all * .0004) return resolve({ h: 40, s: .05, dark: bgL < .45, word: bgL < .45 ? 'Noir' : 'Ivory', gold: 'gold', swatch: bgL < .45 ? '#161616' : '#f4eee2' });
         const hue = main.h / main.w, sat = Math.min(1, main.s / main.w), lig = main.l / main.w;
         let word = HUE_WORDS.find(([upTo]) => hue < upTo)[1];
         if ((word === 'Crimson' || word === 'Rose') && lig < .32) word = 'Maroon';
@@ -1790,7 +1793,7 @@
       if (!r.readable || !d.host1) {
         auStatus('🔎 This card is a picture: reading its words from the picture… (the first time takes about half a minute)');
         try {
-          const found = PdfCard.parse(await ocrLines(r.big || r.pictures[0]));
+          const found = PdfCard.parse(await ocrLines(r.big || r.pictures[0]), { ocr: true });
           if (found.host1) d = found; else d = { ...found, ...d };
         } catch (e) { /* offline: the short form below */ }
       }
@@ -1814,7 +1817,8 @@
     if (!src) return [];
     const T = await loadOcr();
     const { data } = await T.recognize(src, 'eng+hin', { logger: m => { if (m.status === 'recognizing text') auStatus(`🔎 Reading the words on the card… ${Math.round(m.progress * 100)}%`); } });
-    return String(data.text || '').split('\n').map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    // "चि॰" is often read as "चि०" (a zero): put the abbreviation mark back so the name is found
+    return String(data.text || '').split('\n').map(x => x.replace(/([\u0900-\u0965\u0970-\u097F])०/g, '$1॰').replace(/\s+/g, ' ').trim()).filter(Boolean);
   }
   // Still no names: four short boxes, then the videos are made the same way (in the card's colours)
   function showFill(d) {

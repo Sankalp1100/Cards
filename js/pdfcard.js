@@ -96,8 +96,9 @@ const PdfCard = (() => {
     .map(word => ({ word, re: new RegExp([...word].map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s?'), 'g') }));
 
   // Plain lines of text → the card's details (anything not found stays empty)
-  function parse(lines) {
-    lines = (lines || []).map(l => clean(mendHindi(String(l || '')))).filter(Boolean);
+  // opts.ocr: the words were read from a picture, so they are already in the right order (no PDF-text repair)
+  function parse(lines, opts = {}) {
+    lines = (lines || []).map(l => clean(opts.ocr ? String(l || '') : mendHindi(String(l || '')))).filter(Boolean);
     const text = lines.join('\n'), hi = (text.match(/[ऀ-ॿ]/g) || []).length > (text.match(/[A-Za-z]/g) || []).length;
     const year = (digits(text).match(/\b(20[2-4]\d)\b/) || [])[1] || new Date().getFullYear();
     const out = { lang: hi ? 'hi' : 'en', type: 'wedding', host1: '', host2: '', parents1: '', parents2: '', events: [], venue: '', address: '', phones: [], hashtag: '' };
