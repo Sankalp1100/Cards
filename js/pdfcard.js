@@ -23,13 +23,13 @@ const PdfCard = (() => {
     [/bhandara|भंडारा|भण्डारा/i, 'Bhandara', 'भंडारा'],
     [/mata\s*ki\s*chowki|jagran|जागरण|माता\s*की\s*चौकी|चौकी/i, 'Mata ki Chowki', 'माता की चौकी'],
     [/kirtan|bhajan|कीर्तन|भजन/i, 'Kirtan & Bhajan', 'कीर्तन भजन'],
-    [/ratjaga|रतजगा/i, 'Ratjaga', 'रतजगा'],
+    [/rat[\s;:.']*j[\s;:.']*aga|ratjaga|रतजगा/i, 'Ratjaga', 'रतजगा'],
     [/tilak|तिलक|टीका/i, 'Tilak', 'तिलक'],
     [/roka|रोका/i, 'Roka', 'रोका'],
     [/ring\s*ceremony|engagement|sagai|सगाई|रिंग\s*सेरेमनी|मुद्रिका/i, 'Engagement', 'सगाई'],
     [/lagan\s*patrika|lagan\b|लगन/i, 'Lagan', 'लगन'],
     [/haldi|tel\s*baan|हल्दी|हलदी|हलदि|उबटन|तेल\s*बान|तेलबान/i, 'Haldi', 'हल्दी'],
-    [/mehe?n?di|mehandi|मेहँदी|मेहंदी|मेंहदी|मेहन्दी|मेंहदि|मेहदी/i, 'Mehendi', 'मेहँदी'],
+    [/mehe?n?di|mehandi|mec?hen?di|mehndi|मेहँदी|मेहंदी|मेंहदी|मेहन्दी|मेंहदि|मेहदी/i, 'Mehendi', 'मेहँदी'],
     [/ladies\s*sangeet|sangeet|लेडीज़?\s*संगीत|संगीत/i, 'Sangeet', 'संगीत'],
     [/chooda|chura|चूड़ा|चूडा/i, 'Chooda', 'चूड़ा'],
     [/bhaat|bhat\b|mayra|mayro|mamera|भात|मायरा|मायरो|मामेरा/i, 'Bhaat', 'भात'],
@@ -245,7 +245,8 @@ const PdfCard = (() => {
     const out = [];
     let start = 0;
     for (let i = 0; i < L.length; i++) {
-      if (!isWd(L[i])) { out.push(L[i]); continue; }
+      const lineTimes = findTimes(L[i]), bare = L[i].replace(/\b\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)/gi, '').trim();
+      if (!(isWd(L[i]) || lineTimes.length && bare && isWd(bare))) { out.push(L[i]); continue; }
       // the box ends with its weekday; it starts after the previous weekday (at most 7 lines back)
       // it reaches back to the line after the last one with a full date (a heading's date range, the box before)
       const fullDate = l => !MON_START.test(digits(l).trim()) && !!findDate(l, 2000);
@@ -258,6 +259,10 @@ const PdfCard = (() => {
         EVENTS.forEach(ev => { const x = ev[0].exec(l); if (x && !(ev[3] && ev[3].needsDate) && !names.some(n => n.s === x[0])) names.push({ s: x[0], line: l }); });
         times.push(...findTimes(l));
       });
+      times.push(...lineTimes);
+      // times printed just under the weekday (read lower down than it)
+      let after = 0;
+      while (times.length < names.length && L[i + 1 + after] && findTimes(L[i + 1 + after]).length && !EVENTS.some(([re]) => re.test(L[i + 1 + after])) && after < 2) { times.push(...findTimes(L[i + 1 + after])); after++; }
       // a box whose lines already carry a full date is left as it is (a badge's "NOV 1:00 PM" is a month and a time, not 1 November)
       if (!names.length || part.some(l => !MON_START.test(digits(l).trim()) && findDate(l, 2000))) { out.push(L[i]); start = i + 1; continue; }
       let when = '';
@@ -274,8 +279,8 @@ const PdfCard = (() => {
       if (!when) { out.push(L[i]); start = i + 1; continue; }
       // the lines of this box are replaced by one plain line per function
       out.splice(out.length - (i - from), i - from);
-      names.forEach((n, k) => out.push(`${n.s} ${when}${times.length === names.length ? ' ' + times[k] : names.length === 1 && times.length ? ' ' + times[0] : ''}`));
-      start = i + 1;
+      names.forEach((n, k) => out.push(`${n.s} ${when}${times.length >= names.length ? ' ' + times[times.length - names.length + k] : names.length === 1 && times.length ? ' ' + times[0] : ''}`));
+      start = i + 1 + after; i += after;
       continue;
     }
     return out;
@@ -283,7 +288,7 @@ const PdfCard = (() => {
   // Section headings that many cards print on a line of their own, the details under them
   const H_VENUE = /^(?:marriage|wedding|reception|ceremony|party|function)?\s*venue\s*:?$|^(?:समारोह|विवाह|कार्यक्रम|आयोजन)\s*स्थल\s*:?$/i;
   const H_ADDRESS = /^(?:home|our|residential)?\s*(?:address|residence)\s*:?$|^(?:निवास(?:\s*स्थान)?|पता|घर\s*का\s*पता)\s*:?$/i;
-  const H_INVITE = /^(?:cordial(?:ly)?\s+invit(?:ation|ed)\s+(?:from|by)|invitation\s+from|invited\s+by|with\s+warm\s+regards\s+from|warm\s+regards|with\s+best\s+compliments(?:\s+from)?|best\s+compliments(?:\s+from)?|compliments\s+from)\s*:?$/i;
+  const H_INVITE = /^(?:cordial(?:ly)?(?:\s+invit(?:ation|ed)(?:\s+(?:from|by))?)?|invitation\s+from|invited\s+by|with\s+warm\s+regards\s+from|warm\s+regards|with\s+best\s+compliments(?:\s+from)?|best\s+compliments(?:\s+from)?|compliments\s+from)\s*:?$/i;
   const H_ANY = /^[A-Z][A-Z0-9 &'’.,-]{3,40}$/;
   const PLACE_WORDS = /,|\b\d{6}\b|\broad\b|\bnear\b|\bsector\b|\bcolony\b|\bnagar\b|\bvihar\b|\bmarg\b|\bgali\b|\bstreet\b|\bphase\b|\bresidency\b|\bopp\.?\b|\bdist\.?\b|मार्ग|नगर|कॉलोनी|गली|पास|सामने|जिला/i;
   function tidyUp(out, lines, used) {
@@ -341,11 +346,35 @@ const PdfCard = (() => {
     out.events = out.events.filter(e => !(/^(wedding|शुभ विवाह)$/i.test(e.name) && e.date.length <= 10 && out.events.some(x => x !== e && x.date.slice(0, 10) === e.date.slice(0, 10))));
     // inviters are people or families: not a monogram ("S|A"), not a sentence ("Baraat will depart from…")
     out.inviters = out.inviters.filter(v => /[A-Za-z]{4,}|[\u0900-\u097F]{3,}/.test(v) && !/\b(?:will|depart|proceed|residence|request|invite)\b/i.test(v) && v.split(/\s+/).length <= 10);
+    // the little ones' request: its line and the lines under it (their names), up to the next heading
+    if (out.kids && !/\n/.test(out.kids)) {
+      const i = lines.findIndex(l => l === out.kids || out.kids.startsWith(l));
+      if (i >= 0) { const more = []; for (let k = i + 1; k < lines.length && more.length < 3; k++) { const l = lines[k]; if (H_ADDRESS.test(l) || H_VENUE.test(l) || H_INVITE.test(l) || H_ANY.test(l) || /\d{3}/.test(digits(l)) || l.split(' ').length > 9) break; more.push(l); used[k] = true; } if (more.length) out.kids = [out.kids, ...more].join('\n'); }
+    }
+    out.quotes = out.quotes.filter(q => /[॥]/.test(q) || !/करें|करते\s*हैं|पधार|आमंत्रित|उपस्थिति|सादर|request|invite/i.test(q));
+    // a well-known verse whose two halves were read apart (or the wrong way round) is put back together
+    for (let k = 0; k + 1 < VERSES.length; k += 2) {
+      const a = out.quotes.findIndex(q => q.split('\n').includes(VERSES[k])), b = out.quotes.findIndex(q => q.split('\n').includes(VERSES[k + 1]));
+      if (a >= 0 && b >= 0 && a !== b) { const keep = Math.min(a, b); out.quotes[keep] = VERSES[k] + '\n' + VERSES[k + 1]; out.quotes.splice(Math.max(a, b), 1); }
+    }
     // the invocation is not a quote too
     out.quotes = out.quotes.filter(q => norm2(q) !== norm2(out.invocation));
   }
+  const VERSES = ['वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ।', 'निर्विघ्नं कुरु मे देव सर्वकार्येषु सर्वदा॥', 'विघ्न हरण मंगल करण, श्री गणपति महाराज।', 'प्रथम निमंत्रण आपको, पूरण कीजै काज॥',
+    'मंगलम् भगवान विष्णुः, मंगलम् गरुड़ध्वजः।', 'मंगलम् पुण्डरीकाक्षः, मंगलाय तनो हरिः॥', 'सर्वमंगल मांगल्ये शिवे सर्वार्थ साधिके।', 'शरण्ये त्र्यम्बके गौरी नारायणि नमोऽस्तु ते॥',
+    'गजाननं भूतगणादि सेवितं, कपित्थ जम्बू फलचारु भक्षणम्।', 'उमासुतं शोक विनाशकारकं, नमामि विघ्नेश्वर पाद पंकजम्॥',
+    'मंगलम् भगवान विष्णु, मंगलम् गरुड़ध्वजः।', 'मंगलम् पुण्डरीकाक्ष, मंगलाय तनो हरिः॥', 'लम्बोदरं महाकायं गजवक्त्रं चतुर्भुजम्।', 'आवाहयाम्यहं देवं गणेशं सिद्धिदायकम्॥'];
+  const vnorm = x => String(x || '').replace(/[^\u0900-\u097F]/g, '').replace(/[ंँ]/g, 'ं');
+  function similar(a, b) { // share of letter pairs in common
+    const pairs = x => { const p = []; for (let i = 0; i < x.length - 1; i++) p.push(x.slice(i, i + 2)); return p; };
+    const A = pairs(a), B = pairs(b); if (!A.length || !B.length) return 0;
+    let hit = 0; const pool = B.slice(); A.forEach(p => { const k = pool.indexOf(p); if (k >= 0) { hit++; pool.splice(k, 1); } });
+    return 2 * hit / (A.length + B.length);
+  }
+  const mendVerse = l => { const n = vnorm(l); if (n.length < 16 || /गणेशाय|गणपतये|नमः|नम:/.test(l) && n.length < 22) return l; let best = null, sc = 0;
+    VERSES.forEach(v => { const x = similar(n, vnorm(v)); if (x > sc) { sc = x; best = v; } }); return sc > .62 ? best : l; };
   function parse(lines, opts = {}) {
-    lines = layout(lines);
+    lines = layout((lines || []).map(l => /[\u0900-\u097F]{3}/.test(String(l || '')) ? mendVerse(String(l)) : l));
     // Each line as printed (raw keeps wide gaps between side-by-side words) and tidied; "चि॰" alone joins its name
     const rows = [];
     // Repair only text that is really broken (a "ि" before its letter, or empty characters): many PDFs give clean Hindi
@@ -705,14 +734,33 @@ const PdfCard = (() => {
           const say = (f, msg) => opts.progress && opts.progress((k + Math.min(1, f || 0)) / todo.length, `Page ${p.n} of ${pages.length}: ${msg || `reading every word… ${Math.round((f || 0) * 100)}%`}`);
           p.ocr = await ocr(src, say);
         }
-        const all = pages.flatMap(p => p.ocr ? p.ocr.lines : p.lines), allSizes = pages.flatMap(p => p.ocr ? p.ocr.sizes : p.sizes);
-        const found = withNames(parse(all, { ocr: pages.every(p => p.ocr) }), all, allSizes);
+        let all = pages.flatMap(p => p.ocr ? p.ocr.lines : p.lines), allSizes = pages.flatMap(p => p.ocr ? p.ocr.sizes : p.sizes);
+        let found = withNames(parse(all, { ocr: pages.every(p => p.ocr) }), all, allSizes);
+        if (!found.host1) {
+          await addStylish(pages.filter(p => p.ocr), opts.progress);
+          all = pages.flatMap(p => p.ocr ? p.ocr.lines : p.lines); allSizes = pages.flatMap(p => p.ocr ? p.ocr.sizes : p.sizes);
+          found = withNames(parse(all, { ocr: pages.every(p => p.ocr) }), all, allSizes);
+        }
         seen = all;
         if (found.host1 || !details) { details = found; how = readable ? 'text + pictures' : 'pictures'; }
       } catch (e) { /* offline: the details are typed instead */ }
     }
     if (details && !details.lines) details.lines = seen.map(clean).filter(Boolean);
     return { lines, seen, pictures, big, pages: pdf.numPages, readable: !!(details && details.host1) || readable, details, how };
+  }
+  // Stylish English names Tesseract could not read: the vision model looks at the first pages (where names are
+  // printed) only when the names are still missing, and its lines are put in their place on the page
+  async function addStylish(pages, progress) {
+    for (const [k, p] of pages.slice(0, 2).entries()) {
+      if (!p.ocr || !p.ocr.img) continue;
+      let extra = [];
+      try { extra = await florenceLines(p.ocr.img, (f, msg) => progress && progress(f, `Page ${k + 1}: ${msg}`)); } catch (e) { break; }
+      for (const f of extra) {
+        if (p.ocr.lines.some((l, i) => Math.abs((p.ocr.ys[i] || 0) - f.y) < .02 && norm(l).includes(norm(f.s).slice(0, 5)))) continue;
+        const at = p.ocr.ys.findIndex(y => y > f.y), i = at < 0 ? p.ocr.lines.length : at;
+        p.ocr.lines.splice(i, 0, f.s); p.ocr.sizes.splice(i, 0, f.z); p.ocr.ys.splice(i, 0, f.y);
+      }
+    }
   }
   // The pages of a card as pictures (screenshots, photos, JPG/PNG/WebP), in the order of their file names
   // ("page 2" before "page 10"): every picture is read like a picture page of a PDF (OCR in several passes + the
@@ -740,8 +788,13 @@ const PdfCard = (() => {
       const say = (f, msg) => opts.progress && opts.progress((k + Math.min(1, f || 0)) / pages.length, `Picture ${k + 1} of ${pages.length}: ${msg || `reading every word… ${Math.round((f || 0) * 100)}%`}`);
       p.ocr = await ocr(p.src, say);
     }
-    const all = pages.flatMap(p => p.ocr.lines), sizes = pages.flatMap(p => p.ocr.sizes);
-    const details = withNames(parse(all, { ocr: true }), all, sizes);
+    let all = pages.flatMap(p => p.ocr.lines), sizes = pages.flatMap(p => p.ocr.sizes);
+    let details = withNames(parse(all, { ocr: true }), all, sizes);
+    if (!details.host1) {
+      await addStylish(pages, opts.progress);
+      all = pages.flatMap(p => p.ocr.lines); sizes = pages.flatMap(p => p.ocr.sizes);
+      details = withNames(parse(all, { ocr: true }), all, sizes);
+    }
     if (details && !details.lines) details.lines = all.map(clean).filter(Boolean);
     return { lines: [], seen: all, pictures, big: pages[0] && pages[0].src, pages: pages.length, readable: !!(details && details.host1), details, how: 'pictures', files: list.map(f => f.name) };
   }
@@ -797,7 +850,7 @@ const PdfCard = (() => {
       for (let v = 0; v < 256; v++) { wB += hist[v]; if (!wB) continue; const wF = n - wB; if (!wF) break; sB += v * hist[v]; const mB = sB / wB, mF = (total - sB) / wF, b2 = wB * wF * (mB - mF) * (mB - mF); if (b2 > maxV) { maxV = b2; best = v; } } }
     for (let q = 0; q < n; q++) {
       let v = Math.max(0, Math.min(255, (grey[q] - lo) * 255 / Math.max(1, hi - lo)));
-      if (dark) v = 255 - v;
+      if (dark !== (mode === 'neg')) v = 255 - v; // dark cards turned light; the negative pass turns light-on-dark badges around
       if (mode === 'bw') v = (dark ? 255 - grey[q] : grey[q]) > (dark ? 255 - best : best) ? 255 : 0;
       p[q * 4] = p[q * 4 + 1] = p[q * 4 + 2] = v; p[q * 4 + 3] = 255;
     }
@@ -831,19 +884,22 @@ const PdfCard = (() => {
     return { T, model, processor, tokenizer };
   })().catch(e => { flo = null; throw e; });
   // The card in square pieces from top to bottom (the model looks at a square, so tall cards are read in parts)
-  async function florenceLines(img, report) {
-    const { T, model, processor, tokenizer } = await loadFlorence(report && (f => report('download', f)));
+  async function florenceLines(img, progress) {
+    const say = (f, msg) => progress && progress(f, msg);
+    const { T, model, processor, tokenizer } = await loadFlorence(f => say(f, `Getting the AI reader ready (first time only, about 200 MB)… ${Math.round(f * 100)}%`));
     const W = 900, H = Math.round(img.height * W / img.width), step = Math.round(W * .75), out = [];
     const tops = []; for (let y = 0; y < H; y += step) { tops.push(Math.min(y, Math.max(0, H - W))); if (y + W >= H) break; }
     for (const [k, top] of tops.entries()) {
-      if (report) report('read', k / tops.length);
+      const t0 = Date.now(), tick = setInterval(() => { const sec = Math.round((Date.now() - t0) / 1000); say((k + Math.min(.95, sec / 60)) / tops.length, `Reading stylish writing… part ${k + 1} of ${tops.length} · ${sec}s`); }, 1000);
       const c = document.createElement('canvas'); c.width = W; c.height = Math.min(W, H);
       const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
       g.drawImage(img, 0, -top, W, H);
       const image = await T.RawImage.fromURL(c.toDataURL('image/png'));
       const task = '<OCR_WITH_REGION>';
       const inputs = { ...tokenizer(processor.construct_prompts(task)), ...(await processor(image)) };
-      const ids = await model.generate({ ...inputs, max_new_tokens: 512 });
+      let ids;
+      try { ids = await Promise.race([model.generate({ ...inputs, max_new_tokens: 512 }), new Promise((_, no) => setTimeout(() => no(new Error('too slow on this computer')), 90000))]); }
+      finally { clearInterval(tick); }
       const text = tokenizer.batch_decode(ids, { skip_special_tokens: false })[0];
       const r = processor.post_process_generation(text, task, image.size)[task] || { labels: [], quad_boxes: [] };
       r.labels.forEach((label, i) => {
@@ -856,35 +912,99 @@ const PdfCard = (() => {
     }
     return out;
   }
+  // A few Tesseract workers, made once (each loads the English + Hindi data) and closed after a minute unused
+  let pool = null, poolTimer = 0;
+  async function ocrWorkers(T) {
+    clearTimeout(poolTimer);
+    if (!pool) {
+      const n = Math.max(1, Math.min(3, (navigator.hardwareConcurrency || 2) - 1));
+      pool = Promise.all(Array.from({ length: n }, async () => { const w = { onProgress: null }; w.worker = await T.createWorker('eng+hin', 1, { logger: m => { if (w.onProgress && m.status === 'recognizing text') w.onProgress(m.progress); } }); return w; }))
+        .catch(e => { pool = null; throw e; });
+    }
+    return pool;
+  }
+  function ocrIdle() {
+    clearTimeout(poolTimer);
+    poolTimer = setTimeout(async () => { const p = pool; pool = null; if (p) (await p).forEach(w => w.worker.terminate()); }, 60000);
+  }
+  // Badges: small dark shapes on a light page (round date badges, ribbons, labels) hold light words that a
+  // whole-page read skips. Each is found (a patch of dark pixels, compact and not too big), cut out, turned
+  // light-on-dark into dark-on-light, enlarged and read on its own; its words keep their place on the page.
+  async function badgeLines(img, worker) {
+    const W = 600, H = Math.round(img.height * W / img.width), c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0, W, H);
+    const px = g.getImageData(0, 0, W, H).data, lum = new Uint8Array(W * H);
+    let sum = 0; for (let i = 0; i < W * H; i++) { lum[i] = px[i * 4] * .299 + px[i * 4 + 1] * .587 + px[i * 4 + 2] * .114; sum += lum[i]; }
+    if (sum / (W * H) < 128) return []; // a dark page is read turned around already
+    const dark = new Uint8Array(W * H); for (let i = 0; i < W * H; i++) dark[i] = lum[i] < 110 ? 1 : 0;
+    const seen = new Uint8Array(W * H), boxes = [], stack = [];
+    for (let i = 0; i < W * H; i++) {
+      if (!dark[i] || seen[i]) continue;
+      let n = 0, x0 = W, y0 = H, x1 = 0, y1 = 0; stack.push(i); seen[i] = 1;
+      while (stack.length) { const k = stack.pop(), x = k % W, y = (k / W) | 0; n++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+        for (const q of [k - 1, k + 1, k - W, k + W]) if (q >= 0 && q < W * H && !seen[q] && dark[q] && Math.abs((q % W) - x) <= 1) { seen[q] = 1; stack.push(q); } }
+      const w = x1 - x0 + 1, h = y1 - y0 + 1, area = w * h;
+      if (w < 24 || h < 18 || area < W * H * .002 || area > W * H * .12 || n / area < .35 || w / h > 6 || h / w > 2.5) continue;
+      boxes.push({ x0, y0, x1, y1 });
+    }
+    const out = [], k = img.width / W;
+    for (const b of boxes.slice(0, 16)) {
+      const pad = 3, sx = Math.max(0, (b.x0 - pad) * k), sy = Math.max(0, (b.y0 - pad) * k), sw = Math.min(img.width - sx, (b.x1 - b.x0 + 2 * pad) * k), sh = Math.min(img.height - sy, (b.y1 - b.y0 + 2 * pad) * k);
+      const scale = 520 / Math.max(sw, sh), cc = document.createElement('canvas'); cc.width = Math.round(sw * scale); cc.height = Math.round(sh * scale);
+      const cg = cc.getContext('2d'); cg.drawImage(img, sx, sy, sw, sh, 0, 0, cc.width, cc.height);
+      const im = cg.getImageData(0, 0, cc.width, cc.height), p = im.data;
+      for (let i = 0; i < p.length; i += 4) { const v = 255 - (p[i] * .299 + p[i + 1] * .587 + p[i + 2] * .114); p[i] = p[i + 1] = p[i + 2] = v > 140 ? 255 : v < 90 ? 0 : v; }
+      cg.putImageData(im, 0, 0);
+      await worker.setParameters({ tessedit_pageseg_mode: '6', preserve_interword_spaces: '1' });
+      const { data } = await worker.recognize(cc);
+      for (const l of data.lines || []) {
+        const words = (l.words || []).filter(x => x.text && x.text.trim());
+        const conf = words.length ? words.reduce((a, x) => a + x.confidence, 0) / words.length : l.confidence;
+        const text = String(l.text || '').replace(/\s+/g, ' ').trim();
+        if (!text || conf < 40) continue;
+        const cy = (sy + (l.bbox.y0 + l.bbox.y1) / 2 / scale) / img.height;
+        out.push({ s: text, conf: Math.min(conf, 80), y: cy, z: (l.bbox.y1 - l.bbox.y0) / scale / img.height * 1000, x0: sx / img.width, x1: (sx + sw) / img.width, src: 'badge' });
+      }
+    }
+    return out;
+  }
   async function ocr(src, progress, opts2 = {}) {
     if (!src) return { lines: [], sizes: [] };
     const T = await loadOcr(), img = await loadImg(src);
-    const passes = [[2000, 'grey', '3'], [2000, 'grey', '11'], [1400, 'grey', '6'], [1100, 'grey', '11'], [2000, 'bw', '3'], [1100, 'bw', '11'], [750, 'grey', '11'], [600, 'bw', '11']];
+    const passes = [[2000, 'grey', '3'], [2000, 'grey', '11'], [1100, 'grey', '11'], [2000, 'bw', '3'], [750, 'grey', '11'], [1600, 'neg', '11'], [1000, 'neg', '11']];
     // "चि॰" is often read as "चि०" (a zero): the abbreviation mark goes back so the name is found
-    const fix = x => String(x || '').replace(/([\u0900-\u0965\u0970-\u097F])०/g, '$1॰').replace(/[|_~]+/g, ' ').replace(/\s+/g, ' ').trim();
-    let worker = null, done = 0;
-    const found = [];
-    try {
-      worker = await T.createWorker('eng+hin', 1, { logger: m => { if (progress && m.status === 'recognizing text') progress((done + m.progress) / passes.length); } });
-      for (const [width, mode, psm] of passes) {
+    const fix = x => String(x || '').replace(/([\u0900-\u0965\u0970-\u097F])०/g, '$1॰').replace(/[|_~]+/g, ' ').replace(/\s+/g, ' ').trim()
+      .replace(/^(?:[@©®=«»*%&$¢•·°§¶+>]+\s*)+(?=[A-Za-z\u0900-\u097F])/, '').replace(/(?:\s+[«»*%&$¢•·°§¶+<>=©®]+|\s+[ःः]|\s[A-Za-z])$/, '').replace(/(\w);(\w)/g, '$1$2');
+    const found = [], share = passes.map(() => 0), tell = () => progress && progress(share.reduce((a, b) => a + b, 0) / passes.length);
+    // the passes run side by side on a few Tesseract workers (one per spare processor core), kept ready between pages
+    const workers = await ocrWorkers(T);
+    let next = 0;
+    await Promise.all(workers.map(async w => {
+      while (next < passes.length) {
+        const k = next++, [width, mode, psm] = passes[k];
         const c = prepared(img, width, mode);
-        await worker.setParameters({ tessedit_pageseg_mode: psm, preserve_interword_spaces: '1' });
-        const { data } = await worker.recognize(c);
+        w.onProgress = f => { share[k] = f; tell(); };
+        await w.worker.setParameters({ tessedit_pageseg_mode: psm, preserve_interword_spaces: '1' });
+        const { data } = await w.worker.recognize(c);
+        share[k] = 1; tell();
         for (const l of data.lines || []) {
-          const words = (l.words || []).filter(w => w.text && w.text.trim());
-          const conf = words.length ? words.reduce((a, w) => a + w.confidence, 0) / words.length : l.confidence;
+          const words = (l.words || []).filter(x => x.text && x.text.trim());
+          const conf = words.length ? words.reduce((a, x) => a + x.confidence, 0) / words.length : l.confidence;
           const text = fix(l.text);
           if (window.__ocrDebug) window.__ocrDebug.push([width, mode, psm, Math.round(conf), text]);
           if (!text || conf < 45 || norm(text).length < 2) continue;
           if (ocrNoise(text, conf)) continue;
           found.push({ s: text, conf, y: (l.bbox.y0 + l.bbox.y1) / 2 / c.height, z: (l.bbox.y1 - l.bbox.y0) / c.height * 1000, x0: l.bbox.x0 / c.width, x1: l.bbox.x1 / c.width });
         }
-        done++;
       }
-    } finally { if (worker) worker.terminate(); }
+    }));
+    // the badges' words, read one badge at a time
+    try { for (const b of await badgeLines(img, workers[0].worker)) if (!ocrNoise(b.s, b.conf)) found.push({ ...b, s: fix(b.s) }); }
+    catch (e) { if (window.__ocrDebug) window.__ocrDebug.push(['badges failed', e.message]); }
+    ocrIdle();
     // stylish English: the vision model reads what Tesseract could not (its readings join the same merge)
-    if (opts2.florence !== false) {
-      try { found.push(...await florenceLines(img, (what, f) => progress && progress(what === 'download' ? 1 : 1, what === 'download' ? `Getting the AI reader ready (first time only, about 200 MB)… ${Math.round(f * 100)}%` : `Reading stylish writing… ${Math.round(f * 100)}%`))); }
+    if (opts2.florence === true) {
+      try { found.push(...await florenceLines(img, progress)); }
       catch (e) { if (window.__ocrDebug) window.__ocrDebug.push(['florence failed', e.message]); }
     }
     // one reading per place on the card: lines at the same height are the same line (the most confident wins);
@@ -907,11 +1027,17 @@ const PdfCard = (() => {
       }
       kept.push({ ...f, seen: 1, votes: { [f.s.replace(/\s+/g, ' ')]: 1 + f.conf / 1000 } });
     }
+    kept.forEach(k => { const w = k.s.split(' '), h = Math.floor(w.length / 2);
+      if (w.length >= 4 && w.length % 2 === 0) { const a = w.slice(0, h).join(' '), b = w.slice(h).join(' '); if (alike(a, b)) k.s = /[^\w\u0900-\u097F\s,.&]/.test(a) ? b : a; } });
     // each line as most passes read it ("Aanya" read four times beats "Aanva" read once)
     kept.forEach(k => { const best = Object.entries(k.votes).sort((a, b) => b[1] - a[1])[0]; if (best) k.s = best[0]; });
+    // a line read once short and once whole, one under the other: the whole one stays
+    kept.sort((a, b) => a.y - b.y);
+    for (let i = kept.length - 1; i > 0; i--) { const a = norm(kept[i].s), b = norm(kept[i - 1].s);
+      if (a.length >= 8 && b.length >= 8 && Math.abs(kept[i].y - kept[i - 1].y) < .03) { if (b.startsWith(a)) kept.splice(i, 1); else if (a.startsWith(b)) kept.splice(i - 1, 1); } }
     // top to bottom; readings on the same line from left to right
     kept.sort((a, b) => Math.abs(a.y - b.y) < Math.max(.008, Math.min(a.z, b.z) / 1000 * .4) ? (a.x0 || 0) - (b.x0 || 0) : a.y - b.y);
-    return { lines: kept.map(k => k.s), sizes: kept.map(k => k.z * (k.conf > 70 ? 1 : .8)) };
+    return { lines: kept.map(k => k.s), sizes: kept.map(k => k.z * (k.conf > 70 ? 1 : .8)), ys: kept.map(k => k.y), img };
   }
 
   return { parse, layout, toCard, read, readImages, findDate, findDates, findTime, findTimes, EVENTS };
