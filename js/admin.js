@@ -1511,6 +1511,14 @@
       <input data-f="venue" placeholder="Venue (if different)" maxlength="120" value="${esc(e.venue || '')}">
       <button type="button" class="btn-small danger" data-ev-del title="Remove">✕</button></div>`;
   }
+  // A card's details → the card the videos are made from: names, families, functions and venue, and also the
+  // invocation, shlokas and quotes, grandparents, the inviters (nivedak) and the little ones
+  const listOf = v => (Array.isArray(v) ? v : String(v || '').split('\n')).map(x => String(x).trim()).filter(Boolean);
+  function cardOf(d) {
+    return { ...Core.blankCard(), ...PdfCard.toCard({ events: [], phones: [], ...d }), theme: design().no,
+      invocation: d.invocation || '', quotes: listOf(d.quotes), inviters: listOf(d.inviters), kids: d.kids || '',
+      grandparents: [d.grandparents1, d.grandparents2].map(x => String(x || '').trim()).filter(Boolean) };
+  }
   function fillDetails(d, pictures = []) {
     $('#fType').value = PRESETS[d.type] ? d.type : 'wedding';
     $('#fLang').value = d.lang === 'hi' ? 'hi' : 'en';
@@ -1519,6 +1527,11 @@
     $('#fEvents').innerHTML = (d.events.length ? d.events : [{}]).map(evRow).join('');
     $('#fVenue').value = d.venue || ''; $('#fAddress').value = d.address || '';
     $('#fPhones').value = (d.phones || []).join(', ');
+    $('#fTitle').value = d.title || ''; $('#fInvocation').value = d.invocation || '';
+    $('#fGrand1').value = d.grandparents1 || ''; $('#fGrand2').value = d.grandparents2 || '';
+    $('#fQuotes').value = listOf(d.quotes).join('\n'); $('#fInviters').value = listOf(d.inviters).join('\n'); $('#fKids').value = d.kids || '';
+    $('#fAll').value = listOf(d.lines).join('\n');
+    $('#fAllBox').hidden = !listOf(d.lines).length;
     $('#stPages').innerHTML = pictures.map((u, i) => `<a href="${u}" target="_blank" rel="noopener" title="Page ${i + 1}"><img src="${u}" alt="Card page ${i + 1}"></a>`).join('');
     $('#stForm').hidden = false;
   }
@@ -1527,13 +1540,15 @@
       date: r.querySelector('[data-f="date"]').value.replace(/T00:00$/, ''), venue: r.querySelector('[data-f="venue"]').value.trim() })).filter(e => e.name);
     return { type: $('#fType').value, lang: $('#fLang').value, host1: $('#fHost1').value.trim(), host2: $('#fHost2').value.trim(),
       parents1: $('#fParents1').value.trim(), parents2: $('#fParents2').value.trim(), events: evs, venue: $('#fVenue').value.trim(),
-      address: $('#fAddress').value.trim(), phones: $('#fPhones').value.split(/[,;]+/).map(x => x.trim()).filter(Boolean), hashtag: (st.pdf && st.pdf.hashtag) || '' };
+      address: $('#fAddress').value.trim(), phones: $('#fPhones').value.split(/[,;]+/).map(x => x.trim()).filter(Boolean), hashtag: (st.pdf && st.pdf.hashtag) || '',
+      title: $('#fTitle').value.trim(), invocation: $('#fInvocation').value.trim(), grandparents1: $('#fGrand1').value.trim(), grandparents2: $('#fGrand2').value.trim(),
+      quotes: listOf($('#fQuotes').value), inviters: listOf($('#fInviters').value), kids: $('#fKids').value.trim(), lines: listOf($('#fAll').value) };
   }
   // The details into the Studio (the chosen video stays)
   function useDetails() {
     const d = readDetails();
     if (!d.host1) { toast('Please write at least the first name'); $('#fHost1').focus(); return false; }
-    studioLoad({ ...Core.blankCard(), ...PdfCard.toCard(d), theme: design().no }, '', d.lang);
+    studioLoad(cardOf(d), '', d.lang);
     st.details = d;
     stSaveDraft();
     $('#stResume').hidden = true;
@@ -1552,7 +1567,7 @@
     const d = stLoadDraft();
     if (!d) return false;
     fillDetails(d.details);
-    studioLoad({ ...Core.blankCard(), ...PdfCard.toCard(d.details), theme: design().no }, d.video, d.lang);
+    studioLoad(cardOf(d.details), d.video, d.lang);
     st.details = d.details; st.picked = true; st.resumed = true;
     if (st.player) refreshStudio();
     return true;
@@ -1573,7 +1588,7 @@
     pdfStatus(`📄 Reading “${file.name}”…`);
     try {
       await st.ready;
-      const r = await PdfCard.read(file);
+      const r = await PdfCard.read(file, { progress: p => pdfStatus(`🔎 This card is a picture: reading its words from it… ${Math.round(p * 100)}% (the first time takes about half a minute)`) });
       st.pdf = r.details || { lang: 'en', type: 'wedding', events: [], phones: [] };
       fillDetails(st.pdf, r.pictures);
       if (!r.readable) {
@@ -1748,6 +1763,9 @@
         // the main colour: the strongest one, unless that is the gold work and another colour is clearly there too
         let main = ranked[0];
         if (main && isGold(main) && ranked[1] && ranked[1].w > main.w * .25 && !isGold(ranked[1])) main = ranked[1];
+        // a coloured background (deep green, maroon, navy…) is the card's colour itself
+        { const [R, G, B] = bgRGB.map(v => v / 255), mx = Math.max(R, G, B), mn = Math.min(R, G, B), L = (mx + mn) / 2, D = mx - mn, S = D ? D / (1 - Math.abs(2 * L - 1)) : 0;
+          if (S > .25 && L > .06 && L < .8) { let H = mx === R ? ((G - B) / D) % 6 : mx === G ? (B - R) / D + 2 : (R - G) / D + 4; H = (H * 60 + 360) % 360; main = { w: 1, h: H, s: S, l: L }; } }
         if (!main || main.w < all * .0004) return resolve({ h: 40, s: .05, dark: bgL < .45, word: bgL < .45 ? 'Noir' : 'Ivory', gold: 'gold', swatch: bgL < .45 ? '#161616' : '#f4eee2' });
         const hue = main.h / main.w, sat = Math.min(1, main.s / main.w), lig = main.l / main.w;
         let word = HUE_WORDS.find(([upTo]) => hue < upTo)[1];
@@ -1787,38 +1805,14 @@
     auStatus(`📄 Reading “${file.name}” and making your videos…`);
     $('#auDrop').classList.add('busy');
     try {
-      const r = await PdfCard.read(file);
-      let d = r.details || {};
-      // no text in the PDF (a picture of the card, or an old Hindi font): read the picture itself
-      if (!r.readable || !d.host1) {
-        auStatus('🔎 This card is a picture: reading its words from the picture… (the first time takes about half a minute)');
-        try {
-          const found = PdfCard.parse(await ocrLines(r.big || r.pictures[0]), { ocr: true });
-          if (found.host1) d = found; else d = { ...found, ...d };
-        } catch (e) { /* offline: the short form below */ }
-      }
+      const r = await PdfCard.read(file, { progress: p => auStatus(`🔎 This card is a picture: reading its words from it… ${Math.round(p * 100)}% (the first time takes about half a minute)`) });
+      const d = r.details || {};
       au.pendingR = r;
       if (!d.host1) { showFill(d); return; }
       await useAutoDetails(d, r);
     } catch (e) {
       auStatus(`Could not read this PDF: ${e.message}`, true);
     } finally { $('#auDrop').classList.remove('busy'); }
-  }
-  // Reading a card's picture (OCR, English + Hindi), loaded only when a card needs it
-  let ocrLib = null;
-  const loadOcr = () => ocrLib = ocrLib || new Promise((resolve, reject) => {
-    if (window.Tesseract) return resolve(window.Tesseract);
-    const sc = Object.assign(document.createElement('script'), { src: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js' });
-    sc.onload = () => resolve(window.Tesseract);
-    sc.onerror = () => { ocrLib = null; reject(new Error('offline')); };
-    document.head.appendChild(sc);
-  });
-  async function ocrLines(src) {
-    if (!src) return [];
-    const T = await loadOcr();
-    const { data } = await T.recognize(src, 'eng+hin', { logger: m => { if (m.status === 'recognizing text') auStatus(`🔎 Reading the words on the card… ${Math.round(m.progress * 100)}%`); } });
-    // "चि॰" is often read as "चि०" (a zero): put the abbreviation mark back so the name is found
-    return String(data.text || '').split('\n').map(x => x.replace(/([\u0900-\u0965\u0970-\u097F])०/g, '$1॰').replace(/\s+/g, ' ').trim()).filter(Boolean);
   }
   // Still no names: four short boxes, then the videos are made the same way (in the card's colours)
   function showFill(d) {
@@ -1845,7 +1839,7 @@
     {
       $('#auFill').hidden = true;
       au.details = d; au.lang = d.lang === 'hi' ? 'hi' : 'en';
-      au.card = { ...Core.blankCard(), ...PdfCard.toCard(d), theme: design().no };
+      au.card = cardOf(d);
       // new films made in the card's own colours (not the ready-made ones)
       au.page = (r.pictures && r.pictures[0]) || '';
       au.tone = au.page ? await cardTone(au.page) : null;
@@ -1859,10 +1853,43 @@
       if (window.Fun) Fun.burst(null, null, 70);
     }
   }
+  // Every detail read from the card, laid out to check (and change); "make again" rebuilds the videos with them
+  const AU_FIELDS = [['host1', 'Name 1'], ['host2', 'Name 2'], ['parents1', 'Parents of name 1'], ['parents2', 'Parents of name 2'], ['grandparents1', 'Grandparents of name 1'],
+    ['grandparents2', 'Grandparents of name 2'], ['title', 'Card heading'], ['invocation', 'Invocation'], ['venue', 'Venue', 1], ['address', 'Home address', 1], ['phones', 'Phone numbers'],
+    ['kids', 'Little ones (बाल मनुहार)'], ['quotes', 'Shlokas and quotes (one per line)', 2], ['inviters', 'Inviters / निवेदक (one per line)', 2]];
+  const auEvRow = (e = {}) => `<div class="au-ev"><input data-e="name" value="${esc(e.name || '')}" placeholder="Function"><input data-e="date" type="datetime-local" value="${esc(/T/.test(e.date || '') ? e.date : e.date ? e.date + 'T00:00' : '')}"><input data-e="venue" value="${esc(e.venue || '')}" placeholder="Venue (if its own)"><button type="button" class="x" data-ev-x aria-label="Remove">✕</button></div>`;
+  function renderAutoAll(d) {
+    $('#auAllFields').innerHTML = `<label>Occasion <select data-f="type">${Object.entries(PRESETS).map(([k, p]) => `<option value="${k}"${k === d.type ? ' selected' : ''}>${p.icon || ''} ${esc(p.label)}</option>`).join('')}</select></label>`
+      + `<label>Language <select data-f="lang"><option value="en"${d.lang !== 'hi' ? ' selected' : ''}>English</option><option value="hi"${d.lang === 'hi' ? ' selected' : ''}>हिन्दी</option></select></label>`
+      + AU_FIELDS.map(([k, label, wide]) => { const v = k === 'phones' ? (d.phones || []).join(', ') : wide === 2 ? listOf(d[k]).join('\n') : d[k] || '';
+        return `<label class="${wide ? 'wide' : ''}${v ? '' : ' empty'}">${esc(label)} ${wide === 2 ? `<textarea data-f="${k}" rows="3">${esc(v)}</textarea>` : `<input data-f="${k}" value="${esc(v)}">`}</label>`; }).join('');
+    $('#auEvs').innerHTML = (d.events && d.events.length ? d.events : [{}]).map(auEvRow).join('');
+    $('#auText').value = listOf(d.lines).join('\n');
+  }
+  function readAutoAll() {
+    const f = k => { const el = $('#auAllFields').querySelector(`[data-f="${k}"]`); return el ? el.value.trim() : ''; };
+    const d = { ...au.details };
+    ['type', 'lang', ...AU_FIELDS.map(([k]) => k)].forEach(k => { d[k] = f(k); });
+    d.phones = f('phones').split(/[,;]+/).map(x => x.trim()).filter(Boolean);
+    d.quotes = listOf(d.quotes); d.inviters = listOf(d.inviters);
+    d.events = [...$('#auEvs').querySelectorAll('.au-ev')].map(r => ({ name: r.querySelector('[data-e="name"]').value.trim(), date: r.querySelector('[data-e="date"]').value.replace(/T00:00$/, ''), venue: r.querySelector('[data-e="venue"]').value.trim() })).filter(e => e.name);
+    return d;
+  }
+  $('#auAddEv').addEventListener('click', () => $('#auEvs').insertAdjacentHTML('beforeend', auEvRow()));
+  $('#auEvs').addEventListener('click', e => { const b = e.target.closest('[data-ev-x]'); if (b) b.parentElement.remove(); });
+  $('#auAllForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    if (au.rec) return toast('Please wait: a video is still recording');
+    const d = readAutoAll();
+    if (!d.host1) return toast('Please write at least the first name');
+    await useAutoDetails(d, au.pendingR || { pictures: [] });
+    toast('✨ Videos made again with your details');
+  });
   function startAuto() {
     const d = au.details, n = d.events.length;
     $('#auDrop').hidden = true; $('#auWork').hidden = false; $('#auNew').hidden = false;
     auStatus('');
+    renderAutoAll(d);
     $('#auRead').innerHTML = (au.page ? `<img class="au-page" src="${au.page}" alt="The card">` : '') + `<span>✅ Read from the card: <b>${esc([d.host1, d.host2].filter(Boolean).join(' & '))}</b> · ${esc(occasion(au.card).label)}${n ? ` · ${n} function${n === 1 ? '' : 's'}` : ''}${d.venue ? ' · ' + esc(d.venue) : ''} · ${au.lang === 'hi' ? 'हिन्दी' : 'English'}`
       + (au.tone ? `<br>🎨 Colours from your card: <i class="au-swatch" style="background:${au.tone.swatch}"></i> <b>${esc(au.tone.word)}</b> on ${au.tone.dark ? 'dark' : 'light'}. Every video below is made new in them.` : '') + '</span>';
     $('#auGrid').innerHTML = au.picks.map((f, i) => `<button type="button" class="au-pick${f === au.film ? ' on' : ''}" data-i="${i}" style="--i:${i}">

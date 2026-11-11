@@ -234,6 +234,22 @@ const Films = (() => {
     if (occ === 'anniversary') out.heading = L('Anniversary', 'वर्षगाँठ');
     out.regards = fam.length ? [L('WITH BLESSINGS FROM', 'आशीर्वाद सहित'), ...fam.slice(0, 3)] : null;
     out.note = phones || address ? { label: L('With love', 'सादर'), lines: L(['We look forward to', 'celebrating with you'], ['आपकी उपस्थिति', 'हमारा सौभाग्य']), by: `— ${solo ? A : `${A} & ${B}`}` } : null;
+    // Everything else printed on the card (read from its PDF) goes into the film too
+    const txt = v => String(v || '').trim();
+    // the card's invocation: a Ganesh one is already written by the film itself; any other (ॐ नमः शिवाय…) goes on top
+    if (txt(card.invocation)) { if (/गणेश|ganesh/i.test(card.invocation)) out.sacred = true; else out.top = txt(card.invocation); }
+    const inviters = (card.inviters || []).map(txt).filter(Boolean), grand = (card.grandparents || []).map(txt).filter(Boolean);
+    if (inviters.length || grand.length) out.regards = [inviters.length ? L('WITH BEST COMPLIMENTS', 'निवेदक') : L('WITH BLESSINGS FROM', 'आशीर्वाद सहित'), ...inviters, ...grand, ...fam].slice(0, 4);
+    const quote = txt(Array.isArray(card.quotes) ? card.quotes[0] : card.quote);
+    if (quote) {
+      // a shloka or a couplet, in two lines (at a pause, else near the middle)
+      const words = quote.replace(/[“”"]/g, '').split(/\s+/), half = Math.ceil(words.length / 2);
+      const mid = words.length / 2, score = i => Math.abs(i + 1 - mid) - (/[।॥|]$/.test(words[i]) ? 3 : 0);
+      const pauses = words.map((w, i) => i).filter(i => i < words.length - 1 && /[,।|;॥]$/.test(words[i])).sort((a, b) => score(a) - score(b));
+      const cut = pauses.length && Math.abs(pauses[0] + 1 - mid) <= mid * .6 ? pauses[0] + 1 : Math.ceil(mid);
+      out.note = { label: L('Blessings', 'शुभाशीष'), lines: [words.slice(0, cut).join(' '), words.slice(cut).join(' ')].filter(Boolean), by: out.note ? out.note.by : '' };
+    }
+    if (txt(card.kids)) out.kids = txt(card.kids);
     return out;
   }
   // The scene buttons' names in the Studio

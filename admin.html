@@ -407,6 +407,16 @@
             <label>Venue <input id="fVenue" maxlength="120" placeholder="Hall name, area, city"></label>
             <label>Home address <input id="fAddress" maxlength="160"></label>
             <label>Phone numbers <input id="fPhones" maxlength="80" placeholder="98765 43210, 91234 56789"></label>
+            <div class="st-grid2">
+              <label>Card heading <input id="fTitle" maxlength="80" placeholder="e.g. शुभ विवाह"></label>
+              <label>Invocation <input id="fInvocation" maxlength="80" placeholder="e.g. ॥ श्री गणेशाय नमः ॥"></label>
+              <label>Grandparents of name 1 <input id="fGrand1" maxlength="160"></label>
+              <label>Grandparents of name 2 <input id="fGrand2" maxlength="160"></label>
+            </div>
+            <label>Shlokas and quotes <small class="muted">(one per line: the first one shows in the video)</small> <textarea id="fQuotes" rows="3"></textarea></label>
+            <label>Inviters (निवेदक / दर्शनाभिलाषी / with best compliments) <small class="muted">(one per line)</small> <textarea id="fInviters" rows="3"></textarea></label>
+            <label>Little ones (बाल मनुहार) <input id="fKids" maxlength="160"></label>
+            <details class="st-all" id="fAllBox" hidden><summary>📜 Every word read from the card</summary><textarea id="fAll" rows="10" readonly></textarea></details>
             <div class="link-actions">
               <button type="submit" class="btn-glow">✅ Use these details</button>
               <button type="button" class="btn-line" id="fPick">🎬 Choose a video and make it</button>
@@ -561,6 +571,17 @@
       </form>
       <section class="au-work" id="auWork" hidden>
         <p class="au-read" id="auRead"></p>
+        <details class="au-all" id="auAll">
+          <summary>📋 Everything read from the card <small>names, parents, grandparents, every function, venue, shlokas, inviters… tap to check or change</small></summary>
+          <form class="au-all-form" id="auAllForm" autocomplete="off">
+            <div class="au-all-grid" id="auAllFields"></div>
+            <span class="muted">Functions <small>(name · date and time · venue)</small></span>
+            <div class="au-evs" id="auEvs"></div>
+            <button type="button" class="btn-small" id="auAddEv">＋ Add a function</button>
+            <details class="st-all"><summary>📜 Every word on the card</summary><textarea id="auText" rows="10" readonly></textarea></details>
+            <button type="submit" class="btn-glow">↻ Make the videos again with these</button>
+          </form>
+        </details>
         <h3 class="au-h">1. Your best videos <small>made from this card: tap the one you like</small></h3>
         <div class="au-grid" id="auGrid"></div>
         <div class="au-main">

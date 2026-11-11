@@ -579,3 +579,21 @@ main > section[data-page][hidden] { display: none !important; }
 .au-fill-wide { grid-column: 1 / -1; }
 .au-fill button { justify-content: center; }
 @media (max-width: 560px) { .au-fill { grid-template-columns: 1fr; } }
+
+/* Every detail read from a card */
+.st-all summary, .au-all > summary { cursor: pointer; font-weight: 600; }
+.st-all textarea { width: 100%; margin-top: 8px; font: 500 .9rem 'Space Grotesk', sans-serif; }
+.st-form textarea { width: 100%; resize: vertical; }
+.au-all { margin: 0 0 14px; padding: 12px 16px; border-radius: 16px; border: 1px solid var(--line); background: rgba(255,255,255,.03); }
+.au-all > summary small { font-weight: 500; color: var(--muted); margin-left: 6px; }
+.au-all-form { display: grid; gap: 12px; margin-top: 14px; }
+.au-all-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.au-all-grid label { display: grid; gap: 5px; font-size: .8rem; color: var(--muted); }
+.au-all-grid label.wide { grid-column: span 3; }
+.au-all-grid label.empty input, .au-all-grid label.empty textarea { border-style: dashed; }
+.au-all-grid input, .au-all-grid select, .au-all-grid textarea, .au-ev input { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: rgba(8,6,20,.7); color: var(--ink); font: 500 .95rem 'Space Grotesk', sans-serif; color-scheme: dark; width: 100%; box-sizing: border-box; }
+.au-evs { display: grid; gap: 8px; }
+.au-ev { display: grid; grid-template-columns: 1.1fr 1fr 1.4fr auto; gap: 8px; align-items: center; }
+.au-ev .x { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: none; color: var(--ink); cursor: pointer; }
+.au-all-form > .btn-glow { justify-self: start; }
+@media (max-width: 760px) { .au-all-grid { grid-template-columns: 1fr; } .au-all-grid label.wide { grid-column: auto; } .au-ev { grid-template-columns: 1fr 1fr; } }

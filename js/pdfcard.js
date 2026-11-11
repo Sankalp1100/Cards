@@ -12,25 +12,33 @@ const PdfCard = (() => {
     'अक्टूबर': 9, 'अक्तूबर': 9, 'नवम्बर': 10, 'नवंबर': 10, 'दिसम्बर': 11, 'दिसंबर': 11 };
   // Functions, with the name the Studio shows (English, Hindi)
   const EVENTS = [
-    [/ganesh\s*(puja|pujan|sthapana)|गणेश\s*(पूजन|पूजा|स्थापना)|विनायक/i, 'Ganesh Puja', 'गणेश पूजन'],
+    [/ganesh\s*(puja|pujan|sthapana)|ganpati\s*(puja|pujan|sthapana)|गणेश\s*(पूजन|पूजा|स्थापना)|गणपति\s*(पूजन|पूजा|स्थापना)|विनायक/i, 'Ganesh Puja', 'गणेश पूजन'],
+    [/sunder\s*kand|sundarkand|सुन्दरकाण्ड|सुंदरकांड|सुन्दरकांड|सुंदर\s*कांड/i, 'Sunderkand', 'सुंदरकांड'],
     [/mata\s*ki\s*chowki|jagran|जागरण|चौकी/i, 'Mata ki Chowki', 'माता की चौकी'],
-    [/kirtan|कीर्तन/i, 'Kirtan', 'कीर्तन'],
+    [/kirtan|bhajan|कीर्तन|भजन/i, 'Kirtan & Bhajan', 'कीर्तन भजन'],
     [/ratjaga|रतजगा/i, 'Ratjaga', 'रतजगा'],
-    [/tilak|तिलक/i, 'Tilak', 'तिलक'],
-    [/ring\s*ceremony|engagement|sagai|सगाई|रिंग/i, 'Engagement', 'सगाई'],
-    [/haldi|हल्दी|हलदी|उबटन/i, 'Haldi', 'हल्दी'],
-    [/mehe?n?di|mehandi|मेहँदी|मेहंदी|मेंहदी|मेहन्दी/i, 'Mehendi', 'मेहँदी'],
-    [/sangeet|संगीत/i, 'Sangeet', 'संगीत'],
-    [/bhaat|bhat\b|भात/i, 'Bhaat', 'भात'],
-    [/mandap|मण्डप|मंडप/i, 'Mandap', 'मण्डप'],
-    [/ghud\s*chadh?i|ghodi|घुड़चढ़ी|घुड़चढ़ी|घोड़ी/i, 'Ghudchadhi', 'घुड़चढ़ी'],
-    [/baraat|barat\b|बारात/i, 'Baraat', 'बारात'],
-    [/jai\s*mala|var\s*mala|varmala|jaimala|जयमाला|वरमाला/i, 'Jaimala', 'जयमाला'],
-    [/phere|pheras|saat\s*phere|फेरे|पाणिग्रहण|लग्न/i, 'Pheras', 'फेरे'],
-    [/reception|स्वागत\s*समारोह|रिसेप्शन/i, 'Reception', 'स्वागत समारोह'],
-    [/prit[ie]\s*bhoj|bhoj|dinner|lunch|प्रीतिभोज|प्रीति\s*भोज|भोज/i, 'Dinner', 'प्रीतिभोज'],
+    [/tilak|तिलक|टीका/i, 'Tilak', 'तिलक'],
+    [/roka|रोका/i, 'Roka', 'रोका'],
+    [/ring\s*ceremony|engagement|sagai|सगाई|रिंग\s*सेरेमनी|मुद्रिका/i, 'Engagement', 'सगाई'],
+    [/lagan\s*patrika|lagan\b|लगन/i, 'Lagan', 'लगन'],
+    [/haldi|tel\s*baan|हल्दी|हलदी|हलदि|उबटन|तेल\s*बान|तेलबान/i, 'Haldi', 'हल्दी'],
+    [/mehe?n?di|mehandi|मेहँदी|मेहंदी|मेंहदी|मेहन्दी|मेंहदि|मेहदी/i, 'Mehendi', 'मेहँदी'],
+    [/ladies\s*sangeet|sangeet|लेडीज़?\s*संगीत|संगीत/i, 'Sangeet', 'संगीत'],
+    [/chooda|chura|चूड़ा|चूडा/i, 'Chooda', 'चूड़ा'],
+    [/bhaat|bhat\b|mayra|mayro|mamera|भात|मायरा|मायरो|मामेरा/i, 'Bhaat', 'भात'],
+    [/mandap|मण्डप|मंडप|मांडा|माण्डा/i, 'Mandap', 'मण्डप'],
+    [/sehra\s*bandi|सेहरा\s*बंदी|सेहराबंदी/i, 'Sehra Bandi', 'सेहरा बंदी'],
+    [/ghud\s*chadh?i|ghudchadi|ghodi|घ[ुो][ड़ड]़?\s*च[ढ़ढ]़?ी|घोड़ी|घोडी/i, 'Ghudchadhi', 'घुड़चढ़ी'],
+    [/baraat|barat\b|nikasi|बारात|बरात|निकासी|निकरौसी/i, 'Baraat', 'बारात'],
+    [/dwar\s*char|dwarchar|द्वाराचार|द्वार\s*पूजा/i, 'Dwarchar', 'द्वाराचार'],
+    [/jai\s*mala|var\s*mala|varmala|jaimala|जयमाला|जयमाल|वरमाला/i, 'Jaimala', 'जयमाला'],
+    [/phere|pheras|saat\s*phere|फेरे|पाणिग्रहण|शुभ\s*लग्न|लग्न/i, 'Pheras', 'फेरे'],
+    [/reception|स्वागत\s*समारोह|रिसेप्शन|आशीर्वाद\s*समारोह/i, 'Reception', 'स्वागत समारोह'],
+    [/prit[ie]\s*bhoj|bhoj|dinner|lunch|प्रीतिभोज|प्रीति\s*भोज|भोज|भोजन/i, 'Dinner', 'प्रीतिभोज'],
     [/vidai|विदाई/i, 'Vidai', 'विदाई'],
-    [/cocktail/i, 'Cocktail', 'कॉकटेल']
+    [/cocktail|कॉकटेल/i, 'Cocktail', 'कॉकटेल'],
+    // the wedding itself, only when it comes with its own date (not the card's title "Shubh Vivah")
+    [/\bwedding\s*(ceremony|day)?\b(?!\s*invitation)|\bshaadi\b|\bshadi\b|शादी|विवाह\s*(संस्कार|समारोह)|शुभ\s*विवाह/i, 'Wedding', 'शुभ विवाह', { needsDate: true }]
   ];
   const OCCASIONS = [
     [/wedding|marriage|shubh\s*vivah|vivah|विवाह|शादी|परिणय|पाणिग्रहण/i, 'wedding'],
@@ -52,6 +60,20 @@ const PdfCard = (() => {
   const digits = s => s.replace(/[०-९]/g, d => '०१२३४५६७८९'.indexOf(d));
 
   // "12 December 2026", "12th Dec, 2026", "12/12/2026", "12-12-26", "12 दिसम्बर 2026" → { y, m, d }
+  function findDates(line, year) {
+    const s = digits(line), out = [];
+    for (const m of s.matchAll(/(\d{1,2})(?:st|nd|rd|th)?[\s.,-]*([A-Za-z]{3,9}|[ऀ-ॿ]{3,8})(?=[\s.,-]*(\d{4}|\d{2}(?!\s*[A-Za-zऀ-ॿ]))?)/g)) {
+      if (MONTHS[m[2].toLowerCase()] != null && +m[1] >= 1 && +m[1] <= 31) out.push({ d: +m[1], m: MONTHS[m[2].toLowerCase()], y: m[3] ? +(m[3].length === 2 ? '20' + m[3] : m[3]) : year });
+    }
+    for (const m of s.matchAll(/\b(\d{1,2})[./-](\d{1,2})[./-](\d{4}|\d{2})\b/g)) if (+m[2] >= 1 && +m[2] <= 12 && +m[1] <= 31) out.push({ d: +m[1], m: +m[2] - 1, y: +(m[3].length === 2 ? '20' + m[3] : m[3]) });
+    return out;
+  }
+  function findTimes(line) {
+    const s = digits(line), out = [];
+    for (const m of s.matchAll(/\b(\d{1,2})(?:[:.](\d{2}))?\s*(a\.?m\.?|p\.?m\.?)/gi)) { let h = +m[1] % 12; if (/p/i.test(m[3])) h += 12; out.push(`${String(h).padStart(2, '0')}:${m[2] || '00'}`); }
+    if (!out.length) for (const m of s.matchAll(/(प्रातः|प्रात:|सुबह|दोपहर|अपराह्न|सायं|साँय|सांय|शाम|रात्रि|रात)\s*(\d{1,2})(?:[:.](\d{2}))?\s*बजे/g)) out.push(findTime(m[0]));
+    return out;
+  }
   function findDate(line, year) {
     const s = digits(line);
     for (const m of s.matchAll(/(\d{1,2})(?:st|nd|rd|th)?[\s.,-]*([A-Za-z]{3,9}|[ऀ-ॿ]{3,8})(?=[\s.,-]*(\d{4}|\d{2}(?!\s*[A-Za-zऀ-ॿ]))?)/g)) {
@@ -123,19 +145,32 @@ const PdfCard = (() => {
     let lastDate = null;
     lines.forEach((l, i) => {
       const dt = findDate(l, +year);
+      // every function named on this line, left to right (a word that fits two entries counts once)
+      const hits = [];
+      EVENTS.forEach(ev => { const m = ev[0].exec(l); if (m) hits.push({ ev, at: m.index, end: m.index + m[0].length }); });
+      hits.sort((a, b) => a.at - b.at);
+      const list = hits.filter((h, j) => !hits.slice(0, j).some(p => h.at < p.end));
+      const near = [lines[i + 1] || '', lines[i + 2] || '', lines[i + 3] || ''].filter(n => !EVENTS.some(([re]) => re.test(n)) || findDate(n, +year));
+      list.forEach((h, j) => {
+        const seg = list.length > 1 ? l.slice(h.at, list[j + 1] ? list[j + 1].at : undefined) : l;
+        let d = findDate(seg, +year), t = findTime(seg);
+        // side by side: the next lines hold the dates and times in the same order
+        for (const n of near) {
+          if (!d) { const ds = findDates(n, +year); if (ds.length >= list.length) d = ds[j]; else if (list.length === 1 && ds.length) d = ds[0]; }
+          if (!t) { const ts = findTimes(n); if (ts.length >= list.length) t = ts[j]; else if (list.length === 1 && ts.length) t = ts[0]; }
+          if (d && t) break;
+        }
+        if (!d && h.ev[3] && h.ev[3].needsDate) return;
+        d = d || lastDate;
+        const name = hi ? h.ev[2] : h.ev[1];
+        if (out.events.some(e => e.name === name && (!d || e.date.slice(0, 10) === iso(d, '').slice(0, 10)))) return;
+        const venueNear = near.find(n => VENUE_WORDS.test(n) && !findDate(n, +year));
+        out.events.push({ name, date: iso(d, t), venue: venueNear ? clean(venueNear.replace(LABEL, '')).slice(0, 120) : '' });
+      });
       if (dt) lastDate = dt;
-      const ev = EVENTS.find(([re]) => re.test(l));
-      if (!ev) return;
-      const near = [l, lines[i + 1] || '', lines[i + 2] || ''];
-      let d = null, t = '';
-      for (const n of near) { if (!d) d = findDate(n, +year); if (!t) t = findTime(n); if (d && t) break; }
-      d = d || lastDate;
-      const name = hi ? ev[2] : ev[1];
-      if (out.events.some(e => e.name === name)) return;
-      const venueNear = near.find(n => VENUE_WORDS.test(n) && n !== l);
-      out.events.push({ name, date: iso(d, t), venue: venueNear ? clean(venueNear.replace(LABEL, '')).slice(0, 120) : '' });
     });
-    out.events = out.events.slice(0, 9);
+    // in the order they happen
+    out.events = out.events.map((e, k) => ({ e, k })).sort((a, b) => (a.e.date || '9') < (b.e.date || '9') ? -1 : (a.e.date || '9') > (b.e.date || '9') ? 1 : a.k - b.k).map(x => x.e).slice(0, 12);
     // The venue: a line after "Venue / स्थान / स्थल", else the first line with a venue word
     const vi = lines.findIndex(l => LABEL.test(l));
     const vLine = vi >= 0 ? (clean(lines[vi].replace(LABEL, '')) || lines[vi + 1] || '') : lines.find(l => VENUE_WORDS.test(l) && l.length < 90) || '';
@@ -184,7 +219,7 @@ const PdfCard = (() => {
       document.head.appendChild(s);
     }));
   }
-  async function read(file) {
+  async function read(file, opts = {}) {
     const pdfjs = await load();
     const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), cMapUrl: PDFJS + 'cmaps/', cMapPacked: true }).promise;
     const lines = [], pictures = [];
@@ -219,7 +254,8 @@ const PdfCard = (() => {
     const readable = text.replace(/\s/g, '').length > 30 && !/[¼½¾ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖ×ØÙÚÛÜÝÞß]{3}/.test(text);
     // No usable text (a picture of the card, or an old Hindi font): a sharp picture of page 1 for reading it by eye (OCR)
     let big = '';
-    if (!readable) {
+    const quick = readable ? parse(lines) : null;
+    if (!quick || !quick.host1) {
       try {
         const page = await pdf.getPage(1), vp = page.getViewport({ scale: 1 }), v2 = page.getViewport({ scale: 2200 / Math.max(vp.width, vp.height) }), c = document.createElement('canvas');
         c.width = Math.round(v2.width); c.height = Math.round(v2.height);
@@ -228,10 +264,35 @@ const PdfCard = (() => {
         big = c.toDataURL('image/png');
       } catch (e) { /* the small pictures will do */ }
     }
-    return { lines, pictures, big, pages: pdf.numPages, readable, details: readable ? parse(lines) : null };
+    let details = readable ? parse(lines) : null, how = 'text';
+    // A picture of a card, an old Hindi font, or text with no names in it: read the words off the page itself (OCR)
+    if (opts.ocr !== false && (!details || !details.host1)) {
+      try {
+        const found = parse(await ocr(big || pictures[0], opts.progress), { ocr: true });
+        if (found.host1) { details = found; how = 'picture'; }
+      } catch (e) { /* offline: the details are typed instead */ }
+    }
+    return { lines, pictures, big, pages: pdf.numPages, readable: !!(details && details.host1) || readable, details, how };
+  }
+  // Reading a page picture (English + Hindi) with Tesseract, loaded only when a card needs it
+  let ocrLib = null;
+  const loadOcr = () => ocrLib = ocrLib || new Promise((resolve, reject) => {
+    if (window.Tesseract) return resolve(window.Tesseract);
+    const sc = Object.assign(document.createElement('script'), { src: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js' });
+    sc.onload = () => resolve(window.Tesseract);
+    sc.onerror = () => { ocrLib = null; reject(new Error('offline')); };
+    document.head.appendChild(sc);
+  });
+  async function ocr(src, progress) {
+    if (!src) return [];
+    const T = await loadOcr();
+    if (progress) progress(0);
+    const { data } = await T.recognize(src, 'eng+hin', { logger: m => { if (progress && m.status === 'recognizing text') progress(m.progress); } });
+    // "चि॰" is often read as "चि०" (a zero): the abbreviation mark goes back so the name is found
+    return String(data.text || '').split('\n').map(x => x.replace(/([\u0900-\u0965\u0970-\u097F])०/g, '$1॰').replace(/\s+/g, ' ').trim()).filter(Boolean);
   }
 
-  return { parse, toCard, read, findDate, findTime, EVENTS };
+  return { parse, toCard, read, findDate, findDates, findTime, findTimes, EVENTS };
 })();
 
 if (typeof module !== 'undefined') module.exports = PdfCard;
