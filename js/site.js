@@ -745,7 +745,8 @@
   // ---------- Order with a card PDF ----------
   // The customer picks their card's PDF: its names, date and venue are read (js/pdfcard.js, when it can) into a
   // WhatsApp message to us, WhatsApp opens, and they attach the PDF there and send (a link cannot carry a file).
-  let pdfFile = null;
+  // Online, the PDF is also sent to our storage and filed in the owner's order list, so it is never lost.
+  let pdfFile = null, pdfRun = 0;
   // a short note at the bottom of the screen
   let toastTimer = 0;
   function toast(msg) {
@@ -762,7 +763,8 @@
     $('.os-foot').hidden = on;
     $('#osDots').hidden = $('#osStepNo').hidden = on;
   }
-  function pdfOrderMessage(file, d) {
+  // got: { received: the PDF reached our storage, ref: its order number once filed in the owner's list }
+  function pdfOrderMessage(file, d, got = {}) {
     const lines = [`*New Order - Card PDF*`, ''];
     if (d) {
       const names = [d.host1, d.host2].filter(Boolean).join(' & ');
@@ -775,8 +777,21 @@
     }
     if (ord && ord.design) lines.push(`*Design:* ${ord.design}`);
     if (ord && ord.video) lines.push(`*Video:* ${ord.video.name}`);
-    lines.push(`I am attaching my card here: *${file.name}*`, '', 'Please share the price and how soon it can be ready. Thank you!');
+    lines.push(`I am attaching my card here: *${file.name}*`);
+    if (got.received) lines.push('(PDF also received on our website)');
+    lines.push('', 'Please share the price and how soon it can be ready. Thank you!');
+    if (got.ref) lines.push('', `Order no: ${got.ref}`);
     return lines.join('\n');
+  }
+  // Files a PDF order in the owner's list (same row as the order form's, plus where the PDF is kept)
+  function filePdfOrder(ref, saved, d) {
+    const card = d && typeof PdfCard !== 'undefined' ? PdfCard.toCard(d) : { type: ord && ord.type, events: [] };
+    const o = { ...card, type: PRESETS[card.type] ? card.type : 'wedding', design: (ord && ord.design) || '' };
+    const names = [o.host1, o.host2].filter(Boolean).join(' & ');
+    return DB.insert('orders', {
+      design_no: o.design || null, occasion: o.type, names: (names || `Card PDF: ${saved.name}`).slice(0, 120),
+      event_date: o.date || '', code: `${ref} ${Catalog.orderCode(o)}`, pdf_path: saved.path, pdf_name: saved.name
+    }, { auth: false });
   }
   $('#osPdfFile').addEventListener('change', async e => {
     const file = e.target.files[0];
@@ -784,11 +799,30 @@
     if (!file) return;
     if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') return toast('Please choose the PDF of your card');
     pdfFile = file;
+    const run = ++pdfRun;
+    // Sent to our storage while it is read (online, and only PDFs under 10 MB); a failure changes nothing for the customer
+    const ref = Catalog.orderRef();
+    const upload = online && file.size && file.size <= DB.PDF_MAX
+      ? DB.uploadPdf(file).catch(err => { console.warn('Card PDF not uploaded:', err.message); return null; }) : Promise.resolve(null);
     // The message is made here; WhatsApp opens (in a new tab) when they tap "Send on WhatsApp": a tab opened by
     // the page itself after choosing a file gets blocked as a pop-up, and this page must never turn into WhatsApp
-    let details = null;
-    try { await loadPdfCard(); const r = await Promise.race([PdfCard.read(file), new Promise((_, no) => setTimeout(() => no(new Error('slow')), 6000))]); details = r.readable ? r.details : null; } catch (err) { /* sent without the details */ }
-    const url = Core.orderUrl(SITE.whatsapp, pdfOrderMessage(file, details));
+    const reading = (async () => {
+      try { await loadPdfCard(); const r = await Promise.race([PdfCard.read(file), new Promise((_, no) => setTimeout(() => no(new Error('slow')), 6000))]); return r.readable ? r.details : null; } catch (err) { return null; /* sent without the details */ }
+    })();
+    // Once both are done: file the order, and say in the message that the PDF arrived
+    // (if that is after the WhatsApp button shows, its link is simply updated: it only opens when tapped)
+    const got = { received: false, ref: '' };
+    const filed = Promise.all([upload, reading]).then(async ([saved, d]) => {
+      if (!saved) return;
+      got.received = true;
+      try { await filePdfOrder(ref, saved, d); got.ref = ref; } catch (err) { console.warn('Card PDF order not filed:', err.message); }
+      if (run === pdfRun && !$('#osPdfDone').hidden) $('#osPdfWa').href = Core.orderUrl(SITE.whatsapp, pdfOrderMessage(file, d, got));
+    });
+    const details = await reading;
+    if (run !== pdfRun) return;
+    await Promise.race([filed, new Promise(r => setTimeout(r, 2500))]); // a short wait, so the message usually knows
+    if (run !== pdfRun) return;
+    const url = Core.orderUrl(SITE.whatsapp, pdfOrderMessage(file, details, got));
     $('#osPdfWa').href = url;
     $('#osPdfName').textContent = file.name;
     $('#osPdfWhat').textContent = details && details.host1 ? `We read: ${[details.host1, details.host2].filter(Boolean).join(' & ')}${details.events.length ? ` · ${details.events.length} function${details.events.length === 1 ? '' : 's'}` : ''}${details.venue ? ' · ' + details.venue : ''}.` : 'Your order message is ready in WhatsApp.';

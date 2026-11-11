@@ -216,7 +216,18 @@ const PdfCard = (() => {
     const text = lines.join(' ');
     // Old Hindi fonts (Kruti Dev and the like) come out as Latin gibberish; pictures of cards have no text at all
     const readable = text.replace(/\s/g, '').length > 30 && !/[¼½¾ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖ×ØÙÚÛÜÝÞß]{3}/.test(text);
-    return { lines, pictures, pages: pdf.numPages, readable, details: readable ? parse(lines) : null };
+    // No usable text (a picture of the card, or an old Hindi font): a sharp picture of page 1 for reading it by eye (OCR)
+    let big = '';
+    if (!readable) {
+      try {
+        const page = await pdf.getPage(1), vp = page.getViewport({ scale: 1 }), v2 = page.getViewport({ scale: 2200 / Math.max(vp.width, vp.height) }), c = document.createElement('canvas');
+        c.width = Math.round(v2.width); c.height = Math.round(v2.height);
+        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+        await page.render({ canvasContext: g, viewport: v2 }).promise;
+        big = c.toDataURL('image/png');
+      } catch (e) { /* the small pictures will do */ }
+    }
+    return { lines, pictures, big, pages: pdf.numPages, readable, details: readable ? parse(lines) : null };
   }
 
   return { parse, toCard, read, findDate, findTime, EVENTS };

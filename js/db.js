@@ -2,6 +2,8 @@
 // The key below is the PUBLIC (anon) key: it is meant to be in the browser. What anyone can read or change is
 // decided by the database's security rules (supabase/schema.sql): visitors may read the catalog and place an
 // order; only the logged-in owner may change anything or see orders.
+// Card PDFs that customers choose on the website go to the private "order-pdfs" storage bucket: visitors may only
+// add files there; only the logged-in owner can download them.
 const DB = (() => {
   const URL = 'https://ozaaltohnihlpmywinah.supabase.co';
   const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96YWFsdG9obmlobHBteXdpbmFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5NDE2NDgsImV4cCI6MjEwODUxNzY0OH0.rTyJqHJ-gd7g9W0NW-VFe1LWmMRrwcJtA_beLQENMmg';
@@ -43,8 +45,71 @@ const DB = (() => {
     await refreshing;
   }
 
+  // ---- Card PDFs (Supabase Storage) ----
+  const PDF_BUCKET = 'order-pdfs', PDF_MAX = 10 * 1024 * 1024; // 10 MB (the bucket has the same limit)
+  const isPdf = f => !!f && (/\.pdf$/i.test(f.name || '') || f.type === 'application/pdf');
+  // "Riya & Kabir's Card (final).PDF" → "Riya-Kabir-s-Card-final.pdf" (letters, digits, - _ . only; "card.pdf" if nothing is left)
+  function safeName(name) {
+    const base = String(name || '').split(/[\\/]/).pop().replace(/\.pdf$/i, '').normalize('NFKD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^A-Za-z0-9._-]+/g, '-').replace(/-{2,}/g, '-').replace(/^[-._]+|[-._]+$/g, '').slice(0, 60).replace(/[-._]+$/, '');
+    return (base || 'card') + '.pdf';
+  }
+  const randomId = () => {
+    const b = typeof crypto !== 'undefined' && crypto.getRandomValues ? crypto.getRandomValues(new Uint8Array(8)) : Array.from({ length: 8 }, () => Math.random() * 256 | 0);
+    return Array.from(b, n => n.toString(16).padStart(2, '0')).join('');
+  };
+  // Where a PDF is kept in the bucket: "2026/11/<random id>-<safe name>.pdf"
+  const pdfPath = (name, when = new Date(), id = randomId()) =>
+    `${when.getFullYear()}/${String(when.getMonth() + 1).padStart(2, '0')}/${id}-${safeName(name)}`;
+  const objectUrl = (bucket, path) => `${URL}/storage/v1/object/${bucket}/${String(path).split('/').map(encodeURIComponent).join('/')}`;
+
+  // Sends a file to a storage bucket (as a visitor unless auth). Never replaces a file already there.
+  async function upload(bucket, path, file, { auth = false, timeout = 60000 } = {}) {
+    if (auth) await fresh();
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeout);
+    try {
+      const res = await fetch(objectUrl(bucket, path), {
+        method: 'POST', signal: ctrl.signal, body: file,
+        headers: { apikey: KEY, Authorization: `Bearer ${auth && session ? session.access_token : KEY}`, 'Content-Type': file.type || 'application/octet-stream', 'x-upsert': 'false' }
+      });
+      if (!res.ok) {
+        let m = '';
+        try { const d = await res.json(); m = d.message || d.error; } catch (e) { /* not JSON */ }
+        throw new Error(m || `${res.status} ${res.statusText}`);
+      }
+      return path;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   return {
     get user() { return session && session.user; },
+
+    PDF_MAX, isPdf, safeName, pdfPath,
+    // A customer's card PDF → the order-pdfs bucket. Returns { path, name }; throws if it is not a PDF, too big or not sent.
+    async uploadPdf(file, opts) {
+      if (!isPdf(file)) throw new Error('Not a PDF');
+      if (!file.size || file.size > PDF_MAX) throw new Error('The PDF must be under 10 MB');
+      const path = pdfPath(file.name);
+      await upload(PDF_BUCKET, path, new Blob([file], { type: 'application/pdf' }), opts);
+      return { path, name: String(file.name || 'card.pdf').slice(0, 200) };
+    },
+    // The owner downloads a card PDF (the bucket is private, so this needs the owner's login). Returns a Blob.
+    async downloadPdf(path, { timeout = 60000 } = {}) {
+      await fresh();
+      if (!session) throw new Error('Please log in again');
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), timeout);
+      try {
+        const res = await fetch(objectUrl(`authenticated/${PDF_BUCKET}`, path), { signal: ctrl.signal, headers: { apikey: KEY, Authorization: `Bearer ${session.access_token}` } });
+        if (!res.ok) throw new Error(res.status === 400 || res.status === 404 ? 'This PDF was not found' : `${res.status} ${res.statusText}`);
+        return await res.blob();
+      } finally {
+        clearTimeout(timer);
+      }
+    },
 
     async signIn(email, password) {
       keep(withExpiry(await call('/auth/v1/token?grant_type=password', { method: 'POST', auth: false, body: { email: email.trim(), password } })));

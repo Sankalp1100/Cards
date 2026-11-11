@@ -114,7 +114,8 @@
     if (!useDb || !DB.user) return;
     try {
       const rows = await DB.select('orders', 'select=*&order=created_at.desc&limit=500');
-      ordersCache = rows.map(r => ({ id: r.id, code: r.code, name: r.names || 'Customer', type: r.occasion, design: r.design_no || '', date: r.event_date, received: Date.parse(r.created_at), done: r.status === 'done' }));
+      ordersCache = rows.map(r => ({ id: r.id, code: r.code, name: r.names || 'Customer', type: r.occasion, design: r.design_no || '', date: r.event_date, received: Date.parse(r.created_at), done: r.status === 'done',
+        pdfPath: r.pdf_path || '', pdfName: r.pdf_name || '' }));
       renderOrders();
       if (!navigated && page !== 'orders' && ordersCache.some(o => !o.done)) showPage('orders');
     } catch (e) { /* keep the list we have */ }
@@ -161,10 +162,12 @@
       return `
         <div class="order-item${o.done ? ' done' : ''}${o.code === active ? ' on' : ''}">
           <button type="button" class="order-open" data-open="${esc(o.code)}" title="Fill the editor with this order">
-            <b>${esc(o.name)}${Catalog.refOf(o.code) ? ` <span class="order-ref">${Catalog.refOf(o.code)}</span>` : ''}</b>
+            <b>${esc(o.name)}${Catalog.refOf(o.code) ? ` <span class="order-ref">${Catalog.refOf(o.code)}</span>` : ''}${o.pdfPath ? ' <span class="order-ref" title="The customer sent their card PDF">📄 PDF</span>' : ''}</b>
             <small>${(PRESETS[o.type] || PRESETS.wedding).icon} ${esc((PRESETS[o.type] || PRESETS.wedding).label)}${o.design ? ` · ${Templates.serial(o.design)}` : ''}${when ? ` · ${when.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : ''}</small>
             <small class="ago">Received ${new Date(o.received).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</small>
           </button>
+          ${o.pdfPath ? `<button type="button" class="btn-small" data-pdf="${esc(o.id)}" title="${esc(o.pdfName || 'card.pdf')}">⬇ Download PDF</button>
+          <button type="button" class="btn-small" data-pdf-video="${esc(o.id)}" title="Read this PDF in the Video Studio and make its video">⚡ Make video</button>` : ''}
           <button type="button" class="btn-small" data-video="${esc(o.code)}" title="Make this order's video">🎬 Video</button>
           <button type="button" class="btn-small" data-done="${esc(o.code)}" title="${o.done ? 'Mark as not done' : 'Mark as done'}">${o.done ? '↺' : '✓'}</button>
           <button type="button" class="btn-small danger" data-forget="${esc(o.code)}" aria-label="Delete order">✕</button>
@@ -175,7 +178,10 @@
 
   $('#ordersList').addEventListener('click', e => {
     const open = e.target.closest('[data-open]'), done = e.target.closest('[data-done]'), forget = e.target.closest('[data-forget]'), video = e.target.closest('[data-video]');
-    if (open) {
+    const pdf = e.target.closest('[data-pdf], [data-pdf-video]');
+    if (pdf) {
+      orderPdf(pdf, pdf.hasAttribute('data-pdf-video'));
+    } else if (open) {
       const order = Catalog.readOrder(open.dataset.open);
       if (order) { fillOrder(order); renderOrders(open.dataset.open); goTo('create', '.create-grid'); }
     } else if (video) {
@@ -188,6 +194,29 @@
       renderOrders();
     }
   });
+
+  // A website order's card PDF (kept in the private storage, so it needs the login): saved to this device,
+  // or handed to the Video Studio's "Card PDF → video" (readPdf)
+  async function orderPdf(btn, makeVideo) {
+    const o = loadOrders().find(x => x.id === btn.dataset.pdf || x.id === btn.dataset.pdfVideo);
+    if (!o || !o.pdfPath || !useDb) return;
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ Getting PDF…';
+    try {
+      const name = o.pdfName || 'card.pdf';
+      const blob = await DB.downloadPdf(o.pdfPath);
+      if (makeVideo) {
+        await openStudio();
+        readPdf(new File([blob], name, { type: 'application/pdf' }));
+      } else download(name, blob, 'application/pdf');
+    } catch (err) {
+      toast(`Could not get the PDF: ${err.message}`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
+  }
 
   async function fillFromOrder() {
     let text = $('#orderPaste').value;
@@ -1738,7 +1767,7 @@
     if (au.card) startAuto(); else showAutoStart();
   }
   function showAutoStart() {
-    $('#auDrop').hidden = false; $('#auWork').hidden = true; $('#auNew').hidden = true;
+    $('#auDrop').hidden = false; $('#auWork').hidden = true; $('#auNew').hidden = true; $('#auFill').hidden = true;
     auStatus('');
   }
   function closeAuto() {
@@ -1756,11 +1785,61 @@
     $('#auDrop').classList.add('busy');
     try {
       const r = await PdfCard.read(file);
-      const d = r.details || {};
+      let d = r.details || {};
+      // no text in the PDF (a picture of the card, or an old Hindi font): read the picture itself
       if (!r.readable || !d.host1) {
-        auStatus('⚠️ The names could not be read from this PDF (it is a picture, or uses an old Hindi font). Please use the full 🎬 Video Studio for this one: you can type the details there.', true);
-        return;
+        auStatus('🔎 This card is a picture: reading its words from the picture… (the first time takes about half a minute)');
+        try {
+          const found = PdfCard.parse(await ocrLines(r.big || r.pictures[0]));
+          if (found.host1) d = found; else d = { ...found, ...d };
+        } catch (e) { /* offline: the short form below */ }
       }
+      au.pendingR = r;
+      if (!d.host1) { showFill(d); return; }
+      await useAutoDetails(d, r);
+    } catch (e) {
+      auStatus(`Could not read this PDF: ${e.message}`, true);
+    } finally { $('#auDrop').classList.remove('busy'); }
+  }
+  // Reading a card's picture (OCR, English + Hindi), loaded only when a card needs it
+  let ocrLib = null;
+  const loadOcr = () => ocrLib = ocrLib || new Promise((resolve, reject) => {
+    if (window.Tesseract) return resolve(window.Tesseract);
+    const sc = Object.assign(document.createElement('script'), { src: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js' });
+    sc.onload = () => resolve(window.Tesseract);
+    sc.onerror = () => { ocrLib = null; reject(new Error('offline')); };
+    document.head.appendChild(sc);
+  });
+  async function ocrLines(src) {
+    if (!src) return [];
+    const T = await loadOcr();
+    const { data } = await T.recognize(src, 'eng+hin', { logger: m => { if (m.status === 'recognizing text') auStatus(`🔎 Reading the words on the card… ${Math.round(m.progress * 100)}%`); } });
+    return String(data.text || '').split('\n').map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  }
+  // Still no names: four short boxes, then the videos are made the same way (in the card's colours)
+  function showFill(d) {
+    $('#auFType').innerHTML = Object.entries(PRESETS).map(([k, p]) => `<option value="${k}"${k === (d.type || 'wedding') ? ' selected' : ''}>${p.icon || ''} ${esc(p.label)}</option>`).join('');
+    $('#auF1').value = d.host1 || ''; $('#auF2').value = d.host2 || '';
+    $('#auFDate').value = (d.events && d.events[0] && d.events[0].date ? d.events[0].date.slice(0, 10) : '');
+    $('#auFVenue').value = d.venue || '';
+    $('#auFill').hidden = false;
+    auStatus('✍️ The words on this card could not be read. Type the names below (10 seconds), and the videos are made in your card colours.', true);
+    $('#auF1').focus();
+  }
+  $('#auFill').addEventListener('submit', async e => {
+    e.preventDefault();
+    const h1 = $('#auF1').value.trim();
+    if (!h1) { $('#auF1').focus(); return toast('Please write at least the first name'); }
+    const type = $('#auFType').value, date = $('#auFDate').value, venue = $('#auFVenue').value.trim();
+    const words = h1 + $('#auF2').value;
+    const d = { type, lang: /[\u0900-\u097F]/.test(words) ? 'hi' : 'en', host1: h1, host2: $('#auF2').value.trim(), parents1: '', parents2: '',
+      events: date ? [{ name: PRESETS[type] ? PRESETS[type].label : 'Celebration', date, venue }] : [], venue, address: '', phones: [], hashtag: '' };
+    $('#auFill').hidden = true;
+    await useAutoDetails(d, au.pendingR || { pictures: [] });
+  });
+  async function useAutoDetails(d, r) {
+    {
+      $('#auFill').hidden = true;
       au.details = d; au.lang = d.lang === 'hi' ? 'hi' : 'en';
       au.card = { ...Core.blankCard(), ...PdfCard.toCard(d), theme: design().no };
       // new films made in the card's own colours (not the ready-made ones)
@@ -1774,9 +1853,7 @@
       await au.fonts;
       startAuto();
       if (window.Fun) Fun.burst(null, null, 70);
-    } catch (e) {
-      auStatus(`Could not read this PDF: ${e.message}`, true);
-    } finally { $('#auDrop').classList.remove('busy'); }
+    }
   }
   function startAuto() {
     const d = au.details, n = d.events.length;

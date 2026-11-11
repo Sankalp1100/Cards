@@ -45,6 +45,9 @@ create table if not exists public.orders (
   status text not null default 'new' check (status in ('new', 'done'))
 );
 create index if not exists orders_created_at on public.orders (created_at desc);
+-- A card PDF the customer chose on the website: where it is kept (storage bucket "order-pdfs") and its file name
+alter table public.orders add column if not exists pdf_path text check (pdf_path ~ '^\d{4}/\d{2}/[A-Za-z0-9._-]{1,120}\.pdf$');
+alter table public.orders add column if not exists pdf_name text check (length(pdf_name) <= 200);
 
 -- Invitation links made in the admin panel (history on every device)
 create table if not exists public.invites (
@@ -91,6 +94,22 @@ drop policy if exists "admins update orders" on public.orders;
 create policy "admins update orders" on public.orders for update using (public.is_admin()) with check (public.is_admin());
 drop policy if exists "admins delete orders" on public.orders;
 create policy "admins delete orders" on public.orders for delete using (public.is_admin());
+
+-- Card PDFs from the website's order sheet: a PRIVATE storage bucket (PDF only, at most 10 MB).
+-- Anyone can add a PDF (they cannot see, replace or delete any file); only admins can download or delete them.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('order-pdfs', 'order-pdfs', false, 10485760, array['application/pdf'])
+on conflict (id) do update set public = false, file_size_limit = 10485760, allowed_mime_types = array['application/pdf'];
+
+drop policy if exists "anyone adds an order pdf" on storage.objects;
+create policy "anyone adds an order pdf" on storage.objects for insert to anon, authenticated
+  with check (bucket_id = 'order-pdfs' and lower(storage.extension(name)) = 'pdf');
+drop policy if exists "admins read order pdfs" on storage.objects;
+create policy "admins read order pdfs" on storage.objects for select to authenticated
+  using (bucket_id = 'order-pdfs' and public.is_admin());
+drop policy if exists "admins delete order pdfs" on storage.objects;
+create policy "admins delete order pdfs" on storage.objects for delete to authenticated
+  using (bucket_id = 'order-pdfs' and public.is_admin());
 
 -- Invitation history: admins only.
 drop policy if exists "admins manage invites" on public.invites;

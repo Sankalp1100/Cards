@@ -1230,6 +1230,40 @@ test.describe('card PDF → details (js/pdfcard.js)', () => {
   });
 });
 
+test.describe('card PDFs from the website (js/db.js)', () => {
+  const ctx = vm.createContext({ console });
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', 'db.js'), 'utf8'), ctx, { filename: 'db.js' });
+  const DB = vm.runInContext('DB', ctx);
+  test('file names are made safe for storage, always ending in .pdf', () => {
+    assert.equal(DB.safeName("Riya & Kabir's Card (final).PDF"), 'Riya-Kabir-s-Card-final.pdf');
+    assert.equal(DB.safeName('C:\\Users\\me\\Désktop\\card.pdf'), 'card.pdf');
+    assert.equal(DB.safeName('../../etc/passwd'), 'passwd.pdf');
+    assert.equal(DB.safeName('शादी कार्ड.pdf'), 'card.pdf', 'nothing left: "card"');
+    assert.equal(DB.safeName(''), 'card.pdf');
+    assert.equal(DB.safeName('...pdf'), 'card.pdf');
+    assert.equal(DB.safeName('Ananyá Café.pdf'), 'Ananya-Cafe.pdf');
+    assert.ok(DB.safeName('a'.repeat(300) + '.pdf').length <= 64);
+    assert.match(DB.safeName('Mehta--wedding__2026 v2.pdf'), /^[A-Za-z0-9._-]+\.pdf$/);
+  });
+  test('the storage path: year/month/random id-name.pdf, never the same twice', () => {
+    assert.equal(DB.pdfPath('My Card.pdf', new Date(2026, 10, 11), 'ab12'), '2026/11/ab12-My-Card.pdf');
+    assert.equal(DB.pdfPath('x.pdf', new Date(2027, 0, 3), 'id'), '2027/01/id-x.pdf');
+    const a = DB.pdfPath('card.pdf'), b = DB.pdfPath('card.pdf');
+    assert.notEqual(a, b);
+    // the same rule as the orders.pdf_path check in supabase/schema.sql
+    const rule = fs.readFileSync(path.join(ROOT, 'supabase', 'schema.sql'), 'utf8').match(/pdf_path ~ '([^']+)'/)[1];
+    for (const p of [a, DB.pdfPath('a'.repeat(300) + '.pdf'), DB.pdfPath('शादी.pdf')]) assert.match(p, new RegExp(rule), p);
+  });
+  test('only PDFs, at most 10 MB', async () => {
+    assert.equal(DB.PDF_MAX, 10 * 1024 * 1024);
+    assert.ok(DB.isPdf({ name: 'CARD.PDF', type: '' }));
+    assert.ok(DB.isPdf({ name: 'card', type: 'application/pdf' }));
+    assert.ok(!DB.isPdf({ name: 'card.jpg', type: 'image/jpeg' }));
+    await assert.rejects(DB.uploadPdf({ name: 'card.jpg', type: 'image/jpeg', size: 10 }), /Not a PDF/);
+    await assert.rejects(DB.uploadPdf({ name: 'card.pdf', type: 'application/pdf', size: DB.PDF_MAX + 1 }), /10 MB/);
+  });
+});
+
 test('premium films: 15 different concepts (with the trend ones: monogram, palace jharokha, temple gold), at least 5 films each, never the same concept twice in a row', () => {
   const Films = require('../js/films.js');
   const by = {};

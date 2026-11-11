@@ -551,6 +551,14 @@
         <span class="au-steps"><i>1 · PDF</i><i>2 · best videos appear</i><i>3 · pick one + song</i><i>4 · download</i></span>
       </label>
       <p class="au-status" id="auStatus" aria-live="polite"></p>
+      <form class="au-fill" id="auFill" hidden autocomplete="off">
+        <label>Occasion <select id="auFType"></select></label>
+        <label>Name 1 <input id="auF1" maxlength="40" placeholder="e.g. Rohit"></label>
+        <label>Name 2 <small>(if two)</small> <input id="auF2" maxlength="40" placeholder="e.g. Ananya"></label>
+        <label>Date <input id="auFDate" type="date"></label>
+        <label class="au-fill-wide">Venue <input id="auFVenue" maxlength="80" placeholder="e.g. Sunshine Banquet Hall, Lucknow"></label>
+        <button type="submit" class="btn-glow au-fill-wide">✨ Make my videos</button>
+      </form>
       <section class="au-work" id="auWork" hidden>
         <p class="au-read" id="auRead"></p>
         <h3 class="au-h">1. Your best videos <small>made from this card: tap the one you like</small></h3>

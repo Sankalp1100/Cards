@@ -573,3 +573,9 @@ main > section[data-page][hidden] { display: none !important; }
 .au-read { display: flex; align-items: center; gap: 14px; }
 .au-page { width: 64px; height: auto; border-radius: 8px; box-shadow: 0 6px 16px rgba(0,0,0,.4); flex: none; }
 .au-swatch { display: inline-block; width: 16px; height: 16px; border-radius: 50%; vertical-align: -3px; border: 2px solid rgba(255,255,255,.7); }
+.au-fill { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 760px; margin: 16px auto 0; padding: 18px; border-radius: 20px; border: 1px solid var(--line); background: rgba(255,255,255,.04); }
+.au-fill label { display: grid; gap: 6px; font-size: .86rem; color: var(--muted); }
+.au-fill input, .au-fill select { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: rgba(8,6,20,.7); color: var(--ink); font: 500 1rem 'Space Grotesk', sans-serif; color-scheme: dark; }
+.au-fill-wide { grid-column: 1 / -1; }
+.au-fill button { justify-content: center; }
+@media (max-width: 560px) { .au-fill { grid-template-columns: 1fr; } }
