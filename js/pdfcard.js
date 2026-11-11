@@ -230,6 +230,54 @@ const PdfCard = (() => {
       else out.push(`${when} ${text}`.trim());
       i = j - 1;
     }
+    return blocks(out);
+  }
+  const WEEKDAY_NUM = [[/^sun/i, 0], [/^mon/i, 1], [/^tue/i, 2], [/^wed/i, 3], [/^thu/i, 4], [/^fri/i, 5], [/^sat/i, 6], [/रविवार/, 0], [/सोमवार/, 1], [/मंगलवार/, 2], [/बुधवार/, 3], [/गुरुवार|बृहस्पतिवार|वीरवार/, 4], [/शुक्रवार/, 5], [/शनिवार/, 6]];
+  const dayOfWeek = t => { const w = t.replace(/\s+/g, ''); const m = WEEKDAY_NUM.find(([re]) => re.test(w)); return m ? m[1] : -1; };
+  function blocks(L) {
+    const yearOf = (L.join(' ').match(/\b(20[2-4]\d)\b/) || [])[1];
+    // the card's date range: a line with two dates ("29 NOV – 2 DEC 2026")
+    let range = null;
+    let rangeAt = -1;
+    for (const [k, l] of L.entries()) { const ds = findDates(l, +yearOf || new Date().getFullYear()); if (ds.length >= 2) { range = [ds[0], ds[ds.length - 1]]; rangeAt = k; break; } }
+    const isWd = l => WEEKDAY_ONLY.test(l.replace(/\s+/g, '')) || /^(?:sun|mon|tues?|wed(?:nes)?|thu(?:rs)?|fri|sat(?:ur)?)\w{0,5}\s?\w{0,2}$/i.test(l.trim()) && dayOfWeek(l) >= 0;
+    const dayTok = l => { const t = l.trim().replace(/^[Oo]([l1I|])$/, '01').replace(/^([0-3])[Oo]$/, '$10').replace(/^[Oo]([0-9])$/, '0$1').replace(/^(\d)[lI|]$/, '$11'); const m = digits(t).match(/^(\d{1,2})(?:\s+(.*))?$/); return m && +m[1] >= 1 && +m[1] <= 31 ? { d: +m[1], rest: (m[2] || '').trim() } : null; };
+    const out = [];
+    let start = 0;
+    for (let i = 0; i < L.length; i++) {
+      if (!isWd(L[i])) { out.push(L[i]); continue; }
+      // the box ends with its weekday; it starts after the previous weekday (at most 7 lines back)
+      // it reaches back to the line after the last one with a full date (a heading's date range, the box before)
+      const fullDate = l => !MON_START.test(digits(l).trim()) && !!findDate(l, 2000);
+      let from = i; while (from > start && i - from < 7 && !fullDate(L[from - 1])) from--;
+      const part = L.slice(from, i);
+      let names = [], times = [], mon = null, day = null;
+      part.forEach(l => {
+        const m = digits(l).trim().match(MON_START); if (m) mon = m[1];
+        const dt = dayTok(l); if (dt && !day) day = dt.d;
+        EVENTS.forEach(ev => { const x = ev[0].exec(l); if (x && !(ev[3] && ev[3].needsDate) && !names.some(n => n.s === x[0])) names.push({ s: x[0], line: l }); });
+        times.push(...findTimes(l));
+      });
+      // a box whose lines already carry a full date is left as it is (a badge's "NOV 1:00 PM" is a month and a time, not 1 November)
+      if (!names.length || part.some(l => !MON_START.test(digits(l).trim()) && findDate(l, 2000))) { out.push(L[i]); start = i + 1; continue; }
+      let when = '';
+      if (day && mon) when = `${day} ${mon}`;
+      else if (range) {
+        // the weekday inside the card's range (and in that month, when the month was read)
+        const wd = dayOfWeek(L[i]), y0 = range[0].y, s0 = new Date(y0, range[0].m, range[0].d), s1 = new Date(range[1].y, range[1].m, range[1].d);
+        for (let d = new Date(s0); d <= s1; d.setDate(d.getDate() + 1)) {
+          if (d.getDay() !== wd) continue;
+          const mName = Object.keys(MONTHS).find(k => MONTHS[k] === d.getMonth() && k.length === 3);
+          if (!mon || MONTHS[mon.toLowerCase()] === d.getMonth()) { when = `${d.getDate()} ${mName} ${d.getFullYear()}`; break; }
+        }
+      }
+      if (!when) { out.push(L[i]); start = i + 1; continue; }
+      // the lines of this box are replaced by one plain line per function
+      out.splice(out.length - (i - from), i - from);
+      names.forEach((n, k) => out.push(`${n.s} ${when}${times.length === names.length ? ' ' + times[k] : names.length === 1 && times.length ? ' ' + times[0] : ''}`));
+      start = i + 1;
+      continue;
+    }
     return out;
   }
   // Section headings that many cards print on a line of their own, the details under them
@@ -289,6 +337,10 @@ const PdfCard = (() => {
     // a function named as the card prints it ("Kirtan" stays "Kirtan" unless the card also says Bhajan)
     if (!lines.some(l => /bhajan|भजन/i.test(l))) out.events.forEach(e => { if (e.name === 'Kirtan & Bhajan') e.name = 'Kirtan'; if (e.name === 'कीर्तन भजन') e.name = 'कीर्तन'; });
     if (!lines.some(l => /kirtan|कीर्तन/i.test(l))) out.events.forEach(e => { if (e.name === 'Kirtan & Bhajan') e.name = 'Bhajan Sandhya'; if (e.name === 'कीर्तन भजन') e.name = 'भजन संध्या'; });
+    // "Shubh Vivah" printed as a heading over that day's functions is not a function of its own
+    out.events = out.events.filter(e => !(/^(wedding|शुभ विवाह)$/i.test(e.name) && e.date.length <= 10 && out.events.some(x => x !== e && x.date.slice(0, 10) === e.date.slice(0, 10))));
+    // inviters are people or families: not a monogram ("S|A"), not a sentence ("Baraat will depart from…")
+    out.inviters = out.inviters.filter(v => /[A-Za-z]{4,}|[\u0900-\u097F]{3,}/.test(v) && !/\b(?:will|depart|proceed|residence|request|invite)\b/i.test(v) && v.split(/\s+/).length <= 10);
     // the invocation is not a quote too
     out.quotes = out.quotes.filter(q => norm2(q) !== norm2(out.invocation));
   }
@@ -662,6 +714,37 @@ const PdfCard = (() => {
     if (details && !details.lines) details.lines = seen.map(clean).filter(Boolean);
     return { lines, seen, pictures, big, pages: pdf.numPages, readable: !!(details && details.host1) || readable, details, how };
   }
+  // The pages of a card as pictures (screenshots, photos, JPG/PNG/WebP), in the order of their file names
+  // ("page 2" before "page 10"): every picture is read like a picture page of a PDF (OCR in several passes + the
+  // vision model), then the details are taken from all the pages together.
+  const fileUrl = f => new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result); r.onerror = () => reject(new Error(`could not open ${f.name}`)); r.readAsDataURL(f); });
+  async function readImages(files, opts = {}) {
+    const list = [...(files || [])].filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|bmp)$/i.test(f.name))
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).slice(0, 12);
+    if (!list.length) throw new Error('please choose pictures (JPG, PNG or WebP) of the card');
+    const pictures = [], pages = [];
+    for (const f of list) {
+      const img = await loadImg(await fileUrl(f)).catch(() => { throw new Error(`${f.name} is not a picture this browser can open (iPhone HEIC: take a screenshot or save it as JPG)`); });
+      const small = document.createElement('canvas'), k = 900 / Math.max(img.width, img.height);
+      small.width = Math.round(img.width * Math.min(1, k)); small.height = Math.round(img.height * Math.min(1, k));
+      small.getContext('2d').drawImage(img, 0, 0, small.width, small.height);
+      pictures.push(small.toDataURL('image/jpeg', .85));
+      // the reader works on a sharp copy: small screenshots are enlarged, huge photos brought down
+      const big = document.createElement('canvas'), kb = 2200 / Math.max(img.width, img.height);
+      big.width = Math.round(img.width * kb); big.height = Math.round(img.height * kb);
+      const g = big.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, big.width, big.height); g.imageSmoothingQuality = 'high';
+      g.drawImage(img, 0, 0, big.width, big.height);
+      pages.push({ name: f.name, src: big.toDataURL('image/png') });
+    }
+    for (const [k, p] of pages.entries()) {
+      const say = (f, msg) => opts.progress && opts.progress((k + Math.min(1, f || 0)) / pages.length, `Picture ${k + 1} of ${pages.length}: ${msg || `reading every word… ${Math.round((f || 0) * 100)}%`}`);
+      p.ocr = await ocr(p.src, say);
+    }
+    const all = pages.flatMap(p => p.ocr.lines), sizes = pages.flatMap(p => p.ocr.sizes);
+    const details = withNames(parse(all, { ocr: true }), all, sizes);
+    if (details && !details.lines) details.lines = all.map(clean).filter(Boolean);
+    return { lines: [], seen: all, pictures, big: pages[0] && pages[0].src, pages: pages.length, readable: !!(details && details.host1), details, how: 'pictures', files: list.map(f => f.name) };
+  }
   // When the wording gives no names (no "weds", no Chi./Ayu.), the biggest short lines on the card are the names:
   // the heading, the invocation, dates and places are left out. "Aarav & Diya" in one big line is split.
   const NOT_A_NAME = /invit|wedding|marriage|ceremony|save\s*the\s*date|together|celebrat|request|pleasure|family|blessing|ganesh|ganesha|namah|shubh|vivah|reception|engagement|birthday|anniversary|programme|venue|rsvp|विवाह|शुभ|गणेश|नमः|ॐ|आमंत्रण|आमन्त्रण|निमंत्रण|निमन्त्रण|सादर|परिवार|कार्यक्रम|स्थल|स्थान|निवेदक|दर्शनाभिलाषी|सगाई|जन्मदिन|मंगल|आशीर्वाद/i;
@@ -767,7 +850,8 @@ const PdfCard = (() => {
         const s = String(label || '').replace(/<\/?s>|<pad>/g, '').replace(/\s+/g, ' ').trim(), q = r.quad_boxes[i] || [];
         if (!/[A-Za-z]{2}/.test(s) || /[\u0900-\u097F]/.test(s)) return; // English only: Hindi is Tesseract's
         const ys = [q[1], q[3], q[5], q[7]].filter(v => v != null), y0 = Math.min(...ys), y1 = Math.max(...ys);
-        out.push({ s, conf: 82, y: (top + (y0 + y1) / 2) / H, z: (y1 - y0) / H * 1000, src: 'florence' });
+        const xs = [q[0], q[2], q[4], q[6]].filter(v => v != null);
+        out.push({ s, conf: 82, y: (top + (y0 + y1) / 2) / H, z: (y1 - y0) / H * 1000, x0: Math.min(...xs) / W, x1: Math.max(...xs) / W, src: 'florence' });
       });
     }
     return out;
@@ -793,7 +877,7 @@ const PdfCard = (() => {
           if (window.__ocrDebug) window.__ocrDebug.push([width, mode, psm, Math.round(conf), text]);
           if (!text || conf < 45 || norm(text).length < 2) continue;
           if (ocrNoise(text, conf)) continue;
-          found.push({ s: text, conf, y: (l.bbox.y0 + l.bbox.y1) / 2 / c.height, z: (l.bbox.y1 - l.bbox.y0) / c.height * 1000 });
+          found.push({ s: text, conf, y: (l.bbox.y0 + l.bbox.y1) / 2 / c.height, z: (l.bbox.y1 - l.bbox.y0) / c.height * 1000, x0: l.bbox.x0 / c.width, x1: l.bbox.x1 / c.width });
         }
         done++;
       }
@@ -809,9 +893,11 @@ const PdfCard = (() => {
     const kept = [];
     const alike = (a, b) => { const x = norm(a), y = norm(b); if (!x || !y) return false; if (x.includes(y.slice(0, 6)) || y.includes(x.slice(0, 6))) return true;
       let same = 0; for (let i = 0; i < Math.min(x.length, y.length); i++) if (x[i] === y[i]) same++; return same / Math.max(x.length, y.length) > .6; };
+    // how much two readings cover the same stretch of the line, left to right (0 = side by side, 1 = same place)
+    const across = (a, b) => { if (a.x0 == null || b.x0 == null) return 1; const o = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0); return o <= 0 ? 0 : o / Math.max(.01, Math.min(a.x1 - a.x0, b.x1 - b.x0)); };
     for (const f of found) {
       const near = Math.max(.012, f.z / 1000 * .6);
-      const same = kept.find(k => Math.abs(k.y - f.y) < Math.max(near, k.z / 1000 * .6) && (alike(k.s, f.s) || Math.abs(k.y - f.y) < .006));
+      const same = kept.find(k => Math.abs(k.y - f.y) < Math.max(near, k.z / 1000 * .6) && (across(k, f) > .5 || alike(k.s, f.s) && across(k, f) > .15));
       if (same) {
         same.seen++;
         const key = f.s.replace(/\s+/g, ' '); same.votes[key] = (same.votes[key] || 0) + 1 + f.conf / 1000;
@@ -823,11 +909,12 @@ const PdfCard = (() => {
     }
     // each line as most passes read it ("Aanya" read four times beats "Aanva" read once)
     kept.forEach(k => { const best = Object.entries(k.votes).sort((a, b) => b[1] - a[1])[0]; if (best) k.s = best[0]; });
-    kept.sort((a, b) => a.y - b.y);
+    // top to bottom; readings on the same line from left to right
+    kept.sort((a, b) => Math.abs(a.y - b.y) < Math.max(.008, Math.min(a.z, b.z) / 1000 * .4) ? (a.x0 || 0) - (b.x0 || 0) : a.y - b.y);
     return { lines: kept.map(k => k.s), sizes: kept.map(k => k.z * (k.conf > 70 ? 1 : .8)) };
   }
 
-  return { parse, toCard, read, findDate, findDates, findTime, findTimes, EVENTS };
+  return { parse, layout, toCard, read, readImages, findDate, findDates, findTime, findTimes, EVENTS };
 })();
 
 if (typeof module !== 'undefined') module.exports = PdfCard;

@@ -1580,19 +1580,46 @@
   $('#fAddEv').addEventListener('click', () => $('#fEvents').insertAdjacentHTML('beforeend', evRow()));
   $('#stForm').addEventListener('submit', e => { e.preventDefault(); if (st.rec) return; if (useDetails()) { stepTo('look'); toast('✅ Details in: now pick a style'); } });
   $('#fPick').addEventListener('click', () => { if (!st.rec && useDetails()) openPick(); });
+  // A card comes as ONE PDF or as SEVERAL pictures of its pages; once one kind is chosen, the other is switched off
+  // until "Change" is tapped.
+  function lockSource(prefix, kind) {
+    const pdf = $(`#${prefix}${prefix === 'st' ? 'PdfDrop' : 'Drop'}`), img = $(`#${prefix}ImgDrop`);
+    [[pdf, 'pdf'], [img, 'images']].forEach(([box, k]) => {
+      const off = !!kind && kind !== k;
+      box.classList.toggle('off', off); box.classList.toggle('chosen', kind === k);
+      box.querySelector('input').disabled = off;
+      box.setAttribute('aria-disabled', off ? 'true' : 'false');
+    });
+    $(`#${prefix}SrcReset`).hidden = !kind;
+  }
+  async function readImgs(files) {
+    files = [...(files || [])];
+    if (!files.length) return;
+    if (st.rec) return toast('Please wait: a video is still recording');
+    if ($('#stImgDrop').classList.contains('off')) return toast('A PDF is in use: tap “Change” to use pictures instead');
+    lockSource('st', 'images');
+    stepTo('details');
+    pdfStatus(`🖼️ Reading ${files.length} picture${files.length === 1 ? '' : 's'} of the card…`);
+    return readCard(() => PdfCard.readImages(files, { progress: (p, msg) => pdfStatus(msg ? `🔎 ${msg}` : `🔎 Reading every word… ${Math.round(p * 100)}%`) }), 'pictures');
+  }
   async function readPdf(file) {
     if (!file) return;
     if (st.rec) return toast('Please wait: a video is still recording');
+    if ($('#stPdfDrop').classList.contains('off')) return toast('Pictures are in use: tap “Change” to use a PDF instead');
     if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') return pdfStatus('Please choose a PDF file of the card.', true);
+    lockSource('st', 'pdf');
     stepTo('details');
     pdfStatus(`📄 Reading “${file.name}”…`);
+    return readCard(() => PdfCard.read(file, { progress: (p, msg) => pdfStatus(msg ? `🔎 ${msg}` : `🔎 Reading every word on the card… ${Math.round(p * 100)}% (careful reading takes about a minute)`) }), 'PDF');
+  }
+  async function readCard(reader, what) {
     try {
       await st.ready;
-      const r = await PdfCard.read(file, { progress: (p, msg) => pdfStatus(msg ? `🔎 ${msg}` : `🔎 Reading every word on the card… ${Math.round(p * 100)}% (careful reading takes about a minute)`) });
+      const r = await reader();
       st.pdf = r.details || { lang: 'en', type: 'wedding', events: [], phones: [] };
       fillDetails(st.pdf, r.pictures);
       if (!r.readable) {
-        pdfStatus('⚠️ This PDF has no readable text (it is a picture, or uses an old Hindi font). Please type the details from the page shown, then pick a video.', true);
+        pdfStatus(`⚠️ The names could not be read from this ${what}. Please type them from the page shown (everything else read is filled in), then pick a video.`, true);
         $('#fHost1').focus();
         return;
       }
@@ -1600,14 +1627,20 @@
       pdfStatus(`✅ Read: ${[st.pdf.host1, st.pdf.host2].filter(Boolean).join(' & ') || 'no names found'} · ${n} function${n === 1 ? '' : 's'}${st.pdf.venue ? ' · ' + st.pdf.venue : ''}. Check below if you like.`);
       if (st.pdf.host1) { useDetails(); openPick(); }
     } catch (e) {
-      pdfStatus(`Could not read this PDF: ${e.message}`, true);
+      pdfStatus(`Could not read this ${what}: ${e.message}`, true);
     }
   }
+  $('#stImgFile').addEventListener('change', e => { const f = [...e.target.files]; e.target.value = ''; readImgs(f); });
+  $('#stSrcReset').addEventListener('click', () => { if (!st.rec) { lockSource('st', null); pdfStatus(''); $('#stPdfStatus').hidden = true; } });
+  { const box = $('#stImgDrop');
+    ['dragenter', 'dragover'].forEach(t => box.addEventListener(t, e => { e.preventDefault(); if (!box.classList.contains('off')) box.classList.add('over'); }));
+    ['dragleave', 'drop'].forEach(t => box.addEventListener(t, () => box.classList.remove('over')));
+    box.addEventListener('drop', e => { e.preventDefault(); readImgs(e.dataTransfer.files); }); }
   $('#stPdfFile').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; readPdf(f); });
   const drop = $('#stPdfDrop');
   ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
   ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, () => drop.classList.remove('over')));
-  drop.addEventListener('drop', e => { e.preventDefault(); readPdf(e.dataTransfer.files[0]); });
+  drop.addEventListener('drop', e => { e.preventDefault(); const fs = [...e.dataTransfer.files]; if (fs.length && fs.every(f => /^image\//.test(f.type))) readImgs(fs); else readPdf(fs[0]); });
   // From the main page: choose the PDF straight away (the Studio opens behind the file chooser)
   $('#pdfVideoBtn').addEventListener('click', () => { $('#stPdfFile').click(); openStudio().then(() => stepTo('details')); });
   $('#stHeadPdf').addEventListener('click', () => { stepTo('details'); $('#stPdfFile').click(); });
@@ -1789,6 +1822,7 @@
   }
   function showAutoStart() {
     $('#auDrop').hidden = false; $('#auWork').hidden = true; $('#auNew').hidden = true; $('#auFill').hidden = true;
+    ['.au-or', '#auImgDrop'].forEach(q => { $(q).hidden = false; }); lockSource('au', null);
     auStatus('');
   }
   function closeAuto() {
@@ -1798,21 +1832,36 @@
     $('#auto').hidden = true;
     document.body.classList.remove('studio-open');
   }
+  async function autoImgs(files) {
+    files = [...(files || [])];
+    if (!files.length) return;
+    if (au.rec) return toast('Please wait: a video is still recording');
+    if ($('#auImgDrop').classList.contains('off')) return toast('A PDF is in use: tap “Change” to use pictures instead');
+    lockSource('au', 'images');
+    auStatus(`🖼️ Reading ${files.length} picture${files.length === 1 ? '' : 's'} of the card and making your videos…`);
+    $('#auImgDrop').classList.add('busy');
+    return autoRead(() => PdfCard.readImages(files, { progress: (p, msg) => auStatus(msg ? `🔎 ${msg}` : `🔎 Reading every word… ${Math.round(p * 100)}%`) }), 'pictures');
+  }
   async function autoPdf(file) {
     if (!file) return;
     if (au.rec) return toast('Please wait: a video is still recording');
+    if ($('#auDrop').classList.contains('off')) return toast('Pictures are in use: tap “Change” to use a PDF instead');
     if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') return auStatus('Please choose the PDF file of the card.', true);
+    lockSource('au', 'pdf');
     auStatus(`📄 Reading “${file.name}” and making your videos…`);
     $('#auDrop').classList.add('busy');
+    return autoRead(() => PdfCard.read(file, { progress: (p, msg) => auStatus(msg ? `🔎 ${msg}` : `🔎 Reading every word on the card… ${Math.round(p * 100)}% (careful reading takes about a minute)`) }), 'PDF');
+  }
+  async function autoRead(reader, what) {
     try {
-      const r = await PdfCard.read(file, { progress: (p, msg) => auStatus(msg ? `🔎 ${msg}` : `🔎 Reading every word on the card… ${Math.round(p * 100)}% (careful reading takes about a minute)`) });
+      const r = await reader();
       const d = r.details || {};
       au.pendingR = r;
       if (!d.host1) { showFill(d); return; }
       await useAutoDetails(d, r);
     } catch (e) {
       auStatus(`Could not read this PDF: ${e.message}`, true);
-    } finally { $('#auDrop').classList.remove('busy'); }
+    } finally { $('#auDrop').classList.remove('busy'); $('#auImgDrop').classList.remove('busy'); }
   }
   // Still no names: four short boxes, then the videos are made the same way (in the card's colours)
   function showFill(d) {
@@ -1895,6 +1944,7 @@
   function startAuto() {
     const d = au.details, n = d.events.length;
     $('#auDrop').hidden = true; $('#auWork').hidden = false; $('#auNew').hidden = false;
+    ['.au-or', '#auImgDrop', '#auSrcReset'].forEach(q => { $(q).hidden = true; });
     auStatus('');
     renderAutoAll(d);
     $('#auRead').innerHTML = (au.page ? `<img class="au-page" src="${au.page}" alt="The card">` : '') + `<span>✅ Read from the card: <b>${esc([d.host1, d.host2].filter(Boolean).join(' & '))}</b> · ${esc(occasion(au.card).label)}${n ? ` · ${n} function${n === 1 ? '' : 's'}` : ''}${d.venue ? ' · ' + esc(d.venue) : ''} · ${au.lang === 'hi' ? 'हिन्दी' : 'English'}`
@@ -2110,8 +2160,14 @@
   const auDrop = $('#auDrop');
   ['dragenter', 'dragover'].forEach(t => auDrop.addEventListener(t, e => { e.preventDefault(); auDrop.classList.add('over'); }));
   ['dragleave', 'drop'].forEach(t => auDrop.addEventListener(t, () => auDrop.classList.remove('over')));
-  auDrop.addEventListener('drop', e => { e.preventDefault(); autoPdf(e.dataTransfer.files[0]); });
-  $('#auNew').addEventListener('click', () => { if (!au.rec) { auSoundOff(); auStopListen(); cancelAnimationFrame(au.raf); showAutoStart(); $('#auFile').click(); } });
+  auDrop.addEventListener('drop', e => { e.preventDefault(); const fs = [...e.dataTransfer.files]; if (fs.length && fs.every(f => /^image\//.test(f.type))) autoImgs(fs); else autoPdf(fs[0]); });
+  $('#auImgFile').addEventListener('change', e => { const f = [...e.target.files]; e.target.value = ''; autoImgs(f); });
+  { const box = $('#auImgDrop');
+    ['dragenter', 'dragover'].forEach(t => box.addEventListener(t, e => { e.preventDefault(); if (!box.classList.contains('off')) box.classList.add('over'); }));
+    ['dragleave', 'drop'].forEach(t => box.addEventListener(t, () => box.classList.remove('over')));
+    box.addEventListener('drop', e => { e.preventDefault(); autoImgs(e.dataTransfer.files); }); }
+  $('#auSrcReset').addEventListener('click', () => { if (!au.rec) { lockSource('au', null); auStatus(''); } });
+  $('#auNew').addEventListener('click', () => { if (!au.rec) { auSoundOff(); auStopListen(); cancelAnimationFrame(au.raf); showAutoStart(); } });
   $('#auClose').addEventListener('click', closeAuto);
   addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#auto').hidden) closeAuto(); });
   document.querySelectorAll('[data-auto]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); openAuto(); }));

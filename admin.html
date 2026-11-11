@@ -383,6 +383,14 @@
             <b>Drop the card PDF here</b>
             <small>or tap to choose it. The names, functions, dates and venue are read from it, then you pick a video and it is made by itself.</small>
           </label>
+          <p class="st-or"><span>or the card's pages as pictures</span></p>
+          <label class="st-drop st-img-drop" id="stImgDrop">
+            <input type="file" id="stImgFile" accept="image/*,.jpg,.jpeg,.png,.webp" multiple hidden>
+            <span class="st-drop-icon">🖼️</span>
+            <b>Drop the card's pictures here</b>
+            <small>Screenshots or photos of every page (choose them all at once; they are read in the order of their names).</small>
+          </label>
+          <button type="button" class="btn-small st-src-reset" id="stSrcReset" hidden>✕ Change: use another PDF or pictures</button>
           <p class="muted st-pdf-status" id="stPdfStatus" hidden></p>
           <div class="st-order" id="stOrderRow" hidden>
             <h3>… or from an order</h3>
@@ -560,6 +568,14 @@
         <span class="muted">or tap to choose it · English or Hindi · nothing else to fill</span>
         <span class="au-steps"><i>1 · PDF</i><i>2 · best videos appear</i><i>3 · pick one + song</i><i>4 · download</i></span>
       </label>
+      <p class="st-or au-or"><span>or the card's pages as pictures</span></p>
+      <label class="au-drop au-img-drop" id="auImgDrop">
+        <input type="file" id="auImgFile" accept="image/*,.jpg,.jpeg,.png,.webp" multiple hidden>
+        <span class="au-drop-icon">🖼️</span>
+        <b>Drop the card's pictures here</b>
+        <span class="muted">screenshots or photos of every page · choose them all at once · read in the order of their names</span>
+      </label>
+      <button type="button" class="btn-small st-src-reset" id="auSrcReset" hidden>✕ Change: use another PDF or pictures</button>
       <p class="au-status" id="auStatus" aria-live="polite"></p>
       <form class="au-fill" id="auFill" hidden autocomplete="off">
         <div class="au-fill-wide au-fill-top"><div class="au-fill-page" id="auFillPage"></div>

@@ -601,3 +601,12 @@ main > section[data-page][hidden] { display: none !important; }
 .au-fill-top { display: grid; grid-template-columns: 160px 1fr; gap: 14px; align-items: start; }
 .au-fill-page img { width: 100%; border-radius: 10px; box-shadow: 0 8px 20px rgba(0,0,0,.45); }
 @media (max-width: 560px) { .au-fill-top { grid-template-columns: 1fr; } .au-fill-page img { max-width: 200px; } }
+
+/* A card as one PDF, or as pictures of its pages: one kind at a time */
+.st-or { display: flex; align-items: center; gap: 12px; margin: 12px 0; color: var(--muted); font-size: .82rem; }
+.st-or::before, .st-or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.au-or { max-width: 760px; margin: 16px auto 10px; }
+.au-img-drop { margin-top: 0 !important; padding: 32px 24px !important; border-color: rgba(139,92,246,.55) !important; }
+.st-drop.off, .au-drop.off { opacity: .35; filter: grayscale(.7); pointer-events: none; }
+.st-drop.chosen, .au-drop.chosen { box-shadow: 0 0 0 3px rgba(74,222,128,.35); }
+.st-src-reset { display: block; margin: 10px auto 0; }

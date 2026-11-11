@@ -1404,3 +1404,45 @@ test('auto video studio: a film is made new in the card colours (hue follows the
   // the player takes the new film as it is
   assert.doesNotThrow(() => Films.script(Films.recolour(Films.LIST[5], green), 'en'));
 });
+
+
+// A reference card (5 pages, as the owner's customers send them): cover, invitation, date badges, venue and
+// inviters, बाल मनुहार with address and phones. The same card as clean text and as OCR gives it (badge numbers
+// misread, every piece on its own line): every detail must come out either way.
+test('card layouts: date badges, two functions in one box, section headings, grandparents above "grandson"', () => {
+  const PdfCard = require('../js/pdfcard.js');
+  const head = ['॥ श्री गणेशाय नमः ॥', 'शुभ विवाह', 'Shivam', 'weds', 'Aanya', '29 NOV – 2 DEC 2026', 'Ashirwad Banquet Hall · Ghaziabad',
+    'वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ।', 'निर्विघ्नं कुरु मे देव सर्वकार्येषु सर्वदा॥', 'Late Smt. Gaura Devi & Late Shri Radhe Shyam Gupta',
+    'Wedding Ceremony', 'of their beloved grandson', 'Shivam Gupta', 'Son of Smt. Madhuri Gupta & Shri Mahesh Gupta', 'weds', 'Aanya Gupta',
+    'Daughter of Smt. Ladli Gupta & Shri Chandra Shekhar Gupta', 'Resi. Kannauj (U.P.)', 'GOLDEN MOMENTS', '29 November – 2 December 2026'];
+  const tail = ['Baraat will depart from our residence & proceed to the', 'MARRIAGE VENUE', 'Ashirwad Banquet Hall', 'Behrampur, Near Green Hotel Road,',
+    'Mokanova Residency, Ghaziabad – 201009', 'CORDIAL INVITATION FROM', 'Smt. Khushboo & Shri Lalit Varshney', 'Smt. Mona & Shri Rohit Varshney', '& Gupta Family',
+    'WITH BEST COMPLIMENTS FROM', 'Yash, Sankalp, Nitesh & Rakshit', 'S|A', 'बाल मनुहार', 'हमारे मामा की शादी में', 'जलूल-जलूल आना...', 'वंश, माधवी एवं मायरा',
+    'HOME ADDRESS', 'Gali No. 5, Near Shiv Mandir,', 'Rahul Vihar-1, Ghaziabad – 201009', 'FOR DETAILS', '98180 20486 | 91368 86741', '#ShivAanyaKiShaadi'];
+  const clean = ['29 Kirtan', 'NOV 1:00 PM', 'Sunday', '30 Ratjaga', 'NOV 11:00 PM', 'Monday', '01 Haldi Mehendi', 'DEC 11:00 AM 5:00 PM', 'Tuesday',
+    'SHUBH VIVAH', '02 Ghurchari Baraat', 'DEC 4:00 PM 6:00 PM', 'Wednesday'];
+  const ocr = ['Aa -', 'Kirtan', 'NOV', '1:00 PM', 'Sunday', 'Ratjaga', 'NOV', '11:00 PM', 'Monday', 'Ol', 'Haldi', 'Mehendi', 'DEC', '11:00 AM', '5:00 PM', 'Tuesda y',
+    'SHUBH VIVAH', '02', 'Ghurchari', 'Baraat', 'DEC', '4:00 PM', '6:00 PM', 'Wednesday'];
+  for (const [what, badges] of [['clean text', clean], ['OCR pieces', ocr]]) {
+    const d = PdfCard.parse([...head, ...badges, ...tail], { ocr: true });
+    assert.equal(d.host1, 'Shivam Gupta', what); assert.equal(d.host2, 'Aanya Gupta', what);
+    assert.equal(d.parents1, 'Smt. Madhuri Gupta & Shri Mahesh Gupta');
+    assert.equal(d.parents2, 'Smt. Ladli Gupta & Shri Chandra Shekhar Gupta, Resi. Kannauj (U.P.)');
+    assert.equal(d.grandparents1, 'Late Smt. Gaura Devi & Late Shri Radhe Shyam Gupta');
+    assert.deepEqual(d.events.map(e => `${e.name} ${e.date}`), ['Kirtan 2026-11-29T13:00', 'Ratjaga 2026-11-30T23:00', 'Haldi 2026-12-01T11:00',
+      'Mehendi 2026-12-01T17:00', 'Ghudchadhi 2026-12-02T16:00', 'Baraat 2026-12-02T18:00'], what);
+    assert.equal(d.venue, 'Ashirwad Banquet Hall, Behrampur, Near Green Hotel Road, Mokanova Residency, Ghaziabad – 201009');
+    assert.equal(d.address, 'Gali No. 5, Near Shiv Mandir, Rahul Vihar-1, Ghaziabad – 201009');
+    assert.deepEqual(d.phones, ['98180 20486', '91368 86741']); assert.equal(d.hashtag, '#ShivAanyaKiShaadi');
+    for (const who of ['Smt. Khushboo & Shri Lalit Varshney', 'Smt. Mona & Shri Rohit Varshney', 'Gupta Family', 'Yash, Sankalp, Nitesh & Rakshit']) assert.ok(d.inviters.includes(who), `${what}: inviter ${who}`);
+    assert.ok(!d.inviters.some(v => /S\|A|depart/.test(v)), 'no monogram or sentence among the inviters');
+    assert.ok(d.quotes.some(q => q.startsWith('वक्रतुण्ड')), 'the shloka');
+    assert.match(d.kids, /मामा की शादी/); assert.match(d.kids, /वंश, माधवी एवं मायरा/);
+    assert.equal(d.invocation, '॥ श्री गणेशाय नमः ॥');
+  }
+  // a Hindi card with its date badges in Hindi numerals and Hindi times
+  const h = PdfCard.parse(['शुभ विवाह', 'चि॰ रोहन', 'संग', 'आयु॰ प्रिया', '१२', 'दिसम्बर', 'शनिवार', 'हल्दी प्रातः 10 बजे', 'मेहंदी सायं 5 बजे', '१३', 'दिसम्बर', 'रविवार', 'बारात सायं 7 बजे',
+    'विवाह स्थल', 'होटल राज पैलेस,', 'सिविल लाइन्स, जयपुर – 302006', '2026'], { ocr: true });
+  assert.deepEqual(h.events.map(e => `${e.name} ${e.date}`), ['हल्दी 2026-12-12T10:00', 'मेहँदी 2026-12-12T17:00', 'बारात 2026-12-13T19:00']);
+  assert.equal(h.venue, 'होटल राज पैलेस, सिविल लाइन्स, जयपुर – 302006');
+});
