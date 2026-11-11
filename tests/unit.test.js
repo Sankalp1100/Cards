@@ -1240,3 +1240,22 @@ test('premium films: 15 different concepts (with the trend ones: monogram, palac
   Films.LIST.slice(1).forEach((f, i) => assert.notEqual(f.concept, Films.LIST[i].concept, `${Films.LIST[i].id} then ${f.id}`));
   for (const f of Films.LIST) assert.ok(Films.themeOf(f) && Films.themeOf(f).bg, `${f.id} has its colours`);
 });
+
+test('auto video studio: a film is made new in the card colours (hue follows the card, lightness and paper stay)', () => {
+  const Films = require('../js/films.js');
+  const hsl = hex => { const n = parseInt(hex.slice(1), 16), r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+    if (!d) return [0, 0, l]; const h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; return [(h * 60 + 360) % 360, d / (1 - Math.abs(2 * l - 1)), l]; };
+  const green = { h: 145, s: .6, dark: true, word: 'Emerald', gold: 'gold' };
+  for (const base of [Films.LIST[0], Films.LIST.find(f => f.concept === 'jharokha'), Films.LIST.find(f => f.concept === 'temple')]) {
+    const f = Films.recolour(base, green), th = Films.themeOf(f), orig = Films.themeOf(base);
+    assert.equal(f.name, `Emerald ${base.concept === 'heritage' ? f.name.split(' ').slice(1).join(' ') : Films.CONCEPTS[base.concept].short}`);
+    assert.ok(f.fromCard && f.id !== base.id, 'a new film, not the ready one');
+    const [h, , l] = hsl(th.bg[0]);
+    assert.ok(Math.abs(h - 145) < 2, `${f.id} background is green (${th.bg[0]})`);
+    assert.ok(l < .3, 'a dark card gives a dark film');
+    assert.ok(hsl(th.paper)[2] > .85, 'the paper stays a light cream, so words on it stay readable');
+    assert.ok(orig.bg[0] !== th.bg[0]);
+  }
+  // the player takes the new film as it is
+  assert.doesNotThrow(() => Films.script(Films.recolour(Films.LIST[5], green), 'en'));
+});

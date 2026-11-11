@@ -1081,7 +1081,6 @@
     if (state.host1 && !cardReady()) return;
     $('#stOrder').innerHTML = (state.host1 ? `<option value="">✏️ The invite in the editor: ${esc(who(state))}</option>` : '') +
       orders.map(o => `<option value="${esc(o.code)}">${o.done ? '✓ ' : '🆕 '}${esc(o.name)} · ${esc(occasion(o).label)}${Catalog.refOf(o.code) ? ` · ${Catalog.refOf(o.code)}` : ''}</option>`).join('');
-    $('#stOrderRow').hidden = !orders.length && !state.host1;
     if (stLoadDraft()) resumeDraft(); // the project left here last time comes back as it was (the list above still opens the editor's invite or an order)
     else if (state.host1) studioLoad(clone(state), '', '');
     else if (orders.length) studioLoad(orderCard(orders[0].code), orderVideo(orders[0].code), orderLang(orders[0].code));
@@ -1091,6 +1090,8 @@
     stStatus(st.resumed ? '📂 Your last project is back, just as you left it. Make the video, or change anything first.' : 'Watch it on the left, then make the video. It records in real time, so keep this tab open.');
     st.resumed = false;
     $('#stResume').hidden = !stLoadDraft() || !!st.details;
+    // the list shows with orders, or when the last project opened over the editor's invite (to switch to it)
+    $('#stOrderRow').hidden = !orders.length && !(st.details && state.host1);
     $('#studio').hidden = false;
     document.body.classList.add('studio-open');
     showArt();
@@ -1661,6 +1662,344 @@
   });
   $('#stSongDrop').addEventListener('click', () => $('#stMusicFile').click());
   $('#stRemake').addEventListener('click', () => { stopCropSound(); makeStudioVideo(); });
+
+  // ---------- ⚡ Auto Video Studio ----------
+  // Its own screen: drop a card PDF and the best films for that card (its occasion, its language, the most liked
+  // styles, all different) play straight away with the card's own names, dates and venue. Pick one, add a song
+  // from this computer and cut it, make the video. Nothing to fill or choose beyond that.
+  const au = { card: null, lang: 'en', details: null, picks: [], film: '', minis: [], big: null, t: 0, playing: true, raf: 0, last: 0, rr: 0, music: 'film', rec: null, sound: null, listen: null, file: null };
+  const FAMILY = { wedding: 'w', engagement: 'w', reception: 'w', sangeet: 'p', haldi: 'w', mehendi: 'w', anniversary: 'w', birthday: 'p', babyshower: 'k', naming: 's', housewarming: 's', puja: 's' };
+  // the card's occasion in the films' words
+  const filmOcc = type => ({ bday: 'birthday', kidsbday: 'birthday', kitty: 'sangeet', retirement: 'reception', corporate: 'reception', ceremony: 'puja', thread: 'puja', mundan: 'naming', roka: 'engagement', griha: 'housewarming' }[type] || (FAMILY[type] ? type : 'wedding'));
+  function bestFilms(card, lang, n = 6) {
+    const want = filmOcc(card.type), fam = FAMILY[want], hi = lang === 'hi';
+    const score = f => {
+      const c = f.concept || 'heritage';
+      let s = f.occ === want ? 12 : FAMILY[f.occ] === fam ? 5 : 0;
+      if (['monogram', 'jharokha', 'temple'].includes(c)) s += 2; // what sells most right now
+      if (fam === 's' && ['temple', 'rangoli', 'scroll', 'heritage'].includes(c)) s += 5;
+      if (fam === 'p' && ['neon', 'marquee', 'polaroid', 'cinema', 'deco'].includes(c)) s += 4;
+      if (fam === 'w' && ['monogram', 'jharokha', 'heritage', 'cinema', 'floral', 'deco', 'scroll'].includes(c)) s += 3;
+      if (fam === 'k' && ['floral', 'polaroid', 'botanical', 'minimal'].includes(c)) s += 4;
+      if (hi && ['heritage', 'jharokha', 'temple', 'scroll', 'rangoli'].includes(c)) s += 2;
+      if (f.id === 'film-royal-darbar' && fam === 'w') s += 3;
+      return s;
+    };
+    const ranked = Films.LIST.map((f, i) => ({ f, s: score(f), i })).sort((a, b) => b.s - a.s || a.i - b.i);
+    const out = [], used = new Set();
+    for (const r of ranked) { const c = r.f.concept || 'heritage'; if (used.has(c)) continue; used.add(c); out.push(r.f); if (out.length === n) break; }
+    return out;
+  }
+  // The card's colours, read from its first page: the background (light or dark) and its main colour.
+  // Gold work is noticed, but the card's own colour wins (a green card with gold work gives green films).
+  const HUE_WORDS = [[12, 'Crimson'], [28, 'Terracotta'], [44, 'Saffron'], [62, 'Golden'], [85, 'Lime'], [165, 'Emerald'], [200, 'Peacock'], [255, 'Royal Blue'], [292, 'Purple'], [343, 'Rani Pink'], [352, 'Rose'], [361, 'Crimson']];
+  function cardTone(src) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const w = 90, h = Math.round(img.height / img.width * 90) || 120, c = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = c.getContext('2d');
+        g.drawImage(img, 0, 0, w, h);
+        const px = g.getImageData(0, 0, w, h).data, buckets = {}, bins = Array.from({ length: 24 }, () => ({ w: 0, h: 0, s: 0, l: 0 }));
+        let all = 0;
+        for (let i = 0; i < px.length; i += 4) {
+          const r = px[i] / 255, gg = px[i + 1] / 255, b = px[i + 2] / 255, mx = Math.max(r, gg, b), mn = Math.min(r, gg, b), l = (mx + mn) / 2, d = mx - mn;
+          const key = (px[i] >> 5) + ',' + (px[i + 1] >> 5) + ',' + (px[i + 2] >> 5); buckets[key] = (buckets[key] || 0) + 1; all++;
+          if (!d) continue;
+          const s = d / (1 - Math.abs(2 * l - 1)); if (s < .25 || l < .1 || l > .85) continue;
+          let hue = mx === r ? ((gg - b) / d) % 6 : mx === gg ? (b - r) / d + 2 : (r - gg) / d + 4; hue = (hue * 60 + 360) % 360;
+          const bin = bins[Math.floor(hue / 15) % 24]; bin.w += s; bin.h += hue * s; bin.s += s * s; bin.l += l * s;
+        }
+        const top = Object.entries(buckets).sort((a, b) => b[1] - a[1])[0][0].split(',').map(v => (+v * 32 + 16) / 255);
+        const bgL = (Math.max(...top) + Math.min(...top)) / 2;
+        const ranked = bins.filter(b => b.w > 0).sort((a, b) => b.w - a.w);
+        const isGold = b => { const hue = b.h / b.w; return hue >= 33 && hue <= 56; };
+        // the main colour: the strongest one, unless that is the gold work and another colour is clearly there too
+        let main = ranked[0];
+        if (main && isGold(main) && ranked[1] && ranked[1].w > main.w * .25 && !isGold(ranked[1])) main = ranked[1];
+        if (!main || main.w < all * .002) return resolve({ h: 40, s: .05, dark: bgL < .45, word: bgL < .45 ? 'Noir' : 'Ivory', gold: 'gold', swatch: bgL < .45 ? '#161616' : '#f4eee2' });
+        const hue = main.h / main.w, sat = Math.min(1, main.s / main.w), lig = main.l / main.w;
+        let word = HUE_WORDS.find(([upTo]) => hue < upTo)[1];
+        if ((word === 'Crimson' || word === 'Rose') && lig < .32) word = 'Maroon';
+        if (word === 'Royal Blue' && lig < .3) word = 'Midnight';
+        if (word === 'Emerald' && lig > .55) word = 'Sage';
+        resolve({ h: hue, s: sat, dark: bgL < .45, word, gold: word === 'Rani Pink' || word === 'Rose' ? 'rose' : 'gold',
+          swatch: `hsl(${Math.round(hue)} ${Math.round(sat * 100)}% ${Math.round(Math.min(.6, Math.max(.3, lig)) * 100)}%)` });
+      };
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+  }
+  const auStatus = (msg, bad) => { const p = $('#auStatus'); p.textContent = msg; p.classList.toggle('bad', !!bad); };
+  async function openAuto() {
+    if (st.rec) return toast('Please wait: the Video Studio is still recording');
+    $('#auto').hidden = false;
+    document.body.classList.add('studio-open');
+    au.fonts = au.fonts || Films.fontsReady();
+    if (au.card) startAuto(); else showAutoStart();
+  }
+  function showAutoStart() {
+    $('#auDrop').hidden = false; $('#auWork').hidden = true; $('#auNew').hidden = true;
+    auStatus('');
+  }
+  function closeAuto() {
+    if (au.rec) return toast('Please wait: the video is still recording');
+    auSoundOff(); auStopListen();
+    cancelAnimationFrame(au.raf);
+    $('#auto').hidden = true;
+    document.body.classList.remove('studio-open');
+  }
+  async function autoPdf(file) {
+    if (!file) return;
+    if (au.rec) return toast('Please wait: a video is still recording');
+    if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') return auStatus('Please choose the PDF file of the card.', true);
+    auStatus(`📄 Reading “${file.name}” and making your videos…`);
+    $('#auDrop').classList.add('busy');
+    try {
+      const r = await PdfCard.read(file);
+      const d = r.details || {};
+      if (!r.readable || !d.host1) {
+        auStatus('⚠️ The names could not be read from this PDF (it is a picture, or uses an old Hindi font). Please use the full 🎬 Video Studio for this one: you can type the details there.', true);
+        return;
+      }
+      au.details = d; au.lang = d.lang === 'hi' ? 'hi' : 'en';
+      au.card = { ...Core.blankCard(), ...PdfCard.toCard(d), theme: design().no };
+      // new films made in the card's own colours (not the ready-made ones)
+      au.page = (r.pictures && r.pictures[0]) || '';
+      au.tone = au.page ? await cardTone(au.page) : null;
+      const styles = bestFilms(au.card, au.lang);
+      au.picks = au.tone ? styles.map(f => Films.recolour(f, au.tone)) : styles;
+      au.film = au.picks[0];
+      au.file = null;
+      $('#auVideo').hidden = $('#auDone').hidden = true;
+      await au.fonts;
+      startAuto();
+      if (window.Fun) Fun.burst(null, null, 70);
+    } catch (e) {
+      auStatus(`Could not read this PDF: ${e.message}`, true);
+    } finally { $('#auDrop').classList.remove('busy'); }
+  }
+  function startAuto() {
+    const d = au.details, n = d.events.length;
+    $('#auDrop').hidden = true; $('#auWork').hidden = false; $('#auNew').hidden = false;
+    auStatus('');
+    $('#auRead').innerHTML = (au.page ? `<img class="au-page" src="${au.page}" alt="The card">` : '') + `<span>✅ Read from the card: <b>${esc([d.host1, d.host2].filter(Boolean).join(' & '))}</b> · ${esc(occasion(au.card).label)}${n ? ` · ${n} function${n === 1 ? '' : 's'}` : ''}${d.venue ? ' · ' + esc(d.venue) : ''} · ${au.lang === 'hi' ? 'हिन्दी' : 'English'}`
+      + (au.tone ? `<br>🎨 Colours from your card: <i class="au-swatch" style="background:${au.tone.swatch}"></i> <b>${esc(au.tone.word)}</b> on ${au.tone.dark ? 'dark' : 'light'}. Every video below is made new in them.` : '') + '</span>';
+    $('#auGrid').innerHTML = au.picks.map((f, i) => `<button type="button" class="au-pick${f === au.film ? ' on' : ''}" data-i="${i}" style="--i:${i}">
+      <canvas></canvas>${i === 0 ? '<em>Best match</em>' : ''}<b>${esc(f.name)}</b><small>${esc(Films.conceptName(f))}${f.fromCard ? ' · your card colours' : ''}</small></button>`).join('');
+    au.minis = [...$('#auGrid').querySelectorAll('canvas')].map((c, i) => { const P = new Films.Player(c, .25); P.set(au.picks[i], au.lang, au.card, filmOpts()); return P; });
+    au.big = au.big || new Films.Player($('#auCanvas'), .5);
+    setAutoFilm(au.film);
+    renderAutoSongs();
+    au.playing = true; $('#auPlay').textContent = '❚❚';
+    cancelAnimationFrame(au.raf); au.last = performance.now(); au.t0 = au.last;
+    au.raf = requestAnimationFrame(autoFrame);
+  }
+  function setAutoFilm(f) {
+    au.film = f;
+    au.big.set(f, au.lang, au.card, filmOpts());
+    au.t = 0;
+    document.querySelectorAll('#auGrid .au-pick').forEach(b => b.classList.toggle('on', au.picks[+b.dataset.i] === f));
+    renderAutoCrop();
+  }
+  function autoFrame(now) {
+    const dt = Math.min(.5, (now - au.last) / 1000); au.last = now;
+    if (au.rec) au.t = Math.max(0, now - au.rec.t0) / 1000;
+    else if (au.playing) au.t = (au.t + dt) % au.big.total;
+    au.big.draw(au.t);
+    $('#auBar').style.width = `${Math.min(100, au.t / au.big.total * 100)}%`;
+    $('#auTime').textContent = `${mmss(au.t)} / ${mmss(au.big.total)}`;
+    // the small previews take turns (one per frame), each on its own clock, so the page stays smooth
+    if (au.minis.length && !au.rec) { const i = au.rr++ % au.minis.length, P = au.minis[i]; P.draw(((now - au.t0) / 1000 + i * 1.7) % P.total); }
+    if (au.rec && au.t >= au.big.total) au.rec.done();
+    au.raf = requestAnimationFrame(autoFrame);
+  }
+  $('#auGrid').addEventListener('click', e => {
+    const b = e.target.closest('[data-i]');
+    if (!b || au.rec) return;
+    setAutoFilm(au.picks[+b.dataset.i]);
+    if (au.sound) auSoundOn();
+    if (window.Fun) Fun.buzz(10);
+  });
+  $('#auPlay').addEventListener('click', () => { if (au.rec) return; au.playing = !au.playing; $('#auPlay').textContent = au.playing ? '❚❚' : '▶'; });
+  $('#auScrub').addEventListener('pointerdown', e => {
+    if (au.rec) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    au.t = Math.max(0, Math.min(.999, (e.clientX - r.left) / r.width)) * au.big.total;
+  });
+
+  // The song: the film's own tune, one of your saved songs, or a new one from this computer (cut to the part you want)
+  const autoSong = () => /^song:/.test(au.music) ? songs[+au.music.slice(5)] || null : null;
+  function renderAutoSongs() {
+    const f = au.film;
+    $('#auSongs').innerHTML = [['film', `🎼 The film's own music`], ...songs.map((s, i) => [`song:${i}`, `🎶 ${s.name}`])]
+      .map(([k, label]) => `<button type="button" class="chip${au.music === k ? ' on' : ''}" data-au-music="${k}">${esc(label)}</button>`).join('');
+    renderAutoCrop();
+    return f;
+  }
+  $('#auSongs').addEventListener('click', e => {
+    const b = e.target.closest('[data-au-music]');
+    if (!b || au.rec) return;
+    au.music = b.dataset.auMusic; auStopListen(); renderAutoSongs();
+    if (au.sound) auSoundOn();
+  });
+  $('#auAddSong').addEventListener('click', () => $('#auSongFile').click());
+  $('#auSongFile').addEventListener('change', async e => {
+    const f = e.target.files[0]; e.target.value = '';
+    if (!f) return;
+    const name = f.name.replace(/\.[^.]+$/, '');
+    let i = songs.findIndex(s => s.name === name);
+    if (i < 0) {
+      try { songs.push(await decodeSong(name, await f.arrayBuffer())); i = songs.length - 1; saveSongs(); if (st.player) renderMusicChips(); }
+      catch (err) { return toast(`“${name}” is not a song this browser can play. Please choose an MP3, M4A or WAV.`); }
+    }
+    au.music = `song:${i}`;
+    renderAutoSongs();
+    toast('🎵 Song added: drag the sliders to cut the part you want');
+    if (au.sound) auSoundOn();
+  });
+  function drawAutoWave(song) {
+    const c = $('#auWave'), g = c.getContext('2d'), W = c.width, H = c.height, pk = peaks(song, W), len = song.buffer.duration;
+    const cut = song.cut || { start: 0, end: len }, x0 = cut.start / len * W, x1 = cut.end / len * W;
+    g.clearRect(0, 0, W, H);
+    g.fillStyle = 'rgba(232,184,74,.12)'; g.fillRect(x0, 0, x1 - x0, H);
+    for (let x = 0; x < W; x++) { const h = Math.max(1, pk[x] * H * .9); g.fillStyle = x >= x0 && x <= x1 ? '#e8b84a' : 'rgba(255,255,255,.25)'; g.fillRect(x, (H - h) / 2, 1, h); }
+    g.fillStyle = '#ff3d8b'; g.fillRect(x0 - 1, 0, 3, H); g.fillRect(x1 - 2, 0, 3, H);
+  }
+  function renderAutoCrop() {
+    const song = autoSong();
+    $('#auCrop').hidden = !song;
+    if (!song || !au.big) return;
+    const len = song.buffer.duration, cut = song.cut || { start: 0, end: len }, video = au.big.total;
+    $('#auSongName').textContent = `✂️ ${song.name}`;
+    $('#auSongLen').textContent = ` · ${mmss(len)} long · the video is ${mmss(video)}`;
+    [['auStart', cut.start], ['auEnd', cut.end]].forEach(([id, v]) => { const r = $('#' + id); r.max = len.toFixed(1); r.value = v.toFixed(1); });
+    $('#auStartOut').textContent = mmss(cut.start); $('#auEndOut').textContent = mmss(cut.end);
+    const part = cut.end - cut.start;
+    $('#auCropNote').textContent = part + .5 < video ? `This part is ${mmss(part)}: it repeats to fill the ${mmss(video)} video. Tap “Fit to the video” for one long part.` : `It plays from ${mmss(cut.start)} and fades out with the last screen.`;
+    drawAutoWave(song);
+  }
+  let auSave = 0;
+  function setAutoCut(start, end) {
+    const song = autoSong();
+    if (!song || au.rec) return;
+    const len = song.buffer.duration;
+    start = Math.max(0, Math.min(start, len - 1)); end = Math.max(start + 1, Math.min(end, len));
+    song.cut = start <= .05 && end >= len - .05 ? null : { start: Math.round(start * 10) / 10, end: Math.round(end * 10) / 10 };
+    renderAutoCrop();
+    clearTimeout(auSave); auSave = setTimeout(() => { saveSongs(); if (au.sound) auSoundOn(); }, 400);
+  }
+  $('#auStart').addEventListener('input', e => { const s = autoSong(); if (s) setAutoCut(+e.target.value, (s.cut || { end: s.buffer.duration }).end); });
+  $('#auEnd').addEventListener('input', e => { const s = autoSong(); if (s) setAutoCut((s.cut || { start: 0 }).start, +e.target.value); });
+  $('#auWave').addEventListener('pointerdown', e => {
+    const s = autoSong(); if (!s) return;
+    const r = e.currentTarget.getBoundingClientRect(), t = (e.clientX - r.left) / r.width * s.buffer.duration, cut = s.cut || { start: 0, end: s.buffer.duration };
+    if (Math.abs(t - cut.start) < Math.abs(t - cut.end)) setAutoCut(t, cut.end); else setAutoCut(cut.start, t);
+  });
+  $('#auFit').addEventListener('click', () => { const s = autoSong(); if (s) { const a = (s.cut || { start: 0 }).start; setAutoCut(a, a + au.big.total); } });
+  $('#auWhole').addEventListener('click', () => { const s = autoSong(); if (s) setAutoCut(0, s.buffer.duration); });
+  let auHeadRaf = 0;
+  function auStopListen() { cancelAnimationFrame(auHeadRaf); if (au.listen) { au.listen.close(); au.listen = null; } $('#auListen').textContent = '▶ Listen'; $('#auHead').style.left = '-10px'; }
+  $('#auListen').addEventListener('click', () => {
+    const song = autoSong();
+    if (au.listen || !song) return auStopListen();
+    auSoundOff();
+    au.listen = new FileTune(song.buffer, song.cut);
+    if (!au.listen.start()) { au.listen = null; return; }
+    $('#auListen').textContent = '■ Stop';
+    const t0 = au.listen.ctx.currentTime, from = au.listen.from, part = au.listen.to - au.listen.from, len = song.buffer.duration;
+    const move = () => { if (!au.listen) return; $('#auHead').style.left = `${(from + ((au.listen.ctx.currentTime - t0) % part)) / len * 100}%`; auHeadRaf = requestAnimationFrame(move); };
+    move();
+  });
+  // the music itself (for the preview's 🔊 and for the video)
+  function autoMusic() {
+    const song = autoSong();
+    if (song) { const f = new FileTune(song.buffer, song.cut); return f.start() ? f : null; }
+    const t = new Tune(au.film.tune);
+    return t.start() ? t : null;
+  }
+  function auSoundOff() { if (au.sound) { au.sound.stop(); if (au.sound.close) au.sound.close(); else au.sound.ctx.close(); au.sound = null; } $('#auSound').textContent = '🔇'; }
+  function auSoundOn() { auSoundOff(); auStopListen(); au.sound = autoMusic(); $('#auSound').textContent = au.sound ? '🔊' : '🔇'; }
+  $('#auSound').addEventListener('click', () => { if (au.rec) return; if (au.sound) auSoundOff(); else { au.t = 0; auSoundOn(); } });
+
+  // Make it: the big preview is recorded in full size with the music, then saved as an MP4
+  const auMsg = (m, p) => { $('#auMsg').textContent = m; if (p != null) $('#auRecBar').style.width = `${Math.round(p * 100)}%`; };
+  $('#auMake').addEventListener('click', makeAutoVideo);
+  $('#auStop').addEventListener('click', () => { if (au.rec) { au.rec.cancelled = true; au.rec.done(); } });
+  async function makeAutoVideo() {
+    if (au.rec || !au.big) return;
+    if (!(window.MediaRecorder && HTMLCanvasElement.prototype.captureStream)) return auMsg('This browser cannot make videos. Please use Chrome, Edge or Safari.');
+    await au.fonts;
+    const hadSound = !!au.sound;
+    auSoundOff(); auStopListen();
+    const canvas = $('#auCanvas');
+    // full size while recording, the preview size again afterwards
+    au.big = new Films.Player(canvas, 1); au.big.set(au.film, au.lang, au.card, filmOpts());
+    $('#auMake').disabled = true; $('#auStop').hidden = false; $('#auVideo').hidden = $('#auDone').hidden = true;
+    document.querySelectorAll('#auGrid .au-pick, #auSongs .chip, #auAddSong').forEach(b => { b.disabled = true; });
+    let box = null;
+    try {
+      const stream = canvas.captureStream(30);
+      box = autoMusic();
+      if (box) {
+        const dest = box.ctx.createMediaStreamDestination(); box.master.connect(dest);
+        dest.stream.getAudioTracks().forEach(tr => stream.addTrack(tr));
+        if (box.fadeOut) box.fadeOut(au.big.total - 2.6, 2.4);
+      }
+      const mimeType = VIDEO_TYPES.find(t => MediaRecorder.isTypeSupported(t)) || '';
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 5e6 } : { videoBitsPerSecond: 5e6 });
+      const chunks = []; recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+      const stopped = new Promise(r => { recorder.onstop = r; });
+      const total = au.big.total, rec = { t0: performance.now(), cancelled: false };
+      await new Promise(resolve => {
+        rec.done = resolve; au.rec = rec; au.t = 0;
+        recorder.start(500);
+        const tick = setInterval(() => {
+          if (!au.rec) return clearInterval(tick);
+          auMsg(`🔴 Recording… ${mmss(au.t)} / ${mmss(total)} · ${Math.max(0, Math.ceil(total - au.t))}s left. Keep this tab open.`, Math.min(.99, au.t / total));
+        }, 250);
+      });
+      au.rec = null;
+      recorder.stop(); await stopped;
+      if (rec.cancelled) { auMsg('Stopped. Nothing was saved: change anything you like, then make it again.', 0); return; }
+      const type = recorder.mimeType || mimeType || 'video/webm';
+      let blob = new Blob(chunks, { type });
+      if (type.includes('mp4')) { try { blob = new Blob([MP4Fix.defragment(new Uint8Array(await blob.arrayBuffer()))], { type: 'video/mp4' }); } catch (e) { /* keep it as recorded */ } }
+      if (!(await playable(blob))) throw new Error('the recording did not come out right (it would not play)');
+      const ext = type.includes('mp4') ? 'mp4' : 'webm';
+      const name = `${who(au.card)} ${au.film.name} ${au.lang === 'hi' ? 'Hindi' : 'English'} video.${ext}`.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ');
+      const url = URL.createObjectURL(blob), v = $('#auVideo');
+      if (v.src) URL.revokeObjectURL(v.src);
+      Object.assign(v, { src: url, hidden: false });
+      Object.assign($('#auDownload'), { href: url, download: name });
+      $('#auDownload').click();
+      au.file = new File([blob], name, { type: type.split(';')[0] });
+      $('#auShare').hidden = !canShareFile(au.file);
+      $('#auDone').hidden = false;
+      keepVideo(au.file);
+      auMsg(`✅ Saved "${name}" (${(blob.size / 1048576).toFixed(1)} MB) to your Downloads.` + (ext === 'webm' ? ' This browser makes WebM only: please update Chrome for MP4 (WhatsApp needs it).' : ''), 1);
+      toast('Video downloaded 🎬');
+      if (window.Fun) Fun.burst(null, null, 140);
+    } catch (e) {
+      au.rec = null;
+      auMsg(`Could not make the video: ${e.message}. Please try again.`);
+    } finally {
+      if (box) { box.stop(); if (box.close) box.close(); else box.ctx.close(); }
+      au.big = new Films.Player(canvas, .5); au.big.set(au.film, au.lang, au.card, filmOpts());
+      $('#auMake').disabled = false; $('#auStop').hidden = true;
+      document.querySelectorAll('#auGrid .au-pick, #auSongs .chip, #auAddSong').forEach(b => { b.disabled = false; });
+      if (hadSound) auSoundOn();
+    }
+  }
+  $('#auShare').addEventListener('click', () => au.file && shareFile(au.file, 'Invitation video'));
+  $('#auFile').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; autoPdf(f); });
+  const auDrop = $('#auDrop');
+  ['dragenter', 'dragover'].forEach(t => auDrop.addEventListener(t, e => { e.preventDefault(); auDrop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(t => auDrop.addEventListener(t, () => auDrop.classList.remove('over')));
+  auDrop.addEventListener('drop', e => { e.preventDefault(); autoPdf(e.dataTransfer.files[0]); });
+  $('#auNew').addEventListener('click', () => { if (!au.rec) { auSoundOff(); auStopListen(); cancelAnimationFrame(au.raf); showAutoStart(); $('#auFile').click(); } });
+  $('#auClose').addEventListener('click', closeAuto);
+  addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#auto').hidden) closeAuto(); });
+  document.querySelectorAll('[data-auto]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); openAuto(); }));
 
   // ---------- Link history ----------
   // Logged in: kept in the database (the same on your phone and PC). Offline: in this browser.

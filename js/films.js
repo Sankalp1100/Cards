@@ -1879,7 +1879,55 @@ const Films = (() => {
     jharokha: ['wedding', 'sangeet', 'mehendi', 'reception', 'engagement'],
     temple: ['wedding', 'puja', 'housewarming', 'naming', 'engagement']
   };
-  const themeOf = film => film.concept && CONCEPTS[film.concept] ? CONCEPTS[film.concept].pals[film.pal] : THEMES[film.theme];
+  const themeOf = film => film.custom || (film.concept && CONCEPTS[film.concept] ? CONCEPTS[film.concept].pals[film.pal] : THEMES[film.theme]);
+
+  // ---------- A film in the card's own colours (the Auto Video Studio) ----------
+  // tone = { h: 0-360, s: 0-1, dark: true|false, word: 'Emerald', gold: 'gold' | 'rose' | 'silver' }, read from the card's PDF.
+  // Every colour of the film's palette keeps its lightness (so the design keeps its contrast and stays readable);
+  // its hue moves to the card's colour and its strength follows the card's. Creams, whites and greys stay as they are.
+  const hexHsl = hex => {
+    const n = parseInt(hex.slice(1), 16), r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+    if (!d) return [0, 0, l];
+    const s = d / (1 - Math.abs(2 * l - 1));
+    const h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return [(h * 60 + 360) % 360, s, l];
+  };
+  const hslHex = (h, s, l) => {
+    const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = l - c / 2;
+    const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+    return '#' + [r, g, b].map(v => Math.round((v + m) * 255).toString(16).padStart(2, '0')).join('');
+  };
+  function tintTheme(th, tone) {
+    const t = c => {
+      if (typeof c !== 'string' || !/^#[0-9a-f]{6}$/i.test(c)) return c;
+      const [h, s, l] = hexHsl(c);
+      if (s < .12 || l > .97) return c; // whites and greys
+      if (l > .86 && h >= 25 && h <= 60) return c; // creams and ivory paper
+      const ns = tone.s < .14 ? s * .18 : clamp(s * .55 + tone.s * .6, .3, 1);
+      return hslHex(tone.h, ns, l);
+    };
+    const gold = tone.gold === 'rose' ? ROSE : tone.gold === 'silver' ? SILVER : th.gold;
+    const out = { ...th, word: tone.word, gold };
+    // every colour of the palette (flowers, lights, days…) follows, except the gold work, the paper and green leaves
+    for (const [k, v] of Object.entries(th)) {
+      if (['word', 'dark', 'gold', 'paper', 'leaf'].includes(k)) continue;
+      out[k] = Array.isArray(v) ? v.map(t) : t(v);
+    }
+    return out;
+  }
+  // The film's palette nearest to the card (light or dark first, then the closest colour) as the starting point
+  function nearestPal(pals, tone) {
+    const dist = p => { const [h, s] = hexHsl(p.bg[0]); const dh = Math.min(Math.abs(h - tone.h), 360 - Math.abs(h - tone.h)) / 180; return (p.dark === tone.dark ? 0 : 2) + dh + Math.abs(s - tone.s) * .3; };
+    return pals.slice().sort((a, b) => dist(a) - dist(b))[0];
+  }
+  function recolour(film, tone) {
+    const f = typeof film === 'string' ? byId[film] : film;
+    const C = f.concept && CONCEPTS[f.concept];
+    const base = C ? nearestPal(C.pals, tone) : nearestPal(Object.values(THEMES), tone);
+    const short = C ? C.short : FRAMES[f.frame];
+    return { ...f, id: `${f.id}~card`, name: `${tone.word} ${short}`, custom: tintTheme(base, tone), fromCard: true };
+  }
   // The words' holder in a concept (a card in Royal Heritage)
   function holder(ctx, film, th, lt, rise) {
     const C = CONCEPTS[film.concept];
@@ -1969,7 +2017,7 @@ const Films = (() => {
     return Promise.race([Promise.all([...want, ...hindi]).then(() => document.fonts.ready), new Promise(r => setTimeout(r, 15000))]).catch(() => {});
   }
 
-  return { W, H, THEMES, FRAMES, OPENINGS, FX, LIST, byId, describe, CONCEPTS, conceptName, themeOf, details, fromCard, script, Player, fontsReady, SCENE_NAME };
+  return { recolour, W, H, THEMES, FRAMES, OPENINGS, FX, LIST, byId, describe, CONCEPTS, conceptName, themeOf, details, fromCard, script, Player, fontsReady, SCENE_NAME };
 })();
 
 if (typeof module !== 'undefined') module.exports = Films;

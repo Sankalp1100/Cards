@@ -26,6 +26,7 @@
       <a href="#create">✨ <span>Create<em> invite</em></span></a>
       <a href="#designs">🎨 <span>Designs</span></a>
       <a href="#studio" data-studio>🎬 <span><em>Video </em>Studio</span></a>
+      <a href="#auto" data-auto>⚡ <span><em>Auto </em>Video</span></a>
       <a href="#ready">🎞️ <span><em>Ready </em>Videos</span></a>
       <a href="#links">📋 <span><em>My </em>History</span> <b id="linkCount">0</b></a>
       <a href="#catalog">🗂️ <span>Catalog</span></a>
@@ -213,6 +214,7 @@
           <div class="link-actions">
             <button type="button" class="btn-glow" id="generate-btn">⚡ Get links</button>
             <button type="button" class="btn-line" id="studioBtn" data-studio>✨ Video Studio</button>
+            <button type="button" class="btn-glow" id="autoBtn" data-auto>⚡ Auto video from PDF</button>
             <button type="button" class="btn-line" id="pdfVideoBtn">📄 Card PDF → Video</button>
             <button type="button" class="btn-line" id="videoBtn">🎬 Card video</button>
             <button type="button" class="btn-glow" id="lastVideoBtn" disabled title="Make a video first, then download it here">⬇ Download video for sharing</button>
@@ -528,6 +530,61 @@
           <button type="button" class="btn-small" id="stShare" hidden>📤 Share</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ⚡ Auto Video Studio: drop a card PDF; the best videos for it make themselves; choose one, add a song, make it -->
+  <div class="auto" id="auto" hidden>
+    <header class="au-head">
+      <b class="au-brand"><i>⚡</i> Auto Video Studio <small>Drop a card PDF: the best videos make themselves</small></b>
+      <span class="au-head-btns">
+        <button type="button" class="btn-small" id="auNew" hidden>📄 New PDF</button>
+        <button type="button" class="btn-small" id="auClose">✕ Close</button>
+      </span>
+    </header>
+    <div class="au-body">
+      <label class="au-drop" id="auDrop">
+        <input type="file" id="auFile" accept="application/pdf,.pdf" hidden>
+        <span class="au-drop-icon">📄</span>
+        <b>Drop the card PDF here</b>
+        <span class="muted">or tap to choose it · English or Hindi · nothing else to fill</span>
+        <span class="au-steps"><i>1 · PDF</i><i>2 · best videos appear</i><i>3 · pick one + song</i><i>4 · download</i></span>
+      </label>
+      <p class="au-status" id="auStatus" aria-live="polite"></p>
+      <section class="au-work" id="auWork" hidden>
+        <p class="au-read" id="auRead"></p>
+        <h3 class="au-h">1. Your best videos <small>made from this card: tap the one you like</small></h3>
+        <div class="au-grid" id="auGrid"></div>
+        <div class="au-main">
+          <div class="au-stage">
+            <canvas id="auCanvas"></canvas>
+            <div class="au-transport"><button type="button" id="auPlay" aria-label="Pause">❚❚</button><div class="au-bar" id="auScrub"><i id="auBar"></i></div><span id="auTime">0:00</span><button type="button" id="auSound" title="Hear the song with the preview">🔇</button></div>
+          </div>
+          <div class="au-side">
+            <h3 class="au-h">2. The song</h3>
+            <div class="chips au-songs" id="auSongs"></div>
+            <button type="button" class="btn-line au-add" id="auAddSong">🎵 Pick a song from this computer</button>
+            <input type="file" id="auSongFile" accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg" hidden>
+            <div class="au-crop" id="auCrop" hidden>
+              <p><b id="auSongName"></b> <span class="muted" id="auSongLen"></span></p>
+              <div class="au-wave"><canvas id="auWave" width="900" height="110"></canvas><i id="auHead"></i></div>
+              <div class="au-ranges">
+                <label>✂️ Start <input type="range" id="auStart" min="0" step="0.1"><output id="auStartOut">0:00</output></label>
+                <label>End <input type="range" id="auEnd" min="0" step="0.1"><output id="auEndOut">0:00</output></label>
+              </div>
+              <div class="au-crop-btns"><button type="button" class="btn-small" id="auListen">▶ Listen</button><button type="button" class="btn-small" id="auFit">Fit to the video</button><button type="button" class="btn-small" id="auWhole">Whole song</button></div>
+              <p class="muted au-note" id="auCropNote"></p>
+            </div>
+            <h3 class="au-h">3. Make it</h3>
+            <button type="button" class="btn-glow au-make" id="auMake">🎬 Make this video</button>
+            <button type="button" class="btn-line au-stop" id="auStop" hidden>✕ Stop recording</button>
+            <p class="muted au-msg" id="auMsg">It records in real time (under a minute): keep this tab open.</p>
+            <div class="rec-progress"><i id="auRecBar"></i></div>
+            <video id="auVideo" controls playsinline hidden></video>
+            <div class="au-done" id="auDone" hidden><a class="btn-glow" id="auDownload">⬇ Download again</a><button type="button" class="btn-line" id="auShare" hidden>📤 Share</button></div>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 
