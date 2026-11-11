@@ -1588,7 +1588,7 @@
     pdfStatus(`📄 Reading “${file.name}”…`);
     try {
       await st.ready;
-      const r = await PdfCard.read(file, { progress: p => pdfStatus(`🔎 This card is a picture: reading its words from it… ${Math.round(p * 100)}% (the first time takes about half a minute)`) });
+      const r = await PdfCard.read(file, { progress: (p, msg) => pdfStatus(msg ? `🔎 ${msg}` : `🔎 Reading every word on the card… ${Math.round(p * 100)}% (careful reading takes about a minute)`) });
       st.pdf = r.details || { lang: 'en', type: 'wedding', events: [], phones: [] };
       fillDetails(st.pdf, r.pictures);
       if (!r.readable) {
@@ -1805,7 +1805,7 @@
     auStatus(`📄 Reading “${file.name}” and making your videos…`);
     $('#auDrop').classList.add('busy');
     try {
-      const r = await PdfCard.read(file, { progress: p => auStatus(`🔎 This card is a picture: reading its words from it… ${Math.round(p * 100)}% (the first time takes about half a minute)`) });
+      const r = await PdfCard.read(file, { progress: (p, msg) => auStatus(msg ? `🔎 ${msg}` : `🔎 Reading every word on the card… ${Math.round(p * 100)}% (careful reading takes about a minute)`) });
       const d = r.details || {};
       au.pendingR = r;
       if (!d.host1) { showFill(d); return; }
@@ -1816,12 +1816,17 @@
   }
   // Still no names: four short boxes, then the videos are made the same way (in the card's colours)
   function showFill(d) {
+    au.partial = d;
     $('#auFType').innerHTML = Object.entries(PRESETS).map(([k, p]) => `<option value="${k}"${k === (d.type || 'wedding') ? ' selected' : ''}>${p.icon || ''} ${esc(p.label)}</option>`).join('');
     $('#auF1').value = d.host1 || ''; $('#auF2').value = d.host2 || '';
     $('#auFDate').value = (d.events && d.events[0] && d.events[0].date ? d.events[0].date.slice(0, 10) : '');
     $('#auFVenue').value = d.venue || '';
+    const r = au.pendingR || {};
+    $('#auFillPage').innerHTML = r.pictures && r.pictures[0] ? `<img src="${r.pictures[0]}" alt="The card">` : '';
+    const seen = (r.seen || []).join('\n');
+    $('#auFillText').value = seen; $('#auFillTextBox').hidden = !seen;
     $('#auFill').hidden = false;
-    auStatus('✍️ The words on this card could not be read. Type the names below (10 seconds), and the videos are made in your card colours.', true);
+    auStatus('✍️ The names on this card could not be found. Type the names below (10 seconds), and the videos are made in your card colours.', true);
     $('#auF1').focus();
   }
   $('#auFill').addEventListener('submit', async e => {
@@ -1830,8 +1835,10 @@
     if (!h1) { $('#auF1').focus(); return toast('Please write at least the first name'); }
     const type = $('#auFType').value, date = $('#auFDate').value, venue = $('#auFVenue').value.trim();
     const words = h1 + $('#auF2').value;
-    const d = { type, lang: /[\u0900-\u097F]/.test(words) ? 'hi' : 'en', host1: h1, host2: $('#auF2').value.trim(), parents1: '', parents2: '',
-      events: date ? [{ name: PRESETS[type] ? PRESETS[type].label : 'Celebration', date, venue }] : [], venue, address: '', phones: [], hashtag: '' };
+    const read = au.partial || {};
+    const events = read.events && read.events.length ? read.events : date ? [{ name: PRESETS[type] ? PRESETS[type].label : 'Celebration', date, venue }] : [];
+    const d = { parents1: '', parents2: '', address: '', phones: [], hashtag: '', ...read, type, lang: read.lang || (/[\u0900-\u097F]/.test(words) ? 'hi' : 'en'),
+      host1: h1, host2: $('#auF2').value.trim(), events, venue: venue || read.venue || '' };
     $('#auFill').hidden = true;
     await useAutoDetails(d, au.pendingR || { pictures: [] });
   });

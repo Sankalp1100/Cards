@@ -1228,6 +1228,117 @@ test.describe('card PDF → details (js/pdfcard.js)', () => {
     assert.deepEqual([strip.D.credit, strip.D.site, strip.D.venueStyle], ['Made by Me', '', 'name']);
     assert.ok(!strip.scenes.some(s => s.k === 'card' || s.k === 'regards'), 'screens can be left out');
   });
+
+  // Every field of a card, compared in one go (events as [name, date, venue, note])
+  const fields = (d, want) => {
+    const got = { ...d, events: d.events.map(e => [e.name, e.date, e.venue, e.note]) };
+    for (const k of Object.keys(want)) assert.deepEqual(got[k], want[k], k);
+    for (const k of ['lang', 'type', 'title', 'invocation', 'host1', 'host2', 'parents1', 'parents2', 'grandparents1', 'grandparents2', 'events', 'venue', 'address', 'phones', 'hashtag', 'quotes', 'inviters', 'kids', 'lines', 'extra']) assert.ok(k in d, `has ${k}`);
+  };
+  test('a full Hindi wedding card: verse, grandparents, functions side by side with their own venues, निवेदक, बाल मनुहार', () => {
+    const lines = ['॥ श्री गणेशाय नमः ॥', 'वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ।', 'निर्विघ्नं कुरु मे देव सर्वकार्येषु सर्वदा॥', 'शुभ विवाह',
+      'स्व. श्री रामलाल शर्मा एवं स्व. श्रीमती कमला देवी के पौत्र', 'श्रीमती सुनीता एवं श्री महेश शर्मा के सुपुत्र', 'चि॰ रोहित शर्मा', 'संग', 'आयु॰ अनन्या',
+      'सुपुत्री श्रीमती किरण एवं श्री राकेश गुप्ता', 'पौत्री श्रीमती शान्ति देवी एवं श्री हरिप्रसाद गुप्ता', 'के शुभ विवाह के मांगलिक अवसर पर आप सादर आमन्त्रित हैं।',
+      'मांगलिक कार्यक्रम', 'हल्दी  मेहंदी  घुड़चढ़ी', '9 दिसम्बर 2026  9 दिसम्बर 2026  10 दिसम्बर 2026', 'प्रातः 11 बजे  सायं 5 बजे  सायं 7 बजे', 'निवास पर  निवास पर  आनन्द वाटिका',
+      'कीर्तन भजन : 8 दिसम्बर 2026, रात्रि 8 बजे से', 'स्थान : श्री राम मन्दिर, गांधी नगर', 'बारात प्रस्थान : 10 दिसम्बर 2026, रात्रि 9 बजे', 'स्थान : आनन्द वाटिका, आगरा',
+      'फेरे : 11 दिसम्बर 2026, प्रातः 4 बजे', 'समारोह स्थल : होटल ग्रैंड पैलेस, फतेहाबाद रोड, आगरा', 'निवास : 12, शान्ति नगर, आगरा 282001',
+      'दर्शनाभिलाषी', 'श्री सुरेश शर्मा, श्री दिनेश शर्मा', 'समस्त शर्मा परिवार', 'बाल मनुहार', 'मेरे चाचू की शादी में जरूर-जरूर आना', '- पीहू, आरव', 'सम्पर्क : 98765 12345, 91234 56780'];
+    fields(PdfCard.parse(lines, { ocr: true }), {
+      lang: 'hi', type: 'wedding', title: 'शुभ विवाह', invocation: '॥ श्री गणेशाय नमः ॥', host1: 'रोहित शर्मा', host2: 'अनन्या',
+      parents1: 'श्रीमती सुनीता एवं श्री महेश शर्मा', parents2: 'श्रीमती किरण एवं श्री राकेश गुप्ता',
+      grandparents1: 'स्व. श्री रामलाल शर्मा एवं स्व. श्रीमती कमला देवी', grandparents2: 'श्रीमती शान्ति देवी एवं श्री हरिप्रसाद गुप्ता',
+      events: [['कीर्तन भजन', '2026-12-08T20:00', 'श्री राम मन्दिर, गांधी नगर', 'रात्रि 8 बजे से'], ['हल्दी', '2026-12-09T11:00', 'निवास पर', ''], ['मेहँदी', '2026-12-09T17:00', 'निवास पर', ''],
+        ['घुड़चढ़ी', '2026-12-10T19:00', 'आनन्द वाटिका', ''], ['बारात', '2026-12-10T21:00', 'आनन्द वाटिका, आगरा', 'प्रस्थान'], ['फेरे', '2026-12-11T04:00', '', '']],
+      venue: 'होटल ग्रैंड पैलेस, फतेहाबाद रोड, आगरा', address: '12, शान्ति नगर, आगरा 282001', phones: ['98765 12345', '91234 56780'], hashtag: '',
+      quotes: ['वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ।\nनिर्विघ्नं कुरु मे देव सर्वकार्येषु सर्वदा॥'], inviters: ['श्री सुरेश शर्मा', 'श्री दिनेश शर्मा', 'समस्त शर्मा परिवार'],
+      kids: 'मेरे चाचू की शादी में जरूर-जरूर आना\n- पीहू, आरव', lines: lines.map(l => l.replace(/\s+/g, ' ')),
+      extra: ['के शुभ विवाह के मांगलिक अवसर पर आप सादर आमन्त्रित हैं।', 'मांगलिक कार्यक्रम'] });
+  });
+  test('a full English wedding card: Son of / Daughter of, grandparents, a quote in “ ”, each function with its venue lines, compliments, RSVP', () => {
+    const lines = ['Om Shri Ganeshaya Namah', '“Two souls, one heart —', 'a journey of forever begins.”', 'Wedding Invitation', 'Together with their families', 'Rohit Sharma', 'Son of',
+      'Mrs. Sunita & Mr. Mahesh Sharma', 'Grandson of Late Shri Ramlal Sharma & Smt. Kamla Devi', 'weds', 'Ananya Gupta', 'Daughter of Mrs. Kiran & Mr. Rakesh Gupta',
+      'Granddaughter of Smt. Shanti Devi & Shri Hariprasad Gupta', 'Wedding Celebrations', 'Mehendi', 'Thursday, 10th December 2026 | 4:00 PM onwards', 'Poolside Lawns, Hotel Clarks Amer',
+      'Haldi', 'Friday, 11 Dec 2026 | 10:30 AM', 'Dress code: Yellow', 'Sangeet', '11.12.2026 · 7:30 PM', 'The Grand Ballroom, Hotel Clarks Amer', 'Pheras', 'Saturday, 12 December 2026, 9 PM',
+      'Jai Mahal Palace, Jacob Road,', 'Civil Lines, Jaipur 302006', 'Reception', 'December 13, 2026 at 8:00 PM', 'Rambagh Palace, Bhawani Singh Road, Jaipur', 'With best compliments from',
+      'Mahesh & Sunita Sharma', 'All relatives & friends', 'Little ones: Pihu & Aarav can\'t wait to dance at chachu\'s wedding!', 'RSVP', 'Mahesh Sharma - 98765 12345', 'Rakesh Gupta - 99887 76655', '#RoAnTogether'];
+    fields(PdfCard.parse(lines), {
+      lang: 'en', type: 'wedding', title: 'Wedding Invitation', invocation: 'Om Shri Ganeshaya Namah', host1: 'Rohit Sharma', host2: 'Ananya Gupta',
+      parents1: 'Mrs. Sunita & Mr. Mahesh Sharma', parents2: 'Mrs. Kiran & Mr. Rakesh Gupta', grandparents1: 'Late Shri Ramlal Sharma & Smt. Kamla Devi', grandparents2: 'Smt. Shanti Devi & Shri Hariprasad Gupta',
+      events: [['Mehendi', '2026-12-10T16:00', 'Poolside Lawns, Hotel Clarks Amer', '4:00 PM onwards'], ['Haldi', '2026-12-11T10:30', '', 'Dress code: Yellow'],
+        ['Sangeet', '2026-12-11T19:30', 'The Grand Ballroom, Hotel Clarks Amer', ''], ['Pheras', '2026-12-12T21:00', 'Jai Mahal Palace, Jacob Road, Civil Lines, Jaipur 302006', ''],
+        ['Reception', '2026-12-13T20:00', 'Rambagh Palace, Bhawani Singh Road, Jaipur', '']],
+      venue: 'Jai Mahal Palace, Jacob Road, Civil Lines, Jaipur 302006', address: '', phones: ['98765 12345', '99887 76655'], hashtag: '#RoAnTogether',
+      quotes: ['“Two souls, one heart —\na journey of forever begins.”'], inviters: ['Mahesh & Sunita Sharma', 'All relatives & friends', 'Mahesh Sharma', 'Rakesh Gupta'],
+      kids: 'Pihu & Aarav can\'t wait to dance at chachu\'s wedding!', lines, extra: ['Together with their families', 'Wedding Celebrations'] });
+  });
+  test('a Hinglish card: Chi. / Sau. Kan., "sang", 12/12/26, "sham 7 baje", 13 Dec without a year, "@ venue"', () => {
+    fields(PdfCard.parse(['|| Shree Ganeshay Namah ||', 'Shubh Vivah', 'Chi. Aman', '(Grandson of Smt. Kamla Devi & Late Shri Ram Prasad Verma)', 'S/o Smt. Rekha & Shri Vinod Verma', 'sang',
+      'Sau. Kan. Pooja', 'D/o Smt. Meena & Shri Ajay Bansal', 'Tilak - 12/12/26, Sham 7 baje', 'Ladies Sangeet: 13 Dec, 8 PM onwards @ Farmhouse, Sohna Road', 'Pheras: 14 Dec 2026, raat 11 baje',
+      'Venue: Sunshine Resort, Gurugram', 'Sampark: 98100 12345', 'Darshanabhilashi: Verma Parivar']), {
+      lang: 'en', type: 'wedding', title: 'Shubh Vivah', invocation: '॥ Shree Ganeshay Namah ॥', host1: 'Aman', host2: 'Pooja',
+      parents1: 'Smt. Rekha & Shri Vinod Verma', parents2: 'Smt. Meena & Shri Ajay Bansal', grandparents1: 'Smt. Kamla Devi & Late Shri Ram Prasad Verma', grandparents2: '',
+      events: [['Tilak', '2026-12-12T19:00', '', ''], ['Sangeet', '2026-12-13T20:00', 'Farmhouse, Sohna Road', '8 PM onwards'], ['Pheras', '2026-12-14T23:00', '', '']],
+      venue: 'Sunshine Resort, Gurugram', address: '', phones: ['98100 12345'], quotes: [], inviters: ['Verma Parivar'], kids: '', extra: [] });
+  });
+  test('a birthday card: the child\'s name, a date line above its functions, RSVP', () => {
+    fields(PdfCard.parse(['You\'re Invited!', 'Join us to celebrate Aarav\'s 1st Birthday', 'Saturday, 19 December 2026', 'Cake cutting at 7:00 PM, Dinner to follow',
+      'Venue: The Party Hall, Hotel Royal Inn, Sector 18, Noida', 'Dress code: Superheroes', 'RSVP: Neha & Rahul Mehta - 98111 22334']), {
+      lang: 'en', type: 'birthday', title: 'You\'re Invited!', invocation: '', host1: 'Aarav', host2: '', parents1: '', parents2: '',
+      events: [['Cake Cutting', '2026-12-19T19:00', '', ''], ['Dinner', '2026-12-19', '', 'to follow']],
+      venue: 'The Party Hall, Hotel Royal Inn, Sector 18, Noida', phones: ['98111 22334'], inviters: ['Neha & Rahul Mehta'], extra: ['Dress code: Superheroes'] });
+  });
+  test('a Griha Pravesh card: Hindi numerals, a lunar date (left as it is), verse, functions by time only', () => {
+    fields(PdfCard.parse(['॥ ॐ श्री गणेशाय नमः ॥', 'गृह प्रवेश', 'मंगलम् भगवान विष्णुः, मंगलम् गरुड़ध्वजः।', 'मंगलम् पुण्डरीकाक्षः, मंगलाय तनो हरिः॥',
+      'प्रभु कृपा से हमारे नए घर का गृह प्रवेश एवं श्री सत्यनारायण कथा का आयोजन', 'मार्गशीर्ष शुक्ल पंचमी, शनिवार', 'दिनांक: १२ दिसम्बर २०२६', 'कथा: प्रातः 10 बजे से',
+      'प्रीतिभोज: दोपहर 1 बजे', 'स्थान: 45, गणेश नगर, जयपुर 302001', 'निवेदक', 'शर्मा परिवार', 'सम्पर्क: 98290 11223'], { ocr: true }), {
+      lang: 'hi', type: 'housewarming', title: 'गृह प्रवेश', invocation: '॥ ॐ श्री गणेशाय नमः ॥', host1: 'शर्मा परिवार', host2: '',
+      events: [['कथा', '2026-12-12T10:00', '', 'प्रातः 10 बजे से'], ['प्रीतिभोज', '2026-12-12T13:00', '', '']],
+      venue: '45, गणेश नगर, जयपुर 302001', address: '', phones: ['98290 11223'], inviters: ['शर्मा परिवार'], kids: '',
+      quotes: ['मंगलम् भगवान विष्णुः, मंगलम् गरुड़ध्वजः।\nमंगलम् पुण्डरीकाक्षः, मंगलाय तनो हरिः॥'],
+      extra: ['प्रभु कृपा से हमारे नए घर का गृह प्रवेश एवं श्री सत्यनारायण कथा का आयोजन', 'मार्गशीर्ष शुक्ल पंचमी, शनिवार'] });
+  });
+  test('a noisy OCR card: stray "|", "चि०" with the name on the next line, "आयु" without ॰, "नम:", OCR typos, « between side-by-side functions', () => {
+    fields(PdfCard.parse(['| ॥ श्री गणेशाय नम: ॥ |', 'शुभ  विवाह', 'चि०', 'राहुल', 'सुपुत्र श्रीमती  रेखा एवं श्री  विनोद अग्रवाल |', 'संग', 'आयु नेहा', 'सुपुत्री श्रीमती मीना एवं श्री अजय बंसल',
+      'हल्दी « मेहंदी « चुड़चढ़ी', '9 दिसम्बर 2026 « 9 दिसम्बर 2026 « 10 दिसम्बर 2026', 'प्रातः 11 बजे « साये 5 बजे « साय 7 बजे', 'geal - बुधवार, 8 दिसम्बर 2026', '|',
+      'समारोह स्थल : आनन्द वाटिका, आगरा', 'स्वागतोत्सुक : समस्त अग्रवाल परिवार', 'सम्पर्क : 9876512345'], { ocr: true }), {
+      lang: 'hi', type: 'wedding', title: 'शुभ विवाह', invocation: '॥ श्री गणेशाय नम: ॥', host1: 'राहुल', host2: 'नेहा',
+      parents1: 'श्रीमती रेखा एवं श्री विनोद अग्रवाल', parents2: 'श्रीमती मीना एवं श्री अजय बंसल',
+      events: [['हल्दी', '2026-12-09T11:00', '', ''], ['मेहँदी', '2026-12-09T17:00', '', ''], ['घुड़चढ़ी', '2026-12-10T19:00', '', '']],
+      venue: 'आनन्द वाटिका, आगरा', phones: ['98765 12345'], inviters: ['समस्त अग्रवाल परिवार'], extra: ['geal - बुधवार, 8 दिसम्बर 2026'] });
+    // other separators OCR gives between side-by-side items
+    const d = PdfCard.parse(['हल्दी + मेहंदी', '9 दिसम्बर 2026 - 10 दिसम्बर 2026', 'सायं 4 बजे | सायं 7:30 बजे'], { ocr: true });
+    assert.deepEqual(d.events.map(e => [e.name, e.date]), [['हल्दी', '2026-12-09T16:00'], ['मेहँदी', '2026-12-10T19:30']]);
+  });
+  test('a Sunderkand / Mata ki Chowki card: 18.12.2026, "सायं 7:30 बजे", a heading naming the functions, विनीत', () => {
+    fields(PdfCard.parse(['जय माता दी', 'श्री सुन्दरकाण्ड पाठ एवं माता की चौकी', 'आप सपरिवार सादर आमन्त्रित हैं', 'सुन्दरकाण्ड पाठ : शुक्रवार 18.12.2026 सायं 4 बजे से',
+      'माता की चौकी : 18.12.2026 सायं 7:30 बजे', 'भण्डारा : रात्रि 10 बजे', 'स्थान : श्री दुर्गा मन्दिर, राजनगर, गाजियाबाद', 'विनीत', 'श्री रमेश गुप्ता एवं समस्त गुप्ता परिवार', 'मो. 98765 43211'], { ocr: true }), {
+      lang: 'hi', type: 'puja', title: 'श्री सुन्दरकाण्ड पाठ एवं माता की चौकी', invocation: 'जय माता दी', host1: 'श्री रमेश गुप्ता एवं समस्त गुप्ता परिवार',
+      events: [['सुंदरकांड', '2026-12-18T16:00', '', 'पाठ, सायं 4 बजे से'], ['माता की चौकी', '2026-12-18T19:30', '', ''], ['भंडारा', '2026-12-18T22:00', '', '']],
+      venue: 'श्री दुर्गा मन्दिर, राजनगर, गाजियाबाद', phones: ['98765 43211'], inviters: ['श्री रमेश गुप्ता एवं समस्त गुप्ता परिवार'], extra: ['आप सपरिवार सादर आमन्त्रित हैं'] });
+  });
+  test('a "Venue:" line after the list of functions is the main venue, not the venue of the functions above it', () => {
+    const d = PdfCard.parse(['Rohit weds Ananya', 'Haldi: Friday, 11 December 2026, 11:00 AM', 'Mehendi: 11 December 2026, 5:00 PM', 'Baraat: Saturday, 12 December 2026, 7:30 PM',
+      'Reception: 13 December 2026, 8:00 PM', 'Venue: Sunshine Banquet Hall, MG Road, Lucknow', 'Residence: 45, Green Park Colony, Lucknow - 226010']);
+    assert.deepEqual(d.events.map(e => [e.name, e.date, e.venue]), [['Haldi', '2026-12-11T11:00', ''], ['Mehendi', '2026-12-11T17:00', ''], ['Baraat', '2026-12-12T19:30', ''], ['Reception', '2026-12-13T20:00', '']]);
+    assert.equal(d.venue, 'Sunshine Banquet Hall, MG Road, Lucknow'); assert.equal(d.address, '45, Green Park Colony, Lucknow - 226010');
+    assert.deepEqual(d.lines.length, 7); assert.deepEqual(d.extra, []);
+  });
+  test('"TOGETHER WITH THEIR FAMILIES" is never the couple; names on their own lines around "&"; a card with only a date gets its main function', () => {
+    fields(PdfCard.parse(['TOGETHER WITH THEIR FAMILIES', 'AARAV', '&', 'DIYA', 'REQUEST THE PLEASURE OF YOUR COMPANY', 'AT THE CELEBRATION OF THEIR MARRIAGE',
+      'SATURDAY, 12 DECEMBER 2026 AT 7 PM', 'THE LEELA PALACE, UDAIPUR']), {
+      lang: 'en', type: 'wedding', title: '', host1: 'AARAV', host2: 'DIYA', events: [['Wedding', '2026-12-12T19:00', 'THE LEELA PALACE, UDAIPUR', '']],
+      venue: 'THE LEELA PALACE, UDAIPUR', extra: ['TOGETHER WITH THEIR FAMILIES', 'REQUEST THE PLEASURE OF YOUR COMPANY', 'AT THE CELEBRATION OF THEIR MARRIAGE'] });
+    assert.deepEqual([PdfCard.parse(['Together with their families']).host1, PdfCard.parse(['Rohit with Ananya']).host1], ['', 'Rohit']);
+  });
+  test('more dates and times', () => {
+    const D = { d: 12, m: 11, y: 2026 };
+    for (const s of ['12.12.2026', '12/12/26', 'Saturday, 12 December 2026', '१२ दिसम्बर २०२६', '12th of December 2026', 'शनिवार, 12-12-2026']) assert.deepEqual(PdfCard.findDate(s, 2026), D, s);
+    assert.deepEqual(PdfCard.findDate('12th Dec', 2026), D); assert.equal(PdfCard.findDate('मार्गशीर्ष शुक्ल पंचमी', 2026), null);
+    assert.deepEqual(PdfCard.findDates('9 दिसम्बर 2026  9 दिसम्बर 2026  10 दिसम्बर 2026', 2026).map(x => x.d), [9, 9, 10]);
+    assert.equal(PdfCard.findTime('सायं 7:30 बजे'), '19:30'); assert.equal(PdfCard.findTime('रात्रि 8 बजे से'), '20:00'); assert.equal(PdfCard.findTime('7.30 p.m.'), '19:30');
+    assert.equal(PdfCard.findTime('Sector 12 Amer Road'), '', 'not "12 AM"'); assert.equal(PdfCard.findTime('12 Dec 07:30 PM'), '19:30');
+    assert.deepEqual(PdfCard.findDate('12 Dec 07:30 PM', 2026), D, 'the time is not a year');
+  });
 });
 
 test.describe('card PDFs from the website (js/db.js)', () => {
