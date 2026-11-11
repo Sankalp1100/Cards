@@ -807,7 +807,7 @@
     // The message is made here; WhatsApp opens (in a new tab) when they tap "Send on WhatsApp": a tab opened by
     // the page itself after choosing a file gets blocked as a pop-up, and this page must never turn into WhatsApp
     const reading = (async () => {
-      try { await loadPdfCard(); const r = await Promise.race([PdfCard.read(file), new Promise((_, no) => setTimeout(() => no(new Error('slow')), 6000))]); return r.readable ? r.details : null; } catch (err) { return null; /* sent without the details */ }
+      try { await loadPdfCard(); const r = await Promise.race([PdfCard.read(file, { ocr: false }), new Promise((_, no) => setTimeout(() => no(new Error('slow')), 6000))]); return r.readable ? r.details : null; } catch (err) { return null; /* sent without the details */ }
     })();
     // Once both are done: file the order, and say in the message that the PDF arrived
     // (if that is after the WhatsApp button shows, its link is simply updated: it only opens when tapped)

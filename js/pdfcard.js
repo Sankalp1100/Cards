@@ -35,7 +35,7 @@ const PdfCard = (() => {
     [/bhaat|bhat\b|mayra|mayro|mamera|भात|मायरा|मायरो|मामेरा/i, 'Bhaat', 'भात'],
     [/mandap|मण्डप|मंडप|मांडा|माण्डा/i, 'Mandap', 'मण्डप'],
     [/sehra\s*bandi|सेहरा\s*बंदी|सेहराबंदी/i, 'Sehra Bandi', 'सेहरा बंदी'],
-    [/ghud\s*chadh?i|ghudchadi|ghodi|[घच][ुो][ड़ड]़?\s*च[ढ़ढ]़?ी|घोड़ी|घोडी/i, 'Ghudchadhi', 'घुड़चढ़ी'],
+    [/gh[ou][dr]h?\s*ch[ah]{0,2}[dr]h?i|ghudchadi|ghurchari|ghodi|[घच][ुो][ड़ड]़?\s*च[ढ़ढ]़?ी|घोड़ी|घोडी/i, 'Ghudchadhi', 'घुड़चढ़ी'],
     [/baraat|barat\b|nikasi|बारात|बरात|निकासी|निकरौसी/i, 'Baraat', 'बारात'],
     [/dwar\s*char|dwarchar|द्वाराचार|द्वार\s*पूजा/i, 'Dwarchar', 'द्वाराचार'],
     [/jai\s*mala|var\s*mala|varmala|jaimala|जयमाला|जयमाल|वरमाला/i, 'Jaimala', 'जयमाला'],
@@ -199,7 +199,101 @@ const PdfCard = (() => {
 
   // Plain lines of text → the card's details (anything not found stays empty)
   // opts.ocr: the words were read from a picture, so they are already in the right order (no PDF-text repair)
+  // Card layouts that put a function's date apart from it: a round date badge ("29" / "NOV" / "Sunday") beside
+  // "Kirtan 1:00 PM", or one box with two functions and two times ("01 Haldi Mehendi" / "DEC 11:00 AM 5:00 PM").
+  // Each becomes one plain line per function ("Haldi 01 DEC 11:00 AM") before the card is read.
+  const MON_START = /^(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|जनवरी|फ़रवरी|फरवरी|मार्च|अप्रैल|मई|जून|जुलाई|अगस्त|सितम्बर|सितंबर|अक्टूबर|अक्तूबर|नवम्बर|नवंबर|दिसम्बर|दिसंबर)\.?(?=[\s,]|$)/i;
+  const WEEKDAY_ONLY = /^(?:mon|tues?|wed(?:nes)?|thu(?:rs)?|fri|sat(?:ur)?|sun)(?:day)?\.?$|^(?:सोमवार|मंगलवार|बुधवार|गुरुवार|बृहस्पतिवार|वीरवार|शुक्रवार|शनिवार|रविवार)$/i;
+  function layout(input) {
+    const L = (input || []).map(x => String(x || '').trim()).filter(Boolean), out = []; // wide gaps kept: they mark side-by-side columns
+    const badge = i => { const a = digits(L[i] || '').match(/^(\d{1,2})(?:st|nd|rd|th)?(?:\s+(.*))?$/), b = L[i + 1] && digits(L[i + 1]).match(MON_START);
+      return a && b && +a[1] >= 1 && +a[1] <= 31 && !MON_START.test((a[2] || '').trim()) ? { d: a[1], rest: (a[2] || '').trim(), mon: b[1], tail: L[i + 1].slice(b[0].length).trim() } : null; };
+    for (let i = 0; i < L.length; i++) {
+      const bg = badge(i);
+      if (!bg) { out.push(L[i]); continue; }
+      let j = i + 2, text = [bg.rest, bg.tail].filter(Boolean).join(' ');
+      if (L[j] && WEEKDAY_ONLY.test(L[j])) j++;
+      // a badge with its functions on the lines after it (until the next badge)
+      if (!EVENTS.some(([re]) => re.test(text))) {
+        const more = [];
+        while (L[j] && !badge(j) && more.length < 4 && (EVENTS.some(([re]) => re.test(L[j])) || findTimes(L[j]).length) && !findDate(L[j], 2000)) { more.push(L[j]); j++; }
+        if (L[j] && WEEKDAY_ONLY.test(L[j])) j++;
+        text = [text, ...more].filter(Boolean).join(' ');
+      }
+      const when = `${bg.d} ${bg.mon}`, names = [];
+      EVENTS.forEach(ev => { const m = ev[0].exec(text); if (m) names.push({ at: m.index, s: m[0] }); });
+      names.sort((a, b) => a.at - b.at);
+      const kept = names.filter((n, k) => !names.slice(0, k).some(p => n.at < p.at + p.s.length));
+      const times = findTimes(text);
+      if (kept.length >= 2 && times.length === kept.length) kept.forEach((n, k) => out.push(`${n.s} ${when} ${times[k]}`));
+      else if (kept.length) { const n = kept[0]; out.push(`${n.s} ${when} ${(text.slice(0, n.at) + ' ' + text.slice(n.at + n.s.length)).replace(/\s+/g, ' ').trim()}`.trim()); }
+      else out.push(`${when} ${text}`.trim());
+      i = j - 1;
+    }
+    return out;
+  }
+  // Section headings that many cards print on a line of their own, the details under them
+  const H_VENUE = /^(?:marriage|wedding|reception|ceremony|party|function)?\s*venue\s*:?$|^(?:समारोह|विवाह|कार्यक्रम|आयोजन)\s*स्थल\s*:?$/i;
+  const H_ADDRESS = /^(?:home|our|residential)?\s*(?:address|residence)\s*:?$|^(?:निवास(?:\s*स्थान)?|पता|घर\s*का\s*पता)\s*:?$/i;
+  const H_INVITE = /^(?:cordial(?:ly)?\s+invit(?:ation|ed)\s+(?:from|by)|invitation\s+from|invited\s+by|with\s+warm\s+regards\s+from|warm\s+regards|with\s+best\s+compliments(?:\s+from)?|best\s+compliments(?:\s+from)?|compliments\s+from)\s*:?$/i;
+  const H_ANY = /^[A-Z][A-Z0-9 &'’.,-]{3,40}$/;
+  const PLACE_WORDS = /,|\b\d{6}\b|\broad\b|\bnear\b|\bsector\b|\bcolony\b|\bnagar\b|\bvihar\b|\bmarg\b|\bgali\b|\bstreet\b|\bphase\b|\bresidency\b|\bopp\.?\b|\bdist\.?\b|मार्ग|नगर|कॉलोनी|गली|पास|सामने|जिला/i;
+  function tidyUp(out, lines, used) {
+    const norm2 = x => String(x || '').toLowerCase().replace(/[^a-z0-9\u0900-\u097F]/g, '');
+    const isHead = l => H_VENUE.test(l) || H_ADDRESS.test(l) || H_INVITE.test(l) || INVITERS.test(l) && l.split(' ').length <= 5 || KIDS.test(l) && l.split(' ').length <= 3 || H_ANY.test(l) && !/\d/.test(l);
+    const block = (i, max, keep) => { const got = []; for (let k = i + 1; k < lines.length && got.length < max; k++) { const l = lines[k]; if (isHead(l) || !keep(l, got.length)) break; got.push(k); } return got; };
+    lines.forEach((l, i) => {
+      // MARRIAGE VENUE: the hall's name and every address line under it
+      if (H_VENUE.test(l)) {
+        const ks = block(i, 4, (x, n) => n === 0 ? !findTimes(x).length : PLACE_WORDS.test(x) && !/\b[6-9]\d{4}\s?\d{5}\b/.test(digits(x)));
+        if (ks.length) { out.venue = ks.map(k => lines[k]).join(', ').replace(/,\s*,/g, ',').replace(/,\s*$/, ''); used[i] = true; ks.forEach(k => { used[k] = true; }); }
+      }
+      // HOME ADDRESS: the lines under it
+      if (H_ADDRESS.test(l)) {
+        const ks = block(i, 3, x => PLACE_WORDS.test(x) || /\d/.test(x));
+        if (ks.length) { out.address = ks.map(k => lines[k]).join(', ').replace(/,\s*,/g, ',').replace(/,\s*$/, ''); used[i] = true; ks.forEach(k => { used[k] = true; }); }
+      }
+      // CORDIAL INVITATION FROM / WITH BEST COMPLIMENTS FROM: one inviter per line under it
+      if (H_INVITE.test(l)) {
+        const ks = block(i, 6, x => !KIDS.test(x) && !KIDS_LINE.test(x) && (!findDate(x, 2000) && !PLACE_WORDS.test(x.replace(/,/g, '')) || /&|,/.test(x) && !/\d/.test(x)));
+        ks.forEach(k => { const v = lines[k].replace(/^[&,\s]+|[,\s]+$/g, ''); used[k] = true; if (v && /[A-Za-z\u0900-\u097F]{2,}/.test(v) && !out.inviters.some(x => norm2(x) === norm2(v))) out.inviters.push(v); });
+        if (ks.length) used[i] = true;
+      }
+    });
+    // Grandparents printed above "of their beloved grandson" (or "पौत्र") instead of after it
+    const looksName = x => /\b(?:late|smt|shri|sh|mr|mrs|dr)\b\.?|स्व[॰.]|स्वर्गीय|श्रीमती|श्री/i.test(x);
+    [['grandparents1', /grand\s?son|(?:प्र)?पौत्र(?!ी)/i], ['grandparents2', /grand\s?daughter|(?:प्र)?पौत्री/i]].forEach(([key, re]) => {
+      if (out[key] && looksName(out[key])) return;
+      const i = lines.findIndex(l => re.test(l) && !looksName(l));
+      if (i < 0) return;
+      for (let k = i - 1; k >= Math.max(0, i - 4); k--) if (looksName(lines[k]) && !/son of|daughter of|s\/o|d\/o|सुपुत्र/i.test(lines[k])) { out[key] = lines[k]; used[k] = true; used[i] = true; return; }
+      if (out[key] && !looksName(out[key])) out[key] = '';
+    });
+    // "Late Smt. … & Late Shri …" on a line of its own, when no grandparents were found
+    if (!out.grandparents1 && !out.grandparents2) { const i = lines.findIndex((l, k) => !used[k] && /^(?:late|स्व[॰.]|स्वर्गीय)\s/i.test(l)); if (i >= 0) { out.grandparents1 = lines[i]; used[i] = true; } }
+    // "Resi. Kannauj (U.P.)" right under a parents line belongs to those parents
+    lines.forEach((l, i) => {
+      if (!/^(?:resi(?:dence)?\.?|r\/o|निवासी|निवास)\s*[:\-–]?\s*\S/i.test(l) || i === 0) return;
+      const prev = lines[i - 1], side = /daughter of|d\/o|सुपुत्री|पुत्री/i.test(prev) ? 'parents2' : /son of|s\/o|सुपुत्र|पुत्र/i.test(prev) ? 'parents1' : '';
+      if (side && out[side] && !out[side].includes(l)) { out[side] += `, ${l}`; used[i] = true; if (out.address === l) out.address = ''; }
+    });
+    // The full name when the card prints it somewhere ("Shivam" on the cover, "Shivam Gupta" inside)
+    ['host1', 'host2'].forEach(key => {
+      const h = out[key]; if (!h || h.split(' ').length > 1) return;
+      const full = lines.find(l => new RegExp(`^${h.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+[A-Z\\u0900-\\u097F][\\w\\u0900-\\u097F.]{1,20}$`).test(l) && !NOT_A_NAME.test(l));
+      if (full) out[key] = full;
+    });
+    // A sentence that only mentions a function ("Baraat will depart from our residence…") is not a function of its own
+    out.events = out.events.filter(e => e.date || !out.events.some(x => x !== e && x.name === e.name && x.date))
+      .filter(e => e.date || e.venue || String(e.note || '').split(' ').length < 6);
+    // a function named as the card prints it ("Kirtan" stays "Kirtan" unless the card also says Bhajan)
+    if (!lines.some(l => /bhajan|भजन/i.test(l))) out.events.forEach(e => { if (e.name === 'Kirtan & Bhajan') e.name = 'Kirtan'; if (e.name === 'कीर्तन भजन') e.name = 'कीर्तन'; });
+    if (!lines.some(l => /kirtan|कीर्तन/i.test(l))) out.events.forEach(e => { if (e.name === 'Kirtan & Bhajan') e.name = 'Bhajan Sandhya'; if (e.name === 'कीर्तन भजन') e.name = 'भजन संध्या'; });
+    // the invocation is not a quote too
+    out.quotes = out.quotes.filter(q => norm2(q) !== norm2(out.invocation));
+  }
   function parse(lines, opts = {}) {
+    lines = layout(lines);
     // Each line as printed (raw keeps wide gaps between side-by-side words) and tidied; "चि॰" alone joins its name
     const rows = [];
     // Repair only text that is really broken (a "ि" before its letter, or empty characters): many PDFs give clean Hindi
@@ -444,6 +538,7 @@ const PdfCard = (() => {
       const both = free(i + 1) && /[।,]$/.test(l) && /[।॥]$/.test(lines[i + 1]) && !/\d/.test(digits(lines[i + 1]));
       out.quotes.push(both ? l + '\n' + lines[i + 1] : l); used[i] = true; if (both) used[i + 1] = true;
     });
+    tidyUp(out, lines, used);
     out.extra = lines.filter((l, i) => !used[i]);
     return out;
   }
@@ -512,11 +607,11 @@ const PdfCard = (() => {
   async function read(file, opts = {}) {
     const pdfjs = await load();
     const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), cMapUrl: PDFJS + 'cmaps/', cMapPacked: true }).promise;
-    const lines = [], sizes = [], pictures = [];
-    for (let n = 1; n <= Math.min(pdf.numPages, 6); n++) {
+    const pages = [], pictures = [];
+    for (let n = 1; n <= Math.min(pdf.numPages, 8); n++) {
       const page = await pdf.getPage(n);
       // text items grouped into lines by their height on the page
-      const tc = await page.getTextContent(), rows = [];
+      const tc = await page.getTextContent(), rows = [], pl = [], ps = [];
       for (const it of tc.items) {
         if (!it.str || !it.str.trim()) continue;
         const y = Math.round(it.transform[5]), row = rows.find(r => Math.abs(r.y - y) < 4);
@@ -529,39 +624,39 @@ const PdfCard = (() => {
           if (prev) out += i.x - (prev.x + prev.w) > Math.max(prev.z, i.z) * .18 ? ' ' : '';
           out += i.s; prev = i;
         }
-        lines.push(out); sizes.push(Math.max(...r.items.map(i => i.z)));
+        pl.push(out); ps.push(Math.max(...r.items.map(i => i.z)));
       });
-      if (pictures.length < 3) {
-        const vp = page.getViewport({ scale: 1 }), k = 900 / Math.max(vp.width, vp.height), c = document.createElement('canvas');
-        const v2 = page.getViewport({ scale: k });
-        c.width = Math.round(v2.width); c.height = Math.round(v2.height);
-        await page.render({ canvasContext: c.getContext('2d'), viewport: v2 }).promise;
-        pictures.push(c.toDataURL('image/jpeg', .85));
-      }
+      const vp = page.getViewport({ scale: 1 }), k = 900 / Math.max(vp.width, vp.height), c = document.createElement('canvas');
+      const v2 = page.getViewport({ scale: k });
+      c.width = Math.round(v2.width); c.height = Math.round(v2.height);
+      await page.render({ canvasContext: c.getContext('2d'), viewport: v2 }).promise;
+      pictures.push(c.toDataURL('image/jpeg', .85));
+      const text = pl.join(' ');
+      // Old Hindi fonts (Kruti Dev and the like) come out as Latin gibberish; pictures of cards have no text at all
+      const usable = text.replace(/\s/g, '').length > 30 && !/[¼½¾ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖ×ØÙÚÛÜÝÞß]{3}/.test(text);
+      pages.push({ n, page, lines: pl, sizes: ps, usable });
     }
-    const text = lines.join(' ');
-    // Old Hindi fonts (Kruti Dev and the like) come out as Latin gibberish; pictures of cards have no text at all
-    const readable = text.replace(/\s/g, '').length > 30 && !/[¼½¾ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖ×ØÙÚÛÜÝÞß]{3}/.test(text);
-    // No usable text (a picture of the card, or an old Hindi font): a sharp picture of page 1 for reading it by eye (OCR)
-    let big = '';
-    const quick = readable ? parse(lines) : null;
-    if (!quick || !quick.host1) {
+    const lines = pages.flatMap(p => p.lines), sizes = pages.flatMap(p => p.sizes);
+    const readable = pages.some(p => p.usable);
+    let details = readable ? withNames(parse(lines), lines, sizes) : null, how = 'text', seen = lines, big = '';
+    // Every page without usable text (pictures of the card, old Hindi fonts) is read off the page itself (OCR);
+    // when the text there has no names at all, every page is read that way
+    const todo = pages.filter(p => !p.usable).length ? pages.filter(p => !p.usable) : details && details.host1 ? [] : pages;
+    if (opts.ocr !== false && todo.length) {
       try {
-        const page = await pdf.getPage(1), vp = page.getViewport({ scale: 1 }), v2 = page.getViewport({ scale: 2200 / Math.max(vp.width, vp.height) }), c = document.createElement('canvas');
-        c.width = Math.round(v2.width); c.height = Math.round(v2.height);
-        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
-        await page.render({ canvasContext: g, viewport: v2 }).promise;
-        big = c.toDataURL('image/png');
-      } catch (e) { /* the small pictures will do */ }
-    }
-    let details = readable ? withNames(parse(lines), lines, sizes) : null, how = 'text', seen = lines;
-    // A picture of a card, an old Hindi font, or text with no names in it: read the words off the page itself (OCR)
-    if (opts.ocr !== false && (!details || !details.host1)) {
-      try {
-        const o = await ocr(big || pictures[0], opts.progress);
-        const found = withNames(parse(o.lines, { ocr: true }), o.lines, o.sizes);
-        seen = o.lines;
-        if (found.host1 || !details) { details = found; how = 'picture'; }
+        for (const [k, p] of todo.entries()) {
+          const vp = p.page.getViewport({ scale: 1 }), v2 = p.page.getViewport({ scale: 2200 / Math.max(vp.width, vp.height) }), c = document.createElement('canvas');
+          c.width = Math.round(v2.width); c.height = Math.round(v2.height);
+          const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+          await p.page.render({ canvasContext: g, viewport: v2 }).promise;
+          const src = c.toDataURL('image/png'); if (!big) big = src;
+          const say = (f, msg) => opts.progress && opts.progress((k + Math.min(1, f || 0)) / todo.length, `Page ${p.n} of ${pages.length}: ${msg || `reading every word… ${Math.round((f || 0) * 100)}%`}`);
+          p.ocr = await ocr(src, say);
+        }
+        const all = pages.flatMap(p => p.ocr ? p.ocr.lines : p.lines), allSizes = pages.flatMap(p => p.ocr ? p.ocr.sizes : p.sizes);
+        const found = withNames(parse(all, { ocr: pages.every(p => p.ocr) }), all, allSizes);
+        seen = all;
+        if (found.host1 || !details) { details = found; how = readable ? 'text + pictures' : 'pictures'; }
       } catch (e) { /* offline: the details are typed instead */ }
     }
     if (details && !details.lines) details.lines = seen.map(clean).filter(Boolean);
@@ -627,6 +722,18 @@ const PdfCard = (() => {
     return c;
   }
   const norm = x => x.toLowerCase().replace(/[^a-z0-9\u0900-\u097F]/g, '');
+
+  // Decorations read as letters ("PD 0000000", "डे NY डे", "[ J [ J"): no real word, only marks and stray letters.
+  // A day number, a month, a weekday or a time on its own is kept (date badges are printed that way).
+  function ocrNoise(t, conf) {
+    if (/(.)\1{5,}/.test(t.replace(/\s/g, ''))) return true;
+    const s = t.replace(/[^\w\u0900-\u097F:.,&#@'’/-]+/g, ' ').trim();
+    if (/^\d{1,2}$/.test(digits(s)) || MON_START.test(s) || WEEKDAY_ONLY.test(s.replace(/\s/g, '')) || findTimes(s).length && s.length < 14) return false;
+    const words = s.split(/\s+/).filter(w => /[A-Za-z]{3,}|[\u0900-\u097F]{2,}[\u093E-\u094D\u0902\u0903]*[\u0900-\u097F]/.test(w) || /^\d{3,}$/.test(w) || /^#/.test(w));
+    if (!words.length) return true;
+    const letters = (s.match(/[A-Za-z\u0900-\u097F]/g) || []).length;
+    return letters < s.replace(/\s/g, '').length * .45 && conf < 85;
+  }
   // A second reader for stylish English (script fonts Tesseract cannot read): Microsoft's Florence-2 vision model,
   // run in the browser with Transformers.js (no key, no server). About 200 MB the first time, then cached.
   let flo = null;
@@ -685,6 +792,7 @@ const PdfCard = (() => {
           const text = fix(l.text);
           if (window.__ocrDebug) window.__ocrDebug.push([width, mode, psm, Math.round(conf), text]);
           if (!text || conf < 45 || norm(text).length < 2) continue;
+          if (ocrNoise(text, conf)) continue;
           found.push({ s: text, conf, y: (l.bbox.y0 + l.bbox.y1) / 2 / c.height, z: (l.bbox.y1 - l.bbox.y0) / c.height * 1000 });
         }
         done++;
@@ -699,11 +807,22 @@ const PdfCard = (() => {
     // a line seen in several passes gets a bonus
     found.sort((a, b) => b.conf - a.conf);
     const kept = [];
+    const alike = (a, b) => { const x = norm(a), y = norm(b); if (!x || !y) return false; if (x.includes(y.slice(0, 6)) || y.includes(x.slice(0, 6))) return true;
+      let same = 0; for (let i = 0; i < Math.min(x.length, y.length); i++) if (x[i] === y[i]) same++; return same / Math.max(x.length, y.length) > .6; };
     for (const f of found) {
-      const same = kept.find(k => Math.abs(k.y - f.y) < .012 && (norm(k.s).includes(norm(f.s).slice(0, 6)) || norm(f.s).includes(norm(k.s).slice(0, 6)) || Math.abs(k.y - f.y) < .006));
-      if (same) { same.seen++; if (f.s.length > same.s.length * 1.3 && f.conf > same.conf - 8) { same.s = f.s; } continue; }
-      kept.push({ ...f, seen: 1 });
+      const near = Math.max(.012, f.z / 1000 * .6);
+      const same = kept.find(k => Math.abs(k.y - f.y) < Math.max(near, k.z / 1000 * .6) && (alike(k.s, f.s) || Math.abs(k.y - f.y) < .006));
+      if (same) {
+        same.seen++;
+        const key = f.s.replace(/\s+/g, ' '); same.votes[key] = (same.votes[key] || 0) + 1 + f.conf / 1000;
+        // a longer reading of the same line (a pass caught more of it) replaces a cut one
+        if (norm(f.s).length > norm(same.s).length * 1.3 && f.conf > same.conf - 8) { same.s = f.s; same.votes = { [key]: same.votes[key] + 2 }; }
+        continue;
+      }
+      kept.push({ ...f, seen: 1, votes: { [f.s.replace(/\s+/g, ' ')]: 1 + f.conf / 1000 } });
     }
+    // each line as most passes read it ("Aanya" read four times beats "Aanva" read once)
+    kept.forEach(k => { const best = Object.entries(k.votes).sort((a, b) => b[1] - a[1])[0]; if (best) k.s = best[0]; });
     kept.sort((a, b) => a.y - b.y);
     return { lines: kept.map(k => k.s), sizes: kept.map(k => k.z * (k.conf > 70 ? 1 : .8)) };
   }
