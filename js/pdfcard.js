@@ -790,15 +790,18 @@ const PdfCard = (() => {
     const todo = pages.filter(p => !p.usable).length ? pages.filter(p => !p.usable) : details && details.host1 ? [] : pages;
     if (opts.ocr !== false && todo.length) {
       try {
-        for (const [k, p] of todo.entries()) {
+        const srcs = [];
+        for (const p of todo) {
           const vp = p.page.getViewport({ scale: 1 }), v2 = p.page.getViewport({ scale: 2200 / Math.max(vp.width, vp.height) }), c = document.createElement('canvas');
           c.width = Math.round(v2.width); c.height = Math.round(v2.height);
           const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
           await p.page.render({ canvasContext: g, viewport: v2 }).promise;
-          const src = c.toDataURL('image/png'); if (!big) big = src;
-          const say = (f, msg) => opts.progress && opts.progress((k + Math.min(1, f || 0)) / todo.length, `Page ${p.n} of ${pages.length}: ${msg || `reading every word… ${Math.round((f || 0) * 100)}%`}`);
-          p.ocr = await ocr(src, say);
+          srcs.push(c.toDataURL('image/png')); if (!big) big = srcs[0];
         }
+        // every page read at the same time (they share the workers)
+        const done = todo.map(() => 0), sayAll = (k, f, msg) => { done[k] = Math.min(1, f || 0); const all = done.reduce((a, b) => a + b, 0) / todo.length;
+          opts.progress && opts.progress(all, msg ? `Page ${todo[k].n} of ${pages.length}: ${msg}` : `Reading every word on ${todo.length} page${todo.length === 1 ? '' : 's'}… ${Math.round(all * 100)}%`); };
+        await Promise.all(todo.map(async (p, k) => { p.ocr = await ocr(srcs[k], (f, msg) => sayAll(k, f, msg)); }));
         let all = pages.flatMap(p => p.ocr ? p.ocr.lines : p.lines), allSizes = pages.flatMap(p => p.ocr ? p.ocr.sizes : p.sizes);
         let found = withNames(parse(all, { ocr: pages.every(p => p.ocr) }), all, allSizes);
         const couple = d => d && d.host1 && (d.host2 || !/wedding|engagement|reception|anniversary|sangeet|haldi|mehendi/.test(d.type));
@@ -854,10 +857,9 @@ const PdfCard = (() => {
       g.drawImage(img, 0, 0, big.width, big.height);
       pages.push({ name: f.name, src: big.toDataURL('image/png') });
     }
-    for (const [k, p] of pages.entries()) {
-      const say = (f, msg) => opts.progress && opts.progress((k + Math.min(1, f || 0)) / pages.length, `Picture ${k + 1} of ${pages.length}: ${msg || `reading every word… ${Math.round((f || 0) * 100)}%`}`);
-      p.ocr = await ocr(p.src, say);
-    }
+    const done = pages.map(() => 0), sayAll = (k, f, msg) => { done[k] = Math.min(1, f || 0); const all = done.reduce((a, b) => a + b, 0) / pages.length;
+      opts.progress && opts.progress(all, msg ? `Picture ${k + 1} of ${pages.length}: ${msg}` : `Reading every word on ${pages.length} picture${pages.length === 1 ? '' : 's'}… ${Math.round(all * 100)}%`); };
+    await Promise.all(pages.map(async (p, k) => { p.ocr = await ocr(p.src, (f, msg) => sayAll(k, f, msg)); }));
     let all = pages.flatMap(p => p.ocr.lines), sizes = pages.flatMap(p => p.ocr.sizes);
     let details = withNames(parse(all, { ocr: true }), all, sizes);
     const couple = d => d && d.host1 && (d.host2 || !/wedding|engagement|reception|anniversary|sangeet|haldi|mehendi/.test(d.type));
@@ -988,12 +990,31 @@ const PdfCard = (() => {
     }
     return out;
   }
-  // A few Tesseract workers, made once (each loads the English + Hindi data) and closed after a minute unused
-  let pool = null, poolTimer = 0;
+  // Tesseract workers, made once (each loads the English + Hindi data) and closed after a minute unused: one per
+  // spare processor core (up to 5; 2 on a phone or a computer with little memory). Each reading borrows a free one.
+  let pool = null, poolTimer = 0, busy = 0;
+  const waiting = [], free = [];
+  async function ocrTake(workers) {
+    if (!free.length && !busy && !waiting.length) free.push(...workers);
+    busy++;
+    if (free.length) return free.shift();
+    return new Promise(res => waiting.push(res));
+  }
+  function ocrGive(w) {
+    busy--;
+    const next = waiting.shift();
+    if (next) { busy++; next(w); } else free.push(w);
+  }
+  function ocrCount() {
+    const cores = navigator.hardwareConcurrency || 2, mem = navigator.deviceMemory || 8;
+    const small = mem < 4 || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || '');
+    return Math.max(1, Math.min(small ? 2 : 5, cores - 1));
+  }
   async function ocrWorkers(T) {
     clearTimeout(poolTimer);
     if (!pool) {
-      const n = Math.max(1, Math.min(3, (navigator.hardwareConcurrency || 2) - 1));
+      free.length = 0;
+      const n = ocrCount();
       pool = Promise.all(Array.from({ length: n }, async () => { const w = { onProgress: null }; w.worker = await T.createWorker('eng+hin', 1, { logger: m => { if (w.onProgress && m.status === 'recognizing text') w.onProgress(m.progress); } }); return w; }))
         .catch(e => { pool = null; throw e; });
     }
@@ -1001,6 +1022,7 @@ const PdfCard = (() => {
   }
   function ocrIdle() {
     clearTimeout(poolTimer);
+    if (busy) return; // another page is still being read
     poolTimer = setTimeout(async () => { const p = pool; pool = null; if (p) (await p).forEach(w => w.worker.terminate()); }, 60000);
   }
   // Badges: small dark shapes on a light page (round date badges, ribbons, labels) hold light words that a
@@ -1055,10 +1077,9 @@ const PdfCard = (() => {
     const found = [], share = passes.map(() => 0), tell = () => progress && progress(share.reduce((a, b) => a + b, 0) / passes.length);
     // the passes run side by side on a few Tesseract workers (one per spare processor core), kept ready between pages
     const workers = await ocrWorkers(T);
-    let next = 0;
-    await Promise.all(workers.map(async w => {
-      while (next < passes.length) {
-        const k = next++, [width, mode, psm] = passes[k];
+    await Promise.all(passes.map(async ([width, mode, psm], k) => {
+      const w = await ocrTake(workers);
+      try {
         const c = prepared(img, width, mode);
         w.onProgress = f => { share[k] = f; tell(); };
         await w.worker.setParameters({ tessedit_pageseg_mode: psm, preserve_interword_spaces: '1' });
@@ -1073,11 +1094,13 @@ const PdfCard = (() => {
           if (ocrNoise(text, conf)) continue;
           found.push({ s: text, conf, y: (l.bbox.y0 + l.bbox.y1) / 2 / c.height, z: (l.bbox.y1 - l.bbox.y0) / c.height * 1000, x0: l.bbox.x0 / c.width, x1: l.bbox.x1 / c.width });
         }
-      }
+      } finally { w.onProgress = null; ocrGive(w); }
     }));
     // the badges' words, read one badge at a time
-    try { for (const b of await badgeLines(img, workers[0].worker)) if (!ocrNoise(b.s, b.conf)) found.push({ ...b, s: fix(b.s) }); }
+    const bw = await ocrTake(workers);
+    try { for (const b of await badgeLines(img, bw.worker)) if (!ocrNoise(b.s, b.conf)) found.push({ ...b, s: fix(b.s) }); }
     catch (e) { if (window.__ocrDebug) window.__ocrDebug.push(['badges failed', e.message]); }
+    finally { ocrGive(bw); }
     ocrIdle();
     // stylish English: the vision model reads what Tesseract could not (its readings join the same merge)
     if (opts2.florence === true) {
