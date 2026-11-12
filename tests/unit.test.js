@@ -1457,3 +1457,22 @@ test('a late person is never the couple: "Lt. Smt. … AND Lt. Sh. …" are the 
   assert.equal(h.host1, 'अमित'); assert.equal(h.host2, 'नेहा');
   assert.ok(!/स्व/.test(h.host1 + h.host2), 'a late person is never a name of the couple');
 });
+
+test('every word goes in the video: the card\'s other lines (no labels, dates or stray marks), every shloka, all inviters, the little ones', () => {
+  const PdfCard = require('../js/pdfcard.js'), Films = require('../js/films.js');
+  const lines = ['है ame', 'सहर्ष आपको आमंत्रित करते हैं कि इस मंगल अवसर पर पधारकर', '6 Wedding (८2 chemony', 'of their beloved grandson', 'O बाल मनुहार', '४, FOR DETAILS',
+    'आपकी उपस्थिति प्रार्थनीय है', 'Shivam Gupta', '29 NOV Sunday', 'Kirtan 1:00 PM', '29 November – 2 December 2026', 'DESIGNED BY SANKALP', 'MARRIAGE VENUE'];
+  assert.deepEqual(PdfCard.leftover({ host1: 'Shivam Gupta', events: [{ name: 'Kirtan' }], lines }),
+    ['सहर्ष आपको आमंत्रित करते हैं कि इस मंगल अवसर पर पधारकर', 'of their beloved grandson', 'आपकी उपस्थिति प्रार्थनीय है']);
+  const card = { type: 'wedding', host1: 'Shivam', host2: 'Aanya', events: [{ name: 'Haldi', date: '2026-12-01T11:00' }], venue: 'Ashirwad Hall', families: [], phones: [],
+    quotes: ['वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ। निर्विघ्नं कुरु मे देव सर्वकार्येषु सर्वदा॥', 'विघ्न हरण मंगल करण, श्री गणपति महाराज। प्रथम निमंत्रण आपको, पूरण कीजै काज॥'],
+    inviters: ['A1', 'B1', 'C1', 'D1', 'E1'], grandparents: ['Late X'], kids: 'हमारे मामा की शादी में\nवंश एवं मायरा', more: ['of their beloved grandson'] };
+  const { scenes, D } = Films.script(Films.LIST[0], 'en', card);
+  const ks = scenes.map(s => s.k);
+  assert.equal(ks.filter(k => k === 'words').length, 1);
+  assert.deepEqual(scenes.find(s => s.k === 'verse').lines, ['विघ्न हरण मंगल करण, श्री गणपति महाराज।', 'प्रथम निमंत्रण आपको, पूरण कीजै काज॥']);
+  assert.equal(ks.filter(k => k === 'regards').length, 3, 'five inviters on two screens, the grandparents on a third');
+  assert.deepEqual(scenes.filter(s => s.k === 'regards').flatMap(s => s.group.slice(1)), ['A1', 'B1', 'C1', 'D1', 'E1', 'Late X']);
+  assert.deepEqual(D.kidsLines, ['हमारे मामा की शादी में', 'वंश एवं मायरा']);
+  assert.ok(!Films.script(Films.LIST[0], 'en', card, { skip: ['words', 'verse', 'kids'] }).scenes.some(s => ['words', 'verse', 'kids'].includes(s.k)), 'each can be switched off');
+});

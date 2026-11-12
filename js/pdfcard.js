@@ -695,7 +695,7 @@ const PdfCard = (() => {
   // The card's other words: every line read that no field holds yet (a Hindi invitation line, "Baraat will depart
   // from our residence…", "आपकी उपस्थिति प्रार्थनीय है"…), so the video can show every word printed on the card.
   // Headings the video writes itself, dates and times, and stray marks are left out.
-  const LO_LABEL = /^(?:marriage\s+venue|wedding\s+venue|venue|home\s+address|address|residence|for\s+details|contact(?:\s+us)?|rsvp|cordial(?:ly)?(?:\s+invit\w*)?(?:\s+(?:from|by))?|with\s+best\s+compliments(?:\s+from)?|best\s+compliments(?:\s+from)?|golden\s+moments|the\s+celebrations?|save\s+the\s+date|programmes?|schedule|events?|wedding(?:\s+ceremony)?|shubh\s+vivah|designed\s+by.*|by\s+sankalp|बाल\s*मनुहार|निवेदक|स्वागतोत्सुक|दर्शनाभिलाषी|विनीत|शुभ\s*विवाह|मांगलिक\s*कार्यक्रम|कार्यक्रम|शुभ\s*स्थल|विवाह\s*स्थल|निवास|सम्पर्क|संपर्क)\s*[:.]?$/i;
+  const LO_LABEL = /^(?:marriage\s+venue|wedding\s+venue|venue|home\s+address|address|residence|for\s+details|contact(?:\s+us)?|rsvp|cordial(?:ly)?(?:\s+invit\w*)?(?:\s+(?:from|by))?|with\s+best\s+compliments(?:\s+from)?|best\s+compliments(?:\s+from)?|golden\s+moments|wedding\s+\S{0,4}mony|the\s+celebrations?|save\s+the\s+date|programmes?|schedule|events?|wedding(?:\s+ceremony)?|shubh\s+vivah|designed\s+by.*|by\s+sankalp|बाल\s*मनुहार|निवेदक|स्वागतोत्सुक|दर्शनाभिलाषी|विनीत|शुभ\s*विवाह|मांगलिक\s*कार्यक्रम|कार्यक्रम|शुभ\s*स्थल|विवाह\s*स्थल|निवास|सम्पर्क|संपर्क)\s*[:.]?$/i;
   function leftover(d) {
     if (!d) return [];
     const key = x => String(x || '').toLowerCase().normalize('NFC').replace(/[^a-z0-9ऀ-ॣ०-ॿ]+/g, '');
@@ -704,7 +704,14 @@ const PdfCard = (() => {
     const MON = /\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b|जनवरी|फरवरी|मार्च|अप्रैल|मई|जून|जुलाई|अगस्त|सितम्बर|सितंबर|अक्टूबर|नवम्बर|नवंबर|दिसम्बर|दिसंबर/gi;
     const seen = new Set(), out = [];
     for (const raw of d.lines || []) {
-      const l = clean(String(raw || '')).replace(/\s{2,}/g, ' ').trim(), k = key(l);
+      // stray pieces: a word mixing Hindi and English marks ("(८2"), a lone mark or letter at the start ("O बाल मनुहार",
+      // "४, FOR DETAILS"), and a word or two of the other script in a line of one script ("है ame")
+      const LET = /[A-Za-z\u0900-\u0963\u0971-\u097F]/g;
+      let ws = clean(String(raw || '')).split(' ').filter(t => !(/[\u0900-\u097F]/.test(t) && /[A-Za-z0-9]/.test(t)));
+      while (ws.length > 1 && (ws[0].match(LET) || []).length <= 1) ws.shift();
+      const hiN = ws.join('').replace(/[^\u0900-\u0963\u0971-\u097F]/g, '').length, enN = ws.join('').replace(/[^A-Za-z]/g, '').length;
+      if (hiN && enN && Math.min(hiN, enN) <= 3) ws = ws.filter(t => hiN < enN ? !/[\u0900-\u097F]/.test(t) : !/[A-Za-z]/.test(t));
+      const l = ws.join(' ').trim(), k = key(l);
       if (k.length < 5 || seen.has(k) || used.includes(k)) continue;
       if (LO_LABEL.test(l.replace(/^[^A-Za-zऀ-ॿ]+/, ''))) continue;
       // only dates, days, times or function names
