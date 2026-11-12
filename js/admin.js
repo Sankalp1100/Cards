@@ -1514,9 +1514,13 @@
   // A card's details → the card the videos are made from: names, families, functions and venue, and also the
   // invocation, shlokas and quotes, grandparents, the inviters (nivedak) and the little ones
   const listOf = v => (Array.isArray(v) ? v : String(v || '').split('\n')).map(x => String(x).trim()).filter(Boolean);
+  // the card's other words (every line read that no field holds), or the lines written in their box
+  // shlokas: one per line in their box (a two-line shloka on one line; the video splits it again at its ।)
+  const quoteList = v => Array.isArray(v) ? v.map(q => String(q || '').replace(/\s*\n\s*/g, ' ').trim()).filter(Boolean) : listOf(v);
+  const moreOf = d => d.more != null ? listOf(d.more) : PdfCard.leftover(d);
   function cardOf(d) {
     return { ...Core.blankCard(), ...PdfCard.toCard({ events: [], phones: [], ...d }), theme: design().no,
-      invocation: d.invocation || '', quotes: listOf(d.quotes), inviters: listOf(d.inviters), kids: d.kids || '',
+      invocation: d.invocation || '', quotes: quoteList(d.quotes), inviters: listOf(d.inviters), kids: d.kids || '', more: moreOf(d),
       grandparents: [d.grandparents1, d.grandparents2].map(x => String(x || '').trim()).filter(Boolean) };
   }
   function fillDetails(d, pictures = []) {
@@ -1529,9 +1533,8 @@
     $('#fPhones').value = (d.phones || []).join(', ');
     $('#fTitle').value = d.title || ''; $('#fInvocation').value = d.invocation || '';
     $('#fGrand1').value = d.grandparents1 || ''; $('#fGrand2').value = d.grandparents2 || '';
-    $('#fQuotes').value = listOf(d.quotes).join('\n'); $('#fInviters').value = listOf(d.inviters).join('\n'); $('#fKids').value = d.kids || '';
-    $('#fAll').value = listOf(d.lines).join('\n');
-    $('#fAllBox').hidden = !listOf(d.lines).length;
+    $('#fQuotes').value = quoteList(d.quotes).join('\n'); $('#fInviters').value = listOf(d.inviters).join('\n'); $('#fKids').value = d.kids || '';
+    $('#fAll').value = moreOf(d).join('\n');
     $('#stPages').innerHTML = pictures.map((u, i) => `<a href="${u}" target="_blank" rel="noopener" title="Page ${i + 1}"><img src="${u}" alt="Card page ${i + 1}"></a>`).join('');
     $('#stForm').hidden = false;
   }
@@ -1542,7 +1545,7 @@
       parents1: $('#fParents1').value.trim(), parents2: $('#fParents2').value.trim(), events: evs, venue: $('#fVenue').value.trim(),
       address: $('#fAddress').value.trim(), phones: $('#fPhones').value.split(/[,;]+/).map(x => x.trim()).filter(Boolean), hashtag: (st.pdf && st.pdf.hashtag) || '',
       title: $('#fTitle').value.trim(), invocation: $('#fInvocation').value.trim(), grandparents1: $('#fGrand1').value.trim(), grandparents2: $('#fGrand2').value.trim(),
-      quotes: listOf($('#fQuotes').value), inviters: listOf($('#fInviters').value), kids: $('#fKids').value.trim(), lines: listOf($('#fAll').value) };
+      quotes: listOf($('#fQuotes').value), inviters: listOf($('#fInviters').value), kids: listOf($('#fKids').value).join('\n'), more: listOf($('#fAll').value) };
   }
   // The details into the Studio (the chosen video stays)
   function useDetails() {
@@ -1618,6 +1621,7 @@
       const r = await reader();
       st.pdf = r.details || { lang: 'en', type: 'wedding', events: [], phones: [] };
       fillDetails(st.pdf, r.pictures);
+      edSet(st.pdf, r.pictures, 'the Video Studio');
       if (!r.readable) {
         pdfStatus(`⚠️ The names could not be read from this ${what}. Please type them from the page shown (everything else read is filled in), then pick a video.`, true);
         $('#fHost1').focus();
@@ -1893,6 +1897,7 @@
   });
   async function useAutoDetails(d, r) {
     {
+      if (!ed.busy) edSet(d, r.pictures, 'Auto Video');
       $('#auFill').hidden = true;
       au.details = d; au.lang = d.lang === 'hi' ? 'hi' : 'en';
       au.card = cardOf(d);
@@ -1917,17 +1922,17 @@
   function renderAutoAll(d) {
     $('#auAllFields').innerHTML = `<label>Occasion <select data-f="type">${Object.entries(PRESETS).map(([k, p]) => `<option value="${k}"${k === d.type ? ' selected' : ''}>${p.icon || ''} ${esc(p.label)}</option>`).join('')}</select></label>`
       + `<label>Language <select data-f="lang"><option value="en"${d.lang !== 'hi' ? ' selected' : ''}>English</option><option value="hi"${d.lang === 'hi' ? ' selected' : ''}>हिन्दी</option></select></label>`
-      + AU_FIELDS.map(([k, label, wide]) => { const v = k === 'phones' ? (d.phones || []).join(', ') : wide === 2 ? listOf(d[k]).join('\n') : d[k] || '';
-        return `<label class="${wide ? 'wide' : ''}${v ? '' : ' empty'}">${esc(label)} ${wide === 2 ? `<textarea data-f="${k}" rows="3">${esc(v)}</textarea>` : `<input data-f="${k}" value="${esc(v)}">`}</label>`; }).join('');
+      + AU_FIELDS.map(([k, label, wide]) => { const v = k === 'phones' ? (d.phones || []).join(', ') : k === 'quotes' ? quoteList(d.quotes).join('\n') : wide === 2 ? listOf(d[k]).join('\n') : d[k] || '';
+        return `<label class="${wide ? 'wide' : ''}${v ? '' : ' missing'}">${esc(label)} ${wide === 2 ? `<textarea data-f="${k}" rows="3">${esc(v)}</textarea>` : `<input data-f="${k}" value="${esc(v)}">`}</label>`; }).join('');
     $('#auEvs').innerHTML = (d.events && d.events.length ? d.events : [{}]).map(auEvRow).join('');
-    $('#auText').value = listOf(d.lines).join('\n');
+    $('#auText').value = moreOf(d).join('\n');
   }
   function readAutoAll() {
     const f = k => { const el = $('#auAllFields').querySelector(`[data-f="${k}"]`); return el ? el.value.trim() : ''; };
     const d = { ...au.details };
     ['type', 'lang', ...AU_FIELDS.map(([k]) => k)].forEach(k => { d[k] = f(k); });
     d.phones = f('phones').split(/[,;]+/).map(x => x.trim()).filter(Boolean);
-    d.quotes = listOf(d.quotes); d.inviters = listOf(d.inviters); d.kids = listOf(d.kids).join('\n');
+    d.quotes = listOf(d.quotes); d.inviters = listOf(d.inviters); d.kids = listOf(d.kids).join('\n'); d.more = listOf($('#auText').value);
     d.events = [...$('#auEvs').querySelectorAll('.au-ev')].map(r => ({ name: r.querySelector('[data-e="name"]').value.trim(), date: r.querySelector('[data-e="date"]').value.replace(/T00:00$/, ''), venue: r.querySelector('[data-e="venue"]').value.trim() })).filter(e => e.name);
     return d;
   }
@@ -1940,6 +1945,86 @@
     if (!d.host1) return toast('Please write at least the first name');
     await useAutoDetails(d, au.pendingR || { pictures: [] });
     toast('✨ Videos made again with your details');
+  });
+  // ---------- Card details: every point read from the card, to change or fill by hand ----------
+  const ED_KEY = 'cardalbum.carddetails.v1';
+  const ed = { d: null, pictures: [], busy: false };
+  const edStatus = (msg, bad) => { const p = $('#edStatus'); p.textContent = msg; p.classList.toggle('bad', !!bad); };
+  function edRender() {
+    const d = ed.d;
+    $('#edFields').innerHTML = `<label>Occasion <select data-f="type">${Object.entries(PRESETS).map(([k, p]) => `<option value="${k}"${k === d.type ? ' selected' : ''}>${p.icon || ''} ${esc(p.label)}</option>`).join('')}</select></label>`
+      + `<label>Language <select data-f="lang"><option value="en"${d.lang !== 'hi' ? ' selected' : ''}>English</option><option value="hi"${d.lang === 'hi' ? ' selected' : ''}>हिन्दी</option></select></label>`
+      + AU_FIELDS.map(([k, label, wide]) => { const v = k === 'phones' ? (d.phones || []).join(', ') : k === 'quotes' ? quoteList(d.quotes).join('\n') : wide === 2 ? listOf(d[k]).join('\n') : d[k] || '';
+        return `<label class="${wide ? 'wide' : ''}${v ? '' : ' missing'}">${esc(label)} ${wide === 2 ? `<textarea data-f="${k}" rows="3">${esc(v)}</textarea>` : `<input data-f="${k}" value="${esc(v)}">`}</label>`; }).join('');
+    $('#edEvs').innerHTML = (d.events && d.events.length ? d.events : [{}]).map(auEvRow).join('');
+    $('#edMore').value = moreOf(d).join('\n');
+    $('#edPages').innerHTML = (ed.pictures || []).map((u, i) => `<a href="${u}" target="_blank" rel="noopener" title="Page ${i + 1}"><img src="${u}" alt="Card page ${i + 1}"></a>`).join('');
+    $('#edWrap').hidden = false;
+  }
+  function edRead() {
+    const f = k => { const el = $('#edFields').querySelector(`[data-f="${k}"]`); return el ? el.value.trim() : ''; };
+    const d = { ...(ed.d || {}) };
+    ['type', 'lang', ...AU_FIELDS.map(([k]) => k)].forEach(k => { d[k] = f(k); });
+    d.phones = f('phones').split(/[,;]+/).map(x => x.trim()).filter(Boolean);
+    d.quotes = listOf(d.quotes); d.inviters = listOf(d.inviters); d.kids = listOf(d.kids).join('\n'); d.more = listOf($('#edMore').value);
+    d.events = [...$('#edEvs').querySelectorAll('.au-ev')].map(r => ({ name: r.querySelector('[data-e="name"]').value.trim(), date: r.querySelector('[data-e="date"]').value.replace(/T00:00$/, ''), venue: r.querySelector('[data-e="venue"]').value.trim() })).filter(e => e.name);
+    d.hashtag = d.hashtag || '';
+    return d;
+  }
+  function edSave() {
+    if (!ed.d) return;
+    try { localStorage.setItem(ED_KEY, JSON.stringify({ d: ed.d, page: (ed.pictures || [])[0] || '' })); $('#edSaved').textContent = '💾 Saved on this computer'; }
+    catch (e) { try { localStorage.setItem(ED_KEY, JSON.stringify({ d: ed.d })); } catch (e2) { /* storage full or blocked: still works for now */ } }
+  }
+  function edSet(d, pictures, from) {
+    ed.d = { type: 'wedding', lang: 'en', events: [], phones: [], ...d };
+    ed.pictures = pictures || [];
+    edRender(); edSave();
+    if (from) edStatus(`✅ From ${from}: ${[ed.d.host1, ed.d.host2].filter(Boolean).join(' & ') || 'names not found'}. Change anything below, then make the video.`);
+  }
+  try { const saved = JSON.parse(localStorage.getItem(ED_KEY) || 'null');
+    if (saved && saved.d) { ed.d = saved.d; ed.pictures = saved.page ? [saved.page] : []; edRender(); edStatus('📂 The last card is back. Change anything, or read another card.'); } } catch (e) { /* nothing saved */ }
+  async function edReadWith(reader, what) {
+    if (ed.busy) return toast('Please wait: a card is still being read');
+    ed.busy = true;
+    edStatus(`🔎 Reading the ${what}…`);
+    try {
+      const r = await reader((p, msg) => edStatus(msg ? `🔎 ${msg}` : `🔎 Reading every word on the card… ${Math.round(p * 100)}% (careful reading takes about a minute)`));
+      edSet(r.details || {}, r.pictures, `this ${what}`);
+      if (!r.readable) edStatus(`⚠️ The names could not be read from this ${what}. Please type them below (everything else read is filled in).`, true);
+      if (window.Fun) Fun.burst(null, null, 40);
+    } catch (e) { edStatus(`Could not read this ${what}: ${e.message}`, true); }
+    finally { ed.busy = false; }
+  }
+  $('#edPdf').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) edReadWith(progress => PdfCard.read(f, { progress }), 'PDF'); });
+  $('#edImgs').addEventListener('change', e => { const fs = [...e.target.files]; e.target.value = ''; if (fs.length) edReadWith(progress => PdfCard.readImages(fs, { progress }), fs.length === 1 ? 'picture' : 'pictures'); });
+  $('#edBlank').addEventListener('click', () => { edSet({}, [], ''); edStatus('✍️ Type the card\'s details below, then make the video.'); $('#edFields [data-f="host1"]').focus(); });
+  $('#edAddEv').addEventListener('click', () => $('#edEvs').insertAdjacentHTML('beforeend', auEvRow()));
+  $('#edEvs').addEventListener('click', e => { const b = e.target.closest('[data-ev-x]'); if (b) { b.parentElement.remove(); ed.d = edRead(); edSave(); } });
+  $('#edForm').addEventListener('input', e => {
+    const l = e.target.closest('.au-all-grid label'); if (l) l.classList.toggle('missing', !e.target.value.trim());
+    clearTimeout(ed.timer); ed.timer = setTimeout(() => { ed.d = edRead(); edSave(); }, 400);
+  });
+  $('#edForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const d = ed.d = edRead(); edSave();
+    if (!d.host1) { toast('Please write at least the first name'); $('#edFields [data-f="host1"]').focus(); return; }
+    if (au.rec) return toast('Please wait: a video is still recording');
+    await openAuto();
+    au.pendingR = { pictures: ed.pictures };
+    ed.busy = true;
+    try { await useAutoDetails(d, au.pendingR); } finally { ed.busy = false; }
+  });
+  $('#edStudio').addEventListener('click', async () => {
+    const d = ed.d = edRead(); edSave();
+    if (!d.host1) { toast('Please write at least the first name'); $('#edFields [data-f="host1"]').focus(); return; }
+    if (st.rec) return toast('Please wait: a video is still recording');
+    await openStudio();
+    await st.ready;
+    st.pdf = d;
+    fillDetails(d, ed.pictures);
+    stepTo('details');
+    if (useDetails()) openPick();
   });
   function startAuto() {
     const d = au.details, n = d.events.length;
@@ -2570,7 +2655,7 @@
   // ---------- Pages ----------
   // One page at a time (Orders, Create, Designs, History, Catalog, Settings) instead of one very long page.
   // A link to any part (#generate, #settings…) opens its page and scrolls to it.
-  const PAGES = ['orders', 'create', 'designs', 'ready', 'links', 'catalog', 'settings'];
+  const PAGES = ['orders', 'create', 'designs', 'details', 'ready', 'links', 'catalog', 'settings'];
   let page = '', navigated = false;
   function showPage(p) {
     if (!PAGES.includes(p)) return;

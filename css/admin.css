@@ -583,6 +583,8 @@ main > section[data-page][hidden] { display: none !important; }
 /* Every detail read from a card */
 .st-all summary, .au-all > summary { cursor: pointer; font-weight: 600; }
 .st-all textarea { width: 100%; margin-top: 8px; font: 500 .9rem 'Space Grotesk', sans-serif; }
+.st-more { display: block; font-weight: 600; }
+.st-more textarea { display: block; width: 100%; margin-top: 8px; min-height: 120px; font: 500 .9rem 'Space Grotesk', sans-serif; resize: vertical; }
 .st-form textarea { width: 100%; resize: vertical; }
 .au-all { margin: 0 0 14px; padding: 12px 16px; border-radius: 16px; border: 1px solid var(--line); background: rgba(255,255,255,.03); }
 .au-all > summary small { font-weight: 500; color: var(--muted); margin-left: 6px; }
@@ -590,7 +592,21 @@ main > section[data-page][hidden] { display: none !important; }
 .au-all-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .au-all-grid label { display: grid; gap: 5px; font-size: .8rem; color: var(--muted); }
 .au-all-grid label.wide { grid-column: span 3; }
-.au-all-grid label.empty input, .au-all-grid label.empty textarea { border-style: dashed; }
+.au-all-grid label.missing input, .au-all-grid label.missing textarea { border-style: dashed; border-color: #ff6b8a; }
+.ed-src { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.ed-file { cursor: pointer; }
+.ed-status { color: var(--muted); margin: 12px 0 0; }
+.ed-status.bad { color: #ffd0da; }
+.ed-wrap { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 18px; margin-top: 16px; align-items: start; }
+.ed-pages { display: grid; gap: 10px; position: sticky; top: 16px; }
+.ed-pages img { width: 100%; border-radius: 10px; box-shadow: 0 8px 20px rgba(0,0,0,.45); display: block; }
+.ed-pages:empty { display: none; }
+.ed-wrap:has(.ed-pages:empty) { grid-template-columns: minmax(0, 1fr); }
+.ed-legend { margin: 0; font-size: .85rem; color: var(--muted); }
+.ed-dot { display: inline-block; width: 12px; height: 12px; border: 2px dashed #ff6b8a; border-radius: 3px; vertical-align: -1px; }
+.ed-go { margin-top: 4px; }
+.ed-saved { margin: 0; font-size: .8rem; }
+@media (max-width: 760px) { .ed-wrap { grid-template-columns: 1fr; } .ed-pages { position: static; grid-template-columns: repeat(3, 1fr); } }
 .au-all-grid input, .au-all-grid select, .au-all-grid textarea, .au-ev input { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: rgba(8,6,20,.7); color: var(--ink); font: 500 .95rem 'Space Grotesk', sans-serif; color-scheme: dark; width: 100%; box-sizing: border-box; }
 .au-evs { display: grid; gap: 8px; }
 .au-ev { display: grid; grid-template-columns: 1.1fr 1fr 1.4fr auto; gap: 8px; align-items: center; }

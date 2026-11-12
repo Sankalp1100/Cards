@@ -239,21 +239,34 @@ const Films = (() => {
     // the card's invocation: a Ganesh one is already written by the film itself; any other (ॐ नमः शिवाय…) goes on top
     if (txt(card.invocation)) { if (/गणेश|ganesh/i.test(card.invocation)) out.sacred = true; else out.top = txt(card.invocation); }
     const inviters = (card.inviters || []).map(txt).filter(Boolean), grand = (card.grandparents || []).map(txt).filter(Boolean);
-    if (inviters.length || grand.length) out.regards = [inviters.length ? L('WITH BEST COMPLIMENTS', 'निवेदक') : L('WITH BLESSINGS FROM', 'आशीर्वाद सहित'), ...inviters, ...grand, ...fam].slice(0, 4);
-    const quote = txt(Array.isArray(card.quotes) ? card.quotes[0] : card.quote);
-    if (quote) {
-      // a shloka or a couplet, in two lines (at a pause, else near the middle)
-      const words = quote.replace(/[“”"]/g, '').split(/\s+/), half = Math.ceil(words.length / 2);
+    const pages = (head, list) => { const p = []; for (let i = 0; i < list.length; i += 4) p.push([head, ...list.slice(i, i + 4)]); return p; };
+    if (inviters.length || grand.length) {
+      out.regardsPages = [...pages(L('WITH BEST COMPLIMENTS', 'निवेदक'), inviters), ...pages(L('WITH BLESSINGS FROM', 'आशीर्वाद सहित'), grand)].slice(0, 4);
+      out.regards = out.regardsPages[0];
+    }
+    // a shloka or a couplet, in two lines (at a pause, else near the middle)
+    const twoLines = quote => {
+      const words = quote.replace(/[“”"]/g, '').split(/\s+/).filter(Boolean);
       const mid = words.length / 2, score = i => Math.abs(i + 1 - mid) - (/[।॥|]$/.test(words[i]) ? 3 : 0);
       const pauses = words.map((w, i) => i).filter(i => i < words.length - 1 && /[,।|;॥]$/.test(words[i])).sort((a, b) => score(a) - score(b));
       const cut = pauses.length && Math.abs(pauses[0] + 1 - mid) <= mid * .6 ? pauses[0] + 1 : Math.ceil(mid);
-      out.note = { label: L('Blessings', 'शुभाशीष'), lines: [words.slice(0, cut).join(' '), words.slice(cut).join(' ')].filter(Boolean), by: out.note ? out.note.by : '' };
-    }
+      return [words.slice(0, cut).join(' '), words.slice(cut).join(' ')].filter(Boolean);
+    };
+    const quotes = (Array.isArray(card.quotes) ? card.quotes : [card.quote]).map(txt).filter(Boolean);
+    if (quotes[0]) out.note = { label: L('Blessings', 'शुभाशीष'), lines: twoLines(quotes[0]), by: out.note ? out.note.by : '' };
+    // every other shloka gets a screen of its own
+    out.verses = quotes.slice(1, 5).map(twoLines);
     if (txt(card.kids)) out.kids = txt(card.kids);
+    // the little ones' request: its lines, the names last
+    out.kidsLines = String(card.kids || '').split('\n').map(txt).filter(Boolean).slice(0, 5);
+    // every other line printed on the card, a few to a screen
+    const more = (card.more || []).map(txt).filter(Boolean).slice(0, 24);
+    out.morePages = [];
+    for (let i = 0; i < more.length; i += 5) out.morePages.push(more.slice(i, i + 5));
     return out;
   }
   // The scene buttons' names in the Studio
-  const SCENE_NAME = { open: 'Opening', title: 'Names', card: 'Invitation', day: 'Functions', venue: 'Venue', regards: 'Families', note: 'Note', finale: 'Finale' };
+  const SCENE_NAME = { open: 'Opening', title: 'Names', card: 'Invitation', day: 'Functions', venue: 'Venue', regards: 'Families', note: 'Note', verse: 'Shloka', kids: 'Little ones', words: 'Card words', finale: 'Finale' };
 
   // opts: { skip: ['card', 'day', 'venue', 'regards', 'note'], venueStyle: 'full' | 'name', credit, site }
   function script(film, lang, card, opts = {}) {
@@ -265,9 +278,13 @@ const Films = (() => {
     s.push({ k: 'title', d: 5 });
     const skip = new Set(opts.skip || []);
     if (!skip.has('card')) s.push({ k: 'card', d: 6 });
+    // the card's other words, right after the invitation
+    if (!skip.has('words')) (D.morePages || []).forEach((lines, i) => s.push({ k: 'words', lines, i, d: 3 + lines.length * .9 }));
     if (!skip.has('day')) D.days.forEach((day, i) => s.push({ k: 'day', day, i, n: D.days.length, d: D.days.length > 1 ? 3.4 : 4.2 }));
     if (!skip.has('venue') && D.V) s.push({ k: 'venue', d: 4.5 });
-    if (D.regards && !skip.has('regards')) s.push({ k: 'regards', d: 4.5 });
+    if (D.regards && !skip.has('regards')) (D.regardsPages || [D.regards]).forEach((group, i) => s.push({ k: 'regards', group: D.regardsPages ? group : null, i, d: 4.5 }));
+    if (!skip.has('verse')) (D.verses || []).forEach((lines, i) => s.push({ k: 'verse', lines, i, d: 5 }));
+    if (!skip.has('kids') && D.kidsLines && D.kidsLines.length) s.push({ k: 'kids', d: 5.5 });
     if (D.note && !skip.has('note')) s.push({ k: 'note', d: 5 });
     s.push({ k: 'finale', d: 6 });
     let t = 0;
@@ -797,7 +814,7 @@ const Films = (() => {
   function sceneRegards(ctx, film, th, D, sc, lt) {
     const c = holder(ctx, film, th, lt, 100), cx = c.cx; th = c.th || th;
     const lightTh = { ...th, dark: false };
-    const groups = [D.regards, D.compliments].filter(Boolean);
+    const groups = sc.group ? [sc.group] : [D.regards, D.compliments].filter(Boolean);
     const blockH = groups.reduce((h, g) => h + 90 + (g.length - 1) * 76, 0) + (groups.length - 1) * 70 + 220;
     let y = c.y + (film.frame === 'arch' ? 90 : 20) + (c.h - blockH) / 2 + 60, n = 0;
     groups.forEach((g, gi) => {
@@ -849,7 +866,46 @@ const Films = (() => {
       if (D.site) text(ctx, th, D.site, cx, 1530, { z: 30, font: 'caps', color: ink, a: ap(lt, 3.6), ls: 1 });
     }
   }
-  const SCENES = { open: sceneOpen, title: sceneTitle, card: sceneCard, day: sceneDay, venue: sceneVenue, regards: sceneRegards, note: sceneNote, finale: sceneFinale };
+  // A shloka on its own screen
+  function sceneVerse(ctx, film, th, D, sc, lt) {
+    const c = holder(ctx, film, th, lt, 100), cx = c.cx; th = c.th || th;
+    const lightTh = { ...th, dark: false }, mid = c.y + c.h / 2;
+    mandalaAt(ctx, th, cx, mid - 250, 80, ap(lt, .2) * .7); monogram(ctx, th, cx, mid - 250, 44, 'ॐ', ap(lt, .3), false);
+    const h = sc.lines.length * 84;
+    sc.lines.forEach((l, i) => text(ctx, lightTh, l, cx, mid - h / 2 + 60 + i * 84, { z: 50, font: 'deva', color: th.accent, a: ap(lt, .6 + i * .35), rise: 20, maxW: c.w - 110 }));
+    text(ctx, lightTh, '— ✦ —', cx, mid + h / 2 + 90, { z: 30, font: 'caps', color: th.gold[1], a: ap(lt, 1.4) });
+  }
+  // The little ones' request (bal manuhar): a ribbon box with their lines, their names last
+  function sceneKids(ctx, film, th, D, sc, lt) {
+    const c = holder(ctx, film, th, lt, 100), cx = c.cx; th = c.th || th;
+    const lightTh = { ...th, dark: false }, dk = { ...th, dark: true }, lines = D.kidsLines;
+    const hi = isHi(lines.join(' ')), names = lines.length > 1 ? lines[lines.length - 1] : '', words = names ? lines.slice(0, -1) : lines;
+    const bw = c.w - 90, bh = 150 + words.length * 74 + (names ? 120 : 0), by = c.y + (c.h - bh) / 2 + 20;
+    ctx.save(); ctx.globalAlpha = ap(lt, .2); rr(ctx, cx - bw / 2, by, bw, bh, 22); ctx.fillStyle = th.accent; ctx.fill(); stroke(ctx, th.gold[1], 3);
+    rr(ctx, cx - 160, by - 28, 320, 56, 28); ctx.fillStyle = goldFill(ctx, th, by + 10, 60); ctx.fill(); ctx.restore();
+    text(ctx, lightTh, hi ? 'बाल मनुहार' : 'A LITTLE REQUEST', cx, by + 12, { z: 30, font: 'caps', color: th.ink, a: ap(lt, .35), maxW: 290 });
+    words.forEach((l, i) => text(ctx, dk, l, cx, by + 120 + i * 74, { z: 46, font: 'name', color: '#fff', a: ap(lt, .6 + i * .3), rise: 16, maxW: bw - 70 }));
+    if (names) {
+      const ny = by + 120 + words.length * 74 + 30;
+      ctx.save(); ctx.globalAlpha = ap(lt, 1.2); rr(ctx, cx - bw / 2 + 60, ny - 50, bw - 120, 74, 8); ctx.fillStyle = goldFill(ctx, th, ny, 70); ctx.fill(); ctx.restore();
+      text(ctx, lightTh, names, cx, ny, { z: 40, font: 'name', color: th.ink, a: ap(lt, 1.3), maxW: bw - 160 });
+    }
+  }
+  // The card's other words, line by line
+  function sceneWords(ctx, film, th, D, sc, lt) {
+    const c = holder(ctx, film, th, lt, 100), cx = c.cx; th = c.th || th;
+    const lightTh = { ...th, dark: false };
+    const draw = (y, ghost) => {
+      ctx.save(); if (ghost) ctx.globalAlpha = 0;
+      monogram(ctx, th, cx, y, 40, D.sacred ? 'ॐ' : D.mono, ap(lt, .2), false); y += 110;
+      sc.lines.forEach((l, i) => { y += para(ctx, lightTh, l, cx, y, { z: isHi(l) ? 40 : 38, font: isHi(l) ? 'deva' : 'body', color: i % 2 ? shade(th.ink, .2) : th.ink, a: ap(lt, .4 + i * .45), rise: 16, maxW: c.w - 130, lines: 3 }) + 34; });
+      text(ctx, lightTh, '— ✦ —', cx, y + 20, { z: 30, font: 'caps', color: th.gold[1], a: ap(lt, .6 + sc.lines.length * .45) });
+      ctx.restore(); return y + 40;
+    };
+    const top = c.y + (film.frame === 'arch' ? 200 : 120), room = c.y + c.h - 120 - top, used = draw(top, true) - top;
+    draw(top + Math.max(0, (room - used) / 2), false);
+  }
+  const SCENES = { open: sceneOpen, title: sceneTitle, card: sceneCard, day: sceneDay, venue: sceneVenue, regards: sceneRegards, note: sceneNote, verse: sceneVerse, kids: sceneKids, words: sceneWords, finale: sceneFinale };
 
   // ---------- Concepts: eleven more ways to tell the story (Royal Heritage is the frames above) ----------
   // Each concept has its own palettes, letters, opening, names screen, day screens, a holder for the words

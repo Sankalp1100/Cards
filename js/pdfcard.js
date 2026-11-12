@@ -692,6 +692,36 @@ const PdfCard = (() => {
       rsvp: (f.phones[0] || '').replace(/\D/g, ''), hashtag: f.hashtag || '', address: f.address, phones: f.phones };
   }
 
+  // The card's other words: every line read that no field holds yet (a Hindi invitation line, "Baraat will depart
+  // from our residence…", "आपकी उपस्थिति प्रार्थनीय है"…), so the video can show every word printed on the card.
+  // Headings the video writes itself, dates and times, and stray marks are left out.
+  const LO_LABEL = /^(?:marriage\s+venue|wedding\s+venue|venue|home\s+address|address|residence|for\s+details|contact(?:\s+us)?|rsvp|cordial(?:ly)?(?:\s+invit\w*)?(?:\s+(?:from|by))?|with\s+best\s+compliments(?:\s+from)?|best\s+compliments(?:\s+from)?|golden\s+moments|the\s+celebrations?|save\s+the\s+date|programmes?|schedule|events?|wedding(?:\s+ceremony)?|shubh\s+vivah|designed\s+by.*|by\s+sankalp|बाल\s*मनुहार|निवेदक|स्वागतोत्सुक|दर्शनाभिलाषी|विनीत|शुभ\s*विवाह|मांगलिक\s*कार्यक्रम|कार्यक्रम|शुभ\s*स्थल|विवाह\s*स्थल|निवास|सम्पर्क|संपर्क)\s*[:.]?$/i;
+  function leftover(d) {
+    if (!d) return [];
+    const key = x => String(x || '').toLowerCase().normalize('NFC').replace(/[^a-z0-9ऀ-ॣ०-ॿ]+/g, '');
+    const used = key([d.host1, d.host2, d.parents1, d.parents2, d.grandparents1, d.grandparents2, d.title, d.invocation, d.venue, d.address, d.hashtag,
+      ...(d.phones || []), ...[].concat(d.quotes || []), ...[].concat(d.inviters || []), d.kids, ...(d.events || []).map(e => `${e.name} ${e.venue || ''}`)].join(' '));
+    const MON = /\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b|जनवरी|फरवरी|मार्च|अप्रैल|मई|जून|जुलाई|अगस्त|सितम्बर|सितंबर|अक्टूबर|नवम्बर|नवंबर|दिसम्बर|दिसंबर/gi;
+    const seen = new Set(), out = [];
+    for (const raw of d.lines || []) {
+      const l = clean(String(raw || '')).replace(/\s{2,}/g, ' ').trim(), k = key(l);
+      if (k.length < 5 || seen.has(k) || used.includes(k)) continue;
+      if (LO_LABEL.test(l.replace(/^[^A-Za-zऀ-ॿ]+/, ''))) continue;
+      // only dates, days, times or function names
+      let rest = l.replace(MON, ' ').replace(WEEKDAYS, ' ').replace(/\b(?:a\.?m|p\.?m|onwards|from|to|at|on|and)\b\.?|बजे|से|प्रातः|सायं|दोपहर|रात्रि/gi, ' ');
+      EVENTS.forEach(([re]) => { rest = rest.replace(new RegExp(re.source, 'gi'), ' '); });
+      if (!/[A-Za-zऀ-ॿ]{3,}/.test(rest.replace(/\d+/g, ''))) continue;
+      // most of its words already in a field (a name line read a little differently)
+      const words = l.split(/\s+/).map(key).filter(w => w.length >= 3);
+      if (words.length && words.filter(w => used.includes(w)).length / words.length >= .75) continue;
+      // stray marks: mostly letters, and at least one real word
+      const letters = (l.match(/[A-Za-zऀ-ॿ]/g) || []).length;
+      if (letters / l.replace(/\s/g, '').length < .6 || !/[A-Za-z]{3,}|[ऀ-ॿ]{3,}/.test(l)) continue;
+      seen.add(k); out.push(l);
+    }
+    return out.slice(0, 24);
+  }
+
   // ---- In the browser: the PDF's text lines and a picture of its first page ----
   let lib = null;
   function load() {
@@ -1091,7 +1121,7 @@ const PdfCard = (() => {
     return { lines: kept.map(k => k.s), sizes: kept.map(k => k.z * (k.conf > 70 ? 1 : .8)), ys: kept.map(k => k.y), img };
   }
 
-  return { parse, layout, toCard, read, readImages, findDate, findDates, findTime, findTimes, EVENTS };
+  return { parse, layout, toCard, leftover, read, readImages, findDate, findDates, findTime, findTimes, EVENTS };
 })();
 
 if (typeof module !== 'undefined') module.exports = PdfCard;

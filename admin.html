@@ -27,6 +27,7 @@
       <a href="#designs">🎨 <span>Designs</span></a>
       <a href="#studio" data-studio>🎬 <span><em>Video </em>Studio</span></a>
       <a href="#auto" data-auto>⚡ <span><em>Auto </em>Video</span></a>
+      <a href="#details">✏️ <span><em>Card </em>Details</span></a>
       <a href="#ready">🎞️ <span><em>Ready </em>Videos</span></a>
       <a href="#links">📋 <span><em>My </em>History</span> <b id="linkCount">0</b></a>
       <a href="#catalog">🗂️ <span>Catalog</span></a>
@@ -242,6 +243,32 @@
     </section>
 
     <!-- Finished client videos kept on the site (videos/), to watch, download or share again -->
+    <section id="details" class="block" data-page="details">
+      <h2 class="step">✏️ Card details <small>Everything read from the card, point by point. Change anything, type what was not read, then make the video.</small></h2>
+      <div class="ed-src">
+        <label class="btn-glow ed-file">📄 Read a card PDF<input type="file" id="edPdf" accept="application/pdf,.pdf" hidden></label>
+        <label class="btn-line ed-file">🖼️ Read card pictures<input type="file" id="edImgs" accept="image/*,.jpg,.jpeg,.png,.webp" multiple hidden></label>
+        <button type="button" class="btn-small" id="edBlank">✍️ Start empty</button>
+      </div>
+      <p class="ed-status" id="edStatus" aria-live="polite">Read a card PDF (or its pictures) here, or open one in the Video Studio or Auto Video: its details show up here to change.</p>
+      <div class="ed-wrap" id="edWrap" hidden>
+        <aside class="ed-pages" id="edPages"></aside>
+        <form class="au-all-form ed-form" id="edForm" autocomplete="off">
+          <p class="ed-legend"><i class="ed-dot"></i> A box with a red border was not found on the card: type it if the card has it.</p>
+          <div class="au-all-grid" id="edFields"></div>
+          <span class="muted">Functions <small>(name · date and time · venue)</small></span>
+          <div class="au-evs" id="edEvs"></div>
+          <button type="button" class="btn-small" id="edAddEv">＋ Add a function</button>
+          <label class="st-more">📜 Other words on the card <small class="muted">(every line here shows in the video: change, add or delete any line)</small> <textarea id="edMore" rows="6" placeholder="e.g. Baraat will depart from our residence"></textarea></label>
+          <div class="link-actions ed-go">
+            <button type="submit" class="btn-glow">⚡ Make videos with these (Auto Video)</button>
+            <button type="button" class="btn-line" id="edStudio">🎬 Use in the Video Studio</button>
+          </div>
+          <p class="muted ed-saved" id="edSaved"></p>
+        </form>
+      </div>
+    </section>
+
     <section id="ready" class="block" data-page="ready">
       <h2 class="step">🎞️ Ready videos <small>Finished client videos. Play, download or share them again.</small></h2>
       <div class="ready-grid" id="readyGrid"></div>
@@ -421,10 +448,10 @@
               <label>Grandparents of name 1 <input id="fGrand1" maxlength="160"></label>
               <label>Grandparents of name 2 <input id="fGrand2" maxlength="160"></label>
             </div>
-            <label>Shlokas and quotes <small class="muted">(one per line: the first one shows in the video)</small> <textarea id="fQuotes" rows="3"></textarea></label>
+            <label>Shlokas and quotes <small class="muted">(one per line: every one shows in the video)</small> <textarea id="fQuotes" rows="3"></textarea></label>
             <label>Inviters (निवेदक / दर्शनाभिलाषी / with best compliments) <small class="muted">(one per line)</small> <textarea id="fInviters" rows="3"></textarea></label>
-            <label>Little ones (बाल मनुहार) <input id="fKids" maxlength="160"></label>
-            <details class="st-all" id="fAllBox" hidden><summary>📜 Every word read from the card</summary><textarea id="fAll" rows="10" readonly></textarea></details>
+            <label>Little ones (बाल मनुहार) <small class="muted">(their lines, the names last)</small> <textarea id="fKids" rows="3"></textarea></label>
+            <label class="st-more">📜 Other words on the card <small class="muted">(every line here shows in the video: change, add or delete any line)</small> <textarea id="fAll" rows="6" placeholder="e.g. Baraat will depart from our residence"></textarea></label>
             <div class="link-actions">
               <button type="submit" class="btn-glow">✅ Use these details</button>
               <button type="button" class="btn-line" id="fPick">🎬 Choose a video and make it</button>
@@ -468,6 +495,9 @@
             <label class="st-check"><input type="checkbox" data-skip="venue" checked> Venue</label>
             <label class="st-check"><input type="checkbox" data-skip="regards" checked> Families</label>
             <label class="st-check"><input type="checkbox" data-skip="note" checked> Address &amp; phone numbers</label>
+            <label class="st-check"><input type="checkbox" data-skip="words" checked> Other words on the card</label>
+            <label class="st-check"><input type="checkbox" data-skip="verse" checked> Every shloka</label>
+            <label class="st-check"><input type="checkbox" data-skip="kids" checked> Little ones (बाल मनुहार)</label>
           </div>
           <h3>📍 How the venue shows</h3>
           <div class="chips" id="stVenueStyle">
@@ -596,7 +626,7 @@
             <span class="muted">Functions <small>(name · date and time · venue)</small></span>
             <div class="au-evs" id="auEvs"></div>
             <button type="button" class="btn-small" id="auAddEv">＋ Add a function</button>
-            <details class="st-all"><summary>📜 Every word on the card</summary><textarea id="auText" rows="10" readonly></textarea></details>
+            <label class="st-more">📜 Other words on the card <small class="muted">(every line here shows in the video: change, add or delete any line)</small> <textarea id="auText" rows="6" placeholder="e.g. Baraat will depart from our residence"></textarea></label>
             <button type="submit" class="btn-glow">↻ Make the videos again with these</button>
           </form>
         </details>
