@@ -293,21 +293,28 @@ const PdfCard = (() => {
   const PLACE_WORDS = /,|\b\d{6}\b|\broad\b|\bnear\b|\bsector\b|\bcolony\b|\bnagar\b|\bvihar\b|\bmarg\b|\bgali\b|\bstreet\b|\bphase\b|\bresidency\b|\bopp\.?\b|\bdist\.?\b|मार्ग|नगर|कॉलोनी|गली|पास|सामने|जिला/i;
   function tidyUp(out, lines, used) {
     const norm2 = x => String(x || '').toLowerCase().replace(/[^a-z0-9\u0900-\u097F]/g, '');
-    const isHead = l => H_VENUE.test(l) || H_ADDRESS.test(l) || H_INVITE.test(l) || INVITERS.test(l) && l.split(' ').length <= 5 || KIDS.test(l) && l.split(' ').length <= 3 || H_ANY.test(l) && !/\d/.test(l);
-    const block = (i, max, keep) => { const got = []; for (let k = i + 1; k < lines.length && got.length < max; k++) { const l = lines[k]; if (isHead(l) || !keep(l, got.length)) break; got.push(k); } return got; };
+    const bareHead = l => l.replace(/^[^A-Za-z\u0900-\u0965\u0970-\u097F]+/, '');
+    const isHead = l => { const b = bareHead(l); return H_VENUE.test(b) || H_ADDRESS.test(b) || H_INVITE.test(b) || INVITERS.test(b) && b.split(' ').length <= 5 || KIDS.test(b) && b.split(' ').length <= 3 || H_ANY.test(b) && !/\d/.test(b) || /^(?:for\s+details|contact|rsvp|call)\b/i.test(b); };
+    const realHead = l => { const b = bareHead(l); return H_VENUE.test(b) || H_ADDRESS.test(b) || H_INVITE.test(b) || KIDS.test(b) && b.split(' ').length <= 3 || /^(?:for\s+details|contact|rsvp|call)\b/i.test(b); };
+    const block = (i, max, keep, first) => { const got = []; let k = i + 1; while (k < lines.length && H_VENUE.test(bareHead(lines[k])) && H_VENUE.test(bareHead(lines[i]))) { used[k] = true; k++; }
+      for (; k < lines.length && got.length < max; k++) { const l = lines[k];
+        // a stray short word between the lines (a divider read as letters, "bad") is stepped over when the next line belongs
+        if (got.length && !keep(l, got.length) && /^\S{1,5}$/.test(l.trim()) && lines[k + 1] && !isHead(lines[k + 1]) && keep(lines[k + 1], got.length)) { used[k] = true; continue; }
+        if ((got.length === 0 && first ? realHead(l) : isHead(l)) || !keep(l, got.length)) break; got.push(k); } return got; };
     lines.forEach((l, i) => {
       // MARRIAGE VENUE: the hall's name and every address line under it
-      if (H_VENUE.test(l)) {
-        const ks = block(i, 4, (x, n) => n === 0 ? !findTimes(x).length : PLACE_WORDS.test(x) && !/\b[6-9]\d{4}\s?\d{5}\b/.test(digits(x)));
+      if (H_VENUE.test(bareHead(l))) {
+        if (i > 0 && H_VENUE.test(bareHead(lines[i - 1]))) return; // the second line of a repeated heading
+        const ks = block(i, 4, (x, n) => n === 0 ? !findTimes(x).length : PLACE_WORDS.test(x) && !/\b[6-9]\d{4}\s?\d{5}\b/.test(digits(x)), true);
         if (ks.length) { out.venue = ks.map(k => lines[k]).join(', ').replace(/,\s*,/g, ',').replace(/,\s*$/, ''); used[i] = true; ks.forEach(k => { used[k] = true; }); }
       }
       // HOME ADDRESS: the lines under it
-      if (H_ADDRESS.test(l)) {
-        const ks = block(i, 3, x => PLACE_WORDS.test(x) || /\d/.test(x));
+      if (H_ADDRESS.test(bareHead(l))) {
+        const ks = block(i, 3, x => (PLACE_WORDS.test(x) || /\d/.test(x)) && !realHead(x));
         if (ks.length) { out.address = ks.map(k => lines[k]).join(', ').replace(/,\s*,/g, ',').replace(/,\s*$/, ''); used[i] = true; ks.forEach(k => { used[k] = true; }); }
       }
       // CORDIAL INVITATION FROM / WITH BEST COMPLIMENTS FROM: one inviter per line under it
-      if (H_INVITE.test(l)) {
+      if (H_INVITE.test(bareHead(l))) {
         const ks = block(i, 6, x => !KIDS.test(x) && !KIDS_LINE.test(x) && (!findDate(x, 2000) && !PLACE_WORDS.test(x.replace(/,/g, '')) || /&|,/.test(x) && !/\d/.test(x)));
         ks.forEach(k => { const v = lines[k].replace(/^[&,\s]+|[,\s]+$/g, ''); used[k] = true; if (v && /[A-Za-z\u0900-\u097F]{2,}/.test(v) && !out.inviters.some(x => norm2(x) === norm2(v))) out.inviters.push(v); });
         if (ks.length) used[i] = true;
@@ -345,12 +352,16 @@ const PdfCard = (() => {
     // "Shubh Vivah" printed as a heading over that day's functions is not a function of its own
     out.events = out.events.filter(e => !(/^(wedding|शुभ विवाह)$/i.test(e.name) && e.date.length <= 10 && out.events.some(x => x !== e && x.date.slice(0, 10) === e.date.slice(0, 10))));
     // inviters are people or families: not a monogram ("S|A"), not a sentence ("Baraat will depart from…")
-    out.inviters = out.inviters.filter(v => /[A-Za-z]{4,}|[\u0900-\u097F]{3,}/.test(v) && !/\b(?:will|depart|proceed|residence|request|invite)\b/i.test(v) && v.split(/\s+/).length <= 10);
+    out.inviters = out.inviters.map(v => v.replace(/(?:\+?91[\s-]?)?[6-9]\d{4}[\s-]?\d{0,5}\b/g, '').replace(/[\s,·|-]+$/, '').trim())
+      .filter((v, k, all) => !all.slice(0, k).some(x => norm2(x) === norm2(v) || norm2(x).length > 6 && (norm2(x).includes(norm2(v)) || norm2(v).includes(norm2(x))) || Math.abs(norm2(x).length - norm2(v).length) <= 2 && similar(norm2(x), norm2(v)) > .7))
+      .filter(v => /[A-Za-z]{4,}|[\u0900-\u097F]{3,}/.test(v) && !/\b(?:will|depart|proceed|residence|request|invite)\b/i.test(v) && v.split(/\s+/).length <= 10);
     // the little ones' request: its line and the lines under it (their names), up to the next heading
     if (out.kids && !/\n/.test(out.kids)) {
       const i = lines.findIndex(l => l === out.kids || out.kids.startsWith(l));
       if (i >= 0) { const more = []; for (let k = i + 1; k < lines.length && more.length < 3; k++) { const l = lines[k]; if (H_ADDRESS.test(l) || H_VENUE.test(l) || H_INVITE.test(l) || H_ANY.test(l) || /\d{3}/.test(digits(l)) || l.split(' ').length > 9) break; more.push(l); used[k] = true; } if (more.length) out.kids = [out.kids, ...more].join('\n'); }
     }
+    if (out.kids) out.kids = [...new Set(out.kids.split('\n').map(l => l.replace(/^(?:[OoQ0)(\]\[|।.\s]+)(?=[\u0900-\u097FA-Za-z])/, '').replace(/[\s)(\]\[|«»]+$/, '').trim())
+      .filter(l => /[A-Za-z]{3,}|[\u0900-\u097F]{2,}/.test(l) && !KIDS.test(l) || KIDS.test(l) && l.replace(KIDS, '').trim().length > 6))].join('\n');
     out.quotes = out.quotes.filter(q => /[॥]/.test(q) || !/करें|करते\s*हैं|पधार|आमंत्रित|उपस्थिति|सादर|request|invite/i.test(q));
     // a well-known verse whose two halves were read apart (or the wrong way round) is put back together
     for (let k = 0; k + 1 < VERSES.length; k += 2) {
@@ -619,6 +630,23 @@ const PdfCard = (() => {
       const both = free(i + 1) && /[।,]$/.test(l) && /[।॥]$/.test(lines[i + 1]) && !/\d/.test(digits(lines[i + 1]));
       out.quotes.push(both ? l + '\n' + lines[i + 1] : l); used[i] = true; if (both) used[i + 1] = true;
     });
+    const JOINER = /^(?:weds?|&|and|with|संग|सँग|❤|♥)$/i;
+    if (LATE.test(out.host1) || LATE.test(out.host2)) {
+      if (LATE.test(out.host1)) out.host1 = ''; if (LATE.test(out.host2)) out.host2 = '';
+      if (!out.host1 && out.host2) { out.host1 = out.host2; out.host2 = ''; }
+    }
+    // late people joined by "AND" / "&" on lines of their own are the grandparents ("Lt. Smt. Dropati" / AND / "Lt. Sh. Angur Singh")
+    lines.forEach((l, i) => {
+      if (!LATE.test(l)) return;
+      const both = JOINER.test(lines[i + 1] || '') && LATE.test(lines[i + 2] || '') ? `${l} & ${lines[i + 2]}` : l;
+      if (!out.grandparents1 && !out.grandparents2 || both !== l && !(out.grandparents1 || '').includes(lines[i + 2])) out.grandparents1 = both;
+    });
+    // the couple: the names around a "weds" / "&" / "संग" line of its own (never a late person or a sentence)
+    if (!out.host1) {
+      const nameish = x => x && x.split(' ').length <= 4 && !LATE.test(x) && !PHRASE.test(x) && !NOT_A_NAME.test(x) && !/\d/.test(digits(x)) && /^[A-Z\u0900-\u097F]/.test(x);
+      const i = lines.findIndex((l, k) => JOINER.test(l) && nameish(lines[k - 1]) && nameish(lines[k + 1]));
+      if (i > 0) { out.host1 = cleanName(lines[i - 1]); out.host2 = cleanName(lines[i + 1]); }
+    }
     tidyUp(out, lines, used);
     out.extra = lines.filter((l, i) => !used[i]);
     return out;
@@ -736,8 +764,10 @@ const PdfCard = (() => {
         }
         let all = pages.flatMap(p => p.ocr ? p.ocr.lines : p.lines), allSizes = pages.flatMap(p => p.ocr ? p.ocr.sizes : p.sizes);
         let found = withNames(parse(all, { ocr: pages.every(p => p.ocr) }), all, allSizes);
-        if (!found.host1) {
-          await addStylish(pages.filter(p => p.ocr), opts.progress);
+        const couple = d => d && d.host1 && (d.host2 || !/wedding|engagement|reception|anniversary|sangeet|haldi|mehendi/.test(d.type));
+        for (const how of [{ passes: true }, { florence: true }]) {
+          if (couple(found)) break;
+          await addStylish(pages.filter(p => p.ocr), opts.progress, how);
           all = pages.flatMap(p => p.ocr ? p.ocr.lines : p.lines); allSizes = pages.flatMap(p => p.ocr ? p.ocr.sizes : p.sizes);
           found = withNames(parse(all, { ocr: pages.every(p => p.ocr) }), all, allSizes);
         }
@@ -750,11 +780,14 @@ const PdfCard = (() => {
   }
   // Stylish English names Tesseract could not read: the vision model looks at the first pages (where names are
   // printed) only when the names are still missing, and its lines are put in their place on the page
-  async function addStylish(pages, progress) {
+  async function addStylish(pages, progress, how = { passes: true, florence: true }) {
     for (const [k, p] of pages.slice(0, 2).entries()) {
       if (!p.ocr || !p.ocr.img) continue;
       let extra = [];
-      try { extra = await florenceLines(p.ocr.img, (f, msg) => progress && progress(f, `Page ${k + 1}: ${msg}`)); } catch (e) { break; }
+      // more Tesseract passes first (other sizes and ways of reading), then the vision model for script fonts
+      if (how.passes) try { const more = await ocr(p.ocr.img.src, (f, msg) => progress && progress(f, `Page ${k + 1}: ${msg || `looking closer… ${Math.round((f || 0) * 100)}%`}`), { passes: EXTRA_PASSES });
+        more.lines.forEach((s, i) => extra.push({ s, y: more.ys[i], z: more.sizes[i] })); } catch (e) { /* keep what was read */ }
+      if (how.florence) try { extra.push(...await florenceLines(p.ocr.img, (f, msg) => progress && progress(f, `Page ${k + 1}: ${msg}`))); } catch (e) { /* too slow here: skipped */ }
       for (const f of extra) {
         if (p.ocr.lines.some((l, i) => Math.abs((p.ocr.ys[i] || 0) - f.y) < .02 && norm(l).includes(norm(f.s).slice(0, 5)))) continue;
         const at = p.ocr.ys.findIndex(y => y > f.y), i = at < 0 ? p.ocr.lines.length : at;
@@ -790,8 +823,10 @@ const PdfCard = (() => {
     }
     let all = pages.flatMap(p => p.ocr.lines), sizes = pages.flatMap(p => p.ocr.sizes);
     let details = withNames(parse(all, { ocr: true }), all, sizes);
-    if (!details.host1) {
-      await addStylish(pages, opts.progress);
+    const couple = d => d && d.host1 && (d.host2 || !/wedding|engagement|reception|anniversary|sangeet|haldi|mehendi/.test(d.type));
+    for (const how of [{ passes: true }, { florence: true }]) {
+      if (couple(details)) break;
+      await addStylish(pages, opts.progress, how);
       all = pages.flatMap(p => p.ocr.lines); sizes = pages.flatMap(p => p.ocr.sizes);
       details = withNames(parse(all, { ocr: true }), all, sizes);
     }
@@ -802,12 +837,16 @@ const PdfCard = (() => {
   // the heading, the invocation, dates and places are left out. "Aarav & Diya" in one big line is split.
   const NOT_A_NAME = /invit|wedding|marriage|ceremony|save\s*the\s*date|together|celebrat|request|pleasure|family|blessing|ganesh|ganesha|namah|shubh|vivah|reception|engagement|birthday|anniversary|programme|venue|rsvp|विवाह|शुभ|गणेश|नमः|ॐ|आमंत्रण|आमन्त्रण|निमंत्रण|निमन्त्रण|सादर|परिवार|कार्यक्रम|स्थल|स्थान|निवेदक|दर्शनाभिलाषी|सगाई|जन्मदिन|मंगल|आशीर्वाद/i;
   const PHRASE = /\b(together|families|family|their|invite|request|honour|honor|presence|pleasure|celebrate|join\s*us|you)\b|परिवार|आमंत्रित|सादर|पधारें/i;
+  const LATE = /^(?:late|lt\.?|swargiya|swargiy|स्व[॰.]?|स्वर्गीय|स्वर्गवासी)(?=[\s.]|$)/i;
   function withNames(d, lines, sizes) {
-    if (d && (PHRASE.test(d.host1 || '') || PHRASE.test(d.host2 || ''))) d = { ...d, host1: '', host2: '' };
+    if (d && (PHRASE.test(d.host1 || '') || PHRASE.test(d.host2 || '') || LATE.test(d.host1 || '') || LATE.test(d.host2 || ''))) {
+      const late = [d.host1, d.host2].filter(h => LATE.test(h || ''));
+      d = { ...d, host1: '', host2: '', grandparents1: d.grandparents1 || late.join(' & ') };
+    }
     if (!d || d.host1 || !lines || !lines.length) return d;
     const JOIN = /\s+(?:weds|wed|with|and|&|संग|सँग|❤|♥)\s+/i;
     const cand = lines.map((l, i) => ({ l: clean(l).replace(/^[^A-Za-z\u0900-\u097F]+|[^A-Za-z\u0900-\u097F.]+$/g, ''), z: sizes[i] || 0, i }))
-      .filter(c => c.l.length >= 2 && c.l.split(' ').length <= 5 && !/\d/.test(digits(c.l)) && !NOT_A_NAME.test(c.l.replace(JOIN, ' ')) && !PHRASE.test(c.l)
+      .filter(c => c.l.length >= 2 && c.l.split(' ').length <= 5 && !/\d/.test(digits(c.l)) && !NOT_A_NAME.test(c.l.replace(JOIN, ' ')) && !PHRASE.test(c.l) && !LATE.test(c.l) && !/^(?:smt|shri|sh|mr|mrs|श्रीमती|श्री)\b\.?\s/i.test(c.l)
         && !EVENTS.some(([re]) => re.test(c.l)) && !VENUE_WORDS.test(c.l) && !/^(&|and|weds|संग|के साथ)$/i.test(c.l))
       .sort((a, b) => b.z - a.z || a.i - b.i);
     if (!cand.length) return d;
@@ -968,10 +1007,11 @@ const PdfCard = (() => {
     }
     return out;
   }
+  const EXTRA_PASSES = [[1400, 'grey', '6'], [1100, 'bw', '11'], [600, 'bw', '11'], [500, 'grey', '11']];
   async function ocr(src, progress, opts2 = {}) {
     if (!src) return { lines: [], sizes: [] };
     const T = await loadOcr(), img = await loadImg(src);
-    const passes = [[2000, 'grey', '3'], [2000, 'grey', '11'], [1100, 'grey', '11'], [2000, 'bw', '3'], [750, 'grey', '11'], [1600, 'neg', '11'], [1000, 'neg', '11']];
+    const passes = opts2.passes || [[2000, 'grey', '3'], [2000, 'grey', '11'], [1100, 'grey', '11'], [2000, 'bw', '3'], [750, 'grey', '11'], [1600, 'neg', '11'], [1000, 'neg', '11']];
     // "चि॰" is often read as "चि०" (a zero): the abbreviation mark goes back so the name is found
     const fix = x => String(x || '').replace(/([\u0900-\u0965\u0970-\u097F])०/g, '$1॰').replace(/[|_~]+/g, ' ').replace(/\s+/g, ' ').trim()
       .replace(/^(?:[@©®=«»*%&$¢•·°§¶+>]+\s*)+(?=[A-Za-z\u0900-\u097F])/, '').replace(/(?:\s+[«»*%&$¢•·°§¶+<>=©®]+|\s+[ःः]|\s[A-Za-z])$/, '').replace(/(\w);(\w)/g, '$1$2');
@@ -1027,14 +1067,25 @@ const PdfCard = (() => {
       }
       kept.push({ ...f, seen: 1, votes: { [f.s.replace(/\s+/g, ' ')]: 1 + f.conf / 1000 } });
     }
-    kept.forEach(k => { const w = k.s.split(' '), h = Math.floor(w.length / 2);
-      if (w.length >= 4 && w.length % 2 === 0) { const a = w.slice(0, h).join(' '), b = w.slice(h).join(' '); if (alike(a, b)) k.s = /[^\w\u0900-\u097F\s,.&]/.test(a) ? b : a; } });
     // each line as most passes read it ("Aanya" read four times beats "Aanva" read once)
     kept.forEach(k => { const best = Object.entries(k.votes).sort((a, b) => b[1] - a[1])[0]; if (best) k.s = best[0]; });
+    // a line holding the same words twice ("वेश, माधवी एवं मायरा वंश, माधवी एवं मायरा"): one copy, the one another pass read on its own
+    kept.forEach(k => { const w = k.s.split(' ').filter(x => /[\w\u0900-\u097F]/.test(x) && !/^[।॥|]+$/.test(x)), h = Math.floor(w.length / 2);
+      if (w.length < 4 || w.length % 2) return;
+      const a = w.slice(0, h).join(' '), b = w.slice(h).join(' ');
+      if (!alike(a, b)) return;
+      const alone = Object.keys(k.votes).map(v => v.trim());
+      k.s = alone.includes(a) && !alone.includes(b) ? a : b; });
     // a line read once short and once whole, one under the other: the whole one stays
     kept.sort((a, b) => a.y - b.y);
     for (let i = kept.length - 1; i > 0; i--) { const a = norm(kept[i].s), b = norm(kept[i - 1].s);
       if (a.length >= 8 && b.length >= 8 && Math.abs(kept[i].y - kept[i - 1].y) < .03) { if (b.startsWith(a)) kept.splice(i, 1); else if (a.startsWith(b)) kept.splice(i - 1, 1); } }
+    // a short piece that a longer reading of the same row already holds
+    const sameRow = (a, b) => Math.abs(a.y - b.y) < Math.max(.006, Math.min(a.z, b.z) / 1000 * .55);
+    for (let i = kept.length - 1; i >= 0; i--) {
+      const small = kept[i];
+      if (kept.some(big => big !== small && sameRow(big, small) && norm(big.s).length > norm(small.s).length && norm(big.s).includes(norm(small.s)) && (big.x0 == null || small.x0 == null || small.x0 >= big.x0 - .03 && small.x1 <= big.x1 + .03))) kept.splice(i, 1);
+    }
     // top to bottom; readings on the same line from left to right
     kept.sort((a, b) => Math.abs(a.y - b.y) < Math.max(.008, Math.min(a.z, b.z) / 1000 * .4) ? (a.x0 || 0) - (b.x0 || 0) : a.y - b.y);
     return { lines: kept.map(k => k.s), sizes: kept.map(k => k.z * (k.conf > 70 ? 1 : .8)), ys: kept.map(k => k.y), img };

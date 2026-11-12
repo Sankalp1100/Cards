@@ -1446,3 +1446,14 @@ test('card layouts: date badges, two functions in one box, section headings, gra
   assert.deepEqual(h.events.map(e => `${e.name} ${e.date}`), ['हल्दी 2026-12-12T10:00', 'मेहँदी 2026-12-12T17:00', 'बारात 2026-12-13T19:00']);
   assert.equal(h.venue, 'होटल राज पैलेस, सिविल लाइन्स, जयपुर – 302006');
 });
+
+test('a late person is never the couple: "Lt. Smt. … AND Lt. Sh. …" are the grandparents, the couple is around "weds"', () => {
+  const PdfCard = require('../js/pdfcard.js');
+  const d = PdfCard.parse(['शुभ विवाह', 'Lt. Smt. Dropati', 'AND', 'Lt. Sh. Angur Singh', '12 – 13 DEC 2026', 'of their beloved grandson', 'Rahul Singh', 'weds', 'Pooja Verma',
+    'Son of Smt. Sunita & Shri Ramesh Singh'], { ocr: true });
+  assert.equal(d.host1, 'Rahul Singh'); assert.equal(d.host2, 'Pooja Verma');
+  assert.equal(d.grandparents1, 'Lt. Smt. Dropati & Lt. Sh. Angur Singh');
+  const h = PdfCard.parse(['स्व. श्री रामप्रसाद जी', 'की पावन स्मृति में', 'चि॰ अमित', 'संग', 'आयु॰ नेहा'], { ocr: true });
+  assert.equal(h.host1, 'अमित'); assert.equal(h.host2, 'नेहा');
+  assert.ok(!/स्व/.test(h.host1 + h.host2), 'a late person is never a name of the couple');
+});

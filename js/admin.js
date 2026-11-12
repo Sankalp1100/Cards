@@ -1798,7 +1798,7 @@
         if (main && isGold(main) && ranked[1] && ranked[1].w > main.w * .25 && !isGold(ranked[1])) main = ranked[1];
         // a coloured background (deep green, maroon, navy…) is the card's colour itself
         { const [R, G, B] = bgRGB.map(v => v / 255), mx = Math.max(R, G, B), mn = Math.min(R, G, B), L = (mx + mn) / 2, D = mx - mn, S = D ? D / (1 - Math.abs(2 * L - 1)) : 0;
-          if (S > .25 && L > .06 && L < .8) { let H = mx === R ? ((G - B) / D) % 6 : mx === G ? (B - R) / D + 2 : (R - G) / D + 4; H = (H * 60 + 360) % 360; main = { w: 1, h: H, s: S, l: L }; } }
+          if (S > .25 && L > .06 && L < .8) { let H = mx === R ? ((G - B) / D) % 6 : mx === G ? (B - R) / D + 2 : (R - G) / D + 4; H = (H * 60 + 360) % 360; main = { w: all, h: H * all, s: S * all, l: L * all }; } }
         if (!main || main.w < all * .0004) return resolve({ h: 40, s: .05, dark: bgL < .45, word: bgL < .45 ? 'Noir' : 'Ivory', gold: 'gold', swatch: bgL < .45 ? '#161616' : '#f4eee2' });
         const hue = main.h / main.w, sat = Math.min(1, main.s / main.w), lig = main.l / main.w;
         let word = HUE_WORDS.find(([upTo]) => hue < upTo)[1];
@@ -1912,7 +1912,7 @@
   // Every detail read from the card, laid out to check (and change); "make again" rebuilds the videos with them
   const AU_FIELDS = [['host1', 'Name 1'], ['host2', 'Name 2'], ['parents1', 'Parents of name 1'], ['parents2', 'Parents of name 2'], ['grandparents1', 'Grandparents of name 1'],
     ['grandparents2', 'Grandparents of name 2'], ['title', 'Card heading'], ['invocation', 'Invocation'], ['venue', 'Venue', 1], ['address', 'Home address', 1], ['phones', 'Phone numbers'],
-    ['kids', 'Little ones (बाल मनुहार)'], ['quotes', 'Shlokas and quotes (one per line)', 2], ['inviters', 'Inviters / निवेदक (one per line)', 2]];
+    ['kids', 'Little ones (बाल मनुहार)', 2], ['quotes', 'Shlokas and quotes (one per line)', 2], ['inviters', 'Inviters / निवेदक (one per line)', 2]];
   const auEvRow = (e = {}) => `<div class="au-ev"><input data-e="name" value="${esc(e.name || '')}" placeholder="Function"><input data-e="date" type="datetime-local" value="${esc(/T/.test(e.date || '') ? e.date : e.date ? e.date + 'T00:00' : '')}"><input data-e="venue" value="${esc(e.venue || '')}" placeholder="Venue (if its own)"><button type="button" class="x" data-ev-x aria-label="Remove">✕</button></div>`;
   function renderAutoAll(d) {
     $('#auAllFields').innerHTML = `<label>Occasion <select data-f="type">${Object.entries(PRESETS).map(([k, p]) => `<option value="${k}"${k === d.type ? ' selected' : ''}>${p.icon || ''} ${esc(p.label)}</option>`).join('')}</select></label>`
@@ -1927,7 +1927,7 @@
     const d = { ...au.details };
     ['type', 'lang', ...AU_FIELDS.map(([k]) => k)].forEach(k => { d[k] = f(k); });
     d.phones = f('phones').split(/[,;]+/).map(x => x.trim()).filter(Boolean);
-    d.quotes = listOf(d.quotes); d.inviters = listOf(d.inviters);
+    d.quotes = listOf(d.quotes); d.inviters = listOf(d.inviters); d.kids = listOf(d.kids).join('\n');
     d.events = [...$('#auEvs').querySelectorAll('.au-ev')].map(r => ({ name: r.querySelector('[data-e="name"]').value.trim(), date: r.querySelector('[data-e="date"]').value.replace(/T00:00$/, ''), venue: r.querySelector('[data-e="venue"]').value.trim() })).filter(e => e.name);
     return d;
   }
