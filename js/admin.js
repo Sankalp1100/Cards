@@ -1923,8 +1923,7 @@
     $('#auAllFields').innerHTML = `<label>Occasion <select data-f="type">${Object.entries(PRESETS).map(([k, p]) => `<option value="${k}"${k === d.type ? ' selected' : ''}>${p.icon || ''} ${esc(p.label)}</option>`).join('')}</select></label>`
       + `<label>Language <select data-f="lang"><option value="en"${d.lang !== 'hi' ? ' selected' : ''}>English</option><option value="hi"${d.lang === 'hi' ? ' selected' : ''}>हिन्दी</option></select></label>`
       + AU_FIELDS.map(([k, label, wide]) => { const v = k === 'phones' ? (d.phones || []).join(', ') : k === 'quotes' ? quoteList(d.quotes).join('\n') : wide === 2 ? listOf(d[k]).join('\n') : d[k] || '';
-        return `<label class="${wide ? 'wide' : ''}${v ? '' : ' missing'}">${esc(label)} ${wide === 2 ? `<textarea data-f="${k}" rows="${Math.min(8, Math.max(3, v.split('
-').length + 1))}">${esc(v)}</textarea>` : `<input data-f="${k}" value="${esc(v)}">`}</label>`; }).join('');
+        return `<label class="${wide ? 'wide' : ''}${v ? '' : ' missing'}">${esc(label)} ${wide === 2 ? `<textarea data-f="${k}" rows="${Math.min(8, Math.max(3, v.split('\n').length + 1))}">${esc(v)}</textarea>` : `<input data-f="${k}" value="${esc(v)}">`}</label>`; }).join('');
     $('#auEvs').innerHTML = (d.events && d.events.length ? d.events : [{}]).map(auEvRow).join('');
     $('#auText').value = moreOf(d).join('\n');
   }
@@ -1956,8 +1955,7 @@
     $('#edFields').innerHTML = `<label>Occasion <select data-f="type">${Object.entries(PRESETS).map(([k, p]) => `<option value="${k}"${k === d.type ? ' selected' : ''}>${p.icon || ''} ${esc(p.label)}</option>`).join('')}</select></label>`
       + `<label>Language <select data-f="lang"><option value="en"${d.lang !== 'hi' ? ' selected' : ''}>English</option><option value="hi"${d.lang === 'hi' ? ' selected' : ''}>हिन्दी</option></select></label>`
       + AU_FIELDS.map(([k, label, wide]) => { const v = k === 'phones' ? (d.phones || []).join(', ') : k === 'quotes' ? quoteList(d.quotes).join('\n') : wide === 2 ? listOf(d[k]).join('\n') : d[k] || '';
-        return `<label class="${wide ? 'wide' : ''}${v ? '' : ' missing'}">${esc(label)} ${wide === 2 ? `<textarea data-f="${k}" rows="${Math.min(8, Math.max(3, v.split('
-').length + 1))}">${esc(v)}</textarea>` : `<input data-f="${k}" value="${esc(v)}">`}</label>`; }).join('');
+        return `<label class="${wide ? 'wide' : ''}${v ? '' : ' missing'}">${esc(label)} ${wide === 2 ? `<textarea data-f="${k}" rows="${Math.min(8, Math.max(3, v.split('\n').length + 1))}">${esc(v)}</textarea>` : `<input data-f="${k}" value="${esc(v)}">`}</label>`; }).join('');
     $('#edEvs').innerHTML = (d.events && d.events.length ? d.events : [{}]).map(auEvRow).join('');
     $('#edMore').value = moreOf(d).join('\n');
     $('#edPages').innerHTML = (ed.pictures || []).map((u, i) => `<a href="${u}" target="_blank" rel="noopener" title="Page ${i + 1}"><img src="${u}" alt="Card page ${i + 1}"></a>`).join('');
