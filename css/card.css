@@ -1645,3 +1645,12 @@ footer.finale.has-scene .finale-mandala { display: none; }
   .in .section-title, .section-title.in, .reveal.in .stage-date b, .thanks.in, .stage-ch.reveal.in .stage-date b { animation: none; background-position: -60% 0, 0 0; }
   .bd-burst, .bd-tube, .badge-toy svg, .couple-stage::before, .st-retro .pcard::after { animation: none !important; }
 }
+
+/* The scratch card takes each style's own shape */
+.scratch-card.sc-bloom, .scratch-card.sc-pichwai, .scratch-card.sc-mehendi { width: min(280px, 82%); aspect-ratio: 1; border-radius: 50%; }
+.scratch-card.sc-retro, .scratch-card.sc-neon, .scratch-card.sc-toybox { border-radius: 14px;
+  -webkit-mask: radial-gradient(circle 16px at 0 50%, #0000 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 16px at 100% 50%, #0000 98%, #000) right / 51% 100% no-repeat;
+          mask: radial-gradient(circle 16px at 0 50%, #0000 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 16px at 100% 50%, #0000 98%, #000) right / 51% 100% no-repeat; }
+.scratch-card.sc-minimal, .scratch-card.sc-ivory { aspect-ratio: 4 / 5; width: min(270px, 80%); border-radius: 140px 140px 18px 18px; }
+.scratch-card.sc-marigold { aspect-ratio: 1; width: min(290px, 84%); border-radius: 36px; transform: rotate(45deg) scale(.86); }
+.scratch-card.sc-marigold .scratch-under > * { transform: rotate(-45deg); }

@@ -195,7 +195,7 @@
     if (!d) return '';
     return `
       <article class="tpl-silk" data-no="${d.no}">
-        <a class="silk-poster" href="card.html?demo#${Catalog.demoCode(d)}" target="_blank" rel="noopener" aria-label="Live demo: premium silk curtain invitation, design ${Templates.serial(d.no)}">
+        <a class="silk-poster" href="card.html?demo#${Codec.encode({ ...Codec.decode(Catalog.demoCode(d)), intro: 'silk' })}" target="_blank" rel="noopener" aria-label="Live demo: premium silk curtain invitation, design ${Templates.serial(d.no)}">
           <span class="sp-badge">✨ Premium · Silk curtain</span>
           <span class="sp-arch"><span class="sp-mono">D<i>|</i>A</span><span class="sp-names">Diya <i>&amp;</i> Aarav</span><span class="sp-line">request the pleasure of your company</span></span>
           <i class="sp-drape l"><i class="sp-cord"></i></i><i class="sp-drape r"><i class="sp-cord"></i></i>

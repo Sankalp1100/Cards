@@ -384,7 +384,8 @@
   // How the invitation opens: the invite's own choice, else the catalog's, else the design's.
   function introOf(d, t) {
     const own = CATALOG[t.no] && CATALOG[t.no].intro;
-    return INTROS[d.intro] ? d.intro : isPremium(d) ? 'silk' : INTROS[own] ? own : t.intro || 'envelope';
+    // every design keeps its own opening; the silk curtain shows only where it was chosen (a card's intro, or the catalog)
+    return INTROS[d.intro] ? d.intro : INTROS[own] ? own : t.intro || 'envelope';
   }
   const OPEN_MS = { envelope: 1500, doors: 1700, curtains: 1600, scroll: 1800, giftbox: 1500, cardflip: 1700, silk: 2100 };
   // The premium experience (switched on per card, and always on the website's live demos): the silk curtain, a date to
@@ -675,7 +676,7 @@
       ${prem && when ? `
       <section class="scratch reveal" id="reveal-date">${head('A little surprise', 'Save the Date', ' plain')}
         <p class="scratch-note">Some dates are meant to be discovered…</p>
-        <div class="scratch-card" id="scratch">
+        <div class="scratch-card sc-${esc(t.style || 'palace')}" id="scratch">
           <div class="scratch-under"><b>${when.getDate()}<sup>${ordinal(when.getDate()).slice(-2)}</sup></b><span>${esc(when.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }))}</span>
             <small>${esc(when.toLocaleDateString('en-IN', { weekday: 'long' }))}${Core.hasTime(d.date) ? ` · ${esc(fmtTime(when))}` : ''}</small></div>
           <canvas class="scratch-cover" aria-label="Scratch to reveal the date"></canvas>
@@ -867,7 +868,12 @@
       cv.width = Math.round(r.width * k); cv.height = Math.round(r.height * k);
       ctx.setTransform(k, 0, 0, k, 0, 0);
       const g = ctx.createLinearGradient(0, 0, r.width, r.height);
-      g.addColorStop(0, '#b8862b'); g.addColorStop(.35, '#f6dc8a'); g.addColorStop(.5, '#fff3c4'); g.addColorStop(.65, '#e9c060'); g.addColorStop(1, '#a8761f');
+      // the foil takes the design's own metal: its accent colour, lit and shaded
+      const cs = getComputedStyle(document.body), acc = (cs.getPropertyValue('--accent') || '#e9b949').trim(), acc2 = (cs.getPropertyValue('--accent2') || acc).trim();
+      const rgb = c => { ctx.fillStyle = '#b8862b'; ctx.fillStyle = c; const v = ctx.fillStyle; // the canvas normalises any colour
+        return v[0] === '#' ? [1, 3, 5].map(i => parseInt(v.slice(i, i + 2), 16)) : (v.match(/[\d.]+/g) || [184, 134, 43]).slice(0, 3).map(Number); };
+      const mix = (c, w, p) => { const a = rgb(c), b = w === '#fff' ? [255, 255, 255] : [0, 0, 0]; return `rgb(${a.map((x, i) => Math.round(x + (b[i] - x) * p / 100)).join(',')})`; };
+      [[0, mix(acc, '#000', 35)], [.35, mix(acc, '#fff', 45)], [.5, mix(acc, '#fff', 75)], [.65, mix(acc2, '#fff', 25)], [1, mix(acc, '#000', 40)]].forEach(([o, c]) => g.addColorStop(o, c));
       ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = g; ctx.fillRect(0, 0, r.width, r.height);
       // Brushed-metal streaks, a soft sheen band and a few glints, so it reads as real foil
       for (let i = 0; i < 90; i++) { const y = (i * 37) % r.height; ctx.fillStyle = `rgba(${i % 2 ? '255,250,225' : '120,80,20'},${(.05 + (i * 13 % 7) / 70).toFixed(3)})`; ctx.fillRect(0, y, r.width, 1); }
