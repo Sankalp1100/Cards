@@ -1171,16 +1171,17 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.eval(`document.querySelector('.bottom-nav [data-videos]').click()`);
     assert.equal(await page.eval(`document.body.dataset.tab`), 'videos');
     assert.equal(await page.eval(`document.querySelector('#filmGrid .vid-tile').dataset.film`), 'film-royal-darbar', 'Royal Darbar comes first');
-    assert.equal(await page.eval(`document.querySelectorAll('#filmGrid .vid-tile').length`), 20, '20 premium films at a time');
+    assert.equal(await page.eval(`document.querySelectorAll('#filmGrid [data-film]').length`), 20, '20 premium films at a time');
+    assert.equal(await page.eval(`document.querySelectorAll('#filmGrid .vid-tile')[1].dataset.story`), 'story-lovestory', 'Our Love Story sits second in the first row');
     for (let i = 0; i < 10 && !(await page.eval(`document.querySelector('#filmMore').hidden`)); i++) await page.eval(`document.querySelector('#filmMore').click()`);
-    assert.equal(await page.eval(`document.querySelectorAll('#filmGrid .vid-tile').length`), 81, 'all 81 premium films');
+    assert.equal(await page.eval(`document.querySelectorAll('#filmGrid [data-film]').length`), 81, 'all 81 premium films');
     assert.equal(await page.eval(`document.querySelectorAll('#storyGrid .vid-tile').length`), 10, 'lookalike story films left out');
     assert.equal(await page.eval(`document.querySelector('#storyGrid .vid-tile').dataset.look`), 'story-lovestory', 'Our Love Story comes first');
     assert.equal(await page.eval(`document.querySelectorAll('#vidsGrid .vid-tile').length`), 10, 'one tile per scene a story film does not already show');
     const all = await page.eval(`[...document.querySelectorAll('#videos .vid-tile')].map(t => t.dataset.film || t.dataset.look)`);
     assert.equal(all.length, 101, '101 films in all');
     assert.equal(new Set(all).size, 101, 'no film twice');
-    assert.equal(await page.eval(`[...document.querySelectorAll('#filmGrid img')].every(i => i.getAttribute('src') === 'img/films/' + i.closest('[data-film]').dataset.film + '.jpg')`), true);
+    assert.equal(await page.eval(`[...document.querySelectorAll('#filmGrid [data-film] img')].every(i => i.getAttribute('src') === 'img/films/' + i.closest('[data-film]').dataset.film + '.jpg')`), true);
     assert.equal(await page.eval(`!!document.querySelector('#vidsMore, #vidsChips, .vids-feature')`), false, 'no repeats behind "Show more", no real client video');
     // a premium film plays in the player, in its own language
     await page.eval(`document.querySelector('#filmGrid [data-film="film-royal-darbar"]').click()`);

@@ -489,7 +489,15 @@
   const FILM_PAGE = 20;
   let filmShown = FILM_PAGE;
   function renderFilms() {
-    $('#filmGrid').innerHTML = Films.LIST.slice(0, filmShown).map(f => `
+    // Our Love Story (the #1 story film) sits second in this first row, right after Royal Darbar
+    const love = typeof VIDEO_STORIES !== 'undefined' && VIDEO_STORIES.find(v => v[0] === 'story-lovestory');
+    const loveTile = love ? `
+    <button type="button" class="vid-tile love-tile" data-story="${love[0]}" aria-label="Play ${esc(love[1])}">
+      <img src="img/stories/${love[0]}.jpg" alt="" loading="lazy" decoding="async" width="270" height="480">
+      <span class="vid-play" aria-hidden="true">▶</span>
+      <span class="vid-cap"><b>${esc(love[1])}</b><small>✨ New · cinematic love story · ${esc(love[3])}</small></span>
+    </button>` : '';
+    $('#filmGrid').innerHTML = Films.LIST.slice(0, filmShown).map((f, i) => (i === 1 ? loveTile : '') + `
     <button type="button" class="vid-tile film-tile" data-film="${f.id}" aria-label="Play the ${esc(f.name)} premium film">
       <img src="img/films/${f.id}.jpg" alt="" loading="lazy" decoding="async" width="270" height="480">
       <span class="vid-play" aria-hidden="true">▶</span>
@@ -499,7 +507,7 @@
   }
   renderFilms();
   $('#filmMore').addEventListener('click', () => { filmShown += FILM_PAGE; renderFilms(); });
-  $('#filmGrid').addEventListener('click', e => { const b = e.target.closest('[data-film]'); if (b) openFilm(b.dataset.film); });
+  $('#filmGrid').addEventListener('click', e => { const b = e.target.closest('[data-film], [data-story]'); if (b) { if (b.dataset.story) openVideo(b.dataset.story); else openFilm(b.dataset.film); } });
   $('#storyGrid').addEventListener('click', e => { const b = e.target.closest('[data-look]'); if (b) openVideo(b.dataset.look); });
 
   let studioScript = null;
@@ -1169,4 +1177,7 @@
     // Drop ?order=… from the address, so refreshing the page does not open the form again.
     history.replaceState(history.state, '', location.pathname + location.hash);
   }
+  // A direct link to a story video or a look: index.html?video=story-lovestory opens it straight away
+  const wantedVideo = new URLSearchParams(location.search).get('video');
+  if (wantedVideo && (VIDEO_STORIES.some(v => v[0] === wantedVideo) || VIDEO_LOOKS.some(l => l[0] === wantedVideo))) openVideo(wantedVideo);
 })();
