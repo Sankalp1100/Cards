@@ -712,13 +712,15 @@ const Studio = (() => {
 
   // ---------- Moving things (stateless: the frame at any time t is the same, so the preview can jump) ----------
   function petals(c, t, n, cols, seed, size = 1) {
+    // Painted petal sprites tumbling as they fall; every ninth is near the camera: bigger, faster and out of focus
     const R = rng(seed);
     for (let i = 0; i < n; i++) {
-      const x0 = R() * W, y0 = R() * H, sp = 50 + R() * 70, sz = (9 + R() * 12) * size, ph = R() * TAU, rs = (R() - .5) * 2;
-      const y = ((y0 + t * sp) % (H + 120)) - 60, x = x0 + Math.sin(t * .8 + ph) * 46;
-      c.save(); c.translate(x, y); c.rotate(ph + t * rs); c.scale(1, Math.abs(Math.cos(t * 1.4 + ph)) * .6 + .4);
-      c.fillStyle = cols[i % cols.length]; c.globalAlpha = .88;
-      c.beginPath(); c.moveTo(0, -sz); c.quadraticCurveTo(sz * .9, 0, 0, sz * .7); c.quadraticCurveTo(-sz * .9, 0, 0, -sz); c.fill();
+      const near = i % 9 === 4, x0 = R() * W, y0 = R() * H, sp = (50 + R() * 70) * (near ? 1.8 : 1), sz = (9 + R() * 12) * size * (near ? 2.4 : 1), ph = R() * TAU, rs = (R() - .5) * 2;
+      const y = ((y0 + t * sp) % (H + 200)) - 100, x = x0 + Math.sin(t * .8 + ph) * 46;
+      const spr = petalSprite(cols[i % cols.length], near), k = sz / 29;
+      c.save(); c.translate(x, y); c.rotate(ph + t * rs); c.scale(k, k * (Math.abs(Math.cos(t * 1.4 + ph)) * .7 + .3));
+      c.globalAlpha = near ? .62 : .95;
+      c.drawImage(spr, -spr.width / 2, -spr.height / 2);
       c.restore();
     }
   }
@@ -1911,8 +1913,8 @@ const Studio = (() => {
 
   };
   // The moods: each scene's own colours first, then two more (light, tint and text colours), as looks of their own.
-  const SCENES = Object.keys(LOOKS);
-  for (const id of SCENES) {
+  const SCENE_IDS = Object.keys(LOOKS);
+  for (const id of SCENE_IDS) {
     const B = LOOKS[id];
     B.scene = id;
     for (const md of B.moods || []) {
@@ -1945,7 +1947,7 @@ const Studio = (() => {
     { key: 'terracotta', mood: 'Terracotta', tint: [['multiply', '#f0b89a', .55], ['soft-light', '#b04a20', .35]], names: ['#8a2e10', '#ffcfb0'] }
   ];
   const SCRIPTS = ['Playball', 'Dancing Script', 'Satisfy', 'Cookie'];
-  SCENES.forEach((id, si) => {
+  SCENE_IDS.forEach((id, si) => {
     const B = LOOKS[id], dark = +(B.shadow[0].match(/\d+/) || [0])[0] < 200, have = new Set([B.mood, ...(B.moods || []).map(md => md.mood)]);
     const need = 14 - (B.moods || []).length;
     let added = 0;
@@ -2125,11 +2127,37 @@ const Studio = (() => {
       c.save(); path(); c.strokeStyle = gg; c.lineWidth = 10; c.stroke(); c.restore();
       return;
     }
-    const k = s / ih, dw = iw * k, dh = s, sway = Math.sin(t * .9) * .006;
+    const k = s / ih, dw = iw * k, dh = s, sway = Math.sin(t * .9) * .006, light = isLight(L);
     c.save();
-    c.fillStyle = 'rgba(30,15,10,.22)'; c.beginPath(); c.ellipse(cx, foot, dw * .42, dh * .03, 0, 0, TAU); c.fill();
-    c.translate(cx, foot); c.rotate(sway); c.drawImage(img, -dw / 2, -dh, dw, dh);
+    // Light from behind them (warm on an evening scene), a soft wide shadow and a darker one where they stand
+    glow(c, cx, foot - dh * .55, dh * .62, light ? 'rgba(255,250,232,.42)' : 'rgba(255,196,120,.3)');
+    for (const [rx, ry, a] of [[dw * .62, dh * .07, .2], [dw * .4, dh * .028, .38]]) {
+      c.save(); c.translate(cx, foot - dh * .006); c.scale(1, ry / rx);
+      const g = c.createRadialGradient(0, 0, 0, 0, 0, rx); g.addColorStop(0, `rgba(25,12,6,${a})`); g.addColorStop(1, 'rgba(25,12,6,0)');
+      c.fillStyle = g; c.beginPath(); c.arc(0, 0, rx, 0, TAU); c.fill(); c.restore();
+    }
+    const lit = rimLit(img, light);
+    c.translate(cx, foot); c.rotate(sway);
+    if (lit) c.drawImage(lit.cv, -dw / 2 - lit.pad * k, -dh - lit.pad * k, lit.cv.width * k, lit.cv.height * k);
+    else c.drawImage(img, -dw / 2, -dh, dw, dh);
     c.restore();
+  }
+  // A cut-out picture with a soft rim of light around its edge, so it sits in the scene's light (painted once)
+  const rimCache = new Map();
+  function rimLit(img, light) {
+    if (typeof document === 'undefined') return null;
+    const key = img.src + light;
+    if (rimCache.has(key)) return rimCache.get(key);
+    let out = null;
+    try {
+      const iw = img.naturalWidth, ih = img.naturalHeight, pad = Math.round(ih * .03), cv = canvasOf(iw + pad * 2, ih + pad * 2), c = cv.getContext('2d');
+      c.shadowColor = light ? 'rgba(255,252,240,.9)' : 'rgba(255,214,150,.85)'; c.shadowBlur = ih * .018;
+      c.drawImage(img, pad, pad);
+      c.shadowColor = 'transparent'; c.drawImage(img, pad, pad);
+      out = { cv, pad };
+    } catch (e) { out = null; }
+    rimCache.set(key, out);
+    return out;
   }
 
   // A bride and groom side by side, drawn flat (front view). (x, y) = between their feet, `s` = their height.
@@ -2303,6 +2331,30 @@ const Studio = (() => {
       const y = ease(q) * (H + 400) - 200, g = c.createLinearGradient(0, y - 200, 0, y + 200);
       g.addColorStop(0, 'rgba(255,236,190,0)'); g.addColorStop(.5, 'rgba(255,226,160,.55)'); g.addColorStop(1, 'rgba(255,236,190,0)');
       c.fillStyle = g; c.fillRect(0, y - 200, W, 400);
+    } else if (kind === 'sparkle') {
+      // Golden stars twinkle across the screen and fade
+      const R = rng(29);
+      c.save();
+      for (let i = 0; i < 70; i++) {
+        const x = R() * W, y = R() * H, ph = R(), r = (10 + R() * 22) * Math.sin(Math.PI * clamp(q * 1.6 - ph * .6));
+        if (r <= .5) continue;
+        c.globalAlpha = .9 * (1 - q);
+        c.fillStyle = i % 3 ? '#ffd76a' : '#fff6d8';
+        c.beginPath(); c.moveTo(x, y - r * 2); c.quadraticCurveTo(x, y, x + r * 2, y); c.quadraticCurveTo(x, y, x, y + r * 2); c.quadraticCurveTo(x, y, x - r * 2, y); c.quadraticCurveTo(x, y, x, y - r * 2); c.fill();
+      }
+      c.restore();
+    } else if (kind === 'shutter') {
+      // Golden blinds open one after another from the top
+      const n = 8, h = H / n;
+      c.save();
+      for (let i = 0; i < n; i++) {
+        const e = ease(clamp(q * 1.7 - i * .09)), bh = h * (1 - e);
+        if (bh < 1) continue;
+        const y = i * h + (h - bh) / 2, g = c.createLinearGradient(0, y, 0, y + bh);
+        g.addColorStop(0, 'rgba(250,226,170,.85)'); g.addColorStop(.5, 'rgba(255,244,214,.92)'); g.addColorStop(1, 'rgba(214,170,90,.85)');
+        c.fillStyle = g; c.fillRect(0, y, W, bh);
+      }
+      c.restore();
     } else if (kind === 'bloom') {
       glow(c, W / 2, H / 2, 1100, `rgba(255,214,140,${(.5 * (1 - q)).toFixed(2)})`);
     } else if (kind === 'petals') {
@@ -2429,11 +2481,18 @@ const Studio = (() => {
     c.save(); c.globalAlpha = alpha; c.strokeStyle = L.col.gold; c.fillStyle = L.col.gold; c.lineWidth = 2.5;
     let gapW = 30;
     if (word) { setText(c, L, fontOf(L, m.it.hi ? 'hser' : 'serif', z), 'accent', alpha); c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(word, cx, y); gapW = c.measureText(word).width / 2 + 26; c.shadowBlur = 0; }
+    // A tapering gold rule with a curl and a bud at each end, and a little lotus in the middle
     for (const d of [-1, 1]) {
-      c.beginPath(); c.moveTo(cx + d * gapW, y); c.lineTo(cx + d * half, y); c.stroke();
-      c.beginPath(); c.ellipse(cx + d * (half - 4), y, 10, 4, 0, 0, TAU); c.fill();
+      const a = cx + d * gapW, b = cx + d * half;
+      c.beginPath(); c.moveTo(a, y); c.quadraticCurveTo((a + b) / 2, y - 3.2, b, y); c.quadraticCurveTo((a + b) / 2, y + 3.2, a, y); c.fill();
+      c.lineWidth = 2; c.beginPath(); c.arc(b - d * 12, y - 8, 7, Math.PI * .5, Math.PI * 2.1); c.stroke();
+      c.beginPath(); c.ellipse(b + d * 6, y, 8, 3.5, 0, 0, TAU); c.fill();
+      for (const k of [.3, .55]) { c.beginPath(); c.arc(a + (b - a) * k, y - 8, 2.4, 0, TAU); c.arc(a + (b - a) * k, y + 8, 2.4, 0, TAU); c.fill(); }
     }
-    if (!word) { c.beginPath(); c.moveTo(cx, y - 12); c.lineTo(cx + 12, y); c.lineTo(cx, y + 12); c.lineTo(cx - 12, y); c.closePath(); c.fill(); }
+    if (!word) {
+      for (const ang of [-1.1, -.55, 0, .55, 1.1]) leaf(c, cx, y + 6, ang ? 22 : 28, 7, -Math.PI / 2 + ang, L.col.gold, false);
+      c.beginPath(); c.ellipse(cx, y + 7, 16, 4, 0, 0, TAU); c.fill();
+    }
     c.restore();
   }
 
@@ -2447,7 +2506,26 @@ const Studio = (() => {
         c.fillStyle = goldFill(c, y, y + m.h); c.shadowColor = 'rgba(90,50,0,.55)'; c.shadowBlur = 10; c.shadowOffsetY = 6;
         c.strokeStyle = 'rgba(110,64,8,.8)'; c.lineWidth = Math.max(1.5, m.z * .025);
       }
+      // Names (and gold lines) in foil: a gradient from a lit top to a deep edge, a slight emboss on a signboard,
+      // and every few seconds a gleam of light runs across them
+      const base = L.col[it.col] || it.col, foil = !it.gold && it.col === 'names' && HEX.test(base) && it.z >= 60;
+      if (foil) {
+        const bright = lum(base) > 150, g = c.createLinearGradient(0, y, 0, y + m.h);
+        if (bright) { g.addColorStop(0, mix(base, '#ffffff', .6)); g.addColorStop(.45, base); g.addColorStop(1, mix(base, '#8a5a10', .5)); }
+        else { g.addColorStop(0, mix(base, '#ffffff', .3)); g.addColorStop(.5, base); g.addColorStop(1, mix(base, '#000000', .3)); }
+        c.fillStyle = g;
+        if (ctx.board) { c.shadowColor = bright ? 'rgba(0,0,0,.45)' : 'rgba(80,40,10,.28)'; c.shadowBlur = 6; c.shadowOffsetY = 3; }
+      }
       m.lines.forEach((ln, i) => { c.fillText(ln, cx, y + (i + .5) * m.z * lineH(it)); if (it.gold) { c.shadowColor = 'transparent'; c.strokeText(ln, cx, y + (i + .5) * m.z * lineH(it)); } });
+      const shine = ((ctx.t || 0) + y * .002) % 4.6 / 1.3;
+      if ((foil || it.gold) && shine < 1 && alpha > .9) {
+        let wMax = 0;
+        m.lines.forEach(ln => { wMax = Math.max(wMax, c.measureText(ln).width); });
+        const sx = cx - wMax / 2 - 120 + shine * (wMax + 240), sg = c.createLinearGradient(sx - 70, y, sx + 70, y + m.h * .4);
+        sg.addColorStop(0, 'rgba(255,255,255,0)'); sg.addColorStop(.5, 'rgba(255,252,235,.75)'); sg.addColorStop(1, 'rgba(255,255,255,0)');
+        c.shadowColor = 'transparent'; c.fillStyle = sg;
+        m.lines.forEach((ln, i) => c.fillText(ln, cx, y + (i + .5) * m.z * lineH(it)));
+      }
     } else if (it.t === 'mono') drawMono(c, L, ctx.letters, cx, y, m.z, p, alpha);
     else if (it.t === 'crest') { c.globalAlpha = alpha; L.crest(c, cx, y, ctx.t); }
     else if (it.t === 'div') drawDivider(c, L, cx, y + m.h / 2, m, alpha);
@@ -2492,6 +2570,422 @@ const Studio = (() => {
     c.restore();
   }
 
+  // ---------- Premium finish: gold signboards, foil lettering, foreground dressing, chandeliers, depth ----------
+  // Everything still life is painted once onto an offscreen canvas and reused, so a frame stays cheap on a phone.
+  const HEX = /^#[0-9a-f]{6}$/i;
+  const hexRgb = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+  const rgbHex = a => '#' + a.map(v => Math.round(clamp(v, 0, 255)).toString(16).padStart(2, '0')).join('');
+  const mix = (a, b, k) => { const A = hexRgb(a), B = hexRgb(b); return rgbHex(A.map((v, i) => v + (B[i] - v) * k)); };
+  const lum = h => { const [r, g, b] = hexRgb(h); return r * .3 + g * .59 + b * .11; };
+  const canvasOf = (w, h) => { const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.ceil(w)); cv.height = Math.max(1, Math.ceil(h)); return cv; };
+  const hashOf = s => { let h = 11; for (const ch of String(s)) h = (h * 33 + ch.charCodeAt(0)) >>> 0; return h; };
+  const goldBevel = (c, x0, y0, x1, y1) => {
+    const g = c.createLinearGradient(x0, y0, x1, y1);
+    [[0, '#8a5a14'], [.16, '#f9e7a6'], [.34, '#c9952e'], [.52, '#fff3c8'], [.7, '#b07a22'], [.86, '#f2d27a'], [1, '#7a4c10']].forEach(([o, col]) => g.addColorStop(o, col));
+    return g;
+  };
+
+  // Petals as little painted sprites (shaded, with a vein), and soft out-of-focus ones for the petals nearest the camera
+  const sprites = new Map();
+  function petalSprite(col, soft) {
+    const key = col + (soft ? '~' : '');
+    if (sprites.has(key)) return sprites.get(key);
+    const S = 64, pad = soft ? 22 : 3, cv = canvasOf(S + pad * 2, S + pad * 2), c = cv.getContext('2d');
+    const shape = () => { c.beginPath(); c.moveTo(0, -S * .44); c.bezierCurveTo(S * .1, -S * .5, S * .44, -S * .36, S * .36, S * .06); c.bezierCurveTo(S * .3, S * .32, S * .1, S * .46, 0, S * .46);
+      c.bezierCurveTo(-S * .1, S * .46, -S * .3, S * .32, -S * .36, S * .06); c.bezierCurveTo(-S * .44, -S * .36, -S * .1, -S * .5, 0, -S * .44); c.closePath(); };
+    c.save(); c.translate(cv.width / 2, cv.height / 2);
+    if (soft) { c.shadowColor = HEX.test(col) ? mix(col, '#ffffff', .25) : col; c.shadowBlur = 14; c.shadowOffsetX = 2000; c.translate(-2000, 0); c.fillStyle = '#000'; shape(); c.fill(); }
+    else {
+      if (HEX.test(col)) { const g = c.createRadialGradient(-S * .1, -S * .18, 2, 0, 0, S * .56); g.addColorStop(0, mix(col, '#ffffff', .6)); g.addColorStop(.5, col); g.addColorStop(1, mix(col, '#000000', .28)); c.fillStyle = g; }
+      else c.fillStyle = col;
+      shape(); c.fill();
+      c.strokeStyle = 'rgba(255,255,255,.4)'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(0, -S * .3); c.quadraticCurveTo(S * .06, 0, 0, S * .36); c.stroke();
+    }
+    c.restore();
+    sprites.set(key, cv);
+    return cv;
+  }
+  function bokehSprite(col) {
+    const key = 'bokeh' + col;
+    if (sprites.has(key)) return sprites.get(key);
+    const cv = canvasOf(128, 128), c = cv.getContext('2d'), g = c.createRadialGradient(64, 64, 0, 64, 64, 62);
+    g.addColorStop(0, col.replace('A', '.55')); g.addColorStop(.62, col.replace('A', '.32')); g.addColorStop(.9, col.replace('A', '.42')); g.addColorStop(1, col.replace('A', '0'));
+    c.fillStyle = g; c.beginPath(); c.arc(64, 64, 62, 0, TAU); c.fill();
+    sprites.set(key, cv);
+    return cv;
+  }
+  // Out-of-focus lights drifting very slowly in front of everything: the scene gets depth, like a real lens
+  function bokeh(c, t, light, seed) {
+    const spr = bokehSprite(light ? 'rgba(255,250,235,A)' : 'rgba(255,214,150,A)'), R = rng(seed);
+    c.save(); c.globalCompositeOperation = light ? 'source-over' : 'lighter';
+    for (let i = 0; i < 9; i++) {
+      const r = 40 + R() * 90, x = ((R() * W + t * (8 + R() * 14)) % (W + 2 * r)) - r, y = R() * H + Math.sin(t * .3 + i) * 40;
+      c.globalAlpha = (light ? .28 : .3) * (.5 + .5 * Math.sin(t * (.4 + R() * .5) + i * 2));
+      c.drawImage(spr, x - r, y - r, r * 2, r * 2);
+    }
+    c.restore();
+  }
+  // The cinematic finish: a warm light that drifts across the frame and a soft vignette
+  function finish(c, t, light) {
+    c.save();
+    const lx = W * (.5 + .45 * Math.sin(t * .13)), ly = H * (.18 + .1 * Math.cos(t * .11));
+    const g = c.createRadialGradient(lx, ly, 0, lx, ly, 900);
+    g.addColorStop(0, light ? 'rgba(255,226,170,.16)' : 'rgba(255,180,100,.14)'); g.addColorStop(1, 'rgba(255,200,140,0)');
+    c.globalCompositeOperation = 'screen'; c.fillStyle = g; c.fillRect(0, 0, W, H);
+    c.globalCompositeOperation = 'source-over';
+    const v = c.createRadialGradient(W / 2, H * .46, H * .32, W / 2, H * .5, H * .78);
+    v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, light ? 'rgba(70,40,10,.26)' : 'rgba(0,0,0,.5)');
+    c.fillStyle = v; c.fillRect(0, 0, W, H);
+    c.restore();
+  }
+
+  // ---------- Signboards: a carved gold frame holding the words, like a printed card set into the scene ----------
+  // Styles: 'carved' (a framed panel), 'arch' (a Mughal arch with finials), 'cartouche' (a crowned top),
+  // 'wood' (dark carved wood with gold trim). Tone: 'cream', 'velvet' (the scene's own deep colour) or 'wood'.
+  const BOARD_STYLES = ['carved', 'arch', 'cartouche'];
+  const CREAM_TEXT = { col: { names: '#8a1f3c', ink: '#3b2414', ink2: '#5e4428', accent: '#9a5b16', gold: '#b8862b' }, shadow: ['rgba(255,250,236,.9)', 6] };
+  const DARK_TEXT = { col: { names: '#ffd98a', ink: '#fff4de', ink2: '#efd9b6', accent: '#ffc46b', gold: '#e8c46a' }, shadow: ['rgba(20,8,4,.75)', 10] };
+  const BOARD_PAD = { x: 84, top: 104, bottom: 92 };
+  function boardShape(c, style, x, y, w, h, i, keep) {
+    const l = x + i, r = x + w - i, top = y + i, bot = y + h - i;
+    if (!keep) c.beginPath();
+    if (style === 'arch') {
+      // an ogee (onion) arch: rounded shoulders rising to a fine point
+      const spring = y + Math.min(w * .36, h * .32), cx = x + w / 2, rise = spring - top;
+      c.moveTo(l, bot); c.lineTo(l, spring);
+      c.bezierCurveTo(l, spring - rise * .78, cx - (cx - l) * .62, top + rise * .3, cx - (cx - l) * .14, top + rise * .12);
+      c.quadraticCurveTo(cx, top + rise * .06, cx, top);
+      c.quadraticCurveTo(cx, top + rise * .06, cx + (r - cx) * .14, top + rise * .12);
+      c.bezierCurveTo(r - (r - cx) * .62, top + rise * .3, r, spring - rise * .78, r, spring);
+      c.lineTo(r, bot); c.closePath();
+    } else if (style === 'cartouche') {
+      const cx = x + w / 2, shoulder = y + 70;
+      c.moveTo(l, bot); c.lineTo(l, shoulder + i * .4);
+      c.bezierCurveTo(l + w * .18, shoulder + i * .4, cx - w * .2, top + 40, cx - 60, top + 22);
+      c.quadraticCurveTo(cx, top - 12 + i * .2, cx + 60, top + 22);
+      c.bezierCurveTo(cx + w * .2, top + 40, r - w * .18, shoulder + i * .4, r, shoulder + i * .4);
+      c.lineTo(r, bot); c.closePath();
+    } else {
+      const rr = Math.max(4, 22 - i * .5);
+      c.moveTo(l + rr, top); c.arcTo(r, top, r, bot, rr); c.arcTo(r, bot, l, bot, rr); c.arcTo(l, bot, l, top, rr); c.arcTo(l, top, r, top, rr); c.closePath();
+    }
+  }
+  // A carved corner: a gold rosette with acanthus leaves running along both edges
+  function cornerScroll(c, x, y, sx, sy, s) {
+    c.save(); c.translate(x, y); c.scale(sx, sy);
+    c.shadowColor = 'rgba(60,30,0,.45)'; c.shadowBlur = 6; c.shadowOffsetY = 3;
+    const G = goldBevel(c, -s, -s, s, s);
+    for (const [ang, len] of [[0, 1.25], [Math.PI / 2, 1.25], [Math.PI / 4, .9], [.16, .8], [Math.PI / 2 - .16, .8]]) leaf(c, 0, 0, s * len, s * .26, ang, G, false);
+    c.shadowColor = 'transparent';
+    c.strokeStyle = 'rgba(110,64,8,.75)'; c.lineWidth = 2;
+    for (const d of [0, 1]) { c.beginPath(); if (d) c.arc(s * .55, s * .2, s * .2, Math.PI, TAU * .9); else c.arc(s * .2, s * .55, s * .2, -Math.PI / 2, Math.PI * .4); c.stroke(); }
+    const rg = c.createRadialGradient(-s * .06, -s * .06, 1, 0, 0, s * .3); rg.addColorStop(0, '#fff6d0'); rg.addColorStop(.5, '#e6b44a'); rg.addColorStop(1, '#7a4c10');
+    c.fillStyle = rg; c.beginPath(); c.arc(0, 0, s * .28, 0, TAU); c.fill();
+    blossom(c, 0, 0, s * .34, 'rgba(150,95,20,.85)', 'rgba(255,240,190,.95)', .3, 8, false);
+    c.restore();
+  }
+  function gem(c, x, y, r, col) {
+    const g = c.createRadialGradient(x - r * .35, y - r * .4, r * .1, x, y, r);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(.25, mix(col, '#ffffff', .4)); g.addColorStop(.7, col); g.addColorStop(1, mix(col, '#000000', .45));
+    c.fillStyle = goldBevel(c, x - r * 1.4, y - r * 1.4, x + r * 1.4, y + r * 1.4); c.beginPath(); c.arc(x, y, r * 1.38, 0, TAU); c.fill();
+    c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill();
+  }
+  // The crest on top: a fan of gold leaves, a jewelled medallion and a little kalash
+  function crestTop(c, x, y, s, gemCol) {
+    c.save(); c.shadowColor = 'rgba(60,30,0,.45)'; c.shadowBlur = 8; c.shadowOffsetY = 4;
+    const G = goldBevel(c, x - s, y - s, x + s, y + s);
+    for (let i = 0; i < 9; i++) { const a = -Math.PI / 2 + (i - 4) * .3; leaf(c, x, y + s * .1, s * (i % 2 ? .78 : 1.02), s * .2, a, G, false); }
+    for (const d of [-1, 1]) { leaf(c, x + d * s * .3, y + s * .3, s * 1.1, s * .22, d < 0 ? Math.PI + .12 : -.12, G, false); }
+    c.shadowColor = 'transparent';
+    c.fillStyle = G; c.beginPath(); c.ellipse(x, y - s * .55, s * .2, s * .22, 0, 0, TAU); c.fill();
+    c.fillRect(x - s * .1, y - s * .78, s * .2, s * .1);
+    c.beginPath(); c.arc(x, y - s * .9, s * .1, 0, TAU); c.fill();
+    gem(c, x, y + s * .12, s * .26, gemCol);
+    c.restore();
+  }
+  function finial(c, x, y, s) {
+    const G = goldBevel(c, x - s, y - s * 2, x + s, y);
+    c.save(); c.shadowColor = 'rgba(60,30,0,.4)'; c.shadowBlur = 6; c.shadowOffsetY = 3; c.fillStyle = G;
+    c.fillRect(x - s * .55, y - s * .3, s * 1.1, s * .3);
+    c.beginPath(); c.moveTo(x - s * .6, y - s * .3); c.bezierCurveTo(x - s * .7, y - s * 1.1, x - s * .1, y - s * 1.2, x, y - s * 1.6);
+    c.bezierCurveTo(x + s * .1, y - s * 1.2, x + s * .7, y - s * 1.1, x + s * .6, y - s * .3); c.fill();
+    c.fillRect(x - s * .05, y - s * 2.05, s * .1, s * .5); c.beginPath(); c.arc(x, y - s * 2.1, s * .12, 0, TAU); c.fill();
+    c.restore();
+  }
+  // The board's still parts, painted once: frame, panel, beads, corners, crest. Returns the canvas and where the
+  // board's top-left corner sits on it.
+  function boardCanvas(style, tone, w, h, base, gemCol, k = 1) {
+    const M = 80, CR = style === 'wood' ? 40 : 96, cv = canvasOf((w + M * 2) * k, (h + M + CR) * k), c = cv.getContext('2d');
+    c.scale(k, k);
+    const x = M, y = CR, fw = style === 'wood' ? 30 : 36;
+    // a soft shadow on the scene behind
+    c.save(); c.shadowColor = 'rgba(30,15,5,.45)'; c.shadowBlur = 40; c.shadowOffsetY = 18; boardShape(c, style, x, y, w, h, 0); c.fillStyle = '#000'; c.fill(); c.restore();
+    // the panel
+    c.save(); boardShape(c, style, x, y, w, h, fw - 2); c.clip();
+    let pg;
+    if (tone === 'cream') { pg = c.createRadialGradient(x + w / 2, y + h * .42, 40, x + w / 2, y + h / 2, Math.max(w, h) * .75); pg.addColorStop(0, '#fffdf7'); pg.addColorStop(.7, '#f8eedb'); pg.addColorStop(1, '#ead6ae'); }
+    else if (tone === 'wood') { pg = c.createLinearGradient(x, 0, x + w, 0); pg.addColorStop(0, '#3e1d0e'); pg.addColorStop(.5, '#6a3519'); pg.addColorStop(1, '#3a1a0c'); }
+    else { pg = c.createRadialGradient(x + w / 2, y + h * .42, 40, x + w / 2, y + h / 2, Math.max(w, h) * .75); pg.addColorStop(0, mix(base, '#ffffff', .1)); pg.addColorStop(1, mix(base, '#000000', .35)); }
+    c.fillStyle = pg; c.fillRect(x, y - 60, w, h + 60);
+    if (tone === 'wood') {
+      const R = rng(w + h);
+      c.strokeStyle = 'rgba(20,6,0,.28)'; c.lineWidth = 2;
+      for (let i = 0; i < 40; i++) { const gx = x + R() * w; c.beginPath(); c.moveTo(gx, y); c.bezierCurveTo(gx + (R() - .5) * 40, y + h * .3, gx + (R() - .5) * 40, y + h * .7, gx + (R() - .5) * 30, y + h); c.stroke(); }
+    }
+    c.globalAlpha = tone === 'cream' ? .07 : .1; mandala(c, x + w / 2, y + h / 2, Math.min(w, h) * .62, tone === 'cream' ? '#9a6a1c' : '#f2c76b'); c.globalAlpha = 1;
+    for (const [px, py, rot] of [[x + 70, y + h - 70, -.8], [x + w - 70, y + h - 70, .8]]) { c.globalAlpha = .12; paisley(c, px, py, 70, rot, tone === 'cream' ? '#9a6a1c' : '#f2c76b'); c.globalAlpha = 1; }
+    // a fine gold rule and a dotted line inside the frame
+    c.strokeStyle = tone === 'cream' ? 'rgba(176,122,34,.7)' : 'rgba(242,199,107,.6)'; c.lineWidth = 2; boardShape(c, style, x, y, w, h, fw + 14); c.stroke();
+    c.setLineDash([2, 9]); c.lineCap = 'round'; c.lineWidth = 3; boardShape(c, style, x, y, w, h, fw + 24); c.stroke(); c.setLineDash([]);
+    c.restore();
+    // the gold frame: a bevelled band with a carved groove
+    c.save(); boardShape(c, style, x, y, w, h, 0); boardShape(c, style, x, y, w, h, fw, true);
+    c.fillStyle = style === 'wood' ? goldBevel(c, x, y, x + w * .3, y + h * .3) : goldBevel(c, x, y, x + w, y + h); c.fill('evenodd'); c.restore();
+    c.lineJoin = 'round';
+    for (const [i, col, lw] of [[0, 'rgba(90,55,10,.85)', 2.5], [3, 'rgba(255,248,220,.75)', 1.5], [fw * .5, 'rgba(110,64,8,.5)', 2.5], [fw * .5 + 2.5, 'rgba(255,240,200,.55)', 1.2], [fw, 'rgba(90,55,10,.85)', 2.5]]) {
+      c.strokeStyle = col; c.lineWidth = lw; boardShape(c, style, x, y, w, h, i); c.stroke();
+    }
+    // beads along the straight edges
+    const bead = (bx, by) => { const g = c.createRadialGradient(bx - 2, by - 2, .5, bx, by, 5.5); g.addColorStop(0, '#fff8dc'); g.addColorStop(.6, '#d9a640'); g.addColorStop(1, '#7a4c10'); c.fillStyle = g; c.beginPath(); c.arc(bx, by, 5, 0, TAU); c.fill(); };
+    const bi = fw * .25, top0 = style === 'carved' ? y + 60 : y + Math.min(w * .36, h * .32) + 30;
+    for (let by = top0; by < y + h - 60; by += 22) { bead(x + bi, by); bead(x + w - bi, by); }
+    for (let bx = x + 60; bx < x + w - 60; bx += 22) { bead(bx, y + h - bi); if (style === 'carved' || style === 'wood') bead(bx, y + bi); }
+    // corners, crest, finials and the drop at the bottom
+    const cs = style === 'wood' ? 42 : 58;
+    cornerScroll(c, x + 8, y + h - 8, 1, -1, cs); cornerScroll(c, x + w - 8, y + h - 8, -1, -1, cs);
+    if (style === 'carved' || style === 'wood') { cornerScroll(c, x + 8, y + 8, 1, 1, cs); cornerScroll(c, x + w - 8, y + 8, -1, 1, cs); }
+    if (style === 'arch') { finial(c, x + 16, y + Math.min(w * .36, h * .32) + 8, 26); finial(c, x + w - 16, y + Math.min(w * .36, h * .32) + 8, 26); }
+    if (style !== 'wood') crestTop(c, x + w / 2, y + (style === 'cartouche' ? 0 : style === 'arch' ? 4 : 8), 62, gemCol);
+    c.save(); c.shadowColor = 'rgba(60,30,0,.4)'; c.shadowBlur = 6; c.shadowOffsetY = 3;
+    const G = goldBevel(c, x + w / 2 - 50, y + h - 30, x + w / 2 + 50, y + h + 50);
+    for (const a of [.5, 1.2, 1.94, 2.64]) leaf(c, x + w / 2, y + h - 4, 46, 12, a, G, false);
+    c.restore();
+    gem(c, x + w / 2, y + h + 4, 12, gemCol);
+    return { cv, ox: M, oy: CR, k };
+  }
+
+  // ---------- Foreground dressing: drapes, torans, flowers in front of a scene (with their own depth) ----------
+  // Painted once onto two bands (top and bottom), tinted like the scene, and moved a little more than the scene.
+  const DRESS = {
+    haldi: { top: ['drapes', ['#ff4f9a', '#ffd23f', '#ff8a1a']] },
+    mehendi: { top: ['toran'], bottom: ['florals', [['#ffb238', '#e0601c'], ['#ffd6e4', '#e8799d'], ['#fff6e0', '#e8c46a']]] },
+    mandap: { top: ['drapes', ['#fff4f6', '#f7c6d6', '#f2a8c0'], true], bottom: ['florals', [['#fde3ea', '#e48aa6'], ['#ffffff', '#e2d6cf'], ['#f9d6df', '#c9708f']]] },
+    palace: { top: ['drapes', ['#7a1430', '#c8963a', '#5a0e24']] },
+    lights: { chandeliers: true, bottom: ['florals', [['#ffffff', '#d9d2c6'], ['#fff4f0', '#e7c9c0'], ['#ffffff', '#cfd8c8']]] },
+    beach: { top: ['drapes', ['#ffffff', '#fbe6dc', '#f6d2c4'], true], bottom: ['florals', [['#fff6e8', '#f2c49a'], ['#ffffff', '#e8d8cc'], ['#ffe0cc', '#f09a78']]] },
+    diwali: { top: ['toran'] },
+    himalaya: { bottom: ['florals', [['#fff1f6', '#e8a0bd'], ['#ffffff', '#d8d2e8'], ['#fbe3ff', '#b78ad8']]] },
+    galaxy: { chandeliers: true }
+  };
+  const DRESS_TOP = 900, DRESS_BOT = 560;
+  function drapes(c, cols, sheer) {
+    const [a, b, d] = cols, alpha = sheer ? .62 : 1;
+    c.save(); c.globalAlpha = alpha;
+    // side drapes, gathered by a gold tie and flaring below
+    for (const side of [-1, 1]) {
+      c.save(); if (side > 0) { c.translate(W, 0); c.scale(-1, 1); }
+      const g = c.createLinearGradient(0, 0, 230, 0);
+      for (let k = 0; k <= 10; k++) g.addColorStop(k / 10, k % 2 ? mix(a, '#000000', .18) : mix(a, '#ffffff', sheer ? .4 : .14));
+      c.fillStyle = g; c.beginPath(); c.moveTo(0, 0); c.lineTo(250, 0);
+      c.bezierCurveTo(210, 260, 120, 470, 92, 640); c.bezierCurveTo(110, 740, 170, 820, 190, DRESS_TOP); c.lineTo(0, DRESS_TOP); c.closePath(); c.fill();
+      const fade = c.createLinearGradient(0, DRESS_TOP - 160, 0, DRESS_TOP); fade.addColorStop(0, 'rgba(0,0,0,0)'); fade.addColorStop(1, 'rgba(0,0,0,1)');
+      c.globalCompositeOperation = 'destination-out'; c.fillStyle = fade; c.fillRect(0, DRESS_TOP - 160, 260, 160); c.globalCompositeOperation = 'source-over';
+      c.fillStyle = goldBevel(c, 0, 620, 120, 660); rrect(c, -10, 618, 118, 34, 16); c.fill();
+      c.strokeStyle = 'rgba(110,64,8,.7)'; c.lineWidth = 2; c.stroke();
+      for (let k = 0; k < 7; k++) { c.strokeStyle = k % 2 ? '#c9952e' : '#f2d27a'; c.lineWidth = 3; c.beginPath(); c.moveTo(96 + k * 3, 650); c.lineTo(100 + k * 3, 740); c.stroke(); }
+      c.fillStyle = goldBevel(c, 90, 640, 130, 660); c.beginPath(); c.arc(104, 646, 14, 0, TAU); c.fill();
+      c.restore();
+    }
+    // swags across the top: a deeper one behind, a lighter one in front, each with folds
+    for (const [col, dip, thick, off] of [[d || b, 210, 120, 0], [b, 160, 100, W / 4]]) {
+      for (let k = -1; k < 3; k++) {
+        const x0 = off + k * W / 2, x1 = x0 + W / 2, mid = (x0 + x1) / 2;
+        const g = c.createLinearGradient(0, 0, 0, dip + thick);
+        g.addColorStop(0, mix(col, '#000000', .25)); g.addColorStop(.55, mix(col, '#ffffff', sheer ? .35 : .12)); g.addColorStop(1, mix(col, '#000000', .3));
+        c.fillStyle = g; c.beginPath(); c.moveTo(x0, -10); c.quadraticCurveTo(mid, dip * 1.1, x1, -10);
+        c.lineTo(x1, 10); c.quadraticCurveTo(mid, dip + thick, x0, 10); c.closePath(); c.fill();
+        c.strokeStyle = 'rgba(0,0,0,.14)'; c.lineWidth = 3;
+        for (let f = 1; f < 4; f++) { c.beginPath(); c.moveTo(x0 + 20, 0); c.quadraticCurveTo(mid, dip * 1.1 + thick * f / 4, x1 - 20, 0); c.stroke(); }
+      }
+    }
+    c.restore();
+    // a marigold garland on the front swag's hem, with a rose and a tassel at every join
+    for (let k = -1; k < 3; k++) {
+      const x0 = W / 4 + k * W / 2, x1 = x0 + W / 2;
+      for (let i = 0; i <= 22; i++) { const u = i / 22, gx = x0 + (x1 - x0) * u, gy = 10 + (1 - (2 * u - 1) ** 2) * 245; marigold(c, gx, gy, 15, i % 2 ? 36 : 28); }
+      if (x0 > -40 && x0 < W + 40) { rose(c, x0, 18, 30, '#ff8aa8', '#b8203f'); for (let j = 0; j < 9; j++) marigold(c, x0, 46 + j * 26, 12, j % 2 ? 38 : 26); bell(c, x0, 46 + 9 * 26, 34); }
+    }
+  }
+  function toran(c) {
+    // mango leaves on a cord, marigolds between, and hanging strands of genda that end in a rose or a bell
+    c.strokeStyle = '#7a4a1a'; c.lineWidth = 6; c.beginPath(); c.moveTo(0, 26); c.lineTo(W, 26); c.stroke();
+    for (let x = 14; x < W; x += 38) leaf(c, x, 30, 92, 24, Math.PI / 2 + ((x / 38) % 2 ? .1 : -.1), (x / 38) % 2 ? '#2e7d32' : '#4f9a3a');
+    for (let x = 33; x < W; x += 38) marigold(c, x, 34, 15, (x / 38) % 2 ? 38 : 28);
+    const R = rng(77);
+    for (let k = 0; k < 9; k++) {
+      const x = 40 + k * 125, len = 8 + Math.round((k % 2 ? 4 : 10) + R() * 4);
+      for (let j = 0; j < len; j++) marigold(c, x, 60 + j * 27, 14, (j + k) % 2 ? 38 : 26);
+      if (k % 2) rose(c, x, 60 + len * 27 + 10, 22, '#ff6b8a', '#a80d2a'); else bell(c, x, 60 + len * 27, 34);
+    }
+    for (let k = 0; k < 8; k++) {
+      const x0 = 40 + k * 125;
+      for (let i = 1; i < 9; i++) { const u = i / 9; marigold(c, x0 + 125 * u, 70 + Math.sin(u * Math.PI) * 70, 11, i % 2 ? 44 : 34); }
+    }
+  }
+  function florals(c, ro, y0) {
+    const R = rng(ro.length * 31 + 5);
+    for (const [cx, dir] of [[30, 1], [W - 30, -1]]) {
+      const cy = H - y0 - 40;
+      for (let i = 0; i < 26; i++) leaf(c, cx + dir * R() * 120, cy - R() * 160, 90 + R() * 70, 26 + R() * 10, -Math.PI / 2 + dir * (.2 + R() * 1.3), R() > .5 ? '#2f6b34' : '#4f8a44');
+      for (let i = 0; i < 6; i++) eucalyptus(c, cx, cy - 40, 180 + R() * 80, dir > 0 ? -.4 - R() * 1.1 : Math.PI + .4 + R() * 1.1, '#9fb8a2');
+      const spots = [[0, 0, 96], [dir * 120, 30, 70], [dir * 40, -120, 64], [dir * 190, -40, 54], [dir * -10, -230, 46], [dir * 150, -150, 44]];
+      spots.forEach(([dx, dy, r], i) => rose(c, cx + dx, cy + dy, r, ro[i % ro.length][0], ro[i % ro.length][1], R() * 3));
+      for (let i = 0; i < 18; i++) blossom(c, cx + dir * R() * 260, cy - R() * 300, 10 + R() * 10, R() > .5 ? '#ffffff' : ro[1][0], '#fff', R() * 6);
+    }
+  }
+  function tintBand(cv, L, y0, k) {
+    if (!(L.tint || []).length) return cv;
+    const out = canvasOf(cv.width, cv.height), c = out.getContext('2d');
+    c.drawImage(cv, 0, 0);
+    for (const [op, col, alpha] of L.tint) {
+      c.globalCompositeOperation = op; c.globalAlpha = alpha;
+      if (Array.isArray(col)) { const g = c.createLinearGradient(0, -y0 * k, 0, (H - y0) * k); col.forEach((x, i) => g.addColorStop(i / (col.length - 1), x)); c.fillStyle = g; }
+      else c.fillStyle = col;
+      c.fillRect(0, 0, out.width, out.height);
+    }
+    c.globalCompositeOperation = 'destination-in'; c.globalAlpha = 1; c.drawImage(cv, 0, 0);
+    return out;
+  }
+  function paintDress(id, k = 1) {
+    const L = LOOKS[id], D = DRESS[L.scene];
+    if (!D || typeof document === 'undefined') return null;
+    const out = {};
+    if (D.top) {
+      const cv = canvasOf(W * k, DRESS_TOP * k), c = cv.getContext('2d'); c.scale(k, k);
+      if (D.top[0] === 'drapes') drapes(c, D.top[1], D.top[2]); else toran(c);
+      out.top = tintBand(cv, L, 0, k);
+    }
+    if (D.bottom) {
+      const cv = canvasOf(W * k, DRESS_BOT * k), c = cv.getContext('2d'); c.scale(k, k); c.translate(0, -(H - DRESS_BOT));
+      florals(c, D.bottom[1], 0);
+      out.bottom = tintBand(cv, L, H - DRESS_BOT, k);
+    }
+    out.chandeliers = !!D.chandeliers;
+    return out;
+  }
+
+  // A crystal chandelier: gold arms in two tiers, candle lights, festoons and drops of crystal (painted once)
+  function chandelierSprite() {
+    if (sprites.has('chandelier')) return sprites.get('chandelier');
+    const cv = canvasOf(420, 560), c = cv.getContext('2d'), cx = 210;
+    const crystal = (x, y, r) => { const g = c.createRadialGradient(x - r * .3, y - r * .3, .5, x, y, r); g.addColorStop(0, '#ffffff'); g.addColorStop(.5, 'rgba(225,240,255,.9)'); g.addColorStop(1, 'rgba(150,170,210,.7)'); c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); };
+    const drop = (x, y, s) => { const g = c.createLinearGradient(x - s, y, x + s, y + s * 3); g.addColorStop(0, '#ffffff'); g.addColorStop(.5, 'rgba(200,220,255,.85)'); g.addColorStop(1, 'rgba(255,255,255,.95)');
+      c.fillStyle = g; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + s, y + s * 1.8, x, y + s * 3); c.quadraticCurveTo(x - s, y + s * 1.8, x, y); c.fill(); };
+    glow(c, cx, 250, 200, 'rgba(255,220,150,.35)');
+    const G = goldBevel(c, cx - 40, 0, cx + 40, 400);
+    c.fillStyle = G; c.beginPath(); c.ellipse(cx, 14, 40, 14, 0, 0, TAU); c.fill();
+    c.fillRect(cx - 8, 14, 16, 300);
+    for (const [yy, rw] of [[70, 20], [150, 26], [230, 30], [300, 22]]) { c.beginPath(); c.ellipse(cx, yy, rw, rw * .6, 0, 0, TAU); c.fill(); }
+    for (const [ry, rx, n] of [[150, 110, 6], [260, 175, 8]]) {
+      // the back half of the ring first, then the front
+      for (const front of [false, true]) {
+        for (let i = 0; i < n; i++) {
+          const a = i / n * TAU + .3, s = Math.sin(a), px = cx + Math.cos(a) * rx, py = ry + s * rx * .18;
+          if ((s > 0) !== front) continue;
+          c.strokeStyle = G; c.lineWidth = 6; c.beginPath(); c.moveTo(cx, ry + 10); c.bezierCurveTo(cx + Math.cos(a) * rx * .4, ry + 50, px, py + 40, px, py); c.stroke();
+          c.fillStyle = G; c.beginPath(); c.ellipse(px, py, 16, 6, 0, 0, TAU); c.fill();
+          c.fillStyle = '#fffaf0'; c.fillRect(px - 5, py - 30, 10, 28);
+          glow(c, px, py - 38, 30, 'rgba(255,214,140,.8)');
+          c.fillStyle = '#fff3c8'; c.beginPath(); c.ellipse(px, py - 38, 5, 9, 0, 0, TAU); c.fill();
+          for (let j = 0; j < 4; j++) crystal(px, py + 12 + j * 11, 4.2 - j * .4);
+          drop(px, py + 56, 7);
+        }
+      }
+      // festoons of crystal beads between the arms
+      for (let i = 0; i < n; i++) {
+        const a0 = i / n * TAU + .3, a1 = (i + 1) / n * TAU + .3;
+        for (let j = 1; j < 9; j++) {
+          const u = j / 9, a = a0 + (a1 - a0) * u, px = cx + Math.cos(a) * rx, py = ry + Math.sin(a) * rx * .18 + Math.sin(u * Math.PI) * 26;
+          crystal(px, py + 14, 3.4);
+        }
+      }
+    }
+    for (let j = 0; j < 6; j++) crystal(cx, 330 + j * 14, 6 - j * .5);
+    drop(cx, 410, 16);
+    sprites.set('chandelier', cv);
+    return cv;
+  }
+  function chandeliers(c, t, light) {
+    const spr = chandelierSprite();
+    for (const [x, len, s, ph] of [[170, 70, .62, 0], [910, 70, .62, 1.7]]) {
+      const ang = Math.sin(t * .9 + ph) * .018;
+      c.save(); c.translate(x, -10); c.rotate(ang);
+      c.strokeStyle = 'rgba(200,160,70,.9)'; c.lineWidth = 4; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, len); c.stroke();
+      c.translate(0, len); c.scale(s, s);
+      c.drawImage(spr, -spr.width / 2, 0);
+      // twinkles on the crystals
+      const R = rng(31 + ph * 10);
+      c.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 10; i++) {
+        const px = (R() - .5) * 340, py = 160 + R() * 260, a = Math.max(0, Math.sin(t * (2 + R() * 2) + i * 1.9));
+        if (a < .3) continue;
+        c.globalAlpha = a; c.fillStyle = '#ffffff'; const r = 10 * a;
+        c.beginPath(); c.moveTo(px, py - r * 2); c.quadraticCurveTo(px, py, px + r * 2, py); c.quadraticCurveTo(px, py, px, py + r * 2); c.quadraticCurveTo(px, py, px - r * 2, py); c.quadraticCurveTo(px, py, px, py - r * 2); c.fill();
+      }
+      c.restore();
+      if (!light) glow(c, x, len + 160 * s, 260 * s, `rgba(255,214,140,${(.18 + .04 * Math.sin(t * 3 + ph)).toFixed(3)})`);
+    }
+  }
+
+  // ---------- Optional full-bleed scene pictures: img/scenes/<function>-NN.<jpg|png|webp>, listed in js/scenes.js (SCENE_ART) ----------
+  // Only files named in the list are ever asked for; without one, the painted look shows as always.
+  const SCENE_FNS = ['ganesh', 'invite', 'couple', 'haldi', 'mehendi', 'sangeet', 'baraat', 'wedding', 'reception', 'vidai', 'family', 'thanks'];
+  const FN_NAMES = [[/haldi|pithi|ubtan|हल्दी|हलदी|पीठी|उबटन/i, 'haldi'], [/mehe?n?d|मेहँदी|मेहंदी|मेंहदी/i, 'mehendi'], [/sangeet|dance|dj|garba|dandiya|cocktail|संगीत|गरबा|डांडिया/i, 'sangeet'],
+    [/baraat|barat|ghud|ghod|sehra|बारात|घुड़चढ़ी|घुडचढी|सेहरा/i, 'baraat'], [/vidai|bidai|doli|विदाई|बिदाई|डोली/i, 'vidai'], [/reception|dinner|bhoj|swagat|स्वागत|रिसेप्शन|प्रीतिभोज|भोज/i, 'reception'],
+    [/phera|vivah|wedding|varmala|jaimala|mandap|shaadi|फेरे|विवाह|शादी|वरमाला|जयमाला|मंडप/i, 'wedding'], [/puja|pooja|havan|ganesh|katha|aarti|पूजा|हवन|गणेश|कथा|आरती/i, 'ganesh'],
+    [/famil|regards|parivar|परिवार|दर्शनाभिलाषी|विनीत/i, 'family'], [/thank|धन्यवाद|प्रतीक्षा/i, 'thanks']];
+  function sceneList() {
+    const list = sceneNames();
+    return list.map(x => String(typeof x === 'string' ? x : (x && (x.file || x.src || x.id)) || '').replace(/^.*\//, ''))
+      .map(x => (/\.(webp|jpe?g|png)$/i.test(x) ? x : `${x}.webp`))
+      .filter(x => /^[a-z]+-\d+\.(webp|jpe?g|png)$/i.test(x) && SCENE_FNS.includes(x.split('-')[0].toLowerCase()));
+  }
+  function sceneFn(s) {
+    if (s.fn) return s.fn;
+    if (s.k === 'open') return s.ganesha ? 'ganesh' : 'invite';
+    if (s.k === 'title') return s.couple ? 'couple' : 'invite';
+    if (s.k === 'date') return 'invite';
+    if (s.k === 'invite' || s.k === 'end') return 'family';
+    if (s.k === 'final') return 'thanks';
+    const name = s.k === 'event' ? clean(s.e.name) : clean(s.name);
+    return (FN_NAMES.find(([re]) => re.test(name)) || [])[1] || null;
+  }
+  // The list itself: SCENE_ART when the page loaded js/scenes.js, else read once from the file as text (never run
+  // as a script, so it can never be declared twice when another part of the page loads it too)
+  let sceneListLoad = null, sceneFetched = [];
+  const sceneNames = () => (typeof SCENE_ART !== 'undefined' && Array.isArray(SCENE_ART) ? SCENE_ART : sceneFetched);
+  function sceneManifest() {
+    if (sceneListLoad) return sceneListLoad;
+    if (typeof SCENE_ART !== 'undefined' || typeof fetch === 'undefined' || localFile()) return (sceneListLoad = Promise.resolve());
+    sceneListLoad = fetch('js/scenes.js').then(r => (r.ok ? r.text() : '')).then(text => {
+      const m = String(text).match(/SCENE_ART\s*=\s*\[([\s\S]*?)\]/);
+      if (m) sceneFetched = [...m[1].replace(/\/\/.*$/gm, '').matchAll(/['"]([^'"]+)['"]/g)].map(x => x[1]);
+    }).catch(() => {});
+    return sceneListLoad;
+  }
+  const sceneImages = {};
+  function sceneImage(file) {
+    if (typeof Image === 'undefined') return null;
+    if (!sceneImages[file]) { const img = new Image(); img.src = `img/scenes/${file}`; sceneImages[file] = img; }
+    return sceneImages[file];
+  }
+  // A picture as the scene: it fills the screen (cut to fit) and drifts in slowly (Ken Burns)
+  function drawScenePicture(c, img, p, d, seed) {
+    const iw = img.naturalWidth, ih = img.naturalHeight, u = clamp(p / Math.max(1, d)), dir = seed % 2 ? 1 : -1;
+    const z = 1.04 + .08 * u, k = Math.max(W / iw, H / ih) * z;
+    c.drawImage(img, W / 2 - iw * k / 2 + dir * 30 * (u - .5), H / 2 - ih * k / 2 - 20 * u, iw * k, ih * k);
+  }
+
   // ---------- The player: draws frame t of the video on a 1080×1920 canvas ----------
   // `k` paints at a higher resolution (2 = 4K, for a 2160×3840 video), so the art stays sharp.
   function paint(id, k = 1) {
@@ -2526,8 +3020,27 @@ const Studio = (() => {
     const c = tmp.getContext('2d');
     c.drawImage(big, 0, 0);
     LOOKS[id].anim(c, 2.5); // with its moving parts too (the disco ball, the diyas, the lanterns)
+    const d = paintDress(id, Math.min(1, Math.max(.2, canvas.width / W))); // and what hangs in front of it (painted small)
+    if (d && d.top) c.drawImage(d.top, 0, 0, W, DRESS_TOP);
+    if (d && d.bottom) c.drawImage(d.bottom, 0, H - DRESS_BOT, W, DRESS_BOT);
+    if (d && d.chandeliers) chandeliers(c, 2.5, isLight(LOOKS[id]));
     canvas.getContext('2d').drawImage(tmp, 0, 0, canvas.width, canvas.height);
   }
+
+  // The hanging strings of a signboard: pearls on a cream board, marigolds on wood, gold beads on velvet
+  function boardStrings(c, B) {
+    for (const d of [-1, 1]) {
+      const x = W / 2 + d * (B.w / 2 - 120);
+      for (let y = B.y + 34, i = 0; y > B.y - 1400; y -= 23, i++) {
+        if (B.tone === 'wood') { marigold(c, x, y, 11, i % 2 ? 38 : 28); continue; }
+        c.fillStyle = B.tone === 'cream' ? (i % 4 === 3 ? '#d9a640' : '#fbf6ea') : (i % 2 ? '#f2d27a' : '#b8862b');
+        c.beginPath(); c.arc(x, y, i % 4 === 3 ? 6 : 7.5, 0, TAU); c.fill();
+        c.fillStyle = 'rgba(255,255,255,.75)'; c.beginPath(); c.arc(x - 2.4, y - 2.4, 2.2, 0, TAU); c.fill();
+      }
+    }
+  }
+  // A dark scene's own deep colour, for a velvet board
+  const velvetOf = L => { const m = (String(L.shadow[0]).match(/\d+/g) || [20, 10, 30]).slice(0, 3).map(Number); return rgbHex(m.map(v => Math.min(120, v * 3 + 12))); };
 
   class Player {
     // `k` draws smaller (0.5 = 540×960, for previews on the website's phones); the video itself is made at 1.
@@ -2543,34 +3056,121 @@ const Studio = (() => {
       libImage(this.couple); // start loading it now
       let host = '';
       try { host = site.url ? new URL(site.url).host : ''; } catch (e) { /* no address */ }
-      this.ctx = { designer: clean(site.designer) || 'Sankalp', host, letters: [initial(card.host1), initial(card.host2)].filter(Boolean) };
+      this.ctx = { designer: clean(site.designer) || 'Sankalp', host, creditSite: !!opt.creditSite, letters: [initial(card.host1), initial(card.host2)].filter(Boolean) };
       if (!this.ctx.letters.length) this.ctx.letters = ['♥'];
-      this.layer = sceneLayer(LOOKS[opt.look] ? opt.look : 'vrindavan');
+      const main = LOOKS[opt.look] ? opt.look : 'vrindavan';
+      this.layer = sceneLayer(main);
       // A script may give each scene its own look: all are painted now, so the video never stalls on a change.
-      this.layers = new Map();
+      this.layers = new Map(); this.dress = new Map();
       const art = this.k > 1 ? this.k : 1;
-      if (art > 1) this.layer = paint(LOOKS[opt.look] ? opt.look : 'vrindavan', art);
-      this.tl.scenes.forEach(sc => { if (sc.look && LOOKS[sc.look] && !this.layers.has(sc.look)) this.layers.set(sc.look, paint(sc.look, art)); });
+      if (art > 1) this.layer = paint(main, art);
+      this.dress.set(main, paintDress(main, art));
+      this.tl.scenes.forEach(sc => {
+        if (sc.look && LOOKS[sc.look] && !this.layers.has(sc.look)) this.layers.set(sc.look, paint(sc.look, art));
+        if (sc.look && LOOKS[sc.look] && !this.dress.has(sc.look)) this.dress.set(sc.look, paintDress(sc.look, art));
+      });
+      this.pics = new Map(); this.picN = -1;
+      this.assignPics();
+      // Paint every scene's signboard in the background once the lettering has loaded, one scene at a time,
+      // so playing (or recording) never waits for one
+      const token = this.token = {};
+      if (typeof setTimeout !== 'undefined' && typeof document !== 'undefined') fontsOnce().then(() => {
+        let i = 0;
+        const next = () => { if (this.token !== token || i >= this.tl.scenes.length) return; this.prepare(this.tl.scenes[i++]); setTimeout(next, 0); };
+        setTimeout(next, 0);
+      });
       return this;
     }
+    prepare(s) {
+      const L = LOOKS[s.look && this.layers.has(s.look) ? s.look : (LOOKS[this.opt.look] ? this.opt.look : 'vrindavan')] || this.L;
+      return this.sceneText(s, L, s.zone ? 'center' : this.v.layout, this.pic(s));
+    }
+    // Scene pictures (js/scenes.js): each scene whose function has pictures takes one, different ones in turn
+    assignPics() {
+      const list = this.opt.sceneArt === false || localFile() ? [] : sceneList(), key = this.opt.story || this.opt.look || '', used = new Set();
+      this.picN = sceneNames().length;
+      this.pics = new Map();
+      this.cache = new Map();
+      if (!list.length) { this.ready = Promise.resolve(); return; }
+      this.tl.scenes.forEach((sc, i) => {
+        const fn = sceneFn(sc), mine = fn ? list.filter(f => f.toLowerCase().startsWith(fn + '-')) : [];
+        if (!mine.length) return;
+        const fresh = mine.filter(f => !used.has(f)), pool = fresh.length ? fresh : mine, file = pool[hashOf(`${key}:${i}`) % pool.length];
+        used.add(file);
+        const img = sceneImage(file);
+        if (img) this.pics.set(sc, { img, seed: hashOf(file + i) });
+      });
+      this.ready = Promise.all([...this.pics.values()].map(({ img }) => (img.complete ? null : new Promise(r => { img.addEventListener('load', r, { once: true }); img.addEventListener('error', r, { once: true }); }))));
+    }
+    pic(sc) { const x = sc && this.pics.get(sc); return x && x.img.complete && x.img.naturalWidth ? x : null; }
     get total() { return this.tl.total; }
+    // A scene's words, laid out once: on a carved signboard (invitation, functions, venue, regards, thank you),
+    // or straight on the scene
+    sceneText(s, L, lay, pic) {
+      if (this.cache.has(s)) return this.cache.get(s);
+      const items = lines(s, this.card, this.opt), z = s.zone || zoneFor(lay, L.zone);
+      let style = s.board === false ? null : typeof s.board === 'string' ? s.board : s.board ? 'auto' : null;
+      if (s.board == null && s.k !== 'custom' && items.length && (/^(invite|event|events|date|end|final)$/.test(s.k) || (s.k === 'title' && /panel|framed/.test(lay)))) style = 'auto';
+      if (!style && s.board !== false && pic && items.length && !/^(open|title)$/.test(s.k)) style = 'auto';
+      let out;
+      if (style) {
+        const h = hashOf(`${s.look || this.opt.look || ''}|${s.k}|${s.i || 0}|${s.name || ''}`), light = isLight(L);
+        if (!['carved', 'arch', 'cartouche', 'wood'].includes(style)) style = L.scene === 'haldi' && (h >>> 4) % 2 ? 'wood' : BOARD_STYLES[h % 3];
+        const tone = style === 'wood' ? 'wood' : light ? 'cream' : s.tone || ((h >>> 3) % 2 ? 'cream' : 'velvet');
+        const pal = tone === 'cream' ? (light ? null : CREAM_TEXT) : (light ? DARK_TEXT : null);
+        const L2 = pal ? { ...L, col: { ...L.col, ...pal.col }, shadow: pal.shadow } : L;
+        const bw = Math.min(960, z[2] + 2 * BOARD_PAD.x), extra = style === 'arch' ? 96 : style === 'cartouche' ? 40 : 0;
+        const zone2 = [Math.max(z[0] + 50, 130 + BOARD_PAD.top + extra), Math.min(z[1] - 40, 1790 - BOARD_PAD.bottom), bw - 2 * BOARD_PAD.x];
+        const { M, y0 } = layout(this.c, { ...L2, zone: zone2 }, items);
+        const blockH = M.reduce((a, m, i) => a + m.h + (i < M.length - 1 ? m.gap : 0), 0), bh = Math.max(300, blockH + BOARD_PAD.top + BOARD_PAD.bottom + extra);
+        const by = y0 - BOARD_PAD.top - extra - (bh - (blockH + BOARD_PAD.top + BOARD_PAD.bottom + extra)) / 2;
+        const gemCol = ['#c0262d', '#1f8a5a', '#2a5bd7', '#b0245a'][(h >>> 6) % 4];
+        const B = boardCanvas(style, tone, bw, bh, velvetOf(L), gemCol, Math.min(2, Math.max(.5, this.k)));
+        const hang = s.hang != null ? !!s.hang : style !== 'arch' && (h >>> 9) % 3 === 0;
+        out = { M, y0, L: L2, board: { ...B, x: W / 2 - bw / 2, y: by, w: bw, h: bh, style, tone, hang } };
+      } else out = { ...layout(this.c, { ...L, zone: z }, items), L };
+      this.cache.set(s, out);
+      return out;
+    }
     draw(t) {
       const { c, tl } = this, { scenes, total } = tl;
       t = clamp(t, 0, total - .001);
+      if (this.picN !== sceneNames().length) this.assignPics();
       const idx = scenes.findIndex(s => t < s.t0 + s.d), s = scenes[idx < 0 ? scenes.length - 1 : idx], p = t - s.t0, last = s === scenes[scenes.length - 1];
       const lookOf = sc => (sc && sc.look && this.layers.has(sc.look) ? sc.look : null);
-      const L = lookOf(s) ? LOOKS[s.look] : this.L, layer = lookOf(s) ? this.layers.get(s.look) : this.layer;
-      const prev = scenes[scenes.indexOf(s) - 1], prevLook = lookOf(prev), fade = prevLook && prevLook !== s.look ? ease(p / .9) : 1;
+      const main = LOOKS[this.opt.look] ? this.opt.look : 'vrindavan', lookId = sc => lookOf(sc) || main;
+      const L = LOOKS[lookId(s)] || this.L;
+      const prev = scenes[scenes.indexOf(s) - 1], pic = this.pic(s), prevPic = this.pic(prev);
+      const keyOf = (sc, pc) => (pc ? pc.img.src : lookOf(sc));
+      const prevKey = prev ? keyOf(prev, prevPic) : null, fade = prevKey && prevKey !== keyOf(s, pic) ? ease(p / .9) : 1;
       c.setTransform(this.k, 0, 0, this.k, 0, 0);
-      c.save(); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+      c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
       const intro = ease(t / 4.5), z = 1.2 - .16 * intro + .05 * (t / total);
-      c.translate(W / 2 + Math.sin(t * .15) * 10, H / 2 + (1 - intro) * -50); c.scale(z, z); c.translate(-W / 2, -H / 2);
-      if (fade < 1) { c.drawImage(this.layers.get(prevLook), 0, 0, W, H); LOOKS[prevLook].anim(c, t); c.globalAlpha = fade; }
-      c.drawImage(layer, 0, 0, W, H); L.anim(c, t);
-      c.restore();
-      // Art in front of the scenery: Ganesha, and the bride and groom rising in at the bottom
+      // The scenery: the painted look (with its moving parts) under a slow camera, or a scene picture
+      const back = (sc, pc, alpha) => {
+        c.save(); c.globalAlpha = alpha;
+        if (pc) { c.drawImage(lookOf(sc) ? this.layers.get(sc.look) : this.layer, 0, 0, W, H); drawScenePicture(c, pc.img, t - sc.t0, sc.d, pc.seed); }
+        else {
+          c.translate(W / 2 + Math.sin(t * .15) * 10, H / 2 + (1 - intro) * -50); c.scale(z, z); c.translate(-W / 2, -H / 2);
+          c.drawImage(lookOf(sc) ? this.layers.get(sc.look) : this.layer, 0, 0, W, H); LOOKS[lookId(sc)].anim(c, t);
+        }
+        c.restore();
+        // In front of it, a little closer to the camera (so it moves a little more): drapes, torans, flowers
+        const d = !pc && this.dress.get(lookId(sc));
+        if (!d) return;
+        c.save(); c.globalAlpha = alpha;
+        const zf = z * 1.035;
+        c.translate(W / 2 + Math.sin(t * .15) * 24, H / 2 + (1 - intro) * -80); c.scale(zf, zf); c.translate(-W / 2, -H / 2);
+        if (d.top) c.drawImage(d.top, 0, 0, W, DRESS_TOP);
+        if (d.bottom) c.drawImage(d.bottom, 0, H - DRESS_BOT, W, DRESS_BOT);
+        if (d.chandeliers) chandeliers(c, t, isLight(LOOKS[lookId(sc)]));
+        c.restore();
+      };
+      if (fade < 1) back(prev, prevPic, 1);
+      back(s, pic, fade);
+      // Art in front of the scenery: Ganesha, and the bride and groom rising in at the bottom (a scene picture has its own)
       const art = this.opt || {}, photos = art.photos || {};
-      if (s.ganesha && art.ganeshaArt !== 'none') {
+      if (s.ganesha && art.ganeshaArt !== 'none' && !pic) {
         c.save(); c.globalAlpha = ease((p - .2) / 1.2);
         const gy = s.ganesha.y; // Shri Ganesh stays still: he only fades in
         const god = photos.ganesha || ganeshaFor(art.story || art.look || '', art.ganeshaId || (STORIES[art.story] || {}).ganesha);
@@ -2579,7 +3179,7 @@ const Studio = (() => {
         else ganesha(c, W / 2, gy, s.ganesha.s, t);
         c.restore();
       }
-      if (s.couple && art.coupleArt !== 'none') {
+      if (s.couple && art.coupleArt !== 'none' && !pic) {
         c.save(); c.globalAlpha = ease((p - .3) / 1);
         const cy = s.couple.y + (1 - ease((p - .3) / 1.2)) * 60;
         const lib = art.coupleArt !== 'drawn' && !photos.couple && libImage(s.coupleEntry || this.couple);
@@ -2588,49 +3188,90 @@ const Studio = (() => {
         else if (art.coupleArt === 'drawn') couple(c, W / 2, cy, s.couple.s, t);
         c.restore();
       }
+      const light = isLight(L);
+      finish(c, t, light);
       const V = this.v, lay = s.zone ? 'center' : V.layout;
-      if (!this.cache.has(s)) this.cache.set(s, layout(c, { ...L, zone: s.zone || zoneFor(lay, L.zone) }, lines(s, this.card, this.opt)));
-      const { M, y0 } = this.cache.get(s), out = last ? 1 : 1 - ease((p - (s.d - .6)) / .6);
+      const T = this.sceneText(s, L, lay, pic), { M, y0 } = T, Lt = T.L, B = T.board, out = last ? 1 : 1 - ease((p - (s.d - .6)) / .6);
       const blockH = M.reduce((a, m, i) => a + m.h + (i < M.length - 1 ? m.gap : 0), 0);
-      backing(c, lay, L, y0, blockH, ease((p - .1) / .6) * out);
+      if (pic && !B && blockH) {
+        // a soft scrim behind words that sit straight on a picture
+        const cy = y0 + blockH / 2, g = c.createRadialGradient(W / 2, cy, 40, W / 2, cy, Math.max(420, blockH * .9));
+        g.addColorStop(0, light ? 'rgba(255,250,240,.7)' : 'rgba(8,4,14,.62)'); g.addColorStop(1, light ? 'rgba(255,250,240,0)' : 'rgba(8,4,14,0)');
+        c.save(); c.globalAlpha = ease(p / .6) * out; c.fillStyle = g; c.fillRect(0, 0, W, H); c.restore();
+      }
+      if (!B) backing(c, lay, L, y0, blockH, ease((p - .1) / .6) * out);
+      c.save();
+      if (B) {
+        const a = ease((p - .05) / .55) * out, e = ease(p / .9);
+        if (B.hang) { const ang = .05 * Math.exp(-1.5 * p) * Math.cos(p * 4.2), py = B.y - 300; c.translate(W / 2, py); c.rotate(ang); c.translate(-W / 2, -py - (1 - e) * 170); }
+        else { const sc = .93 + .07 * e, cy = B.y + B.h / 2; c.translate(W / 2, cy); c.scale(sc, sc); c.translate(-W / 2, -cy); }
+        if (a > .01) {
+          c.globalAlpha = a;
+          if (B.hang) boardStrings(c, B);
+          c.drawImage(B.cv, B.x - B.ox, B.y - B.oy, B.cv.width / B.k, B.cv.height / B.k);
+          // a gleam of light passes across the board once it is up
+          const u = (p - .7) / 1.4;
+          if (u > 0 && u < 1) {
+            c.save(); boardShape(c, B.style, B.x, B.y, B.w, B.h, 0); c.clip();
+            const sx = B.x - 260 + u * (B.w + 520), g = c.createLinearGradient(sx - 160, B.y, sx + 160, B.y + 260);
+            g.addColorStop(0, 'rgba(255,250,230,0)'); g.addColorStop(.5, `rgba(255,250,230,${(.38 * a).toFixed(2)})`); g.addColorStop(1, 'rgba(255,250,230,0)');
+            c.fillStyle = g; c.fillRect(B.x, B.y - 120, B.w, B.h + 160); c.restore();
+          }
+          c.globalAlpha = 1;
+        }
+      }
       let y = y0;
       M.forEach((m, i) => {
-        const a = ease((p - .25 - i * .16) / .7) * out, k = 1 - a;
+        const a = ease((p - .25 - i * .16) / .7) * out, k = 1 - a, ctx = { ...this.ctx, t, board: !!B };
         if (a > .01) {
           let x = W / 2, yy = y + k * 26;
-          if (V.enter === 'drop') yy = y - k * 34;
-          else if (V.enter === 'side') { x = W / 2 + (i % 2 ? 1 : -1) * k * 90; yy = y; }
-          if (V.enter === 'zoom') {
-            const z = .86 + .14 * a;
-            c.save(); c.translate(W / 2, y + m.h / 2); c.scale(z, z); c.translate(-W / 2, -(y + m.h / 2));
-            drawItem(c, L, m, x, y, p - .25 - i * .16, a, { ...this.ctx, t });
+          const enter = s.enter || V.enter; // a script scene may pick its own entrance
+          if (enter === 'drop') yy = y - k * 34;
+          else if (enter === 'side') { x = W / 2 + (i % 2 ? 1 : -1) * k * 90; yy = y; }
+          if (enter === 'swing' || enter === 'unfold') {
+            // swing: each line swings in from its side; unfold: each line opens out from its middle like a ribbon
+            c.save(); c.translate(W / 2, y + m.h / 2);
+            if (enter === 'swing') { c.rotate((i % 2 ? 1 : -1) * k * .12); c.translate((i % 2 ? 1 : -1) * k * 60, 0); }
+            else c.scale(1, Math.max(.02, ease(a)));
+            c.translate(-W / 2, -(y + m.h / 2));
+            drawItem(c, Lt, m, x, y, p - .25 - i * .16, a, ctx);
             c.restore();
-          } else drawItem(c, L, m, x, yy, p - .25 - i * .16, a, { ...this.ctx, t });
+          } else if (enter === 'zoom') {
+            const zz = .86 + .14 * a;
+            c.save(); c.translate(W / 2, y + m.h / 2); c.scale(zz, zz); c.translate(-W / 2, -(y + m.h / 2));
+            drawItem(c, Lt, m, x, y, p - .25 - i * .16, a, ctx);
+            c.restore();
+          } else drawItem(c, Lt, m, x, yy, p - .25 - i * .16, a, ctx);
         }
         y += m.h + m.gap;
       });
+      c.restore();
       L.fx(c, t);
+      bokeh(c, t, light, L.scene.length * 13 + 7);
       if (s.shower) petals(c, t, 70, ['#ff9f1c', '#ffd166', '#ef476f', '#ffffff', '#f4a3c4'], 7, 1.25);
       if (s.sigCorner) {
         // The designer's signature in the bottom-left corner (a client's video ends on it)
-        const a = ease((p - .6) / .9), light = isLight(L);
+        const a = ease((p - .6) / .9);
         c.save(); c.globalAlpha = a; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
         c.font = '112px "Great Vibes"';
         const w = Math.max(300, c.measureText(this.ctx.designer).width + 90);
-        c.fillStyle = light ? 'rgba(255,253,246,.88)' : 'rgba(10,4,16,.6)'; rrect(c, 36, H - 236, w, 192, 34); c.fill();
-        c.strokeStyle = L.col.gold; c.globalAlpha = a * .7; c.lineWidth = 2; rrect(c, 46, H - 226, w - 20, 172, 28); c.stroke(); c.globalAlpha = a;
+        c.shadowColor = 'rgba(0,0,0,.3)'; c.shadowBlur = 24; c.shadowOffsetY = 8;
+        c.fillStyle = light ? 'rgba(255,253,246,.92)' : 'rgba(10,4,16,.68)'; rrect(c, 36, H - 236, w, 192, 34); c.fill();
+        c.shadowColor = 'transparent';
+        c.strokeStyle = goldBevel(c, 36, H - 236, 36 + w, H - 44); c.lineWidth = 4; rrect(c, 46, H - 226, w - 20, 172, 28); c.stroke();
         c.fillStyle = light ? L.col.ink2 : '#f3e6cf'; c.font = `28px "${L.font.serif}"`; spacing(c, 7); c.fillText('DESIGNED BY', 76, H - 178);
-        spacing(c, 0); c.fillStyle = L.col.gold; c.font = '112px "Great Vibes"'; c.fillText(this.ctx.designer, 70, H - 80);
+        spacing(c, 0); c.fillStyle = goldFill(c, H - 170, H - 70); c.font = '112px "Great Vibes"'; c.fillText(this.ctx.designer, 70, H - 80);
         c.restore();
       } else if (s.k !== 'end' && art.signature !== false) {
-        // The credit sits on a soft pill, so it reads on any background
-        const light = isLight(L), txt = `Designed by ${this.ctx.designer}`;
+        // The credit sits on a soft pill with a fine gold edge, so it reads on any background
+        const txt = `Designed by ${this.ctx.designer}${this.ctx.creditSite && this.ctx.host ? ` · ${this.ctx.host}` : ''}`; // creditSite: a client's video also names the website
         c.save(); c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `26px "${L.font.serif}"`; spacing(c, 2);
         const w = c.measureText(txt).width + 44;
-        c.fillStyle = light ? 'rgba(255,253,246,.8)' : 'rgba(15,6,20,.45)'; rrect(c, W / 2 - w / 2, H - 70, w, 44, 22); c.fill();
+        c.fillStyle = light ? 'rgba(255,253,246,.84)' : 'rgba(15,6,20,.52)'; rrect(c, W / 2 - w / 2, H - 70, w, 44, 22); c.fill();
+        c.strokeStyle = light ? 'rgba(184,134,43,.55)' : 'rgba(232,196,106,.5)'; c.lineWidth = 1.5; rrect(c, W / 2 - w / 2 + 4, H - 66, w - 8, 36, 18); c.stroke();
         c.fillStyle = light ? L.col.ink : '#fff7ea'; c.fillText(txt, W / 2, H - 47); c.restore();
       }
-      if (s !== scenes[0]) change(c, this.v.change, p, L);
+      if (s !== scenes[0]) change(c, s.change || this.v.change, p, L); // a script scene may pick its own change
       if (s.doors) opening(c, this.v.open, clamp((p - .5) / 1.8), t);
       return s;
     }
@@ -2670,11 +3311,16 @@ const Studio = (() => {
       return !img || img.complete ? null : new Promise(r => { img.addEventListener('load', r, { once: true }); img.addEventListener('error', r, { once: true }); });
     }));
   }
+  let fontsLoad = null;
   function fontsReady() {
     if (typeof document === 'undefined' || !document.fonts) return Promise.resolve();
     const want = [...FONTS.map(f => `40px "${f}"`), '700 40px "Cinzel Decorative"', 'italic 40px "Cormorant Garamond"'];
     const hindi = ['40px "Yatra One"', '700 40px "Amita"', '40px "Tiro Devanagari Hindi"'].map(f => document.fonts.load(f, 'ॐ शुभ विवाह'));
-    return Promise.all([...want.map(f => document.fonts.load(f)), ...hindi, artReady(), libReady()]).catch(() => {});
+    return (fontsLoad = Promise.all([...want.map(f => document.fonts.load(f)), ...hindi, artReady(), libReady(), sceneManifest()]).catch(() => {}));
+  }
+  // The same, started once (the background painting of signboards waits on it)
+  function fontsOnce() {
+    return fontsLoad || fontsReady();
   }
 
   // The website's sample video for a scene: the occasion it suits, with sample names (and parents, for weddings).
@@ -2685,7 +3331,7 @@ const Studio = (() => {
     return card;
   }
 
-  return { W, H, LOOKS, SCENES, STORIES, quotesFor, eventTop, swapNames, variant, coupleFor, POSES, OPENINGS, CHANGES, LAYOUTS_V, ENTRANCES, SITE_QR, HI, hasCouple, dateRange, lookName, thumb, sample, defaults, timeline, lines, parents, splitIcon, ordinal, phone, sceneName, sceneLayer, Player, fontsReady };
+  return { W, H, LOOKS, SCENES: SCENE_IDS, STORIES, quotesFor, eventTop, swapNames, variant, coupleFor, POSES, OPENINGS, CHANGES, LAYOUTS_V, ENTRANCES, SITE_QR, HI, hasCouple, dateRange, lookName, thumb, sample, defaults, timeline, lines, parents, splitIcon, ordinal, phone, sceneName, sceneLayer, Player, fontsReady };
 })();
 
 if (typeof module !== 'undefined') module.exports = Studio;

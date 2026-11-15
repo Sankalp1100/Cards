@@ -3,6 +3,16 @@
 // note and a finale signed by Sankalp. Every film is its own palette × frame (no two share both), with its own
 // opening, sparkle and occasion, and made-up sample names, places and numbers (no real person's details).
 // js/site.js shows them under Story videos; tools/film-posters.mjs draws their pictures into img/films/.
+// Art: couples and Ganesh ji come from img/films-art/*.webp (light copies of img/couples/cut and img/art/cut); they
+// load when a film is set and fade in, and a film still plays (code-drawn) if one is missing.
+// AI scenes (optional): a full-scene picture at img/scenes/<function>-NN.<jpg|jpeg|png|webp>, listed by its full file
+// name in js/scenes.js (SCENE_ART, shared with the cards; films.js loads that list itself when the page has not).
+// function: ganesh, invite, haldi, mehendi, sangeet, baraat, wedding, reception, vidai, family, thanks; couple-NN (a
+// full-scene couple) also serves invite and thanks. A scene of that function (opening = ganesh/invite, names/card =
+// invite, a day = its first function, families/note = family, finale = thanks) shows it full-bleed (cover, scaled
+// once to the player's size, slow Ken Burns drift) under a readability scrim; Royal Heritage, Rangoli, Farmaan,
+// Jharokha and Temple use it for every scene, the other concepts on their day screens. Films pick 01…NN by number.
+// Only listed files are requested; a missing or broken one is skipped and the painted scene is drawn instead.
 const Films = (() => {
   const W = 1080, H = 1920;
 
@@ -314,8 +324,10 @@ const Films = (() => {
   let NOW = 0; // the film's clock, for the foil shimmer
   const isHi = s => /[ऀ-ॿ]/.test(s);
   function goldFill(ctx, th, y, z) {
-    const g = ctx.createLinearGradient(0, y - z * .8, 0, y + z * .25);
-    g.addColorStop(0, th.gold[0]); g.addColorStop(.5, th.gold[1]); g.addColorStop(1, th.gold[2]);
+    // big letters get real foil: a bright crown, a deeper band where the light turns, a bright lip below
+    const g = ctx.createLinearGradient(0, y - z * .85, 0, y + z * .22), [hi, mid, lo] = th.gold;
+    if (z < 44) { g.addColorStop(0, hi); g.addColorStop(.55, mid); g.addColorStop(1, lo); return g; }
+    g.addColorStop(0, hi); g.addColorStop(.3, mid); g.addColorStop(.5, lo); g.addColorStop(.6, mid); g.addColorStop(.82, hi); g.addColorStop(1, mid);
     return g;
   }
   // One line of text, shrunk to fit; colour 'gold' paints it in the palette's foil
@@ -333,7 +345,13 @@ const Films = (() => {
     ctx.fillStyle = color === 'gold' ? goldFill(ctx, th, y, size) : color;
     if (glow) { ctx.shadowColor = th.dark ? 'rgba(255,200,90,.55)' : 'rgba(120,60,10,.25)'; ctx.shadowBlur = glow; }
     const yy = y + (1 - clamp(a)) * rise;
+    if (color === 'gold' && size >= 34) {
+      // pressed foil: a soft dark bed under the letters, then the metal, then a fine dark edge
+      ctx.save(); ctx.shadowColor = 'transparent'; ctx.fillStyle = th.dark ? 'rgba(0,0,0,.55)' : rgba(hex6(th.gold[2]), .35);
+      ctx.filter = 'none'; ctx.fillText(spaced, x, yy + Math.max(2, size * .035)); ctx.restore();
+    }
     ctx.fillText(spaced, x, yy);
+    if (color === 'gold' && size >= 60) { ctx.save(); ctx.shadowColor = 'transparent'; ctx.lineWidth = Math.max(1, size * .012); ctx.strokeStyle = rgba(hex6(th.gold[2]), .55); ctx.strokeText(spaced, x, yy); ctx.restore(); }
     if (color === 'gold') {
       const w = ctx.measureText(spaced).width, x0 = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
       const p = ((NOW * .35 + x0 * .0007) % 1.6) - .3, sh = ctx.createLinearGradient(x0 - 60, yy - size, x0 + w + 60, yy);
@@ -358,15 +376,524 @@ const Films = (() => {
   function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
   const stroke = (ctx, c, w) => { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.stroke(); };
 
+  // ---------- Premium kit: foil, paper, silk, flowers, gilt frames, art and painted stages ----------
+  // Static layers (backgrounds, stages, gilt boards, flower sprites) are painted once at the player's scale on
+  // offscreen canvases and reused every frame, so a phone only redraws the moving parts.
+  const HAS_DOM = typeof document !== 'undefined' && typeof Image !== 'undefined';
+  let SCALE = .5;
+  const LAYERS = new Map();
+  function layer(key, paint, w = W, h = H) {
+    if (!HAS_DOM) return null;
+    const k = `${key}@${SCALE}`;
+    let c = LAYERS.get(k);
+    if (c) { LAYERS.delete(k); LAYERS.set(k, c); return c; }
+    c = document.createElement('canvas');
+    const s = w * h > 300000 ? SCALE : Math.max(SCALE, 1); // little sprites stay sharp
+    c.width = Math.max(1, Math.round(w * s)); c.height = Math.max(1, Math.round(h * s));
+    const g = c.getContext('2d'); g.scale(s, s);
+    try { paint(g, w, h); } catch (e) { /* a layer that fails stays blank */ }
+    LAYERS.set(k, c);
+    // iPhone Safari caps canvas memory: drop the oldest layers and release their pixels at once
+    while (LAYERS.size > 28) { const old = LAYERS.keys().next().value, oc = LAYERS.get(old); LAYERS.delete(old); oc.width = oc.height = 0; }
+    return c;
+  }
+  const put = (ctx, c, x = 0, y = 0, w = W, h = H) => { if (c && c.width) ctx.drawImage(c, x, y, w, h); };
+  const thKey = th => `${th.word}|${th.bg[0]}|${th.accent}|${th.gold[1]}`;
+  const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
+  const mix = (a, b, k) => { const p = parseInt(a.slice(1), 16), q = parseInt(b.slice(1), 16), f = s => Math.round(((p >> s) & 255) * (1 - k) + ((q >> s) & 255) * k); return '#' + [16, 8, 0].map(s => f(s).toString(16).padStart(2, '0')).join(''); };
+  const hex6 = c => /^#[0-9a-f]{6}$/i.test(c) ? c : '#808080';
+  // Brushed foil: light and dark bands across, like real gold leaf catching the light
+  function foil(ctx, th, x0, y0, x1, y1) {
+    const [hi, mid, lo] = th.gold, g = ctx.createLinearGradient(x0, y0, x1, y1);
+    g.addColorStop(0, mid); g.addColorStop(.18, hi); g.addColorStop(.36, mid); g.addColorStop(.52, lo); g.addColorStop(.68, mid); g.addColorStop(.84, hi); g.addColorStop(1, mid);
+    return g;
+  }
+  // A grain of noise over a layer (paper tooth, silk weave)
+  let GRAIN = null;
+  function grain(g, a = .05, w = W, h = H, mode = 'overlay') {
+    if (!HAS_DOM) return;
+    if (!GRAIN) {
+      GRAIN = document.createElement('canvas'); GRAIN.width = GRAIN.height = 160;
+      const gc = GRAIN.getContext('2d'), d = gc.createImageData(160, 160), r = rng(99);
+      for (let i = 0; i < d.data.length; i += 4) { const v = 70 + r() * 120; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
+      gc.putImageData(d, 0, 0);
+    }
+    g.save(); g.globalAlpha = a; g.globalCompositeOperation = mode; g.fillStyle = g.createPattern(GRAIN, 'repeat'); g.fillRect(0, 0, w, h); g.restore();
+  }
+  // A paisley (buta), the motif woven into silk and printed on cards
+  function buta(g, x, y, s, rot) {
+    g.save(); g.translate(x, y); g.rotate(rot); g.scale(s / 100, s / 100);
+    g.beginPath(); g.moveTo(0, 50); g.bezierCurveTo(-48, 40, -50, -20, -10, -36); g.bezierCurveTo(20, -48, 46, -30, 30, -60);
+    g.bezierCurveTo(62, -30, 52, 30, 0, 50); g.closePath(); g.fill();
+    g.restore();
+  }
+  function damask(g, col, a, w = W, h = H, step = 150) {
+    g.save(); g.globalAlpha = a; g.fillStyle = col; g.strokeStyle = col; g.lineWidth = 2;
+    for (let y = -step; y < h + step; y += step) for (let x = -step; x < w + step; x += step) {
+      const ox = ((y / step) % 2 ? step / 2 : 0);
+      buta(g, x + ox, y, 46, .5);
+      g.beginPath(); g.arc(x + ox + step / 2, y + step / 2, 5, 0, Math.PI * 2); g.fill();
+      for (let i = 0; i < 4; i++) { g.beginPath(); g.ellipse(x + ox + step / 2 + Math.cos(i * Math.PI / 2) * 14, y + step / 2 + Math.sin(i * Math.PI / 2) * 14, 7, 3, i * Math.PI / 2, 0, Math.PI * 2); g.fill(); }
+    }
+    g.restore();
+  }
+  // Silk / velvet: a lit centre, woven motif, grain and a deep vignette
+  function silkBg(g, c0, c1, motif, ma, w = W, h = H, light = false) {
+    const b = g.createRadialGradient(w / 2, h * .36, 40, w / 2, h * .5, h * .78);
+    b.addColorStop(0, c0); b.addColorStop(1, c1); g.fillStyle = b; g.fillRect(0, 0, w, h);
+    damask(g, motif, ma, w, h);
+    // the sheen of silk: soft diagonal bands
+    g.save(); g.globalCompositeOperation = light ? 'multiply' : 'screen'; g.globalAlpha = light ? .04 : .035;
+    for (let i = -2; i < 6; i++) { const s = g.createLinearGradient(i * 300, 0, i * 300 + 420, h * .4); s.addColorStop(0, 'rgba(255,255,255,0)'); s.addColorStop(.5, light ? '#a07040' : '#ffffff'); s.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = s; g.fillRect(0, 0, w, h); }
+    g.restore();
+    grain(g, light ? .06 : .09, w, h);
+    const v = g.createRadialGradient(w / 2, h * .45, h * .28, w / 2, h * .5, h * .75);
+    v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, light ? 'rgba(90,50,10,.22)' : 'rgba(0,0,0,.6)'); g.fillStyle = v; g.fillRect(0, 0, w, h);
+  }
+  // Handmade paper: tone, fibres, tooth
+  function paperFill(g, col, w, h, seed = 3) {
+    g.fillStyle = col; g.fillRect(0, 0, w, h);
+    const r = rng(seed);
+    g.save(); g.lineWidth = 1;
+    for (let i = 0; i < w * h / 2400; i++) {
+      const x = r() * w, y = r() * h, a = r() * Math.PI, l = 6 + r() * 16;
+      g.strokeStyle = r() < .5 ? 'rgba(120,90,50,.07)' : 'rgba(255,255,255,.22)';
+      g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + Math.cos(a) * l * .5 + 3, y + Math.sin(a) * l * .5, x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke();
+    }
+    g.restore();
+    grain(g, .07, w, h, 'multiply');
+    const e = g.createRadialGradient(w / 2, h / 2, Math.min(w, h) * .35, w / 2, h / 2, Math.max(w, h) * .72);
+    e.addColorStop(0, 'rgba(0,0,0,0)'); e.addColorStop(1, 'rgba(110,70,20,.13)'); g.fillStyle = e; g.fillRect(0, 0, w, h);
+  }
+  const paperLayer = (col, w, h) => layer(`paper|${col}|${w}x${h}`, g => paperFill(g, hex6(col), w, h), w, h);
+  // Fill the current path with paper (clipped)
+  function paperIn(ctx, col, x, y, w, h) { ctx.save(); ctx.clip(); const p = paperLayer(col, Math.round(w), Math.round(h)); if (p && p.width) ctx.drawImage(p, x, y, w, h); else { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); } ctx.restore(); }
+  // A gilt corner: a bracket, a scroll that curls, leaves and a bead
+  function filigree(ctx, th, x, y, s, sx, sy, a = 1) {
+    if (a <= 0) return;
+    ctx.save(); ctx.globalAlpha *= clamp(a); ctx.translate(x, y); ctx.scale(sx * s / 100, sy * s / 100);
+    const f = foil(ctx, th, 0, 0, 120, 120);
+    ctx.strokeStyle = f; ctx.fillStyle = f; ctx.lineCap = 'round'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(0, 130); ctx.lineTo(0, 12); ctx.quadraticCurveTo(0, 0, 12, 0); ctx.lineTo(130, 0); ctx.stroke();
+    ctx.lineWidth = 2.6;
+    ctx.beginPath(); ctx.moveTo(16, 104); ctx.bezierCurveTo(14, 40, 40, 14, 104, 16); ctx.stroke();
+    const curl = (cx, cy, r, dir, a0) => { ctx.beginPath(); for (let k = 0; k <= 26; k++) { const t = k / 26 * Math.PI * 1.8, q = r * (1 - k / 34); ctx.lineTo(cx + Math.cos(a0 + t * dir) * q, cy + Math.sin(a0 + t * dir) * q); } ctx.stroke(); };
+    curl(112, 28, 13, 1, Math.PI); curl(28, 112, 13, -1, -Math.PI / 2 + Math.PI * 1.5);
+    const lf = (lx, ly, ang, L) => { ctx.save(); ctx.translate(lx, ly); ctx.rotate(ang); ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(L * .5, -L * .38, L, 0); ctx.quadraticCurveTo(L * .5, L * .38, 0, 0); ctx.fill(); ctx.restore(); };
+    lf(22, 22, Math.PI / 4, 40); lf(46, 26, -.15, 26); lf(26, 46, Math.PI / 2 + .15, 26); lf(70, 20, -.35, 18); lf(20, 70, Math.PI / 2 + .35, 18);
+    ctx.beginPath(); ctx.arc(16, 16, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(142, 0, 5, 0, Math.PI * 2); ctx.arc(0, 142, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  function filigreeCorners(ctx, th, x, y, w, h, s, a = 1, inset = 0) {
+    filigree(ctx, th, x + inset, y + inset, s, 1, 1, a); filigree(ctx, th, x + w - inset, y + inset, s, -1, 1, a);
+    filigree(ctx, th, x + inset, y + h - inset, s, 1, -1, a); filigree(ctx, th, x + w - inset, y + h - inset, s, -1, -1, a);
+  }
+  // A carved gilt moulding around a rectangle (a frame, a signboard)
+  function gilt(ctx, th, x, y, w, h, bw = 24, r = 8, shadow = true) {
+    ctx.save();
+    if (shadow) { ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 18; }
+    rr(ctx, x, y, w, h, r); ctx.fillStyle = th.gold[2]; ctx.fill(); ctx.shadowColor = 'transparent';
+    ctx.lineWidth = bw; ctx.strokeStyle = foil(ctx, th, x, y, x + w * .7, y + h); rr(ctx, x + bw / 2, y + bw / 2, w - bw, h - bw, Math.max(1, r - bw / 2)); ctx.stroke();
+    ctx.lineWidth = 2; ctx.strokeStyle = rgba(hex6(th.gold[2]), .9); rr(ctx, x + bw * .42, y + bw * .42, w - bw * .84, h - bw * .84, r); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,248,220,.75)'; ctx.lineWidth = 1.6; rr(ctx, x + 2, y + 2, w - 4, h - 4, r); ctx.stroke();
+    ctx.strokeStyle = 'rgba(40,20,0,.55)'; ctx.lineWidth = 2; rr(ctx, x + bw, y + bw, w - 2 * bw, h - 2 * bw, Math.max(1, r - bw)); ctx.stroke();
+    // beading along the moulding
+    ctx.fillStyle = th.gold[0]; ctx.globalAlpha *= .8;
+    const step = 22, bx = x + bw * .7, by = y + bw * .7, bw2 = w - bw * 1.4, bh2 = h - bw * 1.4;
+    for (let p = step; p < bw2 - 4; p += step) { ctx.beginPath(); ctx.arc(bx + p, by, 2.4, 0, Math.PI * 2); ctx.arc(bx + p, by + bh2, 2.4, 0, Math.PI * 2); ctx.fill(); }
+    for (let p = step; p < bh2 - 4; p += step) { ctx.beginPath(); ctx.arc(bx, by + p, 2.4, 0, Math.PI * 2); ctx.arc(bx + bw2, by + p, 2.4, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+  }
+  // Flower sprites: marigold, rose, jasmine and a leaf, shaded, drawn once
+  function marigold(col) {
+    return layer(`mg|${col}`, g => {
+      const c = hex6(col), cx = 40, cy = 40;
+      const b = g.createRadialGradient(cx - 6, cy - 8, 2, cx, cy, 36); b.addColorStop(0, shade(c, .35)); b.addColorStop(.6, c); b.addColorStop(1, shade(c, -.35));
+      g.fillStyle = b; g.beginPath(); g.arc(cx, cy, 34, 0, Math.PI * 2); g.fill();
+      for (let ring = 0; ring < 4; ring++) {
+        const r = 32 - ring * 8, n = 16 - ring * 3;
+        for (let i = 0; i < n; i++) {
+          const a = i / n * Math.PI * 2 + ring * .4, x = cx + Math.cos(a) * r * .8, y = cy + Math.sin(a) * r * .8;
+          g.fillStyle = i % 2 ? shade(c, .18 - ring * .02) : shade(c, -.12);
+          g.beginPath(); g.ellipse(x, y, 7, 4.5, a, 0, Math.PI * 2); g.fill();
+        }
+      }
+      g.fillStyle = shade(c, -.4); g.globalAlpha = .5; g.beginPath(); g.arc(cx, cy, 5, 0, Math.PI * 2); g.fill();
+    }, 80, 80);
+  }
+  function rose(col) {
+    return layer(`rose|${col}`, g => {
+      const c = hex6(col), cx = 50, cy = 50;
+      for (let ring = 0; ring < 4; ring++) {
+        const n = [6, 5, 4, 3][ring], r = [44, 34, 24, 14][ring];
+        for (let i = 0; i < n; i++) {
+          const a = i / n * Math.PI * 2 + ring * .7;
+          const pg = g.createRadialGradient(cx, cy, 2, cx + Math.cos(a) * r * .5, cy + Math.sin(a) * r * .5, r);
+          pg.addColorStop(0, shade(c, -.25)); pg.addColorStop(.7, shade(c, .12 + ring * .05)); pg.addColorStop(1, shade(c, .35));
+          g.fillStyle = pg; g.beginPath(); g.ellipse(cx + Math.cos(a) * r * .35, cy + Math.sin(a) * r * .35, r * .62, r * .48, a, 0, Math.PI * 2); g.fill();
+          g.strokeStyle = shade(c, -.3); g.globalAlpha = .25; g.lineWidth = 1; g.stroke(); g.globalAlpha = 1;
+        }
+      }
+      g.strokeStyle = shade(c, -.4); g.lineWidth = 2; g.beginPath(); for (let k = 0; k < 30; k++) { const t = k / 30 * Math.PI * 3, q = 2 + k * .3; g.lineTo(cx + Math.cos(t) * q, cy + Math.sin(t) * q); } g.stroke();
+    }, 100, 100);
+  }
+  function leafSprite(col) {
+    return layer(`leaf|${col}`, g => {
+      const c = hex6(col), lg = g.createLinearGradient(0, 0, 0, 40); lg.addColorStop(0, shade(c, .25)); lg.addColorStop(1, shade(c, -.3));
+      g.fillStyle = lg; g.beginPath(); g.moveTo(4, 20); g.quadraticCurveTo(40, -4, 96, 20); g.quadraticCurveTo(40, 44, 4, 20); g.fill();
+      g.strokeStyle = shade(c, .4); g.globalAlpha = .6; g.lineWidth = 1.5; g.beginPath(); g.moveTo(6, 20); g.quadraticCurveTo(50, 18, 92, 20); g.stroke();
+    }, 100, 40);
+  }
+  const sprite = (ctx, c, x, y, s, rot = 0, a = 1) => {
+    if (!c || !c.width) return;
+    ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y); if (rot) ctx.rotate(rot);
+    const iw = c.width / Math.max(SCALE, 1), ih = c.height / Math.max(SCALE, 1), k = s / Math.max(iw, ih);
+    ctx.drawImage(c, -iw * k / 2, -ih * k / 2, iw * k, ih * k); ctx.restore();
+  };
+  const MARI = ['#ff9f1c', '#ffc93c', '#ff7b00', '#ffd23f'];
+  // A marigold garland hanging between two points
+  function garland(ctx, x0, y0, x1, y1, sag, s = 34, cols = MARI, leafCol = '#3f7a2a') {
+    const n = Math.max(4, Math.round(Math.hypot(x1 - x0, y1 - y0) / (s * .62)));
+    for (let i = 0; i <= n; i++) {
+      const u = i / n, x = x0 + (x1 - x0) * u, y = y0 + (y1 - y0) * u + Math.sin(u * Math.PI) * sag;
+      if (i % 4 === 2) sprite(ctx, leafSprite(leafCol), x, y + s * .35, s * 1.1, Math.PI / 2 + .4);
+      sprite(ctx, marigold(cols[i % cols.length]), x, y, s);
+    }
+  }
+  // A string of marigolds falling straight down (a ladi), ending in a tassel
+  function ladi(ctx, x, y, len, s = 30, cols = MARI, sway = 0) {
+    const n = Math.max(2, Math.round(len / (s * .7)));
+    for (let i = 0; i <= n; i++) { const u = i / n; sprite(ctx, marigold(cols[(i + 1) % cols.length]), x + Math.sin(u * 2 + sway) * 3, y + u * len, s * (i % 3 === 2 ? .7 : 1)); }
+    sprite(ctx, rose('#c2185b'), x, y + len + s * .7, s * .9);
+  }
+  // ---------- The art: couple illustrations and Ganesh ji (img/films-art, light WebP copies of img/couples/cut and img/art/cut) ----------
+  const ART_LIB = {
+    wedding: ['wedding-01', 'wedding-02', 'wedding-05', 'wedding-06', 'wedding-07', 'wedding-08', 'wedding-09', 'wedding-12', 'wedding-14', 'wedding-03', 'wedding-10', 'wedding-11'],
+    engagement: ['engagement-01', 'engagement-02', 'engagement-03', 'roka-01', 'engagement-04', 'roka-02', 'engagement-05'],
+    reception: ['reception-02', 'reception-03', 'reception-01', 'reception-04', 'reception-05'], sangeet: ['sangeet-01', 'sangeet-02', 'sangeet-03'],
+    haldi: ['haldi-01', 'haldi-02', 'haldi-03', 'haldi-04'], mehendi: ['mehendi-01', 'mehendi-02', 'mehendi-03'], anniversary: ['anniversary-01'],
+    babyshower: ['babyshower-01', 'babyshower-02'], kid: ['kid-01', 'kid-02'], family: ['family-01', 'family-02'],
+    ganesha: ['ganesha-01', 'ganesha-06', 'ganesha-02', 'ganesha-07', 'ganesha-08', 'ganesha-09', 'ganesha-10', 'ganesha-11', 'ganesha-12']
+  };
+  const ART_OF = { wedding: 'wedding', engagement: 'engagement', reception: 'reception', sangeet: 'sangeet', haldi: 'haldi', mehendi: 'mehendi', anniversary: 'anniversary',
+    birthday: 'kid', babyshower: 'babyshower', naming: 'kid', housewarming: 'family', puja: 'family' };
+  const IMGS = {};
+  function loadImg(src) {
+    if (!HAS_DOM) return null;
+    let a = IMGS[src];
+    if (!a) {
+      a = IMGS[src] = { img: new Image(), ok: false, bad: false, at: 0 };
+      // decoded off the main thread before it counts as in, so the first frame that shows it never stalls
+      a.done = new Promise(res => { a.img.onload = () => { Promise.resolve(a.img.decode ? a.img.decode() : 0).catch(() => {}).then(() => { a.ok = true; a.at = Date.now(); res(a); }); }; a.img.onerror = () => { a.bad = true; res(a); }; });
+      a.img.decoding = 'async'; a.img.src = src;
+    }
+    return a;
+  }
+  // the picture, once it has arrived (it fades in over half a second if it came late)
+  const ready = a => a && a.ok ? clamp((Date.now() - a.at) / 500) : 0;
+  const artSrc = id => `img/films-art/${id}.webp`;
+  function pickArt(kind, n) { const l = ART_LIB[kind] || ART_LIB.wedding; return l[((n % l.length) + l.length) % l.length]; }
+  // A couple or Ganesh ji standing on the scene: a soft floor shadow, a halo of light behind, the figure
+  function figure(ctx, id, cx, bottom, h, a = 1, o = {}) {
+    const im = loadImg(artSrc(id)), k = ready(im) * clamp(a);
+    if (k <= 0) return false;
+    const w = h * im.img.naturalWidth / im.img.naturalHeight;
+    ctx.save(); ctx.globalAlpha *= k;
+    if (o.halo) { const g = ctx.createRadialGradient(cx, bottom - h * .55, 10, cx, bottom - h * .55, h * .62); g.addColorStop(0, o.halo); g.addColorStop(1, 'rgba(255,220,150,0)'); ctx.fillStyle = g; ctx.fillRect(cx - h, bottom - h * 1.2, h * 2, h * 1.3); }
+    if (o.shadow !== false) { const s = ctx.createRadialGradient(cx, bottom - 6, 4, cx, bottom - 6, w * .55); s.addColorStop(0, 'rgba(0,0,0,.4)'); s.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = s; ctx.save(); ctx.translate(cx, bottom - 6); ctx.scale(1, .16); ctx.translate(-cx, -(bottom - 6)); ctx.beginPath(); ctx.arc(cx, bottom - 6, w * .55, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+    if (o.flip) { ctx.translate(cx, 0); ctx.scale(-1, 1); ctx.translate(-cx, 0); }
+    ctx.drawImage(im.img, cx - w / 2, bottom - h, w, h);
+    ctx.restore();
+    return true;
+  }
+  // The same figure as a toned print (sepia newspaper photo, duotone poster), made once from the picture's pixels
+  function tonedArt(id, dark, light) {
+    const im = loadImg(artSrc(id));
+    if (!im || !im.ok) return null;
+    return layer(`tone|${id}|${dark}|${light}`, g => {
+      // toned at the size it is shown (a print is never more than ~1000 px tall on the 1920 frame)
+      const k = Math.min(1, Math.ceil(1000 * Math.max(SCALE, .25)) / im.img.naturalHeight), w = Math.round(im.img.naturalWidth * k), h = Math.round(im.img.naturalHeight * k);
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(im.img, 0, 0, w, h);
+      const d = x.getImageData(0, 0, w, h), p = d.data, A = parseInt(dark.slice(1), 16), B = parseInt(light.slice(1), 16);
+      for (let i = 0; i < p.length; i += 4) {
+        let l = (p[i] * .3 + p[i + 1] * .59 + p[i + 2] * .11) / 255; l = clamp((l - .5) * 1.25 + .55);
+        p[i] = ((A >> 16) & 255) * (1 - l) + ((B >> 16) & 255) * l; p[i + 1] = ((A >> 8) & 255) * (1 - l) + ((B >> 8) & 255) * l; p[i + 2] = (A & 255) * (1 - l) + (B & 255) * l;
+      }
+      x.putImageData(d, 0, 0); g.drawImage(c, 0, 0, im.img.naturalWidth, im.img.naturalHeight);
+    }, im.img.naturalWidth, im.img.naturalHeight);
+  }
+  // ---------- AI scenes (optional): the pictures listed in js/scenes.js (SCENE_ART), see the note at the top ----------
+  const SCENE_FNS = ['ganesh', 'invite', 'haldi', 'mehendi', 'sangeet', 'baraat', 'wedding', 'reception', 'vidai', 'family', 'thanks'];
+  let SCENE_LIST = null, sceneListP = null;
+  function sceneList() {
+    if (SCENE_LIST) return SCENE_LIST;
+    if (typeof SCENE_ART !== 'undefined' && Array.isArray(SCENE_ART)) return (SCENE_LIST = SCENE_ART.filter(f => typeof f === 'string'));
+    if (!HAS_DOM) return [];
+    if (!sceneListP) { // the page did not load the list: fetch it once (it is tiny, and names only files that exist)
+      const had = document.querySelector('script[src$="scenes.js"]');
+      if (had) sceneListP = new Promise(r => { had.addEventListener('load', r); had.addEventListener('error', r); setTimeout(r, 4000); });
+      else {
+        const tag = document.createElement('script'); tag.src = 'js/scenes.js'; tag.dataset.filmScenes = '1';
+        sceneListP = new Promise(r => { tag.onload = tag.onerror = r; setTimeout(r, 4000); });
+        document.head.appendChild(tag);
+      }
+    }
+    return [];
+  }
+  // a function's pictures: <function>-NN.(jpg|jpeg|png|webp); invite and thanks may also use couple-NN (a full-scene couple)
+  function scenePics(fn) {
+    if (!SCENE_FNS.includes(fn)) return [];
+    const re = f => new RegExp('^' + f + '-[0-9]+[.](jpe?g|png|webp)$', 'i'), list = sceneList();
+    const own = list.filter(f => re(fn).test(f)), extra = fn === 'invite' || fn === 'thanks' ? list.filter(f => re('couple').test(f)) : [];
+    return own.concat(extra).sort();
+  }
+  function aiScene(fn, n) {
+    const pics = scenePics(fn);
+    for (let i = 0; i < pics.length; i++) { const a = loadImg(`img/scenes/${pics[(n + i) % pics.length]}`); if (a && a.ok) return a; if (a && !a.bad) return null; }
+    return null;
+  }
+  const FN_OF_ICON = { diya: 'ganesh', bell: 'ganesh', pot: 'haldi', leaf: 'mehendi', note: 'sangeet', drum: 'baraat', arch: 'baraat', ring: 'wedding', glass: 'reception', dish: 'reception', cake: 'family', balloon: 'family' };
+  function sceneFn(film, D, sc) {
+    if (sc.k === 'open') return D.sacred ? 'ganesh' : 'invite';
+    if (sc.k === 'day') { const e = sc.day.events[0] || {}; return /phere|फेरे|mandap|vivah|विवाह|wedding|jaimala/i.test(e.name || '') ? 'wedding' : /vidai|विदाई/i.test(e.name || '') ? 'vidai' : FN_OF_ICON[e.icon] || 'invite'; }
+    if (sc.k === 'venue') return film.occ === 'wedding' ? 'wedding' : film.occ === 'reception' ? 'reception' : 'invite';
+    if (['regards', 'kids', 'note'].includes(sc.k)) return 'family';
+    if (sc.k === 'finale') return 'thanks';
+    return 'invite';
+  }
+  // The AI picture full-bleed (cover), drifting slowly (Ken Burns), under a scrim so the words stay readable
+  function drawAi(ctx, a, th, lt, d, seed) {
+    const k = ready(a); if (k <= 0) return false;
+    const iw = a.img.naturalWidth || 1, ih = a.img.naturalHeight || 1;
+    // a cover-fit copy at the player's size, made once: a big photo stays sharp but light to redraw
+    const L = layer(`ai|${a.img.src}`, g => { const s = Math.max(W * 1.1 / iw, H * 1.1 / ih); g.drawImage(a.img, W * .55 - iw * s / 2, H * .55 - ih * s / 2, iw * s, ih * s); }, Math.round(W * 1.1), Math.round(H * 1.1));
+    const z = 1 + .06 * clamp(lt / d), dx = (hash(seed) - .5) * 50 * clamp(lt / d), w = W * 1.1 * z, h = H * 1.1 * z;
+    ctx.save(); ctx.globalAlpha *= k;
+    if (L) ctx.drawImage(L, W / 2 - w / 2 + dx, H / 2 - h / 2, w, h);
+    const g = ctx.createLinearGradient(0, 0, 0, H), c = th.dark ? '0,0,0' : '255,250,240';
+    g.addColorStop(0, `rgba(${c},.5)`); g.addColorStop(.3, `rgba(${c},.2)`); g.addColorStop(.7, `rgba(${c},.2)`); g.addColorStop(1, `rgba(${c},.55)`);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore();
+    return k >= 1;
+  }
+  // ---------- Painted stages: one per function, full-bleed behind the words ----------
+  function multifoil(g, x, y, w, h) {
+    // a cusped Mughal arch: lobes along the curve, then the pillars down
+    const cx = x + w / 2, spring = y + w * .55;
+    g.beginPath(); g.moveTo(x, y + h); g.lineTo(x, spring);
+    const N = 7, pts = [];
+    for (let i = 0; i <= N; i++) { const t = i / N, a = Math.PI + t * Math.PI; pts.push([cx + Math.cos(a) * w / 2, spring + Math.sin(a) * (spring - y) * (1 + .12 * Math.sin(t * Math.PI))]); }
+    for (let i = 1; i <= N; i++) { const [px, py] = pts[i - 1], [qx, qy] = pts[i], mx = (px + qx) / 2, my = (py + qy) / 2, nx = mx - cx, ny = my - spring, l = Math.hypot(nx, ny) || 1; g.quadraticCurveTo(mx - nx / l * 26, my - ny / l * 26, qx, qy); }
+    g.lineTo(x + w, y + h); g.closePath();
+  }
+  function pillar(g, x, y, w, h, col, gold) {
+    const pg = g.createLinearGradient(x, 0, x + w, 0); pg.addColorStop(0, shade(col, -.35)); pg.addColorStop(.35, shade(col, .2)); pg.addColorStop(.6, col); pg.addColorStop(1, shade(col, -.45));
+    g.fillStyle = pg; g.fillRect(x, y, w, h);
+    g.fillStyle = gold; [y, y + 30, y + h - 46].forEach(yy => g.fillRect(x - 10, yy, w + 20, 16));
+    g.fillRect(x - 16, y + h - 20, w + 32, 20);
+    g.globalAlpha = .35; g.fillStyle = shade(col, -.5); for (let i = 1; i < 4; i++) g.fillRect(x + i * w / 4 - 1, y + 50, 2, h - 110); g.globalAlpha = 1;
+  }
+  function floorPersp(g, c0, c1, y0, gold) {
+    const f = g.createLinearGradient(0, y0, 0, H); f.addColorStop(0, c0); f.addColorStop(1, c1); g.fillStyle = f; g.fillRect(0, y0, W, H - y0);
+    g.save(); g.strokeStyle = gold; g.globalAlpha = .18; g.lineWidth = 2;
+    for (let i = -12; i <= 12; i++) { g.beginPath(); g.moveTo(W / 2 + i * 30, y0); g.lineTo(W / 2 + i * 260, H); g.stroke(); }
+    for (let k = 1; k < 9; k++) { const yy = y0 + (H - y0) * Math.pow(k / 9, 1.7); g.beginPath(); g.moveTo(0, yy); g.lineTo(W, yy); g.stroke(); }
+    g.restore();
+  }
+  function drape(g, x0, x1, y, depth, col) {
+    const fg = g.createLinearGradient(0, y, 0, y + depth); fg.addColorStop(0, shade(col, -.3)); fg.addColorStop(.6, col); fg.addColorStop(1, shade(col, -.25));
+    g.fillStyle = fg; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.quadraticCurveTo((x0 + x1) / 2, y + depth * 2, x0, y); g.fill();
+    g.save(); g.strokeStyle = shade(col, .35); g.globalAlpha = .35; g.lineWidth = 3;
+    for (let i = 1; i < 4; i++) { g.beginPath(); g.moveTo(x0 + 8, y + i * 6); g.quadraticCurveTo((x0 + x1) / 2, y + depth * 2 * (i / 4.2), x1 - 8, y + i * 6); g.stroke(); }
+    g.restore();
+  }
+  function sideCurtain(g, x, w, col, flip) {
+    for (let f = 0; f < 6; f++) {
+      const fx = x + (flip ? -1 : 1) * f * w / 6, cg = g.createLinearGradient(fx, 0, fx + (flip ? -1 : 1) * w / 6, 0);
+      cg.addColorStop(0, shade(col, -.45)); cg.addColorStop(.5, shade(col, .12)); cg.addColorStop(1, shade(col, -.45));
+      g.fillStyle = cg; g.beginPath(); g.moveTo(fx, 0); g.lineTo(fx + (flip ? -1 : 1) * w / 6, 0);
+      g.quadraticCurveTo(fx + (flip ? -1 : 1) * w / 6 * (1 - f / 6) * .3, H * .5, fx + (flip ? -1 : 1) * (w / 6) * .4, H); g.lineTo(fx, H); g.closePath(); g.fill();
+    }
+  }
+  function fairy(g, n, col, y0, y1, seed) {
+    const r = rng(seed);
+    for (let i = 0; i < n; i++) {
+      const x = r() * W, y = y0 + r() * (y1 - y0), s = 3 + r() * 5;
+      const gl = g.createRadialGradient(x, y, 0, x, y, s * 5); gl.addColorStop(0, col); gl.addColorStop(1, 'rgba(255,220,150,0)');
+      g.globalAlpha = .55 + r() * .45; g.fillStyle = gl; g.fillRect(x - s * 5, y - s * 5, s * 10, s * 10);
+      g.fillStyle = '#fff8e0'; g.beginPath(); g.arc(x, y, s * .6, 0, Math.PI * 2); g.fill();
+    }
+    g.globalAlpha = 1;
+  }
+  function lightStrands(g, n, col, seed) {
+    const r = rng(seed);
+    for (let i = 0; i < n; i++) {
+      const x = 30 + i * (W - 60) / (n - 1), len = 400 + r() * 700;
+      g.strokeStyle = 'rgba(255,255,255,.12)'; g.lineWidth = 1; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, len); g.stroke();
+      for (let y = 20 + r() * 30; y < len; y += 46) { const gl = g.createRadialGradient(x, y, 0, x, y, 16); gl.addColorStop(0, col); gl.addColorStop(1, 'rgba(255,220,150,0)'); g.fillStyle = gl; g.fillRect(x - 16, y - 16, 32, 32); g.fillStyle = '#fffbe8'; g.beginPath(); g.arc(x, y, 2.6, 0, Math.PI * 2); g.fill(); }
+    }
+  }
+  function chandelier(g, x, y, s, gold) {
+    g.save(); g.translate(x, y); g.scale(s, s);
+    g.strokeStyle = gold; g.lineWidth = 3; g.beginPath(); g.moveTo(0, -400); g.lineTo(0, 0); g.stroke();
+    const glow = g.createRadialGradient(0, 40, 4, 0, 40, 220); glow.addColorStop(0, 'rgba(255,240,200,.55)'); glow.addColorStop(1, 'rgba(255,240,200,0)'); g.fillStyle = glow; g.fillRect(-230, -180, 460, 460);
+    for (let tier = 0; tier < 3; tier++) {
+      const r = 120 - tier * 32, yy = 20 + tier * 48;
+      g.beginPath(); g.ellipse(0, yy, r, r * .22, 0, 0, Math.PI * 2); g.stroke();
+      for (let i = 0; i < 14 - tier * 3; i++) { const a = i / (14 - tier * 3) * Math.PI * 2, px = Math.cos(a) * r, py = yy + Math.sin(a) * r * .22; g.fillStyle = 'rgba(255,255,255,.85)'; g.beginPath(); g.moveTo(px, py); g.lineTo(px - 4, py + 18); g.lineTo(px, py + 32); g.lineTo(px + 4, py + 18); g.closePath(); g.fill(); g.fillStyle = '#fff6d0'; g.beginPath(); g.arc(px, py - 6, 3.5, 0, Math.PI * 2); g.fill(); }
+    }
+    g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.moveTo(0, 150); g.lineTo(-10, 180); g.lineTo(0, 220); g.lineTo(10, 180); g.closePath(); g.fill();
+    g.restore();
+  }
+  function bush(g, x, y, s, cols, leafCol, seed) {
+    const r = rng(seed);
+    for (let i = 0; i < 26; i++) { const a = r() * Math.PI * 2, d = r() * s; sprite(g, leafSprite(leafCol), x + Math.cos(a) * d * 1.1, y + Math.sin(a) * d * .6, s * .5, a); }
+    for (let i = 0; i < 22; i++) { const a = r() * Math.PI * 2, d = Math.sqrt(r()) * s; sprite(g, rose(cols[i % cols.length]), x + Math.cos(a) * d, y + Math.sin(a) * d * .55, s * (.34 + r() * .18), r() * 6); }
+  }
+  function urli(g, x, y, s, gold) {
+    const b = g.createLinearGradient(x - s, y, x + s, y); b.addColorStop(0, shade(gold, -.4)); b.addColorStop(.4, shade(gold, .3)); b.addColorStop(1, shade(gold, -.45));
+    g.fillStyle = b; g.beginPath(); g.ellipse(x, y, s, s * .22, 0, 0, Math.PI); g.lineTo(x - s, y); g.fill();
+    g.beginPath(); g.ellipse(x, y, s, s * .2, 0, 0, Math.PI * 2); g.fillStyle = shade(gold, -.2); g.fill();
+    for (let i = 0; i < 12; i++) sprite(g, marigold(MARI[i % 4]), x + (hash(i + s) - .5) * s * 1.5, y + (hash(i * 3 + s) - .5) * s * .25, s * .26);
+  }
+  function brassDiyas(g, n, y, spread, gold) {
+    for (let i = 0; i < n; i++) {
+      const x = W / 2 + (i - (n - 1) / 2) * spread;
+      const gl = g.createRadialGradient(x, y - 30, 2, x, y - 30, 90); gl.addColorStop(0, 'rgba(255,190,80,.55)'); gl.addColorStop(1, 'rgba(255,160,40,0)'); g.fillStyle = gl; g.fillRect(x - 90, y - 120, 180, 180);
+      const b = g.createLinearGradient(x - 30, y, x + 30, y); b.addColorStop(0, shade(gold, -.4)); b.addColorStop(.5, shade(gold, .3)); b.addColorStop(1, shade(gold, -.4));
+      g.fillStyle = b; g.beginPath(); g.ellipse(x, y, 32, 13, 0, 0, Math.PI); g.lineTo(x - 32, y); g.fill();
+      const fl = g.createRadialGradient(x, y - 20, 1, x, y - 20, 22); fl.addColorStop(0, '#fffbd0'); fl.addColorStop(.5, '#ffb22e'); fl.addColorStop(1, 'rgba(255,90,0,0)');
+      g.fillStyle = fl; g.beginPath(); g.moveTo(x, y - 50); g.quadraticCurveTo(x + 13, y - 18, x, y - 4); g.quadraticCurveTo(x - 13, y - 18, x, y - 50); g.fill();
+    }
+  }
+  function fireworks(g, seed) {
+    const r = rng(seed), cols = ['#ffd36b', '#ff7aa8', '#8fe3ff', '#ffffff', '#ffb347'];
+    for (let b = 0; b < 6; b++) {
+      const x = 120 + r() * (W - 240), y = 160 + r() * 520, R = 70 + r() * 110, c = cols[b % cols.length];
+      for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2, l = R * (.75 + r() * .3); const lg = g.createLinearGradient(x, y, x + Math.cos(a) * l, y + Math.sin(a) * l); lg.addColorStop(0, 'rgba(255,255,255,0)'); lg.addColorStop(1, c); g.strokeStyle = lg; g.lineWidth = 2.2; g.beginPath(); g.moveTo(x + Math.cos(a) * l * .25, y + Math.sin(a) * l * .25); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke(); g.fillStyle = c; g.beginPath(); g.arc(x + Math.cos(a) * l, y + Math.sin(a) * l, 2.6, 0, Math.PI * 2); g.fill(); }
+    }
+  }
+  function palaceSkyline(g, y, col, lights) {
+    g.fillStyle = col; g.beginPath(); g.moveTo(0, H);
+    const parts = [[0, 120], [90, 200], [170, 150], [260, 260], [400, 330], [540, 420], [680, 330], [820, 260], [910, 150], [990, 200], [1080, 120]];
+    parts.forEach(([x, hh]) => { g.lineTo(x, y - hh); });
+    g.lineTo(W, H); g.closePath(); g.fill();
+    // domes and chhatris
+    [[540, 420, 90], [400, 330, 60], [680, 330, 60], [260, 260, 40], [820, 260, 40]].forEach(([x, hh, r]) => { g.beginPath(); g.ellipse(x, y - hh, r, r * 1.1, 0, Math.PI, 0); g.fill(); g.fillRect(x - 3, y - hh - r * 1.1 - 40, 6, 44); });
+    if (lights) { g.fillStyle = lights; for (let i = 0; i < 160; i++) { const x = hash(i) * W, yy = y - hash(i + 40) * 300; g.globalAlpha = .5 + hash(i + 9) * .5; g.fillRect(x, yy, 3, 3); } g.globalAlpha = 1; }
+  }
+  // kind: ganesh, haldi, mehendi, sangeet, baraat, wedding, reception, family, invite, thanks, vidai
+  function stage(kind, th) {
+    return layer(`stage|${kind}|${thKey(th)}`, g => {
+      const gold = hex6(th.gold[1]), acc = hex6(th.accent);
+      if (kind === 'haldi') {
+        const s = g.createLinearGradient(0, 0, 0, H); s.addColorStop(0, '#fff6c8'); s.addColorStop(.55, '#ffd25a'); s.addColorStop(1, '#f0a020'); g.fillStyle = s; g.fillRect(0, 0, W, H);
+        g.save(); g.globalAlpha = .9; multifoil(g, 160, 260, W - 320, 1300); const ag = g.createRadialGradient(W / 2, 900, 40, W / 2, 900, 700); ag.addColorStop(0, '#fffbe6'); ag.addColorStop(1, '#ffcf4d'); g.fillStyle = ag; g.fill(); g.restore();
+        for (let i = 0; i < 14; i++) ladi(g, 40 + i * 77, 0, 520 + (i % 2) * 160 + Math.sin(i * 1.7) * 90, 34);
+        pillar(g, 60, 600, 70, 1000, '#f6e2a8', gold); pillar(g, W - 130, 600, 70, 1000, '#f6e2a8', gold);
+        floorPersp(g, '#f3b23a', '#c9761a', 1500, '#fff0c0');
+        urli(g, 230, 1640, 110, gold); urli(g, W - 230, 1660, 120, gold);
+        for (let i = 0; i < 70; i++) sprite(g, marigold(MARI[i % 4]), hash(i) * W, 1520 + hash(i + 7) * 380, 18 + hash(i + 3) * 14);
+      } else if (kind === 'mehendi') {
+        const s = g.createLinearGradient(0, 0, 0, H); s.addColorStop(0, '#1f5a34'); s.addColorStop(.6, '#2f7a3e'); s.addColorStop(1, '#173f22'); g.fillStyle = s; g.fillRect(0, 0, W, H);
+        damask(g, '#9fd38a', .09);
+        g.save(); multifoil(g, 150, 300, W - 300, 1250); g.fillStyle = '#fbe6ee'; g.fill(); g.clip(); damask(g, '#e98fb0', .22); g.restore();
+        g.save(); g.lineWidth = 34; g.strokeStyle = '#2a6a3a'; multifoil(g, 150, 300, W - 300, 1250); g.stroke(); g.restore();
+        const fl = ['#ff5c8a', '#ff9f1c', '#ffd23f', '#e8467c', '#ffffff'];
+        for (let i = 0; i < 46; i++) { const t = i / 45, a = Math.PI + t * Math.PI, x = W / 2 + Math.cos(a) * (W - 300) / 2, y = 300 + (W - 300) * .55 + Math.sin(a) * (W - 300) * .55; sprite(g, i % 3 ? rose(fl[i % 5]) : marigold(MARI[i % 4]), x, y, 54, i); }
+        for (let y = 900; y < 1560; y += 50) { sprite(g, rose(fl[(y / 50) % 5 | 0]), 150, y, 50, y); sprite(g, rose(fl[(y / 50 + 2) % 5 | 0]), W - 150, y, 50, y); }
+        floorPersp(g, '#e9c9a0', '#b98a5a', 1480, '#fff');
+        const cols = ['#e8467c', '#ff9f1c', '#7b2fbf', '#1fa37a', '#ffd23f', '#e8467c'];
+        cols.forEach((c, i) => { const x = 110 + i * 172, cg = g.createRadialGradient(x - 20, 1560, 5, x, 1580, 90); cg.addColorStop(0, shade(c, .35)); cg.addColorStop(1, shade(c, -.35)); g.fillStyle = cg; rr(g, x - 80, 1520, 160, 110, 40); g.fill(); g.strokeStyle = '#ffd36b'; g.lineWidth = 4; g.stroke(); });
+      } else if (kind === 'sangeet') {
+        const s = g.createLinearGradient(0, 0, 0, H); s.addColorStop(0, '#12062a'); s.addColorStop(.6, '#3a0f5a'); s.addColorStop(1, '#1a0526'); g.fillStyle = s; g.fillRect(0, 0, W, H);
+        lightStrands(g, 22, 'rgba(255,215,140,.9)', 4);
+        [[-1, '#ff4fd8'], [1, '#4fd8ff'], [0, '#ffd36b']].forEach(([sd, c]) => { g.save(); g.translate(W / 2 + sd * 420, -20); g.rotate(-sd * .32); const b = g.createLinearGradient(0, 0, 0, H * 1.1); b.addColorStop(0, rgba(c, .5)); b.addColorStop(1, rgba(c, 0)); g.fillStyle = b; g.beginPath(); g.moveTo(-20, 0); g.lineTo(-260, H * 1.1); g.lineTo(260, H * 1.1); g.lineTo(20, 0); g.fill(); g.restore(); });
+        drape(g, 0, W / 2, 0, 120, '#7a1f6a'); drape(g, W / 2, W, 0, 120, '#7a1f6a');
+        floorPersp(g, '#2a0a3a', '#0a0210', 1450, '#ff9be8');
+        const st = g.createRadialGradient(W / 2, 1560, 20, W / 2, 1560, 500); st.addColorStop(0, 'rgba(255,200,255,.35)'); st.addColorStop(1, 'rgba(255,200,255,0)'); g.fillStyle = st; g.fillRect(0, 1200, W, 720);
+      } else if (kind === 'baraat') {
+        const s = g.createLinearGradient(0, 0, 0, H); s.addColorStop(0, '#060b2a'); s.addColorStop(.55, '#1c2a6a'); s.addColorStop(1, '#3a1a3a'); g.fillStyle = s; g.fillRect(0, 0, W, H);
+        fireworks(g, 11);
+        palaceSkyline(g, 1420, '#120a1e', '#ffd36b');
+        floorPersp(g, '#3a1a2a', '#140610', 1420, '#ffb347');
+        garland(g, -20, 60, W / 2, 60, 140, 40); garland(g, W / 2, 60, W + 20, 60, 140, 40);
+        for (let i = 0; i < 9; i++) ladi(g, 60 + i * 120, 40, 160 + (i % 2) * 80, 30);
+        fairy(g, 50, 'rgba(255,200,110,.9)', 1450, 1900, 5);
+      } else if (kind === 'reception' || kind === 'thanks') {
+        const s = g.createLinearGradient(0, 0, 0, H); s.addColorStop(0, '#0b1636'); s.addColorStop(.6, '#1a2850'); s.addColorStop(1, '#0a1024'); g.fillStyle = s; g.fillRect(0, 0, W, H);
+        for (let i = 0; i < 3; i++) { const x = -150 + i * 460, w = 400; g.save(); multifoil(g, x, 380, w, 1100); const ag = g.createLinearGradient(0, 380, 0, 1480); ag.addColorStop(0, '#2c3f78'); ag.addColorStop(1, '#5a6fa8'); g.fillStyle = ag; g.fill(); g.lineWidth = 10; g.strokeStyle = gold; g.stroke(); g.restore(); }
+        fairy(g, 70, 'rgba(255,230,180,.9)', 400, 1400, 8);
+        chandelier(g, 230, 300, .8, gold); chandelier(g, W - 230, 300, .8, gold); chandelier(g, W / 2, 200, 1, gold);
+        floorPersp(g, '#e9ecf4', '#8a94b0', 1480, '#ffffff');
+        bush(g, 90, 1520, 170, ['#ffffff', '#fbe9ef', '#fff6e6'], '#2f5a3a', 3); bush(g, W - 90, 1520, 170, ['#ffffff', '#fbe9ef', '#fff6e6'], '#2f5a3a', 4);
+      } else if (kind === 'wedding' || kind === 'vidai') {
+        const s = g.createLinearGradient(0, 0, 0, H); s.addColorStop(0, '#5a0a14'); s.addColorStop(.6, '#8a1a1e'); s.addColorStop(1, '#3a0408'); g.fillStyle = s; g.fillRect(0, 0, W, H);
+        damask(g, '#ffb347', .07);
+        // the mandap: a dome canopy on four pillars
+        g.save(); g.fillStyle = foil(g, th, 140, 260, 940, 520); g.beginPath(); g.moveTo(110, 560); g.quadraticCurveTo(W / 2, 140, W - 110, 560); g.closePath(); g.fill(); g.restore();
+        g.fillStyle = '#fff3d6'; g.beginPath(); g.moveTo(150, 560); g.quadraticCurveTo(W / 2, 210, W - 150, 560); g.closePath(); g.globalAlpha = .25; g.fill(); g.globalAlpha = 1;
+        pillar(g, 130, 560, 64, 1000, '#f3dfb0', gold); pillar(g, W - 194, 560, 64, 1000, '#f3dfb0', gold);
+        drape(g, 110, W - 110, 560, 120, '#c2182e');
+        for (let i = 0; i < 9; i++) ladi(g, 170 + i * 92, 560, 220 + (i % 2) * 120, 28);
+        const fire = g.createRadialGradient(W / 2, 1500, 10, W / 2, 1500, 480); fire.addColorStop(0, 'rgba(255,170,60,.6)'); fire.addColorStop(1, 'rgba(255,120,30,0)'); g.fillStyle = fire; g.fillRect(0, 1000, W, 920);
+        floorPersp(g, '#7a1a14', '#2a0604', 1540, '#ffcf6b');
+        for (let i = 0; i < 60; i++) sprite(g, i % 3 ? rose('#d81b3c') : marigold(MARI[i % 4]), hash(i + 5) * W, 1560 + hash(i + 17) * 340, 20 + hash(i) * 14, i);
+      } else if (kind === 'ganesh') {
+        const s = g.createLinearGradient(0, 0, 0, H); s.addColorStop(0, '#3a0a04'); s.addColorStop(.5, '#7a2a08'); s.addColorStop(1, '#2a0602'); g.fillStyle = s; g.fillRect(0, 0, W, H);
+        damask(g, '#ffcf6b', .07);
+        g.save(); multifoil(g, 170, 340, W - 340, 1240); const ag = g.createRadialGradient(W / 2, 1000, 30, W / 2, 1000, 760); ag.addColorStop(0, '#ffe6a8'); ag.addColorStop(.6, '#e89a3a'); ag.addColorStop(1, '#8a3a0c'); g.fillStyle = ag; g.fill(); g.lineWidth = 26; g.strokeStyle = foil(g, th, 170, 340, W - 170, 1580); g.stroke(); g.restore();
+        garland(g, -20, 70, W / 2, 70, 160, 40); garland(g, W / 2, 70, W + 20, 70, 160, 40);
+        for (let i = 0; i < 10; i++) ladi(g, 50 + i * 109, 50, 200 + (i % 3) * 90, 30);
+        floorPersp(g, '#5a1a06', '#200602', 1560, '#ffcf6b');
+        brassDiyas(g, 7, 1660, 150, gold);
+      } else if (kind === 'family') {
+        const s = g.createLinearGradient(0, 0, 0, H); s.addColorStop(0, '#fbeedd'); s.addColorStop(1, '#e9c9a0'); g.fillStyle = s; g.fillRect(0, 0, W, H);
+        damask(g, '#c08a4a', .08);
+        g.save(); multifoil(g, 130, 300, W - 260, 1300); g.fillStyle = '#fff8ec'; g.fill(); g.lineWidth = 18; g.strokeStyle = foil(g, th, 0, 300, W, 1600); g.stroke(); g.restore();
+        garland(g, -20, 60, W / 2, 60, 120, 36); garland(g, W / 2, 60, W + 20, 60, 120, 36);
+        floorPersp(g, '#e2b884', '#a8743e', 1560, '#fff');
+        bush(g, 70, 1560, 150, ['#f48fb1', '#ffffff', '#ffb74d'], '#4a7a3a', 9); bush(g, W - 70, 1560, 150, ['#f48fb1', '#ffffff', '#ffb74d'], '#4a7a3a', 10);
+      } else {
+        // invite: an ivory palace hall of arches, pink and white flowers
+        const s = g.createLinearGradient(0, 0, 0, H); s.addColorStop(0, '#f7f1ea'); s.addColorStop(1, '#e6d6c4'); g.fillStyle = s; g.fillRect(0, 0, W, H);
+        for (let i = 0; i < 3; i++) { const x = -170 + i * 470, w = 400; g.save(); multifoil(g, x, 330, w, 1200); const ag = g.createLinearGradient(0, 330, 0, 1530); ag.addColorStop(0, '#fffdf8'); ag.addColorStop(1, '#efe3d2'); g.fillStyle = ag; g.fill(); g.lineWidth = 12; g.strokeStyle = foil(g, th, x, 330, x + w, 1530); g.stroke(); g.restore(); }
+        pillar(g, 230, 560, 50, 1000, '#fbf6ee', gold); pillar(g, W - 280, 560, 50, 1000, '#fbf6ee', gold);
+        floorPersp(g, '#f3ece2', '#cdbba6', 1530, '#b48a4a');
+        bush(g, 60, 1560, 170, ['#f8bbd0', '#ffffff', '#f48fb1'], '#5a7a4a', 1); bush(g, W - 60, 1560, 170, ['#f8bbd0', '#ffffff', '#f48fb1'], '#5a7a4a', 2);
+        for (let i = 0; i < 60; i++) sprite(g, rose(i % 2 ? '#f8bbd0' : '#ffffff'), hash(i + 2) * W, 1600 + hash(i + 33) * 300, 14 + hash(i) * 10, i);
+      }
+      grain(g, .07);
+      const v = g.createRadialGradient(W / 2, H * .45, H * .3, W / 2, H * .5, H * .8); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.42)'); g.fillStyle = v; g.fillRect(0, 0, W, H);
+    });
+  }
+  const STAGE_TONE = { haldi: false, mehendi: true, sangeet: true, baraat: true, reception: true, thanks: true, wedding: true, vidai: true, ganesh: true, family: false, invite: false };
+  // Falling petals and gold dust, drawn live over a stage
+  function petals(ctx, t, n = 22, cols = ['#ff8fa3', '#ffb347', '#ffd23f', '#e8467c']) {
+    ctx.save();
+    for (let i = 0; i < n; i++) {
+      const r1 = hash(i + 300), r2 = hash(i + 350), r3 = hash(i + 399);
+      const y = ((r2 * H + t * (70 + r3 * 70)) % (H + 80)) - 40, x = r1 * W + Math.sin(t * .9 + i) * 50, rot = t * (r3 - .5) * 3 + i;
+      ctx.globalAlpha = .85; ctx.fillStyle = cols[i % cols.length];
+      ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(1, .55 + .45 * Math.sin(t * 2 + i));
+      ctx.beginPath(); ctx.moveTo(0, -12); ctx.quadraticCurveTo(10, -4, 0, 12); ctx.quadraticCurveTo(-10, -4, 0, -12); ctx.fill(); ctx.restore();
+    }
+    ctx.restore();
+  }
+
   // ---------- Backgrounds ----------
   function background(ctx, th, t, tint) {
-    const [c0, c1] = tint ? [tint, shade(tint, -.6)] : th.bg;
-    const g = ctx.createRadialGradient(W / 2, H * .42, 60, W / 2, H * .5, H * .75);
-    g.addColorStop(0, c0); g.addColorStop(1, c1);
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    const v = ctx.createRadialGradient(W / 2, H / 2, H * .3, W / 2, H / 2, H * .72);
-    v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, th.dark || tint ? 'rgba(0,0,0,.45)' : 'rgba(90,50,10,.18)');
-    ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+    const [c0, c1] = tint ? [tint, shade(tint, -.6)] : th.bg, dk = th.dark || tint;
+    // woven silk with a buta damask (dark palettes) or a printed paper (light ones), painted once
+    const L = layer(`bg|${thKey(th)}|${tint || ''}`, g => {
+      silkBg(g, c0, c1, dk ? th.gold[1] : th.gold[2], dk ? .05 : .07, W, H, !dk);
+      // a warm light from above, like a lamp over a table
+      const top = g.createRadialGradient(W / 2, -120, 20, W / 2, -120, H * .7); top.addColorStop(0, dk ? 'rgba(255,220,160,.12)' : 'rgba(255,255,255,.5)'); top.addColorStop(1, 'rgba(255,220,160,0)');
+      g.fillStyle = top; g.fillRect(0, 0, W, H);
+    });
+    if (L) put(ctx, L);
+    else { const g = ctx.createRadialGradient(W / 2, H * .42, 60, W / 2, H * .5, H * .75); g.addColorStop(0, c0); g.addColorStop(1, c1); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
     // a faint mandala watermark, turning slowly
     ctx.save(); ctx.translate(W / 2, H * .45); ctx.rotate(t * .03); ctx.globalAlpha = th.dark || tint ? .07 : .12;
     ctx.strokeStyle = th.dark || tint ? th.gold[1] : th.gold[2]; ctx.lineWidth = 2;
@@ -499,19 +1026,25 @@ const Films = (() => {
     if (k <= 0) return;
     const { x, y, w, h } = PANEL;
     ctx.save(); ctx.globalAlpha *= clamp(k * 1.4);
-    // double gold rule
-    rr(ctx, x, y, w, h, 10); stroke(ctx, th.dark ? th.gold[1] : th.gold[2], 3);
-    rr(ctx, x + 16, y + 16, w - 32, h - 32, 6); stroke(ctx, th.dark ? th.gold[2] : th.gold[1], 1.5);
+    // a gilt rule: a broad band of brushed foil with a fine line inside it
     const f = film.frame;
+    rr(ctx, x, y, w, h, 10); ctx.lineWidth = 8; ctx.strokeStyle = foil(ctx, th, x, y, x + w * .6, y + h); ctx.stroke();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,248,220,.45)'; ctx.stroke();
+    rr(ctx, x + 18, y + 18, w - 36, h - 36, 6); stroke(ctx, th.dark ? th.gold[2] : th.gold[1], 2);
+    if (f === 'arch' || f === 'lotus' || f === 'deco') filigreeCorners(ctx, th, x, y, w, h, 110, k, 28);
+    else if (f === 'lattice') filigreeCorners(ctx, th, x, y, w, h, 100, k, 58);
+    else if (f === 'toran') { filigree(ctx, th, x + 40, y + h - 28, 100, 1, -1, k); filigree(ctx, th, x + w - 40, y + h - 28, 100, -1, -1, k); }
+    const MB = (bx, by, r, c) => HAS_DOM ? sprite(ctx, marigold(c), bx, by, r * 2.7) : bead(ctx, bx, by, r, c);
     if (f === 'toran') {
-      const swags = 4, sw = (w - 20) / swags;
+      // a marigold toran: five swags, short strings with brass bells, two long strings down the sides
+      const swags = 5, sw = (w - 20) / swags;
       for (let i = 0; i < swags; i++) {
         const x0 = x + 10 + i * sw;
-        for (let j = 0; j <= 16; j++) { const u = j / 16; if (u > k * 1.2) break; const bx = x0 + u * sw, by = y + 26 + Math.sin(u * Math.PI) * 70; bead(ctx, bx, by, 13, j % 2 ? '#ff8a1c' : '#ffc23a'); }
+        for (let j = 0; j <= 13; j++) { const u = j / 13; if (u > k * 1.2) break; const bx = x0 + u * sw, by = y + 24 + Math.sin(u * Math.PI) * 62; if (j === 6 && HAS_DOM) sprite(ctx, leafSprite('#3f7a2a'), bx, by + 22, 38, Math.PI / 2); MB(bx, by, 13, j % 2 ? '#ff8a1c' : '#ffc23a'); }
         const hx = x + 10 + i * sw;
-        if (i) { for (let j = 0; j < 5; j++) bead(ctx, hx, y + 40 + j * 24, 11, j % 2 ? '#ff8a1c' : '#ffc23a'); bell(ctx, th, hx, y + 152); }
+        if (i) { for (let j = 0; j < 4; j++) MB(hx, y + 40 + j * 24, 11, j % 2 ? '#ff8a1c' : '#ffc23a'); bell(ctx, th, hx, y + 130); }
       }
-      [x + 14, x + w - 14].forEach(sx => { for (let j = 0; j < 22 * k; j++) bead(ctx, sx, y + 40 + j * 24, 11, j % 2 ? '#ff8a1c' : '#ffc23a'); bell(ctx, th, sx, y + 40 + 22 * 24); });
+      [x + 14, x + w - 14].forEach(sx => { for (let j = 0; j < 22 * k; j++) MB(sx, y + 40 + j * 24, 11, j % 2 ? '#ff8a1c' : '#ffc23a'); bell(ctx, th, sx, y + 40 + 22 * 24); });
     } else if (f === 'arch') {
       ctx.strokeStyle = th.dark ? th.gold[1] : th.gold[2]; ctx.lineWidth = 3;
       const ax = x + 60, aw = w - 120, top = y + 60;
@@ -567,24 +1100,22 @@ const Films = (() => {
     ctx.beginPath();
     if (film.frame === 'arch') { ctx.moveTo(x, y + h); ctx.lineTo(x, y + 220); ctx.quadraticCurveTo(x, y + 20, x + w / 2, y); ctx.quadraticCurveTo(x + w, y + 20, x + w, y + 220); ctx.lineTo(x + w, y + h); ctx.closePath(); }
     else rr(ctx, x, y, w, h, 26);
-    const pg = ctx.createLinearGradient(0, y, 0, y + h);
-    pg.addColorStop(0, th.paper); pg.addColorStop(1, shade(th.paper.length === 7 ? th.paper : '#ffffff', -.04));
-    ctx.fillStyle = pg; ctx.fill();
+    ctx.fillStyle = th.paper; ctx.fill();
     ctx.shadowColor = 'transparent';
-    stroke(ctx, th.gold[1], 2.5);
-    // inner rule and corner flourishes
+    // handmade paper, a deckle of foil round the edge
+    if (/^#[0-9a-f]{6}$/i.test(th.paper)) paperIn(ctx, th.paper, x, y, w, h);
+    ctx.lineWidth = 7; ctx.strokeStyle = foil(ctx, th, x, y, x + w, y + h); ctx.stroke();
+    // inner rule and gilt corners
     ctx.save(); ctx.clip();
     ctx.beginPath();
-    if (film.frame === 'arch') { const i = 20; ctx.moveTo(x + i, y + h - i); ctx.lineTo(x + i, y + 228); ctx.quadraticCurveTo(x + i, y + 40, x + w / 2, y + i + 4); ctx.quadraticCurveTo(x + w - i, y + 40, x + w - i, y + 228); ctx.lineTo(x + w - i, y + h - i); ctx.closePath(); }
-    else rr(ctx, x + 20, y + 20, w - 40, h - 40, 14);
-    stroke(ctx, th.gold[1], 1.2);
+    if (film.frame === 'arch') { const i = 22; ctx.moveTo(x + i, y + h - i); ctx.lineTo(x + i, y + 228); ctx.quadraticCurveTo(x + i, y + 40, x + w / 2, y + i + 4); ctx.quadraticCurveTo(x + w - i, y + 40, x + w - i, y + 228); ctx.lineTo(x + w - i, y + h - i); ctx.closePath(); }
+    else rr(ctx, x + 22, y + 22, w - 44, h - 44, 14);
+    stroke(ctx, th.gold[1], 1.6);
     ctx.strokeStyle = th.gold[1]; ctx.lineWidth = 2;
     const cs = film.frame === 'arch' ? [[x + 34, y + h - 34, 1, -1], [x + w - 34, y + h - 34, -1, -1]] : [[x + 34, y + 34, 1, 1], [x + w - 34, y + 34, -1, 1], [x + 34, y + h - 34, 1, -1], [x + w - 34, y + h - 34, -1, -1]];
-    cs.forEach(([px, py, sx, sy]) => {
-      ctx.beginPath(); ctx.moveTo(px, py + sy * 60); ctx.quadraticCurveTo(px, py, px + sx * 60, py); ctx.stroke();
-      ctx.beginPath(); ctx.arc(px + sx * 14, py + sy * 14, 4, 0, Math.PI * 2); ctx.fillStyle = th.gold[1]; ctx.fill();
-    });
+    cs.forEach(([px, py, sx, sy]) => filigree(ctx, th, px, py, 62, sx, sy));
     // a little ornament at the foot of the card
+    ctx.fillStyle = th.gold[1];
     const fy = y + h - 70, cx = x + w / 2;
     ctx.beginPath(); ctx.moveTo(cx - 170, fy); ctx.lineTo(cx - 34, fy); ctx.moveTo(cx + 34, fy); ctx.lineTo(cx + 170, fy); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(cx, fy - 18); ctx.lineTo(cx + 18, fy); ctx.lineTo(cx, fy + 18); ctx.lineTo(cx - 18, fy); ctx.closePath(); ctx.fill();
@@ -630,7 +1161,11 @@ const Films = (() => {
       }
       ctx.restore();
       mandalaAt(ctx, th, cx, cy, 230 * ap(lt, .2, 1.2), .8);
-      monogram(ctx, th, cx, cy, 120 * (.6 + .4 * ap(lt, .1, 1)), D.sacred ? 'ॐ' : D.mono, ap(lt, 0, .8));
+      // Ganesh ji rises in the light for a sacred occasion; otherwise the couple's monogram
+      const gz = .82 + .18 * ap(lt, .1, 1.4);
+      if (!(D.sacred && figure(ctx, ganeshArt(film), cx, cy + 230 * gz, 470 * gz, ap(lt, .1, .9), { halo: 'rgba(255,225,160,.7)', shadow: false })))
+        monogram(ctx, th, cx, cy, 120 * (.6 + .4 * ap(lt, .1, 1)), D.sacred ? 'ॐ' : D.mono, ap(lt, 0, .8));
+      if (D.sacred) text(ctx, th, '॥ श्री गणेशाय नमः ॥', cx, cy + 380, { z: 44, font: 'deva', color: th.dark ? 'gold' : th.accent, a: ap(lt, 1.2), glow: th.dark ? 14 : 0 });
     } else if (sc.o === 'doors' || sc.o === 'curtains') {
       const open = ease((lt - 1.3) / 1.9);
       if (open > .02) { monogram(ctx, th, cx, cy, 130, D.sacred ? 'ॐ' : D.mono, open); }
@@ -709,18 +1244,23 @@ const Films = (() => {
         by = 1230;
       }
     } else {
-      let y = 520;
-      monogram(ctx, th, cx, y - 70, 70, D.sacred ? 'ॐ' : D.mono, ap(lt, .1));
-      if (D.sacred) text(ctx, th, '॥ श्री गणेशाय नमः ॥', cx, y + 60, { z: 30, font: 'deva', color: c, a: ap(lt, .3) });
-      text(ctx, th, D.heading, cx, y + 190, { z: hiHead ? 112 : 92, font: hiHead ? 'name' : 'head', color: c, a: ap(lt, .5), rise: 40, glow: th.dark ? 18 : 0, maxW: 760 });
-      text(ctx, th, '— ✦ —', cx, y + 250, { z: 30, font: 'caps', color: c, a: ap(lt, .7) });
-      if (D.solo) text(ctx, th, D.A, cx, y + 400, { z: 104, font: 'name', color: ink, a: ap(lt, .9), rise: 40, glow, maxW: 760 });
+      // Ganesh ji (or the monogram) on top, the names, and the couple standing at the foot of the frame
+      const g = D.sacred && HAS_DOM && ready(loadImg(artSrc(ganeshArt(film)))) > 0;
+      if (g) figure(ctx, ganeshArt(film), cx, 500, 210, ap(lt, .1), { halo: 'rgba(255,215,140,.55)', shadow: false });
+      else monogram(ctx, th, cx, 400, 66, D.sacred ? 'ॐ' : D.mono, ap(lt, .1));
+      if (D.sacred) text(ctx, th, '॥ श्री गणेशाय नमः ॥', cx, 545, { z: 30, font: 'deva', color: c, a: ap(lt, .3) });
+      text(ctx, th, D.heading, cx, 665, { z: hiHead ? 104 : 88, font: hiHead ? 'name' : 'head', color: c, a: ap(lt, .5), rise: 40, glow: th.dark ? 18 : 0, maxW: 760 });
+      text(ctx, th, '— ✦ —', cx, 715, { z: 28, font: 'caps', color: c, a: ap(lt, .7) });
+      if (D.solo) text(ctx, th, D.A, cx, 850, { z: 100, font: 'name', color: ink, a: ap(lt, .9), rise: 40, glow, maxW: 760 });
       else {
-        text(ctx, th, D.A, cx, y + 380, { z: 110, font: 'name', color: ink, a: ap(lt, .9), rise: 40, glow, maxW: 760 });
-        text(ctx, th, D.join, cx, y + 462, { z: 78, font: 'script', color: c, a: ap(lt, 1.15) });
-        text(ctx, th, D.B, cx, y + 570, { z: 110, font: 'name', color: ink, a: ap(lt, 1.35), rise: 40, glow, maxW: 760 });
+        text(ctx, th, D.A, cx, 820, { z: 100, font: 'name', color: ink, a: ap(lt, .9), rise: 40, glow, maxW: 760 });
+        text(ctx, th, D.join, cx, 890, { z: 66, font: 'script', color: c, a: ap(lt, 1.15) });
+        text(ctx, th, D.B, cx, 985, { z: 100, font: 'name', color: ink, a: ap(lt, 1.35), rise: 40, glow, maxW: 760 });
       }
-      by = D.solo ? y + 500 : y + 650;
+      by = D.solo ? 960 : 1075;
+      const shown = figure(ctx, coupleArt(film), cx, 1640 + (1 - out((lt - 1.4) / 1.2)) * 60, D.solo ? 470 : 480, ap(lt, 1.4, 1), { halo: th.dark ? 'rgba(255,215,150,.4)' : 'rgba(255,255,255,.7)' });
+      if (!shown) diyas(ctx, th, cx, 1500, ap(lt, 2.2), lt);
+      film = { ...film, noDiyas: true };
     }
     ctx.save(); ctx.globalAlpha = ap(lt, 1.7);
     ctx.font = FONT.caps(30, isHi(D.date)); const dw = Math.min(700, ctx.measureText(D.date).width + 80);
@@ -728,7 +1268,7 @@ const Films = (() => {
     ctx.restore();
     text(ctx, th, D.date, cx, by, { z: 30, font: 'caps', color: ink, a: ap(lt, 1.7), maxW: 640 });
     text(ctx, th, [D.V, D.CITY].filter(Boolean).join(' · '), cx, by + 76, { z: 34, font: 'body', color: c, a: ap(lt, 2) });
-    diyas(ctx, th, cx, 1500, ap(lt, 2.2), lt);
+    if (!film.noDiyas) diyas(ctx, th, cx, 1500, ap(lt, 2.2), lt);
   }
   function sceneCard(ctx, film, th, D, sc, lt) {
     const c = holder(ctx, film, th, lt, 120); th = c.th || th;
@@ -756,35 +1296,52 @@ const Films = (() => {
     ctx.restore();
     return y;
   }
+  // A day of functions: the function's own painted stage, its couple (or Ganesh ji) standing in it, and a gilt
+  // signboard hanging on marigold strings with the day, the functions and their times
+  function signboard(ctx, th, x, y, w, h, velvet) {
+    const L = layer(`board|${thKey(th)}|${w}x${h}|${velvet ? 1 : 0}`, g => {
+      gilt(g, th, 20, 20, w, h, 26, 10);
+      g.save(); rr(g, 46, 46, w - 52, h - 52, 4); g.clip();
+      if (velvet) { const v = g.createRadialGradient(20 + w / 2, 20 + h * .4, 20, 20 + w / 2, 20 + h / 2, w * .8); v.addColorStop(0, shade(th.accent, -.05)); v.addColorStop(1, shade(th.accent, -.6)); g.fillStyle = v; g.fillRect(0, 0, w + 40, h + 40); damask(g, th.gold[1], .07, w + 40, h + 40, 110); grain(g, .1, w + 40, h + 40); }
+      else { g.translate(46, 46); paperFill(g, /^#[0-9a-f]{6}$/i.test(th.paper) ? th.paper : '#fbf4e6', w - 52, h - 52); g.setTransform(1, 0, 0, 1, 0, 0); }
+      g.restore();
+      const s = Math.max(SCALE, 1) === 1 ? 1 : 1; // corners on the board itself
+      g.save(); g.scale(s, s); filigreeCorners(g, th, 58, 58, w - 76, h - 76, 70, 1, 0); g.restore();
+    }, w + 40, h + 40);
+    if (L) ctx.drawImage(L, x - 20, y - 20, w + 40, h + 40);
+    else { rr(ctx, x, y, w, h, 10); ctx.fillStyle = velvet ? th.accent : th.paper; ctx.fill(); stroke(ctx, th.gold[1], 6); }
+  }
   function sceneDay(ctx, film, th, D, sc, lt) {
-    const hi = D.lang === 'hi', cx = W / 2, tint = sc.n > 1 ? th.days[sc.i % 3] : shade(th.accent, th.dark ? .05 : -.15);
-    background(ctx, th, lt, tint);
-    dayLife(ctx, sc.n > 1 ? sc.i % 3 : film.cast % 3, lt);
-    const tw = { ...th, dark: true, gold: GOLD };
+    const hi = D.lang === 'hi', cx = W / 2, fn = sceneFn(film, D, sc), sk = stageKind(film, fn), night = STAGE_TONE[sk] !== false;
+    const L = AI_ON ? null : stage(sk, th);
+    if (L) put(ctx, L); else if (!AI_ON) { background(ctx, th, lt, sc.n > 1 ? th.days[sc.i % 3] : shade(th.accent, th.dark ? .05 : -.15)); dayLife(ctx, sc.i % 3, lt); }
+    // the figure walks in from below and settles
+    const isG = sk === 'ganesh', art = dayArt(film, fn), rise = (1 - out((lt - .2) / 1.1)) * 90;
+    if (!AI_ON) figure(ctx, art, cx, (isG ? 1610 : H - 40) + rise, isG ? 640 : 900, ap(lt, .2, 1), { halo: night ? 'rgba(255,225,160,.45)' : 'rgba(255,255,255,.6)' });
+    if (sk === 'baraat' || sk === 'sangeet' || sk === 'reception') particles(ctx, th, 'sparkle', lt + sc.t0, true); else petals(ctx, lt + sc.t0, 20);
+    // the signboard drops in on its strings and swings to rest
+    const ev = sc.day.events, n = ev.length, bw = 800, bh = 330 + n * 132, bx = cx - bw / 2;
+    const drop = (1 - out((lt - .1) / 1)) * -900, by = 250 + drop, sw = Math.sin(lt * 2.2) * .02 * Math.max(0, 1 - lt / 3);
+    ctx.save(); ctx.translate(cx, 0); ctx.rotate(sw); ctx.translate(-cx, 0);
+    if (HAS_DOM) { ladi(ctx, bx + 110, -20, by + 24, 30); ladi(ctx, bx + bw - 110, -20, by + 24, 30); }
+    const velvet = !night;
+    signboard(ctx, th, bx, by, bw, bh, velvet);
+    const tb = velvet ? { ...th, dark: true } : { ...th, dark: false }, ink = velvet ? '#fff6e0' : th.ink, gold = velvet ? 'gold' : th.gold[2];
     const label = sc.n > 1 ? (hi ? `दिन ${sc.i + 1}` : `DAY 0${sc.i + 1}`) : (hi ? 'कार्यक्रम' : 'THE CELEBRATION');
-    text(ctx, tw, D.solo ? D.A : `${D.A} & ${D.B}`, cx, 600, { z: 64, font: 'script', color: '#fff', a: ap(lt, .1), maxW: 820 });
-    text(ctx, tw, label, cx, 760, { z: 76, font: 'head', color: 'gold', a: ap(lt, .2), rise: 30, ls: 3, glow: 16 });
-    ctx.save(); ctx.globalAlpha = ap(lt, .3); ctx.strokeStyle = th.gold[0]; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(cx - 260, 800); ctx.lineTo(cx - 30, 800); ctx.moveTo(cx + 30, 800); ctx.lineTo(cx + 260, 800); ctx.stroke(); ctx.restore();
-    const slide = 1 - out((lt - .45) / .8), x = 60 + slide * 900, y = 860, w = W - 120, h = 290;
-    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 40; rr(ctx, x, y, w, h, 24); ctx.fillStyle = th.paper; ctx.fill(); ctx.restore();
-    rr(ctx, x, y, w, h, 24); stroke(ctx, th.gold[1], 2.5);
-    // date disc
-    const dx = x + 120, dy = y + h / 2;
-    monogram(ctx, th, dx, dy, 88, '', 1, false);
-    const lt2 = { ...th, dark: true };
-    text(ctx, lt2, String(sc.day.d).padStart(2, '0'), dx, dy + 6, { z: 64, font: 'name', color: 'gold', maxW: 140 });
-    text(ctx, lt2, sc.day.month.toUpperCase(), dx, dy + 40, { z: 22, font: 'caps', color: '#fff', maxW: 140 });
-    text(ctx, lt2, sc.day.wd, dx, dy + 66, { z: 20, font: 'body', color: '#ffe9b0', maxW: 150 });
-    const lightTh = { ...th, dark: false };
-    sc.day.events.forEach((e, i) => {
-      const ex = x + 250 + i * (w - 270) / sc.day.events.length, a = ap(lt, .9 + i * .25), ew = (w - 290) / sc.day.events.length;
-      text(ctx, lightTh, ICON[e.icon] || '✦', ex + 34, dy - 4, { z: 46, font: 'caps', color: th.accent, a, maxW: 70 });
-      text(ctx, lightTh, e.name, ex + 82, dy - 6, { z: 50, font: hi ? 'name' : 'name', color: th.ink, align: 'left', a, maxW: ew - 90 });
-      text(ctx, lightTh, e.time, ex + 82, dy + 44, { z: 30, font: 'caps', color: shade(th.ink, .3), align: 'left', a, maxW: ew - 90 });
+    let y = by + 120;
+    text(ctx, tb, label, cx, y, { z: 36, font: 'caps', color: gold, a: ap(lt, .5), ls: 4, maxW: bw - 160 });
+    ctx.save(); ctx.globalAlpha = ap(lt, .55); ctx.strokeStyle = velvet ? th.gold[0] : th.gold[1]; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx - 230, y + 30); ctx.lineTo(cx - 24, y + 30); ctx.moveTo(cx + 24, y + 30); ctx.lineTo(cx + 230, y + 30); ctx.stroke();
+    ctx.fillStyle = ctx.strokeStyle; ctx.beginPath(); ctx.moveTo(cx, y + 18); ctx.lineTo(cx + 12, y + 30); ctx.lineTo(cx, y + 42); ctx.lineTo(cx - 12, y + 30); ctx.closePath(); ctx.fill(); ctx.restore();
+    y += 140;
+    ev.forEach((e, i) => {
+      const a = ap(lt, .8 + i * .25);
+      text(ctx, tb, e.name, cx, y, { z: 84, font: 'name', color: velvet ? 'gold' : th.accent, a, rise: 20, maxW: bw - 140 });
+      text(ctx, tb, e.time, cx, y + 48, { z: 30, font: 'caps', color: ink, a, ls: 2, maxW: bw - 160 });
+      y += 132;
     });
-    text(ctx, tw, `${sc.day.wd} · ${sc.day.d} ${sc.day.month}`, cx, y + h + 110, { z: 40, font: 'body', color: '#fff', a: ap(lt, 1.3) });
-    diyas(ctx, th, cx, y + h + 330, ap(lt, 1.5), lt);
+    text(ctx, tb, `${sc.day.wd} · ${sc.day.d} ${sc.day.month}`, cx, by + bh - 66, { z: 40, font: 'body', color: ink, a: ap(lt, 1.3), maxW: bw - 160 });
+    ctx.restore();
   }
   function sceneVenue(ctx, film, th, D, sc, lt) {
     const c = holder(ctx, film, th, lt, 100); th = c.th || th;
@@ -856,14 +1413,15 @@ const Films = (() => {
     const a = ease((lt - 2) / 1);
     if (a > 0) {
       frame(ctx, film, th, a, lt);
-      monogram(ctx, th, cx, 520, 66, D.sacred ? 'ॐ' : D.mono, a);
-      text(ctx, th, D.heading, cx, 740, { z: isHi(D.heading) ? 100 : 84, font: isHi(D.heading) ? 'name' : 'head', color: c, a, glow: th.dark ? 16 : 0, maxW: 760 });
-      text(ctx, th, D.A, cx, 900, { z: 96, font: 'name', color: ink, a: ap(lt, 2.3), maxW: 760 });
-      if (D.B) { text(ctx, th, D.join, cx, 980, { z: 68, font: 'script', color: c, a: ap(lt, 2.5) }); text(ctx, th, D.B, cx, 1080, { z: 96, font: 'name', color: ink, a: ap(lt, 2.7), maxW: 760 }); }
-      text(ctx, th, D.date, cx, 1180, { z: 30, font: 'caps', color: ink, a: ap(lt, 2.9), maxW: 640 });
-      diyas(ctx, th, cx, 1330, ap(lt, 3), lt);
-      if (D.credit) text(ctx, th, D.credit === 'Designed by Sankalp' ? 'Designed with ♥ by Sankalp' : D.credit, cx, 1470, { z: 46, font: 'script', color: c, a: ap(lt, 3.4), glow: th.dark ? 12 : 0 });
-      if (D.site) text(ctx, th, D.site, cx, 1530, { z: 30, font: 'caps', color: ink, a: ap(lt, 3.6), ls: 1 });
+      // the names, then the couple (or Ganesh ji for a puja) under a soft light, then Sankalp's signature
+      text(ctx, th, D.heading, cx, 480, { z: isHi(D.heading) ? 92 : 76, font: isHi(D.heading) ? 'name' : 'head', color: c, a, glow: th.dark ? 16 : 0, maxW: 740 });
+      text(ctx, th, D.A, cx, 610, { z: 88, font: 'name', color: ink, a: ap(lt, 2.3), maxW: 740 });
+      if (D.B) { text(ctx, th, D.join, cx, 680, { z: 60, font: 'script', color: c, a: ap(lt, 2.5) }); text(ctx, th, D.B, cx, 770, { z: 88, font: 'name', color: ink, a: ap(lt, 2.7), maxW: 740 }); }
+      text(ctx, th, D.date, cx, D.B ? 840 : 700, { z: 30, font: 'caps', color: ink, a: ap(lt, 2.9), maxW: 640 });
+      const art = ['puja', 'housewarming'].includes(film.occ) && D.sacred ? ganeshArt(film) : coupleArt(film);
+      if (!figure(ctx, art, cx, 1415 + (1 - out((lt - 2.6) / 1.4)) * 50, D.B ? 520 : 600, ap(lt, 2.6, 1.2), { halo: th.dark ? 'rgba(255,215,150,.5)' : 'rgba(255,255,255,.75)' })) diyas(ctx, th, cx, 1330, ap(lt, 3), lt);
+      if (D.credit) text(ctx, th, D.credit === 'Designed by Sankalp' ? 'Designed with ♥ by Sankalp' : D.credit, cx, 1500, { z: 50, font: 'script', color: c, a: ap(lt, 3.4), glow: th.dark ? 12 : 0 });
+      if (D.site) text(ctx, th, D.site, cx, 1556, { z: 28, font: 'caps', color: ink, a: ap(lt, 3.6), ls: 2 });
     }
   }
   // A shloka on its own screen
@@ -936,6 +1494,8 @@ const Films = (() => {
   }
   const dateBits = (D, sc) => ({ d: String(sc.day.d).padStart(2, '0'), m: String(sc.day.month).toUpperCase(), wd: sc.day.wd });
 
+  // a concept's still background, painted once per palette
+  function cbg(ctx, key, th, paint) { const L = layer(`cbg|${key}|${thKey(th)}`, g => paint(g)); if (L) put(ctx, L); else paint(ctx); }
   // ===== Minimal Modern: white space, big serif names set to the left, thin lines =====
   const MINIMAL = {
     short: 'Minimal', name: 'Minimal Modern', trans: 'up', fx: 'none',
@@ -947,9 +1507,13 @@ const Films = (() => {
       P6('Ink', false, ['#f0f2f7', '#dfe4ee'], ['#7d8fb3', '#34466b', '#1d2a45'], '#ffffff', '#16213a', '#34466b'),
       P6('Noir', true, ['#181818', '#0b0b0b'], ['#ffffff', '#d9c7a7', '#9a8462'], '#1d1d1d', '#f4f4f4', '#d9c7a7')],
     bg(ctx, th, t) {
-      const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]);
-      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-      ctx.save(); ctx.globalAlpha = .18; ctx.strokeStyle = th.ink; ctx.lineWidth = 1.5; ctx.strokeRect(60, 60, W - 120, H - 120); ctx.restore();
+      cbg(ctx, 'minimal', th, g => {
+        // cotton paper with a blind-debossed border and a fine foil hairline
+        if (th.dark) { silkBg(g, th.bg[0], th.bg[1], th.gold[1], .025); } else paperFill(g, th.bg[0], W, H, 11);
+        g.save(); g.strokeStyle = th.dark ? 'rgba(0,0,0,.6)' : 'rgba(0,0,0,.08)'; g.lineWidth = 6; g.strokeRect(64, 64, W - 128, H - 128);
+        g.strokeStyle = th.dark ? 'rgba(255,255,255,.06)' : 'rgba(255,255,255,.8)'; g.lineWidth = 2; g.strokeRect(68, 68, W - 136, H - 136);
+        g.strokeStyle = foil(g, th, 0, 0, W, H); g.lineWidth = 1.6; g.strokeRect(92, 92, W - 184, H - 184); g.restore();
+      });
     },
     open(ctx, film, th, D, sc, lt) {
       const cx = W / 2, cy = H / 2, k1 = ease(lt / 1.1), k2 = ease((lt - 1) / 1.1);
@@ -971,9 +1535,11 @@ const Films = (() => {
         text(ctx, th, D.B, x + sl(1), 1080, { z: 160, font: 'name', color: th.ink, align: 'left', a: ap(lt, 1), maxW: 820 });
       }
       ctx.save(); ctx.globalAlpha = ap(lt, 1.3); ctx.strokeStyle = th.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, 1160); ctx.lineTo(x + 320 * ap(lt, 1.3, 1), 1160); ctx.stroke(); ctx.restore();
-      text(ctx, th, D.date, x, 1240, { z: 42, font: 'caps', color: th.ink, align: 'left', a: ap(lt, 1.5), maxW: 780, ls: 2 });
-      text(ctx, th, [D.V, D.CITY].filter(Boolean).join(', '), x, 1305, { z: 34, font: 'body', color: th.accent, align: 'left', a: ap(lt, 1.7), maxW: 780 });
-      ctx.save(); ctx.translate(W - 110, 960); ctx.rotate(-Math.PI / 2);
+      // the couple, set into the white space at the right like an editorial photograph
+      figure(ctx, coupleArt(film), 790, (FIN ? 1610 : 1745) + (1 - out((lt - .8) / 1.4)) * 40, FIN ? 470 : 620, ap(lt, .8, 1.2), { halo: th.dark ? 'rgba(255,240,210,.18)' : 'rgba(255,255,255,.9)' });
+      text(ctx, th, D.date, x, 1240, { z: 40, font: 'caps', color: th.ink, align: 'left', a: ap(lt, 1.5), maxW: 470, ls: 2 });
+      para(ctx, th, [D.V, D.CITY].filter(Boolean).join(', '), x + 235, 1305, { z: 34, font: 'body', color: th.accent, a: ap(lt, 1.7), maxW: 430, lines: 3 });
+      ctx.save(); ctx.translate(W - 120, 640); ctx.rotate(-Math.PI / 2);
       text(ctx, th, hi ? 'तारीख़ याद रखें' : 'SAVE THE DATE', 0, 0, { z: 28, font: 'caps', color: th.ink, a: ap(lt, 1.9) * .6, ls: 10 });
       ctx.restore();
     },
@@ -994,6 +1560,7 @@ const Films = (() => {
   // ===== Watercolor Bloom: soft washes, roses blooming at the corners, names in script =====
   function flower(ctx, x, y, r, cols, rot, k) {
     if (k <= 0) return;
+    if (HAS_DOM) { sprite(ctx, rose(hex6(cols[0])), x, y, r * 2.3 * Math.min(1, k), rot, clamp(k * 2)); return; }
     ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(k, k);
     for (let ring = 0; ring < 3; ring++) {
       const n = [8, 7, 5][ring], rr2 = r * [1, .72, .45][ring];
@@ -1004,6 +1571,7 @@ const Films = (() => {
     ctx.restore();
   }
   function leaf(ctx, x, y, len, ang, col, k = 1) {
+    if (HAS_DOM && k > 0) { ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(k, k); sprite(ctx, leafSprite(hex6(col)), len / 2, 0, len); ctx.restore(); return; }
     ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(k, k); ctx.fillStyle = col; ctx.globalAlpha = .85;
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(len * .5, -len * .28, len, 0); ctx.quadraticCurveTo(len * .5, len * .28, 0, 0); ctx.fill(); ctx.restore();
   }
@@ -1024,9 +1592,14 @@ const Films = (() => {
       P6('Buttercup', false, ['#fffdf3', '#fbf1c9'], ['#e3c35d', '#b89a2e', '#6b5810'], '#ffffff', '#4f4310', '#c9a227', { fl: ['#f8d55c', '#fff0a8', '#f0b72f'], leaf: '#8db27a' }),
       P6('Hydrangea', false, ['#f6fbff', '#dcebf9'], ['#c9b07a', '#9c8452', '#5b4a24'], '#ffffff', '#1f3a5c', '#4a7fc0', { fl: ['#8db8ea', '#c7defa', '#6a96d9'], leaf: '#86ab92' })],
     bg(ctx, th, t) {
-      const g = ctx.createLinearGradient(0, 0, W, H); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-      [[120, 160, 420, th.fl[1]], [W - 80, H - 220, 480, th.fl[0]], [W - 160, 360, 260, th.leaf], [140, H - 420, 300, th.fl[2]]].forEach(([x, y, r, c]) => {
-        const w2 = ctx.createRadialGradient(x, y, 10, x, y, r); w2.addColorStop(0, c + '55'); w2.addColorStop(1, c + '00'); ctx.fillStyle = w2; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      cbg(ctx, 'floral', th, g => {
+        // cold-press watercolour paper with soft blooms of colour bleeding at the edges
+        paperFill(g, th.bg[0], W, H, 5);
+        const r = rng(17);
+        [[120, 160, 460, th.fl[1]], [W - 80, H - 220, 520, th.fl[0]], [W - 160, 360, 300, th.leaf], [140, H - 420, 340, th.fl[2]], [W / 2, H * .5, 700, th.bg[1]]].forEach(([x, y, rad, c]) => {
+          for (let k = 0; k < 7; k++) { const xx = x + (r() - .5) * rad * .5, yy = y + (r() - .5) * rad * .5, rr2 = rad * (.5 + r() * .5); const w2 = g.createRadialGradient(xx, yy, 10, xx, yy, rr2); w2.addColorStop(0, c + '30'); w2.addColorStop(.7, c + '18'); w2.addColorStop(1, c + '00'); g.fillStyle = w2; g.beginPath(); g.arc(xx, yy, rr2, 0, Math.PI * 2); g.fill(); }
+        });
+        grain(g, .05);
       });
     },
     open(ctx, film, th, D, sc, lt) {
@@ -1045,13 +1618,16 @@ const Films = (() => {
         text(ctx, th, D.lang === 'hi' ? 'संग' : 'and', cx, 920, { z: 44, font: 'caps', color: th.accent, a: ap(lt, 1), ls: 4 });
         text(ctx, th, D.B, cx, 1090, { z: 180, font: 'name', color: th.ink, a: ap(lt, 1.2), rise: 30, maxW: 900 });
       }
-      text(ctx, th, D.date, cx, 1240, { z: 40, font: 'caps', color: th.ink, a: ap(lt, 1.6), ls: 2, maxW: 820 });
-      text(ctx, th, [D.V, D.CITY].filter(Boolean).join(' · '), cx, 1310, { z: 40, font: 'body', color: th.accent, a: ap(lt, 1.8), maxW: 820 });
-      bouquet(ctx, th, cx, 1520, 1.1, lt, ease((lt - 1.6) / 1));
+      text(ctx, th, D.date, cx, 1225, { z: 40, font: 'caps', color: th.ink, a: ap(lt, 1.6), ls: 2, maxW: 820 });
+      text(ctx, th, [D.V, D.CITY].filter(Boolean).join(' · '), cx, 1290, { z: 40, font: 'body', color: th.accent, a: ap(lt, 1.8), maxW: 820 });
+      // the couple in a nest of blooms
+      const fy = FIN ? -150 : 0; figure(ctx, coupleArt(film), cx, 1770 + fy, FIN ? 320 : 440, ap(lt, 1.4, 1.2), { halo: 'rgba(255,255,255,.85)' });
+      bouquet(ctx, th, cx - 300, 1640 + fy, FIN ? .8 : 1, lt, ease((lt - 1.6) / 1)); bouquet(ctx, th, cx + 300, 1660 + fy, FIN ? .8 : 1, lt, ease((lt - 1.8) / 1), -1);
     },
     panel(ctx, film, th, a) {
       const r = { x: 130, y: 340, w: W - 260, h: 1240 }; r.cx = r.x + r.w / 2;
-      ctx.save(); ctx.globalAlpha *= clamp(a); ctx.shadowColor = 'rgba(120,60,60,.18)'; ctx.shadowBlur = 50; rr(ctx, r.x, r.y, r.w, r.h, 40); ctx.fillStyle = th.paper; ctx.fill(); ctx.restore();
+      ctx.save(); ctx.globalAlpha *= clamp(a); ctx.shadowColor = 'rgba(120,60,60,.18)'; ctx.shadowBlur = 50; rr(ctx, r.x, r.y, r.w, r.h, 40); ctx.fillStyle = th.paper; ctx.fill(); ctx.shadowColor = 'transparent'; paperIn(ctx, th.paper, r.x, r.y, r.w, r.h);
+      rr(ctx, r.x + 26, r.y + 26, r.w - 52, r.h - 52, 28); ctx.lineWidth = 3; ctx.strokeStyle = foil(ctx, th, r.x, r.y, r.x + r.w, r.y + r.h); ctx.stroke(); ctx.restore();
       bouquet(ctx, th, r.x + 40, r.y + 40, .9, NOW, clamp(a)); bouquet(ctx, th, r.x + r.w - 40, r.y + r.h - 40, .7, NOW, clamp(a), -1);
       return r;
     },
@@ -1076,13 +1652,19 @@ const Films = (() => {
       P6('Jade', true, ['#0e3d2a', '#010d07'], GOLD, 'rgba(255,255,255,.06)', '#f0f8f2', '#e8c66a'),
       P6('Royal', true, ['#33134f', '#07020d'], SILVER, 'rgba(255,255,255,.06)', '#f6f0ff', '#c8b6ff')],
     bg(ctx, th, t) {
-      const g = ctx.createRadialGradient(W / 2, H * .45, 50, W / 2, H * .5, H * .8); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      cbg(ctx, 'cinema', th, g => {
+        const b = g.createRadialGradient(W / 2, H * .42, 50, W / 2, H * .5, H * .8); b.addColorStop(0, th.bg[0]); b.addColorStop(1, th.bg[1]); g.fillStyle = b; g.fillRect(0, 0, W, H);
+        // smoke in the projector light
+        const r = rng(23); for (let i = 0; i < 26; i++) { const x = r() * W, y = r() * H, rad = 120 + r() * 260, h2 = g.createRadialGradient(x, y, 0, x, y, rad); h2.addColorStop(0, 'rgba(255,255,255,.05)'); h2.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = h2; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
+        grain(g, .14);
+      });
       [-1, 1].forEach(s => {
         ctx.save(); ctx.translate(W / 2 + s * 460, H); ctx.rotate(s * (-.35 + Math.sin(t * .5 + s) * .18));
         const b = ctx.createLinearGradient(0, 0, 0, -H * 1.1); b.addColorStop(0, th.accent + '40'); b.addColorStop(1, th.accent + '00');
         ctx.fillStyle = b; ctx.beginPath(); ctx.moveTo(-30, 0); ctx.lineTo(-260, -H * 1.1); ctx.lineTo(260, -H * 1.1); ctx.lineTo(30, 0); ctx.fill(); ctx.restore();
       });
       ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, 150); ctx.fillRect(0, H - 170, W, 170);
+      ctx.fillStyle = foil(ctx, th, 0, 0, W, 0); ctx.fillRect(0, 148, W, 2); ctx.fillRect(0, H - 170, W, 2);
     },
     open(ctx, film, th, D, sc, lt) {
       const k = ease((lt - .3) / 1.2), cy = H / 2;
@@ -1094,18 +1676,24 @@ const Films = (() => {
       text(ctx, tw(th, true), D.heading, W / 2, cy + 130, { z: 64, font: 'head', color: 'gold', a: ap(lt, 1.9), glow: 18 });
     },
     title(ctx, film, th, D, sc, lt) {
+      // a film poster: billing on top, the couple lit from behind, the title block and the small print below
       const t2 = tw(th, true), cx = W / 2, hi = D.lang === 'hi';
-      text(ctx, t2, hi ? 'प्रस्तुत करते हैं' : 'STARRING', cx, 620, { z: 34, font: 'caps', color: th.accent, a: ap(lt, .2), ls: 10 });
-      if (D.solo) text(ctx, t2, D.A, cx, 860, { z: 120, font: 'name', color: 'gold', a: ap(lt, .5), glow: 22, maxW: 900 });
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 150, W, H - 320); ctx.clip();
+      const rim = ctx.createRadialGradient(cx, 1150, 30, cx, 1150, 620); rim.addColorStop(0, rgba(hex6(th.accent), .4)); rim.addColorStop(1, rgba(hex6(th.accent), 0)); ctx.fillStyle = rim; ctx.fillRect(0, 500, W, 1300);
+      figure(ctx, coupleArt(film), cx, 1790 - (ap(lt, .3, 2.4)) * 30, 1000, ap(lt, .3, 1), { shadow: false });
+      const fade = ctx.createLinearGradient(0, 1330, 0, H - 170); fade.addColorStop(0, rgba(hex6(th.bg[1]), 0)); fade.addColorStop(.55, rgba(hex6(th.bg[1]), .9)); fade.addColorStop(1, th.bg[1]); ctx.fillStyle = fade; ctx.fillRect(0, 1330, W, 420);
+      const top = ctx.createLinearGradient(0, 150, 0, 760); top.addColorStop(0, rgba(hex6(th.bg[1]), .85)); top.addColorStop(1, rgba(hex6(th.bg[1]), 0)); ctx.fillStyle = top; ctx.fillRect(0, 150, W, 610);
+      ctx.restore();
+      text(ctx, t2, hi ? 'प्रस्तुत करते हैं' : 'STARRING', cx, 250, { z: 30, font: 'caps', color: th.accent, a: ap(lt, .2), ls: 10 });
+      if (D.solo) text(ctx, t2, D.A, cx, 420, { z: 120, font: 'name', color: 'gold', a: ap(lt, .5), glow: 22, maxW: 900 });
       else {
-        text(ctx, t2, D.A, cx, 800, { z: 112, font: 'name', color: 'gold', a: ap(lt, .5), glow: 22, maxW: 900 });
-        text(ctx, t2, hi ? 'और' : 'AND', cx, 890, { z: 34, font: 'caps', color: '#fff', a: ap(lt, .8), ls: 8 });
-        text(ctx, t2, D.B, cx, 1010, { z: 112, font: 'name', color: 'gold', a: ap(lt, 1), glow: 22, maxW: 900 });
+        text(ctx, t2, D.A, cx, 380, { z: 104, font: 'name', color: 'gold', a: ap(lt, .5), glow: 22, maxW: 900 });
+        text(ctx, t2, hi ? 'और' : 'AND', cx, 450, { z: 30, font: 'caps', color: '#fff', a: ap(lt, .8), ls: 8 });
+        text(ctx, t2, D.B, cx, 560, { z: 104, font: 'name', color: 'gold', a: ap(lt, 1), glow: 22, maxW: 900 });
       }
-      ctx.save(); ctx.globalAlpha = ap(lt, 1.3) * .7; ctx.strokeStyle = th.accent; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - 200, 1080); ctx.lineTo(cx + 200, 1080); ctx.stroke(); ctx.restore();
-      text(ctx, t2, `${hi ? '' : 'IN CINEMAS · '}${D.date}`, cx, 1160, { z: 38, font: 'caps', color: '#fff', a: ap(lt, 1.5), ls: 3, maxW: 880 });
-      text(ctx, t2, [D.V, D.CITY].filter(Boolean).join(' · '), cx, 1230, { z: 38, font: 'body', color: th.accent, a: ap(lt, 1.7), maxW: 880 });
-      text(ctx, t2, '★ ★ ★ ★ ★', cx, 1360, { z: 36, font: 'caps', color: th.accent, a: ap(lt, 2) });
+      text(ctx, t2, `${hi ? '' : 'IN CINEMAS · '}${D.date}`, cx, 1560, { z: 40, font: 'caps', color: '#fff', a: ap(lt, 1.5), ls: 3, maxW: 880, glow: 10 });
+      text(ctx, t2, [D.V, D.CITY].filter(Boolean).join(' · '), cx, 1620, { z: 38, font: 'body', color: th.accent, a: ap(lt, 1.7), maxW: 880 });
+      text(ctx, t2, hi ? 'परिवार की ओर से एक प्रेम कहानी · संगीत: शहनाई · निर्देशन: प्यार' : 'A FAMILY PRODUCTION · MUSIC BY THE SHEHNAI · DIRECTED BY LOVE · ★★★★★', cx, 1690, { z: 20, font: 'caps', color: 'rgba(255,255,255,.7)', a: ap(lt, 2), ls: 2, maxW: 860 });
     },
     panel(ctx, film, th, a) {
       const r = { x: 120, y: 260, w: W - 240, h: 1360 }; r.cx = r.x + r.w / 2;
@@ -1114,6 +1702,10 @@ const Films = (() => {
     },
     day(ctx, film, th, D, sc, lt) {
       const t2 = tw(th, true), cx = W / 2, b = dateBits(D, sc), hi = D.lang === 'hi';
+      // the day's couple as a toned film still rising out of the dark
+      const still = tonedArt(dayArt(film, sceneFn(film, D, sc)), hex6(th.bg[1]), hex6(th.accent));
+      if (still) { const iw = still.width / SCALE, ih = still.height / SCALE, k = 900 / ih; ctx.save(); ctx.beginPath(); ctx.rect(0, 150, W, H - 320); ctx.clip(); ctx.globalAlpha = ap(lt, .2, 1.5) * .55; ctx.drawImage(still, cx - iw * k / 2, H - 170 - ih * k + (1 - ap(lt, 0, 3)) * 40, iw * k, ih * k);
+        const f = ctx.createLinearGradient(0, H - 600, 0, H - 170); f.addColorStop(0, rgba(hex6(th.bg[1]), 0)); f.addColorStop(1, th.bg[1]); ctx.globalAlpha = 1; ctx.fillStyle = f; ctx.fillRect(0, H - 600, W, 430); ctx.restore(); }
       text(ctx, t2, sc.n > 1 ? (hi ? `अध्याय ${sc.i + 1}` : `CHAPTER ${['ONE', 'TWO', 'THREE', 'FOUR'][sc.i]}`) : (hi ? 'आज की शाम' : 'TONIGHT'), cx, 560, { z: 36, font: 'caps', color: th.accent, a: ap(lt, .2), ls: 10 });
       text(ctx, t2, sc.day.events.map(e => e.name).join(' · '), cx, 760, { z: 96, font: 'name', color: 'gold', a: ap(lt, .4), glow: 20, maxW: 900 });
       text(ctx, t2, `${b.wd}, ${b.d} ${b.m}`, cx, 860, { z: 40, font: 'caps', color: '#fff', a: ap(lt, .6), ls: 3, maxW: 880 });
@@ -1135,7 +1727,7 @@ const Films = (() => {
   // ===== Gatsby Deco: black and gold, a fan that opens, eight-cornered frames =====
   function octagon(ctx, x, y, w, h, c) { ctx.beginPath(); ctx.moveTo(x + c, y); ctx.lineTo(x + w - c, y); ctx.lineTo(x + w, y + c); ctx.lineTo(x + w, y + h - c); ctx.lineTo(x + w - c, y + h); ctx.lineTo(x + c, y + h); ctx.lineTo(x, y + h - c); ctx.lineTo(x, y + c); ctx.closePath(); }
   function fan(ctx, th, cx, cy, R, k, up = true) {
-    ctx.save(); ctx.strokeStyle = th.gold[1]; ctx.lineWidth = 2.5;
+    ctx.save(); ctx.strokeStyle = foil(ctx, th, cx - R, cy - R, cx + R, cy); ctx.lineWidth = 3;
     const a0 = up ? Math.PI : 0, span = Math.PI * k;
     for (let i = 0; i <= 18; i++) { const a = a0 + (Math.PI - span) / 2 + span * i / 18; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R); ctx.stroke(); }
     for (let r = R * .35; r <= R; r += R * .22) { ctx.beginPath(); ctx.arc(cx, cy, r, a0 + (Math.PI - span) / 2, a0 + (Math.PI + span) / 2); ctx.stroke(); }
@@ -1152,11 +1744,18 @@ const Films = (() => {
       P6('Teal', true, ['#0d3c42', '#031214'], GOLD, '#0a2a2e', '#f4ead2', '#e8b84a'),
       P6('Champagne', false, ['#f6efe0', '#e7d9bc'], ['#d4a64a', '#9c7424', '#5a400e'], '#fbf6ea', '#1c1712', '#9c7424')],
     bg(ctx, th, t) {
-      const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-      ctx.save(); ctx.globalAlpha = th.dark ? .08 : .12; ctx.strokeStyle = th.gold[1]; ctx.lineWidth = 2;
-      for (let x = 40; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-      ctx.restore();
-      ctx.save(); ctx.strokeStyle = th.gold[1]; ctx.lineWidth = 3; octagon(ctx, 50, 50, W - 100, H - 100, 70); ctx.stroke(); ctx.lineWidth = 1.5; octagon(ctx, 66, 66, W - 132, H - 132, 62); ctx.stroke(); ctx.restore();
+      cbg(ctx, 'deco', th, g => {
+        if (th.dark) silkBg(g, th.bg[0], th.bg[1], th.gold[1], 0); else paperFill(g, th.bg[0], W, H, 8);
+        // a sunburst of fine gold rays and a stepped skyline of chevrons
+        g.save(); g.globalAlpha = th.dark ? .14 : .18; g.strokeStyle = foil(g, th, 0, 0, W, H); g.lineWidth = 2;
+        for (let i = 0; i <= 48; i++) { const a = Math.PI + i * Math.PI / 48; g.beginPath(); g.moveTo(W / 2, H * .62); g.lineTo(W / 2 + Math.cos(a) * 1400, H * .62 + Math.sin(a) * 1400); g.stroke(); }
+        g.globalAlpha = th.dark ? .1 : .14; for (let x = 40; x < W; x += 40) { g.beginPath(); g.moveTo(x, H * .7); g.lineTo(x, H); g.stroke(); }
+        g.restore();
+        g.save(); g.strokeStyle = foil(g, th, 0, 0, W, H); g.lineWidth = 6; octagon(g, 46, 46, W - 92, H - 92, 74); g.stroke(); g.lineWidth = 1.5; octagon(g, 64, 64, W - 128, H - 128, 64); g.stroke(); octagon(g, 74, 74, W - 148, H - 148, 60); g.stroke();
+        // stepped deco corners
+        [[46, 46, 1, 1], [W - 46, 46, -1, 1], [46, H - 46, 1, -1], [W - 46, H - 46, -1, -1]].forEach(([x, y, sx, sy]) => { g.fillStyle = foil(g, th, x, y, x + sx * 120, y + sy * 120); for (let k = 0; k < 3; k++) { g.beginPath(); g.moveTo(x + sx * (90 + k * 26), y + sy * 20); g.lineTo(x + sx * (100 + k * 26), y + sy * 20); g.lineTo(x + sx * 20, y + sy * (100 + k * 26)); g.lineTo(x + sx * 20, y + sy * (90 + k * 26)); g.closePath(); g.fill(); } });
+        g.restore(); grain(g, .06);
+      });
     },
     open(ctx, film, th, D, sc, lt) {
       fan(ctx, th, W / 2, H * .62, 520, ease(lt / 1.6));
@@ -1166,7 +1765,8 @@ const Films = (() => {
     },
     title(ctx, film, th, D, sc, lt) {
       const cx = W / 2;
-      ctx.save(); ctx.globalAlpha = ap(lt, 0, 1.2); ctx.strokeStyle = th.gold[1]; ctx.lineWidth = 3; octagon(ctx, 150, 380, W - 300, 1100, 90); ctx.stroke(); ctx.lineWidth = 1.2; octagon(ctx, 170, 400, W - 340, 1060, 82); ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.globalAlpha = ap(lt, 0, 1.2); octagon(ctx, 150, 380, W - 300, 1100, 90); ctx.fillStyle = th.dark ? 'rgba(0,0,0,.35)' : 'rgba(255,255,255,.45)'; ctx.fill();
+      ctx.strokeStyle = foil(ctx, th, 150, 380, W - 150, 1480); ctx.lineWidth = 7; ctx.stroke(); ctx.lineWidth = 1.5; octagon(ctx, 172, 402, W - 344, 1056, 82); ctx.stroke(); ctx.restore();
       fan(ctx, th, cx, 400, 170, ap(lt, .2, 1.2));
       text(ctx, th, D.heading.toUpperCase(), cx, 560, { z: 44, font: 'caps', color: th.accent, a: ap(lt, .4), ls: 8, maxW: 700 });
       if (D.solo) text(ctx, th, D.A, cx, 860, { z: 150, font: 'name', color: 'gold', a: ap(lt, .7), maxW: 700, glow: 10 });
@@ -1198,20 +1798,34 @@ const Films = (() => {
   };
 
   // ===== Polaroid Memories: kraft paper, taped polaroids, handwriting =====
-  function tape(ctx, x, y, w, ang) { ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.fillStyle = 'rgba(240,226,190,.75)'; ctx.fillRect(-w / 2, -22, w, 44); ctx.restore(); }
+  // a gilt photo corner (the album corners hold the prints; w is kept from the old tape)
+  function tape(ctx, x, y, w, ang) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang + Math.PI / 4);
+    const s = Math.min(70, w * .4), g = ctx.createLinearGradient(-s, -s, s, s); g.addColorStop(0, '#8a5a14'); g.addColorStop(.35, '#f6dc8a'); g.addColorStop(.6, '#c8952e'); g.addColorStop(1, '#7a4a0c');
+    ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-s, s * .3); ctx.lineTo(0, -s * .7); ctx.lineTo(s, s * .3); ctx.closePath(); ctx.fill();
+    ctx.shadowColor = 'transparent'; ctx.strokeStyle = 'rgba(255,245,200,.7)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-s * .7, s * .15); ctx.lineTo(0, -s * .5); ctx.lineTo(s * .7, s * .15); ctx.stroke();
+    ctx.restore();
+  }
   function polaroid(ctx, th, x, y, w, h, ang, k, draw) {
     if (k <= 0) return;
     ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.globalAlpha *= clamp(k);
-    ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 12; ctx.fillStyle = '#fffdf8'; ctx.fillRect(-w / 2, -h / 2, w, h); ctx.shadowColor = 'transparent';
-    const pw = w - 60, ph = h - 190, g = ctx.createLinearGradient(0, -h / 2, 0, -h / 2 + ph); g.addColorStop(0, shade(th.accent, .25)); g.addColorStop(1, shade(th.accent, -.25));
+    ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 18; ctx.fillStyle = '#fffdf8'; ctx.fillRect(-w / 2, -h / 2, w, h); ctx.shadowColor = 'transparent';
+    ctx.beginPath(); ctx.rect(-w / 2, -h / 2, w, h); paperIn(ctx, '#fffdf6', -w / 2, -h / 2, w, h);
+    // the print: a soft studio backdrop and a gloss
+    const pw = w - 60, ph = h - 190, g = ctx.createRadialGradient(0, -h / 2 + ph * .4, 20, 0, -h / 2 + ph * .5, ph * .8); g.addColorStop(0, shade(th.accent, .7)); g.addColorStop(.6, shade(th.accent, .35)); g.addColorStop(1, shade(th.accent, -.1));
     ctx.fillStyle = g; ctx.fillRect(-pw / 2, -h / 2 + 30, pw, ph);
+    ctx.save(); ctx.beginPath(); ctx.rect(-pw / 2, -h / 2 + 30, pw, ph); ctx.clip();
     if (draw) draw(-pw / 2, -h / 2 + 30, pw, ph);
+    const gl = ctx.createLinearGradient(-pw / 2, -h / 2, pw / 2, -h / 2 + ph); gl.addColorStop(0, 'rgba(255,255,255,.28)'); gl.addColorStop(.4, 'rgba(255,255,255,0)'); gl.addColorStop(1, 'rgba(255,255,255,.06)'); ctx.fillStyle = gl; ctx.fillRect(-pw / 2, -h / 2 + 30, pw, ph);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(0,0,0,.12)'; ctx.lineWidth = 2; ctx.strokeRect(-pw / 2, -h / 2 + 30, pw, ph);
     ctx.restore();
   }
   function heart(ctx, x, y, s, col, fill = true) { ctx.save(); ctx.translate(x, y); ctx.scale(s / 100, s / 100); ctx.beginPath(); ctx.moveTo(0, 30); ctx.bezierCurveTo(-60, -10, -40, -70, 0, -38); ctx.bezierCurveTo(40, -70, 60, -10, 0, 30); ctx.closePath(); if (fill) { ctx.fillStyle = col; ctx.fill(); } else { ctx.strokeStyle = col; ctx.lineWidth = 6; ctx.stroke(); } ctx.restore(); }
   const POLAROID = {
     short: 'Polaroid', name: 'Polaroid Memories', trans: 'slide', fx: 'none',
-    face: face('700 {z}px "Caveat", cursive', '700 {z}px "Caveat", cursive', '500 {z}px "Caveat", cursive', '500 {z}px "Caveat", cursive', '700 {z}px "Caveat", cursive'),
+    face: face('400 {z}px "Great Vibes", cursive', '700 {z}px "Caveat", cursive', '600 {z}px "Jost", sans-serif', '500 {z}px "Caveat", cursive', '400 {z}px "Great Vibes", cursive'),
     pals: [P6('Kraft', false, ['#d2b48c', '#b8956a'], ['#6b4a2a', '#4a321a', '#2a1a0a'], '#fffdf6', '#3a2a1a', '#c0524a'),
       P6('Linen', false, ['#f3ece0', '#e4d8c4'], ['#8a6a4a', '#5a4430', '#2e2216'], '#fffefb', '#2e2620', '#3f7fa8'),
       P6('Sage Board', false, ['#c9d3bf', '#aebba2'], ['#4a5a3a', '#34422a', '#1e2818'], '#fffffa', '#26301e', '#c76b4a'),
@@ -1219,32 +1833,40 @@ const Films = (() => {
       P6('Sky Board', false, ['#cfe1ee', '#b1cbde'], ['#3a5a74', '#28425a', '#14263a'], '#fffffd', '#1e2e3e', '#e0864a'),
       P6('Chalk', true, ['#2d3a33', '#1c2420'], ['#ffffff', '#e8e8e0', '#b8b8b0'], '#fffdf6', '#f4f4ec', '#f2c94c')],
     bg(ctx, th, t) {
-      ctx.fillStyle = th.bg[0]; ctx.fillRect(0, 0, W, H);
-      ctx.save();
-      for (let i = 0; i < 260; i++) { ctx.globalAlpha = .12; ctx.fillStyle = i % 2 ? '#000' : '#fff'; ctx.fillRect(hash(i) * W, hash(i + 300) * H, 2 + hash(i + 7) * 3, 2); }
-      ctx.globalAlpha = th.dark ? .25 : .18; ctx.strokeStyle = th.dark ? '#fff' : th.ink; ctx.lineWidth = 3;
-      for (let i = 0; i < 9; i++) { const x = hash(i + 41) * W, y = hash(i + 91) * H; if (i % 3) heart(ctx, x, y, 40, ctx.strokeStyle, false); else { ctx.beginPath(); for (let p = 0; p < 5; p++) { const a = -Math.PI / 2 + p * Math.PI * 4 / 5; ctx.lineTo(x + Math.cos(a) * 24, y + Math.sin(a) * 24); } ctx.closePath(); ctx.stroke(); } }
-      ctx.restore();
+      cbg(ctx, 'polaroid', th, g => {
+        // a linen-bound album page: woven cloth, a stitched border, gold-stamped corners
+        const b = g.createRadialGradient(W / 2, H * .4, 80, W / 2, H / 2, H * .8); b.addColorStop(0, shade(th.bg[0], .08)); b.addColorStop(1, shade(th.bg[1], -.12)); g.fillStyle = b; g.fillRect(0, 0, W, H);
+        g.save(); g.globalAlpha = .07; g.strokeStyle = th.dark ? '#fff' : '#3a2a1a'; g.lineWidth = 1;
+        for (let y = 0; y < H; y += 4) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); } g.globalAlpha = .05; for (let x = 0; x < W; x += 4) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
+        g.restore(); grain(g, .12);
+        g.save(); g.setLineDash([14, 10]); g.strokeStyle = th.dark ? 'rgba(255,255,255,.35)' : 'rgba(255,255,255,.6)'; g.lineWidth = 3; g.strokeRect(54, 54, W - 108, H - 108); g.restore();
+        filigreeCorners(g, { ...th, gold: GOLD }, 80, 80, W - 160, H - 160, 90, .85);
+        const v = g.createRadialGradient(W / 2, H / 2, H * .3, W / 2, H / 2, H * .75); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.3)'); g.fillStyle = v; g.fillRect(0, 0, W, H);
+      });
     },
     open(ctx, film, th, D, sc, lt) {
       const drop = (s, y0) => y0 - (1 - out((lt - s) / .7)) * 1400;
       polaroid(ctx, th, W / 2 - 160, drop(.1, 820), 460, 560, -.16, ap(lt, .1, .2));
       polaroid(ctx, th, W / 2 + 170, drop(.5, 900), 460, 560, .12, ap(lt, .5, .2));
-      polaroid(ctx, th, W / 2, drop(.9, 1000), 500, 610, -.03, ap(lt, .9, .2), (x, y, w, h) => { heart(ctx, x + w / 2, y + h / 2, 220, 'rgba(255,255,255,.85)'); });
+      polaroid(ctx, th, W / 2, drop(.9, 1000), 500, 610, -.03, ap(lt, .9, .2), (x, y, w, h) => { if (!figure(ctx, coupleArt(film), x + w / 2, y + h + 20, h * 1.05, 1, { shadow: false })) heart(ctx, x + w / 2, y + h / 2, 220, 'rgba(255,255,255,.85)'); });
       tape(ctx, W / 2, drop(.9, 1000) - 300, 180, .08);
       text(ctx, th, D.lang === 'hi' ? 'हमारी कहानी…' : 'our story…', W / 2, 1520, { z: 96, font: 'script', color: th.dark ? '#fff' : th.ink, a: ap(lt, 1.8) });
     },
     title(ctx, film, th, D, sc, lt) {
       const cx = W / 2, k = out(lt / .8);
       polaroid(ctx, th, cx, 800 - (1 - k) * 300, 700, 860, -.05, k, (x, y, w, h) => {
-        heart(ctx, x + w / 2, y + h / 2 + 30, 260, 'rgba(255,255,255,.22)');
-        text(ctx, tw(th, true), D.mono.replace(' | ', ' ♥ '), x + w / 2, y + h / 2 + 50, { z: 150, font: 'name', color: '#fff', maxW: w - 40 });
+        heart(ctx, x + w / 2, y + h / 2 + 30, 300, 'rgba(255,255,255,.25)');
+        if (!figure(ctx, coupleArt(film), x + w / 2, y + h + 30, h * 1.08, 1, { shadow: false }))
+          text(ctx, tw(th, true), D.mono.replace(' | ', ' ♥ '), x + w / 2, y + h / 2 + 50, { z: 150, font: 'name', color: '#fff', maxW: w - 40 });
       });
       ctx.save(); ctx.translate(cx, 800 - (1 - k) * 300); ctx.rotate(-.05);
       text(ctx, { ...th, dark: false }, who2(D, D.lang === 'hi'), 0, 370, { z: 92, font: 'name', color: '#2a2a2a', a: ap(lt, .6), maxW: 620 });
       ctx.restore();
       tape(ctx, cx - 250, 390, 170, -.5); tape(ctx, cx + 250, 390, 170, .5);
-      ctx.save(); ctx.translate(cx + 250, 1440); ctx.rotate(.07); ctx.globalAlpha = ap(lt, 1.2); ctx.shadowColor = 'rgba(0,0,0,.2)'; ctx.shadowBlur = 20; ctx.fillStyle = '#fff3a6'; ctx.fillRect(-190, -150, 380, 300); ctx.restore();
+      ctx.save(); ctx.translate(cx + 250, 1440); ctx.rotate(.07); ctx.globalAlpha = ap(lt, 1.2); ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 8; ctx.fillStyle = '#fbf5e8'; ctx.fillRect(-190, -150, 380, 300); ctx.shadowColor = 'transparent';
+      ctx.beginPath(); ctx.rect(-190, -150, 380, 300); paperIn(ctx, '#fbf5e8', -190, -150, 380, 300);
+      ctx.strokeStyle = foil(ctx, { gold: GOLD }, -190, -150, 190, 150); ctx.lineWidth = 4; ctx.strokeRect(-176, -136, 352, 272); ctx.restore();
+      seal(ctx, th, cx + 410, 1300, 46, initials(D), ap(lt, 1.6, .4));
       ctx.save(); ctx.translate(cx + 250, 1440); ctx.rotate(.07);
       text(ctx, { ...th, dark: false }, D.lang === 'hi' ? 'याद रखना!' : 'save the date!', 0, -70, { z: 50, font: 'script', color: th.accent, a: ap(lt, 1.3) });
       text(ctx, { ...th, dark: false }, D.date, 0, 10, { z: 40, font: 'body', color: '#2a2a2a', a: ap(lt, 1.4), maxW: 340 });
@@ -1254,17 +1876,19 @@ const Films = (() => {
     },
     panel(ctx, film, th, a) {
       const r = { x: 120, y: 300, w: W - 240, h: 1320 }; r.cx = r.x + r.w / 2;
-      ctx.save(); ctx.globalAlpha *= clamp(a); ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 30; ctx.fillStyle = th.paper; ctx.fillRect(r.x, r.y, r.w, r.h); ctx.shadowColor = 'transparent';
-      ctx.strokeStyle = 'rgba(80,130,200,.25)'; ctx.lineWidth = 2; for (let y = r.y + 120; y < r.y + r.h; y += 64) { ctx.beginPath(); ctx.moveTo(r.x, y); ctx.lineTo(r.x + r.w, y); ctx.stroke(); }
-      ctx.strokeStyle = 'rgba(220,80,80,.45)'; ctx.beginPath(); ctx.moveTo(r.x + 80, r.y); ctx.lineTo(r.x + 80, r.y + r.h); ctx.stroke(); ctx.restore();
-      tape(ctx, r.cx, r.y, 220, -.04);
+      ctx.save(); ctx.globalAlpha *= clamp(a); ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = 36; ctx.shadowOffsetY = 14; ctx.fillStyle = th.paper; ctx.fillRect(r.x, r.y, r.w, r.h); ctx.shadowColor = 'transparent';
+      ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); paperIn(ctx, th.paper, r.x, r.y, r.w, r.h);
+      ctx.strokeStyle = foil(ctx, { gold: GOLD }, r.x, r.y, r.x + r.w, r.y + r.h); ctx.lineWidth = 3; ctx.strokeRect(r.x + 28, r.y + 28, r.w - 56, r.h - 56); ctx.lineWidth = 1; ctx.strokeRect(r.x + 38, r.y + 38, r.w - 76, r.h - 76); ctx.restore();
+      [[r.x, r.y, -Math.PI / 2], [r.x + r.w, r.y, 0], [r.x + r.w, r.y + r.h, Math.PI / 2], [r.x, r.y + r.h, Math.PI]].forEach(([x, y, a2]) => tape(ctx, x, y, 160, a2 - Math.PI / 4 + Math.PI / 2));
       return { ...r, th: { ...th, ink: '#2a2a2a', dark: false } };
     },
     day(ctx, film, th, D, sc, lt) {
       const cx = W / 2, b = dateBits(D, sc), x = 160, w = W - 320, y = 360, k = out(lt / .6);
-      ctx.save(); ctx.globalAlpha = k; ctx.translate(0, (1 - k) * 200); ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 30; ctx.fillStyle = '#fffdf8'; ctx.fillRect(x, y, w, 1160); ctx.shadowColor = 'transparent';
-      ctx.fillStyle = th.accent; ctx.fillRect(x, y, w, 170);
-      ctx.fillStyle = '#555'; for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.arc(x + 60 + i * (w - 120) / 8, y, 14, 0, Math.PI * 2); ctx.fill(); }
+      ctx.save(); ctx.globalAlpha = k; ctx.translate(0, (1 - k) * 200); ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = 36; ctx.shadowOffsetY = 14; ctx.fillStyle = '#fffdf8'; ctx.fillRect(x, y, w, 1160); ctx.shadowColor = 'transparent';
+      ctx.beginPath(); ctx.rect(x, y, w, 1160); paperIn(ctx, '#fffdf8', x, y, w, 1160);
+      const hb = ctx.createLinearGradient(0, y, 0, y + 170); hb.addColorStop(0, shade(th.accent, .1)); hb.addColorStop(1, shade(th.accent, -.25)); ctx.fillStyle = hb; ctx.fillRect(x, y, w, 170);
+      ctx.fillStyle = foil(ctx, { gold: GOLD }, x, y, x + w, y); ctx.fillRect(x, y + 166, w, 6);
+      for (let i = 0; i < 9; i++) { const rx = x + 60 + i * (w - 120) / 8, rg = ctx.createLinearGradient(rx - 10, 0, rx + 10, 0); rg.addColorStop(0, '#7a5a1a'); rg.addColorStop(.5, '#f6dc8a'); rg.addColorStop(1, '#7a5a1a'); ctx.strokeStyle = rg; ctx.lineWidth = 7; ctx.beginPath(); ctx.arc(rx, y, 16, Math.PI * .9, Math.PI * 2.1); ctx.stroke(); }
       ctx.restore();
       const t3 = { ...th, dark: false };
       text(ctx, tw(th, true), `${b.m}  ·  ${dayLabel(D, sc)}`, cx, y + 110, { z: 60, font: 'name', color: '#fff', a: k, maxW: w - 40 });
@@ -1298,10 +1922,20 @@ const Films = (() => {
       P6('Tangerine', true, ['#22100a', '#080302'], ['#ffe2c4', '#ff8a1f', '#a04400'], 'rgba(255,255,255,.04)', '#ffffff', '#ff8a1f', { n2: '#3df0ff' }),
       P6('Crimson', true, ['#220a0e', '#080203'], ['#ffd0d6', '#ff3350', '#9a0d20'], 'rgba(255,255,255,.04)', '#ffffff', '#ff3350', { n2: '#ffd23d' })],
     bg(ctx, th, t) {
-      ctx.fillStyle = th.bg[1]; ctx.fillRect(0, 0, W, H);
-      ctx.save(); ctx.globalAlpha = .07; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
-      for (let r = 0; r < 40; r++) { const y = r * 50; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); for (let x = (r % 2) * 60; x < W; x += 120) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 50); ctx.stroke(); } }
-      ctx.restore();
+      cbg(ctx, 'neon', th, g => {
+        g.fillStyle = '#0a0606'; g.fillRect(0, 0, W, H);
+        const r = rng(31);
+        for (let row = 0; row < 40; row++) for (let x = (row % 2) * -60; x < W; x += 120) {
+          const y = row * 48, v = r(), bc = g.createLinearGradient(0, y, 0, y + 44); bc.addColorStop(0, `rgb(${70 + v * 30},${32 + v * 12},${26 + v * 8})`); bc.addColorStop(1, `rgb(${40 + v * 20},${18 + v * 8},${14 + v * 6})`);
+          g.fillStyle = bc; rr(g, x + 3, y + 3, 114, 42, 4); g.fill();
+        }
+        g.globalCompositeOperation = 'multiply'; g.globalAlpha = .55; g.fillStyle = shade(th.accent, -.2); g.fillRect(0, 0, W, H); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+        grain(g, .2);
+        const dark = g.createRadialGradient(W / 2, H * .45, 200, W / 2, H * .5, H * .7); dark.addColorStop(0, 'rgba(0,0,0,.05)'); dark.addColorStop(1, 'rgba(0,0,0,.75)'); g.fillStyle = dark; g.fillRect(0, 0, W, H);
+        // edison bulbs on long cords
+        for (let i = 0; i < 7; i++) { const x = 90 + i * 150, len = 90 + (i % 3) * 70; g.strokeStyle = '#1a1210'; g.lineWidth = 3; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, len); g.stroke(); const gl = g.createRadialGradient(x, len + 26, 2, x, len + 26, 120); gl.addColorStop(0, 'rgba(255,190,110,.55)'); gl.addColorStop(1, 'rgba(255,170,80,0)'); g.fillStyle = gl; g.fillRect(x - 120, len - 94, 240, 240); g.fillStyle = '#ffd9a0'; g.beginPath(); g.ellipse(x, len + 26, 14, 20, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#3a2a1a'; g.fillRect(x - 8, len, 16, 10); }
+        const fl = g.createLinearGradient(0, H - 380, 0, H); fl.addColorStop(0, 'rgba(0,0,0,0)'); fl.addColorStop(.25, '#120a0c'); fl.addColorStop(1, '#050304'); g.fillStyle = fl; g.fillRect(0, H - 380, W, 380);
+      });
       const g = ctx.createRadialGradient(W / 2, H * .45, 0, W / 2, H * .45, 700); g.addColorStop(0, th.accent + '33'); g.addColorStop(1, th.accent + '00'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
       const f = ctx.createLinearGradient(0, H - 320, 0, H); f.addColorStop(0, 'rgba(0,0,0,0)'); f.addColorStop(1, th.accent + '30'); ctx.fillStyle = f; ctx.fillRect(0, H - 320, W, 320);
     },
@@ -1364,7 +1998,7 @@ const Films = (() => {
     for (let yy = y; yy <= y + h; yy += s * 1.6) { [[x, yy], [x + w, yy]].forEach(([px, py]) => { ctx.fillStyle = cols[i++ % cols.length]; ctx.beginPath(); ctx.arc(px, py, s * .75, 0, Math.PI * 2); ctx.fill(); }); }
   }
   const RANGOLI = {
-    short: 'Rangoli', name: 'Rangoli Utsav', trans: 'zoom', fx: 'petals',
+    short: 'Rangoli', name: 'Rangoli Utsav', ai: true, trans: 'zoom', fx: 'petals',
     face: face('400 {z}px "Yatra One", serif', '400 {z}px "Yatra One", serif', '400 {z}px "Marcellus", serif', '400 {z}px "Marcellus", serif', '400 {z}px "Yatra One", serif'),
     pals: [P6('Festive', false, ['#fff3df', '#ffd9a8'], GOLD, '#ffffff', '#5a1030', '#d81b60', { rg: ['#d81b60', '#ff9800', '#fdd835', '#43a047'] }),
       P6('Peacock', false, ['#eafaf7', '#c6ece6'], GOLD, '#ffffff', '#0b3a5a', '#00838f', { rg: ['#1565c0', '#00897b', '#7cb342', '#fbc02d'] }),
@@ -1373,8 +2007,16 @@ const Films = (() => {
       P6('Royal', false, ['#f6efff', '#e0cdfa'], GOLD, '#ffffff', '#36125a', '#7b1fa2', { rg: ['#7b1fa2', '#ffb300', '#ec407a', '#26a69a'] }),
       P6('Tulsi', false, ['#f1fae8', '#d6efc0'], GOLD, '#ffffff', '#1f3a10', '#2e7d32', { rg: ['#2e7d32', '#fdd835', '#e53935', '#fb8c00'] })],
     bg(ctx, th, t) {
-      const g = ctx.createRadialGradient(W / 2, H / 2, 100, W / 2, H / 2, H * .7); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-      ctx.save(); ctx.globalAlpha = .18; ctx.fillStyle = th.ink; for (let y = 40; y < H; y += 60) for (let x = 40 + ((y / 60) % 2) * 30; x < W; x += 60) { ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill(); } ctx.restore();
+      cbg(ctx, 'rangoli', th, g => {
+        // a lime-washed courtyard wall, dotted for the kolam, a marigold toran with mango leaves across the top
+        paperFill(g, th.bg[0], W, H, 21);
+        const b = g.createRadialGradient(W / 2, H / 2, 100, W / 2, H / 2, H * .7); b.addColorStop(0, 'rgba(255,255,255,0)'); b.addColorStop(1, rgba(hex6(th.bg[1]), .9)); g.fillStyle = b; g.fillRect(0, 0, W, H);
+        g.save(); g.globalAlpha = .12; g.fillStyle = th.ink; for (let y = 300; y < H; y += 60) for (let x = 40 + ((y / 60) % 2) * 30; x < W; x += 60) { g.beginPath(); g.arc(x, y, 3, 0, Math.PI * 2); g.fill(); } g.restore();
+        for (let i = 0; i < 12; i++) sprite(g, leafSprite('#2e7d32'), 45 + i * 90, 52, 90, Math.PI / 2 + (i % 2 ? .3 : -.3));
+        garland(g, -20, 30, W + 20, 30, 0, 44); garland(g, -20, 30, W / 2, 30, 110, 38); garland(g, W / 2, 30, W + 20, 30, 110, 38);
+        for (let i = 0; i < 6; i++) ladi(g, 90 + i * 180, 60, 120 + (i % 2) * 60, 28);
+        grain(g, .05);
+      });
     },
     open(ctx, film, th, D, sc, lt) {
       rangoli(ctx, W / 2, H * .45, 430, th.rg, ease(lt / 2.6), lt);
@@ -1441,8 +2083,13 @@ const Films = (() => {
       P6('Eucalyptus', false, ['#f6faf9', '#dfece9'], ['#9cc0b6', '#5f8f84', '#2f5850'], '#ffffff', '#183a33', '#4f8478', { lf: '#86aea4', round: true }),
       P6('Moss', false, ['#f9f8f2', '#e8e8d8'], ['#9aa86a', '#66763a', '#38441a'], '#ffffff', '#252e12', '#66763a', { lf: '#77894a', round: true })],
     bg(ctx, th, t) {
-      ctx.fillStyle = th.bg[0]; ctx.fillRect(0, 0, W, H);
-      const g = ctx.createLinearGradient(0, H * .6, 0, H); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]); ctx.fillStyle = g; ctx.fillRect(0, H * .6, W, H * .4);
+      cbg(ctx, 'botanical', th, g => {
+        paperFill(g, th.bg[0], W, H, 13);
+        const b = g.createLinearGradient(0, H * .55, 0, H); b.addColorStop(0, rgba(hex6(th.bg[1]), 0)); b.addColorStop(1, rgba(hex6(th.bg[1]), 1)); g.fillStyle = b; g.fillRect(0, H * .55, W, H * .45);
+        // pressed-leaf shadows in the paper
+        g.save(); g.globalAlpha = .07; for (let i = 0; i < 14; i++) sprig(g, hash(i + 3) * W, hash(i + 13) * H, 220, hash(i) * 6, th.lf, 1, th.round); g.restore();
+        g.strokeStyle = foil(g, th, 0, 0, W, H); g.lineWidth = 2; g.strokeRect(70, 70, W - 140, H - 140);
+      });
       ctx.save(); ctx.globalAlpha = .7; sprig(ctx, -10, 200, 300, -.3 + Math.sin(t) * .02, th.lf, 1, th.round); sprig(ctx, W + 10, H - 200, 300, Math.PI + .3 + Math.sin(t + 1) * .02, th.lf, 1, th.round); ctx.restore();
     },
     open(ctx, film, th, D, sc, lt) {
@@ -1462,12 +2109,15 @@ const Films = (() => {
         text(ctx, th, '&', cx, 990, { z: 110, font: 'script', color: th.accent, a: ap(lt, .9) });
         text(ctx, th, D.B, cx, 1140, { z: 150, font: 'name', color: th.ink, a: ap(lt, 1.1), maxW: 700 });
       }
-      text(ctx, th, D.date, cx, 1300, { z: 36, font: 'caps', color: th.ink, a: ap(lt, 1.4), ls: 4, maxW: 700 });
-      text(ctx, th, [D.V, D.CITY].filter(Boolean).join(', '), cx, 1360, { z: 34, font: 'body', color: th.accent, a: ap(lt, 1.6), maxW: 700 });
+      text(ctx, th, D.date, cx, 1260, { z: 36, font: 'caps', color: th.ink, a: ap(lt, 1.4), ls: 4, maxW: 700 });
+      text(ctx, th, [D.V, D.CITY].filter(Boolean).join(', '), cx, 1316, { z: 34, font: 'body', color: th.accent, a: ap(lt, 1.6), maxW: 700 });
+      const by2 = FIN ? 1615 : 1775; figure(ctx, coupleArt(film), cx, by2, FIN ? 280 : 420, ap(lt, 1.6, 1.2), { halo: 'rgba(255,255,255,.8)' });
+      sprig(ctx, cx - 140, by2 - 15, FIN ? 220 : 320, -2.4, th.lf, ease((lt - 1.6) / 1.2), th.round); sprig(ctx, cx + 140, by2 - 15, FIN ? 220 : 320, -.74, th.lf, ease((lt - 1.8) / 1.2), th.round);
     },
     panel(ctx, film, th, a) {
       const r = { x: 150, y: 330, w: W - 300, h: 1270 }; r.cx = r.x + r.w / 2;
-      ctx.save(); ctx.globalAlpha *= clamp(a); ctx.fillStyle = th.paper; ctx.beginPath(); ctx.moveTo(r.x, r.y + r.h); ctx.lineTo(r.x, r.y + r.w / 2); ctx.arc(r.cx, r.y + r.w / 2, r.w / 2, Math.PI, 0); ctx.lineTo(r.x + r.w, r.y + r.h); ctx.closePath(); ctx.fill(); ctx.strokeStyle = th.accent; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.globalAlpha *= clamp(a); ctx.fillStyle = th.paper; ctx.shadowColor = 'rgba(40,60,30,.2)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 12; ctx.beginPath(); ctx.moveTo(r.x, r.y + r.h); ctx.lineTo(r.x, r.y + r.w / 2); ctx.arc(r.cx, r.y + r.w / 2, r.w / 2, Math.PI, 0); ctx.lineTo(r.x + r.w, r.y + r.h); ctx.closePath(); ctx.fill(); ctx.shadowColor = 'transparent';
+      paperIn(ctx, th.paper, r.x, r.y, r.w, r.h); ctx.strokeStyle = foil(ctx, th, r.x, r.y, r.x + r.w, r.y + r.h); ctx.lineWidth = 4; ctx.stroke(); ctx.restore();
       sprig(ctx, r.x + 20, r.y + r.h - 20, 260, -.5, th.lf, clamp(a), th.round); sprig(ctx, r.x + r.w - 20, r.y + r.h - 20, 260, Math.PI + .5, th.lf, clamp(a), th.round);
       return { ...r, y: r.y + 120, h: r.h - 160 };
     },
@@ -1503,8 +2153,15 @@ const Films = (() => {
       P6('Emerald', true, ['#0d4a2a', '#02140a'], GOLD, '#fff6e6', '#0a2a18', '#0f7a44'),
       P6('Sunset', true, ['#a3360c', '#2a0c02'], GOLD, '#fff6e6', '#2a1004', '#d9480f')],
     bg(ctx, th, t) {
-      for (let i = 0; i < 18; i++) { const x = i * W / 18, g = ctx.createLinearGradient(x, 0, x + W / 18, 0); g.addColorStop(0, shade(th.bg[0], -.45)); g.addColorStop(.5, th.bg[0]); g.addColorStop(1, shade(th.bg[0], -.45)); ctx.fillStyle = g; ctx.fillRect(x, 0, W / 18 + 1, H); }
-      const v = ctx.createRadialGradient(W / 2, H / 2, 200, W / 2, H / 2, H * .7); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.65)'); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+      cbg(ctx, 'marquee', th, g => {
+        // a theatre's velvet curtain: deep folds with a sheen on each crest, a swagged valance with gold fringe
+        for (let i = 0; i < 16; i++) { const x = i * W / 16, c = g.createLinearGradient(x, 0, x + W / 16, 0); c.addColorStop(0, shade(th.bg[0], -.6)); c.addColorStop(.35, shade(th.bg[0], -.1)); c.addColorStop(.5, shade(th.bg[0], .18)); c.addColorStop(.65, shade(th.bg[0], -.1)); c.addColorStop(1, shade(th.bg[0], -.6)); g.fillStyle = c; g.fillRect(x, 0, W / 16 + 1, H); }
+        grain(g, .1);
+        for (let i = 0; i < 4; i++) drape(g, i * W / 4 - 10, (i + 1) * W / 4 + 10, 0, 90, mix(hex6(th.bg[0]), '#ffffff', .06));
+        g.fillStyle = foil(g, th, 0, 0, W, 0); g.fillRect(0, 0, W, 22);
+        for (let i = 0; i < 4; i++) { const x0 = i * W / 4; for (let k = 0; k <= 20; k++) { const u = k / 20, x = x0 + u * W / 4, y = 20 + Math.sin(u * Math.PI) * 170; g.fillStyle = foil(g, th, x - 4, y, x + 4, y + 40); g.fillRect(x - 3, y, 6, 34); g.beginPath(); g.arc(x, y + 36, 5, 0, Math.PI * 2); g.fill(); } }
+        const v = g.createRadialGradient(W / 2, H / 2, 200, W / 2, H / 2, H * .7); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.65)'); g.fillStyle = v; g.fillRect(0, 0, W, H);
+      });
       [-1, 1].forEach(s => { ctx.save(); ctx.translate(W / 2 + s * 380, -40); ctx.rotate(s * (.25 + Math.sin(t * .8 + s) * .12)); const b = ctx.createLinearGradient(0, 0, 0, H); b.addColorStop(0, 'rgba(255,240,200,.28)'); b.addColorStop(1, 'rgba(255,240,200,0)'); ctx.fillStyle = b; ctx.beginPath(); ctx.moveTo(-20, 0); ctx.lineTo(-300, H); ctx.lineTo(300, H); ctx.lineTo(20, 0); ctx.fill(); ctx.restore(); });
     },
     open(ctx, film, th, D, sc, lt) {
@@ -1560,21 +2217,37 @@ const Films = (() => {
       P6('Rose Daily', false, ['#fbefed', '#f1dcd8'], ['#7a2a3a', '#5a1a2a', '#2e0a14'], '#fdf6f5', '#231518', '#c2185b'),
       P6('Garden Post', false, ['#eef3e8', '#dbe6cf'], ['#3a5a2a', '#2a4a1a', '#14280a'], '#f6f9f2', '#18241a', '#2e7d32')],
     bg(ctx, th, t) {
-      ctx.fillStyle = th.bg[0]; ctx.fillRect(0, 0, W, H);
-      ctx.save(); ctx.globalAlpha = .07; ctx.fillStyle = '#000'; for (let y = 0; y < H; y += 9) for (let x = (y % 18); x < W; x += 18) ctx.fillRect(x, y, 2, 2);
-      ctx.globalAlpha = .12; ctx.fillStyle = '#000'; ctx.fillRect(W / 2 - 1, 0, 2, H); ctx.restore();
+      cbg(ctx, 'editorial', th, g => {
+        // a broadsheet on a linen table: the sheet of newsprint, fibres and foxing, a soft shadow under it
+        g.fillStyle = shade(th.bg[1], -.35); g.fillRect(0, 0, W, H); grain(g, .15);
+        g.save(); g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 50; g.shadowOffsetY = 16; g.fillStyle = th.bg[0]; g.fillRect(56, 150, W - 112, H - 300); g.restore();
+        g.save(); g.beginPath(); g.rect(56, 150, W - 112, H - 300); g.clip(); g.translate(56, 150); paperFill(g, th.bg[0], W - 112, H - 300, 41); g.restore();
+        g.save(); g.globalAlpha = .05; g.fillStyle = '#000'; for (let y = 150; y < H - 150; y += 9) for (let x = 56 + (y % 18); x < W - 56; x += 18) g.fillRect(x, y, 2, 2); g.restore();
+      });
     },
-    page(ctx, th, D, lt, small) {
+    // a column of type: grey lines broken into words, the way print looks from arm's length
+    column(ctx, th, x, y, w, n, a) {
+      ctx.save(); ctx.globalAlpha *= a; ctx.fillStyle = th.ink;
+      for (let i = 0; i < n; i++) { let xx = x; const end = i % 7 === 6 ? x + w * .55 : x + w; while (xx < end - 12) { const ww = Math.min(end - xx, 18 + hash(i * 31 + xx) * 60); ctx.globalAlpha = a * (.32 + hash(i + xx) * .12); ctx.fillRect(xx, y + i * 26, ww, 9); xx += ww + 9; } }
+      ctx.restore();
+    },
+    page(ctx, th, D, lt, small, film) {
       const cx = W / 2, hi = D.lang === 'hi', a = s => small ? 1 : ap(lt, s);
       text(ctx, th, hi ? 'शुभ समाचार' : 'The Wedding Times', cx, 380, { z: hi ? 110 : 120, font: hi ? 'name' : 'head', color: th.ink, a: a(0), maxW: 900 });
       ctx.save(); ctx.globalAlpha = a(.1); ctx.fillStyle = th.ink; ctx.fillRect(90, 420, W - 180, 6); ctx.fillRect(90, 432, W - 180, 2); ctx.fillRect(90, 488, W - 180, 2); ctx.restore();
       text(ctx, th, `${hi ? 'अंक 1' : 'VOL. I'}  ·  ${D.date}  ·  ${hi ? 'मूल्य: आपका आशीर्वाद' : 'PRICE: YOUR BLESSINGS'}`, cx, 470, { z: 24, font: 'caps', color: th.ink, a: a(.2), maxW: 880, ls: 1 });
       text(ctx, th, who2(D, hi).toUpperCase(), cx, 650, { z: 150, font: 'name', color: th.ink, a: a(.4), maxW: 900, rise: 20 });
       text(ctx, th, D.solo ? (hi ? 'का जश्न!' : 'CELEBRATES!') : (hi ? 'विवाह बंधन में बंधेंगे!' : 'TO TIE THE KNOT!'), cx, 760, { z: 80, font: 'name', color: th.accent, a: a(.6), maxW: 900 });
-      ctx.save(); ctx.globalAlpha = a(.8); ctx.fillStyle = th.accent; ctx.fillRect(90, 830, 440, 520); ctx.fillStyle = th.ink;
-      for (let i = 0; i < 16; i++) ctx.fillRect(570, 850 + i * 32, i % 5 === 4 ? 260 : 420, 12);
-      ctx.restore();
-      text(ctx, tw(th, true), D.mono, 310, 1130, { z: 150, font: 'name', color: '#fff', a: a(.9), maxW: 400 });
+      // the front-page photograph: the couple printed in sepia, a caption under it; columns of type beside
+      ctx.save(); ctx.globalAlpha = a(.8); ctx.fillStyle = shade(th.bg[0], -.08); ctx.fillRect(90, 830, 440, 520);
+      const tone = film && tonedArt(coupleArt(film), mix(hex6(th.ink), '#4a2e14', .45), mix(hex6(th.bg[0]), '#fff8e8', .4));
+      if (tone) { ctx.save(); ctx.beginPath(); ctx.rect(96, 836, 428, 508); ctx.clip(); const iw = tone.width / SCALE, ih = tone.height / SCALE, k = 560 / ih; ctx.drawImage(tone, 310 - iw * k / 2, 1360 - ih * k, iw * k, ih * k); ctx.restore(); }
+      else { ctx.fillStyle = th.accent; ctx.fillRect(90, 830, 440, 520); }
+      ctx.strokeStyle = th.ink; ctx.lineWidth = 3; ctx.strokeRect(90, 830, 440, 520); ctx.restore();
+      if (!tone) text(ctx, tw(th, true), D.mono, 310, 1130, { z: 150, font: 'name', color: '#fff', a: a(.9), maxW: 400 });
+      text(ctx, th, hi ? 'चित्र: परिवार संग्रह' : 'The happy couple — family archive', 310, 1385, { z: 22, font: 'body', color: th.ink, a: a(.9), maxW: 440 });
+      text(ctx, th, hi ? 'विशेष संवाददाता' : 'BY OUR SPECIAL CORRESPONDENT', 790, 850, { z: 20, font: 'caps', color: th.accent, a: a(.85), maxW: 420 });
+      EDITORIAL.column(ctx, th, 570, 880, 420, 18, a(.9));
       text(ctx, th, `${hi ? 'स्थान' : 'VENUE'}: ${[D.V, D.CITY].filter(Boolean).join(', ')}`, cx, 1420, { z: 34, font: 'body', color: th.ink, a: a(1.1), maxW: 900 });
       ctx.save(); ctx.globalAlpha = a(1.2); ctx.fillStyle = th.ink; ctx.fillRect(90, 1460, W - 180, 2); ctx.restore();
       text(ctx, th, D.heading, cx, 1540, { z: 60, font: 'script', color: th.accent, a: a(1.3) });
@@ -1583,10 +2256,10 @@ const Films = (() => {
       const k = ease(lt / 2.4);
       ctx.save(); ctx.translate(W / 2, H / 2); ctx.rotate((1 - k) * Math.PI * 6); ctx.scale(.08 + .92 * k, .08 + .92 * k); ctx.translate(-W / 2, -H / 2);
       ctx.fillStyle = th.paper; ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 60; ctx.fillRect(60, 260, W - 120, 1400); ctx.shadowColor = 'transparent';
-      EDITORIAL.page(ctx, th, D, lt, true); ctx.restore();
+      EDITORIAL.page(ctx, th, D, lt, true, film); ctx.restore();
       if (lt > 2.4) { ctx.save(); ctx.globalAlpha = ap(lt, 2.4, .3); ctx.translate(W / 2 + 230, 300); ctx.rotate(-.18); ctx.strokeStyle = th.accent; ctx.lineWidth = 6; ctx.strokeRect(-200, -60, 400, 120); ctx.restore(); text(ctx, th, D.lang === 'hi' ? 'ताज़ा ख़बर!' : 'EXTRA! EXTRA!', W / 2 + 230, 320, { z: 50, font: 'caps', color: th.accent, a: ap(lt, 2.4, .3) }); }
     },
-    title(ctx, film, th, D, sc, lt) { EDITORIAL.page(ctx, th, D, lt, false); },
+    title(ctx, film, th, D, sc, lt) { EDITORIAL.page(ctx, th, D, lt, false, film); },
     panel(ctx, film, th, a) {
       const r = { x: 110, y: 300, w: W - 220, h: 1320 }; r.cx = r.x + r.w / 2;
       ctx.save(); ctx.globalAlpha *= clamp(a); ctx.fillStyle = th.paper; ctx.fillRect(r.x, r.y, r.w, r.h); ctx.fillStyle = th.ink; ctx.fillRect(r.x, r.y, r.w, 8); ctx.fillRect(r.x, r.y + 16, r.w, 2); ctx.fillRect(r.x, r.y + r.h - 8, r.w, 8); ctx.restore();
@@ -1611,12 +2284,19 @@ const Films = (() => {
   function scroll(ctx, th, top, bottom, a = 1) {
     const x = 150, w = W - 300;
     ctx.save(); ctx.globalAlpha *= clamp(a);
-    const g = ctx.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, shade(th.paper, -.18)); g.addColorStop(.12, th.paper); g.addColorStop(.88, th.paper); g.addColorStop(1, shade(th.paper, -.18));
-    ctx.fillStyle = g; ctx.fillRect(x, top, w, bottom - top);
-    ctx.globalAlpha *= .25; ctx.fillStyle = '#7a5a2a'; for (let i = 0; i < 60; i++) ctx.fillRect(x + hash(i) * w, top + hash(i + 9) * (bottom - top), 3, 3);
+    const sh = Math.max(1, bottom - top);
+    const P = layer(`parch|${th.paper}`, g => {
+      paperFill(g, hex6(th.paper), w, 1400, 7);
+      const e = g.createLinearGradient(0, 0, w, 0); e.addColorStop(0, 'rgba(110,60,10,.35)'); e.addColorStop(.1, 'rgba(110,60,10,0)'); e.addColorStop(.9, 'rgba(110,60,10,0)'); e.addColorStop(1, 'rgba(110,60,10,.35)'); g.fillStyle = e; g.fillRect(0, 0, w, 1400);
+      const r = rng(5); for (let i = 0; i < 18; i++) { const fx = r() * w, fy = r() * 1400, fr = 10 + r() * 40, f = g.createRadialGradient(fx, fy, 0, fx, fy, fr); f.addColorStop(0, 'rgba(140,90,30,.12)'); f.addColorStop(1, 'rgba(140,90,30,0)'); g.fillStyle = f; g.fillRect(fx - fr, fy - fr, fr * 2, fr * 2); }
+      g.strokeStyle = foil(g, th, 0, 0, w, 1400); g.lineWidth = 3; g.strokeRect(34, 60, w - 68, 1280); g.lineWidth = 1; g.strokeRect(44, 70, w - 88, 1260);
+    }, w, 1400);
+    if (P) { const ps = P.width / w, ch = Math.min(1400, sh); ctx.drawImage(P, 0, (1400 - ch) / 2 * ps, P.width, ch * ps, x, top, w, sh); }
+    else { ctx.fillStyle = th.paper; ctx.fillRect(x, top, w, sh); }
     ctx.restore();
-    [top, bottom].forEach(y => { ctx.save(); ctx.globalAlpha *= clamp(a); const r = ctx.createLinearGradient(0, y - 30, 0, y + 30); r.addColorStop(0, '#5a3214'); r.addColorStop(.5, '#c9883e'); r.addColorStop(1, '#4a280e'); ctx.fillStyle = r; rr(ctx, x - 50, y - 30, w + 100, 60, 30); ctx.fill();
-      ctx.fillStyle = goldFill(ctx, th, y + 20, 50); ctx.beginPath(); ctx.arc(x - 60, y, 34, 0, Math.PI * 2); ctx.arc(x + w + 60, y, 34, 0, Math.PI * 2); ctx.fill(); ctx.restore(); });
+    [top, bottom].forEach(y => { ctx.save(); ctx.globalAlpha *= clamp(a); const r = ctx.createLinearGradient(0, y - 30, 0, y + 30); r.addColorStop(0, '#3a1e08'); r.addColorStop(.3, '#a8662a'); r.addColorStop(.5, '#e0a860'); r.addColorStop(.7, '#8a4e1c'); r.addColorStop(1, '#2a1404'); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 20; ctx.shadowOffsetY = 8; ctx.fillStyle = r; rr(ctx, x - 50, y - 30, w + 100, 60, 30); ctx.fill(); ctx.shadowColor = 'transparent';
+      [x - 66, x + w + 66].forEach(fx => { ctx.fillStyle = foil(ctx, th, fx - 30, y - 40, fx + 30, y + 40); ctx.beginPath(); ctx.arc(fx, y, 34, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.ellipse(fx + (fx < x ? -40 : 40), y, 16, 24, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = 'rgba(60,30,0,.5)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(fx, y, 22, 0, Math.PI * 2); ctx.stroke(); });
+      ctx.restore(); });
     return { x: x + 30, y: top + 60, w: w - 60, h: bottom - top - 120, cx: W / 2 };
   }
   function seal(ctx, th, x, y, r, s, a) {
@@ -1627,7 +2307,7 @@ const Films = (() => {
     text(ctx, tw(th, true), s, x, y + r * .2, { z: r * .55, font: 'caps', color: '#fff', a, maxW: r * 1.3 });
   }
   const SCROLL = {
-    short: 'Farmaan', name: 'Royal Farmaan', trans: 'fade', fx: 'sparkle',
+    short: 'Farmaan', name: 'Royal Farmaan', ai: true, trans: 'fade', fx: 'sparkle',
     face: face('400 {z}px "Pinyon Script", cursive', '400 {z}px "Cinzel", serif', '400 {z}px "Cinzel", serif', 'italic 400 {z}px "Cormorant Garamond", serif', '400 {z}px "Pinyon Script", cursive'),
     pals: [P6('Maroon', true, ['#5c0f1e', '#1a0307'], GOLD, '#f3e2b8', '#4a2a10', '#9b1b30'),
       P6('Emerald', true, ['#0f4a32', '#03140d'], GOLD, '#f2e3bd', '#3a2a10', '#1b6b45'),
@@ -1636,8 +2316,7 @@ const Films = (() => {
       P6('Aubergine', true, ['#4a1a4e', '#120414'], GOLD, '#f2e2c0', '#3a2414', '#7a2a7e'),
       P6('Saffron', true, ['#8a3a0c', '#240c02'], GOLD, '#f4e4bc', '#4a2a10', '#c2570e')],
     bg(ctx, th, t) {
-      const g = ctx.createRadialGradient(W / 2, H * .45, 60, W / 2, H / 2, H * .75); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-      ctx.save(); ctx.globalAlpha = .08; ctx.strokeStyle = th.gold[1]; ctx.lineWidth = 2; for (let i = -H; i < W; i += 70) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + H, H); ctx.stroke(); ctx.beginPath(); ctx.moveTo(i + H, 0); ctx.lineTo(i, H); ctx.stroke(); } ctx.restore();
+      cbg(ctx, 'scroll', th, g => { silkBg(g, th.bg[0], th.bg[1], th.gold[1], .07); g.save(); g.globalAlpha = .05; g.strokeStyle = th.gold[1]; g.lineWidth = 2; for (let i = -H; i < W; i += 70) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + H, H); g.stroke(); g.beginPath(); g.moveTo(i + H, 0); g.lineTo(i, H); g.stroke(); } g.restore(); });
     },
     open(ctx, film, th, D, sc, lt) {
       const k = ease((lt - .2) / 1.8), half = 650 * k, cy = H / 2;
@@ -1648,7 +2327,8 @@ const Films = (() => {
     },
     title(ctx, film, th, D, sc, lt) {
       const r = scroll(ctx, th, 260, 1640), cx = W / 2, hi = D.lang === 'hi';
-      text(ctx, th, D.sacred ? '॥ श्री गणेशाय नमः ॥' : (hi ? 'शाही निमन्त्रण' : 'BY ROYAL INVITATION'), cx, 430, { z: 34, font: D.sacred ? 'deva' : 'caps', color: th.accent, a: ap(lt, .2), ls: 3 });
+      if (D.sacred) figure(ctx, ganeshArt(film), cx, 395, 120, ap(lt, .1), { shadow: false });
+      text(ctx, th, D.sacred ? '॥ श्री गणेशाय नमः ॥' : (hi ? 'शाही निमन्त्रण' : 'BY ROYAL INVITATION'), cx, 440, { z: 34, font: D.sacred ? 'deva' : 'caps', color: th.accent, a: ap(lt, .2), ls: 3 });
       text(ctx, th, D.heading, cx, 560, { z: 70, font: 'caps', color: th.ink, a: ap(lt, .4), maxW: r.w });
       if (D.solo) text(ctx, th, D.A, cx, 860, { z: 170, font: 'name', color: th.accent, a: ap(lt, .6), maxW: r.w });
       else {
@@ -1709,12 +2389,21 @@ const Films = (() => {
       P6('Blush', false, ['#fcf0ec', '#f1dad3'], ROSE, '#fffaf8', '#3c2420', '#a5604a'),
       P6('Wine', true, ['#4a0f20', '#13030a'], GOLD, '#460e1e', '#f6ebdc', '#e3b866')],
     bg(ctx, th, t) {
-      const g = ctx.createRadialGradient(W / 2, H * .42, 80, W / 2, H / 2, H * .8); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]);
-      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-      ctx.save(); ctx.globalAlpha = th.dark ? .06 : .09; ctx.strokeStyle = th.gold[1]; ctx.lineWidth = 1.5;
-      for (let y = 0; y < H + 90; y += 90) for (let x = (y / 90 % 2) * 45; x < W + 90; x += 90) { ctx.beginPath(); ctx.moveTo(x, y - 20); ctx.lineTo(x + 14, y); ctx.lineTo(x, y + 20); ctx.lineTo(x - 14, y); ctx.closePath(); ctx.stroke(); }
-      ctx.restore();
-      ctx.save(); ctx.strokeStyle = goldGrad(ctx, th, 0, 0, W, H); ctx.globalAlpha = .7; ctx.lineWidth = 3; ctx.strokeRect(44, 44, W - 88, H - 88); ctx.lineWidth = 1.2; ctx.strokeRect(60, 60, W - 120, H - 120); ctx.restore();
+      cbg(ctx, 'monogram', th, g => {
+        if (th.dark) silkBg(g, th.bg[0], th.bg[1], th.gold[1], 0);
+        else {
+          // white marble: soft grey veins that wander and branch
+          const b = g.createRadialGradient(W / 2, H * .42, 80, W / 2, H / 2, H * .8); b.addColorStop(0, th.bg[0]); b.addColorStop(1, th.bg[1]); g.fillStyle = b; g.fillRect(0, 0, W, H);
+          const r = rng(77);
+          for (let v = 0; v < 9; v++) { let x = r() * W, y = -50, a = Math.PI / 2 + (r() - .5); g.strokeStyle = `rgba(120,110,100,${.08 + r() * .12})`; g.lineWidth = .8 + r() * 2.4; g.beginPath(); g.moveTo(x, y); while (y < H + 50) { a += (r() - .5) * .5; x += Math.cos(a) * 18; y += Math.abs(Math.sin(a)) * 18 + 4; g.lineTo(x, y); } g.stroke(); }
+          grain(g, .05);
+        }
+        g.save(); g.globalAlpha = th.dark ? .06 : .07; g.strokeStyle = th.gold[1]; g.lineWidth = 1.5;
+        for (let y = 0; y < H + 90; y += 90) for (let x = (y / 90 % 2) * 45; x < W + 90; x += 90) { g.beginPath(); g.moveTo(x, y - 20); g.lineTo(x + 14, y); g.lineTo(x, y + 20); g.lineTo(x - 14, y); g.closePath(); g.stroke(); }
+        g.restore();
+        g.strokeStyle = foil(g, th, 0, 0, W, H); g.lineWidth = 6; g.strokeRect(44, 44, W - 88, H - 88); g.lineWidth = 1.5; g.strokeRect(62, 62, W - 124, H - 124);
+        filigreeCorners(g, th, 62, 62, W - 124, H - 124, 120, 1, 12);
+      });
     },
     open(ctx, film, th, D, sc, lt) {
       crest(ctx, th, D, W / 2, H / 2 - 80, 230, lt / 1.6, lt);
@@ -1737,6 +2426,9 @@ const Films = (() => {
       ctx.fillStyle = th.gold[1]; ctx.beginPath(); ctx.moveTo(cx, 1196); ctx.lineTo(cx + 12, 1210); ctx.lineTo(cx, 1224); ctx.lineTo(cx - 12, 1210); ctx.closePath(); ctx.fill(); ctx.restore();
       text(ctx, th, D.date, cx, 1300, { z: 44, font: 'caps', color: th.ink, a: ap(lt, 1.5), ls: 2 });
       text(ctx, th, [D.V, D.CITY].filter(Boolean).join(', '), cx, 1370, { z: 40, font: 'body', color: th.accent, a: ap(lt, 1.7) });
+      // the couple stamped in gold foil, like an engraved keepsake
+      const tone = tonedArt(coupleArt(film), hex6(th.gold[2]), hex6(th.gold[0]));
+      if (tone) { const iw = tone.width / SCALE, ih = tone.height / SCALE, k = (FIN ? 190 : 330) / ih; ctx.save(); ctx.globalAlpha = ap(lt, 1.8, 1.2) * .95; ctx.drawImage(tone, cx - iw * k / 2, 1440, iw * k, ih * k); ctx.restore(); }
     },
     panel(ctx, film, th, a) {
       const r = { x: 110, y: 270, w: W - 220, h: 1380 }; r.cx = r.x + r.w / 2;
@@ -1774,8 +2466,10 @@ const Films = (() => {
   }
   function palaceArch(ctx, th, x, y, w, h, a = 1) {
     ctx.save(); ctx.globalAlpha *= clamp(a);
-    archPath(ctx, x - 22, y - 22, w + 44, h + 44); ctx.fillStyle = goldGrad(ctx, th, x, y, x + w, y + h); ctx.fill();
-    archPath(ctx, x, y, w, h); ctx.fillStyle = th.paper; ctx.fill();
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 20;
+    archPath(ctx, x - 26, y - 26, w + 52, h + 52); ctx.fillStyle = foil(ctx, th, x, y, x + w * .7, y + h); ctx.fill(); ctx.restore();
+    ctx.strokeStyle = 'rgba(60,30,0,.5)'; ctx.lineWidth = 2; archPath(ctx, x - 12, y - 12, w + 24, h + 24); ctx.stroke();
+    archPath(ctx, x, y, w, h); ctx.fillStyle = th.paper; ctx.fill(); paperIn(ctx, th.paper, x, y, w, h);
     ctx.strokeStyle = th.accent; ctx.lineWidth = 3; archPath(ctx, x + 18, y + 26, w - 36, h - 44); ctx.stroke();
     // the little lobed crown on top
     ctx.fillStyle = th.gold[1]; ctx.beginPath(); ctx.arc(x + w / 2, y - 34, 16, 0, Math.PI * 2); ctx.fill();
@@ -1784,7 +2478,7 @@ const Films = (() => {
     return { x: x + 40, y: y + w * .32, w: w - 80, h: h - w * .32 - 30, cx: x + w / 2 };
   }
   const JHAROKHA = {
-    short: 'Jharokha', name: 'Palace Jharokha', trans: 'zoom', fx: 'lanterns',
+    short: 'Jharokha', name: 'Palace Jharokha', ai: true, trans: 'zoom', fx: 'lanterns',
     face: face('400 {z}px "Great Vibes", cursive', '700 {z}px "Cinzel Decorative", serif', '400 {z}px "Marcellus", serif', 'italic 400 {z}px "Cormorant Garamond", serif', '400 {z}px "Great Vibes", cursive'),
     pals: [P6('Peacock', true, ['#0b3a4a', '#02121a'], GOLD, '#f6ead2', '#1e2a2e', '#0f6b7a'),
       P6('Rani', true, ['#5a0f3c', '#1a0312'], GOLD, '#f8e9dc', '#3a1028', '#b0185a'),
@@ -1793,11 +2487,24 @@ const Films = (() => {
       P6('Jade', true, ['#0f4a3a', '#031711'], GOLD, '#f2ecd6', '#1d2e26', '#1f7a5e'),
       P6('Dusk', true, ['#3b1d3d', '#100510'], GOLD, '#f7e8ee', '#2e1630', '#a5487a')],
     bg(ctx, th, t) {
-      const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-      ctx.save(); ctx.globalAlpha = .13; ctx.fillStyle = th.gold[1];
-      for (let i = 0; i < 6; i++) { archPath(ctx, -40 + i * 200, H - 300, 160, 320); ctx.fill(); }
-      ctx.restore();
-      jaali(ctx, th, 0, 0, W, 180, th.gold[1], .12);
+      cbg(ctx, 'jharokha', th, g => {
+        silkBg(g, th.bg[0], th.bg[1], th.gold[1], .03, W, H, !th.dark);
+        // three storeys of small jharokhas, each glowing with a lamp inside, a carved band between storeys
+        for (let row = 0; row < 4; row++) {
+          const y = 120 + row * 470;
+          g.fillStyle = foil(g, th, 0, y + 380, W, y + 400); g.globalAlpha = .55; g.fillRect(0, y + 384, W, 14); g.globalAlpha = 1;
+          for (let i = 0; i < 5; i++) {
+            const x = 20 + i * 220, glow = g.createRadialGradient(x + 80, y + 260, 10, x + 80, y + 230, 200);
+            glow.addColorStop(0, th.dark ? 'rgba(255,200,110,.55)' : 'rgba(255,255,240,.9)'); glow.addColorStop(1, th.dark ? 'rgba(255,160,60,.05)' : 'rgba(255,240,200,.2)');
+            archPath(g, x, y + 90, 160, 280); g.fillStyle = glow; g.fill();
+            g.save(); g.clip(); jaali(g, th, x, y + 90, 160, 280, th.dark ? th.gold[2] : th.gold[1], .35); g.restore();
+            g.lineWidth = 6; g.strokeStyle = foil(g, th, x, y, x + 160, y + 370); archPath(g, x, y + 90, 160, 280); g.stroke();
+            g.fillStyle = th.gold[1]; g.beginPath(); g.ellipse(x + 80, y + 80, 34, 18, 0, Math.PI, 0); g.fill();
+          }
+        }
+        const v = g.createRadialGradient(W / 2, H * .5, H * .25, W / 2, H * .5, H * .7); v.addColorStop(0, rgba(hex6(th.bg[1]), .55)); v.addColorStop(1, rgba(hex6(th.bg[1]), .85)); g.fillStyle = v; g.fillRect(0, 0, W, H);
+        grain(g, .06);
+      });
     },
     open(ctx, film, th, D, sc, lt) {
       const x = 170, y = 380, w = W - 340, h = 1200;
@@ -1879,7 +2586,7 @@ const Films = (() => {
     ctx.restore();
   }
   const TEMPLE = {
-    short: 'Temple', name: 'Temple Gold', trans: 'fade', fx: 'sparkle',
+    short: 'Temple', name: 'Temple Gold', ai: true, trans: 'fade', fx: 'sparkle',
     face: face('700 {z}px "Cinzel Decorative", serif', '400 {z}px "Cinzel", serif', '400 {z}px "Cinzel", serif', '400 {z}px "Marcellus", serif', '400 {z}px "Great Vibes", cursive'),
     pals: [P6('Kumkum', true, ['#5e0b0b', '#1c0202'], GOLD, '#fff1d6', '#f8ecd0', '#f0b429'),
       P6('Banana Leaf', true, ['#0f3d1c', '#03130a'], GOLD, '#fff1d6', '#f4ecd2', '#e6b422'),
@@ -1888,10 +2595,19 @@ const Films = (() => {
       P6('Sandal', false, ['#fbf1dc', '#efdcb4'], GOLD, '#7a3b05', '#3f2008', '#a0520b'),
       P6('Temple Night', true, ['#141a3a', '#050714'], GOLD, '#fff1d6', '#f2ecdc', '#f0b429')],
     bg(ctx, th, t) {
-      const g = ctx.createRadialGradient(W / 2, H * .55, 60, W / 2, H / 2, H * .8); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-      gopuram(ctx, th, W / 2, H - 120, 760, th.dark ? .1 : .14);
-      templeBorder(ctx, th, 70, false, .9);
-      templeBorder(ctx, th, H - 70, true, .9);
+      cbg(ctx, 'temple', th, g => {
+        silkBg(g, th.bg[0], th.bg[1], th.gold[1], .045, W, H, !th.dark);
+        gopuram(g, th, W / 2, H - 120, 760, th.dark ? .16 : .2);
+        // little niches in the gopuram's tiers
+        g.save(); g.globalAlpha = th.dark ? .18 : .2; g.fillStyle = th.bg[1]; let ww = 760, yy = H - 120;
+        for (let i = 0; i < 6; i++) { const hh = 70 - i * 4, n = 7 - i; for (let k = 0; k < n; k++) { archPath(g, W / 2 - ww * .4 + k * ww * .8 / Math.max(1, n - 1) - 12, yy - hh + 14, 24, hh - 22); g.fill(); } yy -= hh + 6; ww *= .79; }
+        g.restore();
+        templeBorder(g, th, 70, false, .95);
+        templeBorder(g, th, H - 70, true, .95);
+        // brass bells hanging from the top border
+        for (let i = 0; i < 6; i++) { const x = 110 + i * 172, len = 70 + (i % 2) * 50; g.strokeStyle = foil(g, th, x - 2, 0, x + 2, len); g.lineWidth = 3; g.beginPath(); g.moveTo(x, 100); g.lineTo(x, 100 + len); g.stroke(); g.save(); g.translate(x, 100 + len); g.scale(1.6, 1.6); g.translate(-x, -(100 + len)); bell(g, th, x, 100 + len); g.restore(); }
+        grain(g, .05);
+      });
     },
     open(ctx, film, th, D, sc, lt) {
       kolam(ctx, th, W / 2, H / 2 - 120, 300, lt / 1.6);
@@ -1911,8 +2627,10 @@ const Films = (() => {
         text(ctx, th, D.B, cx, 950, { z: 128, font: 'name', color: 'gold', a: ap(lt, 1.1), glow: 18 });
       }
       diya(ctx, th, cx - 340, 1110, 46, lt, ap(lt, 1.2)); diya(ctx, th, cx, 1110, 46, lt, ap(lt, 1.35)); diya(ctx, th, cx + 340, 1110, 46, lt, ap(lt, 1.5));
-      text(ctx, th, D.date, cx, 1270, { z: 44, font: 'caps', color: th.ink, a: ap(lt, 1.6), ls: 2 });
-      text(ctx, th, [D.V, D.CITY].filter(Boolean).join(' · '), cx, 1340, { z: 40, font: 'body', color: th.accent, a: ap(lt, 1.8) });
+      text(ctx, th, D.date, cx, 1250, { z: 44, font: 'caps', color: th.ink, a: ap(lt, 1.6), ls: 2 });
+      text(ctx, th, [D.V, D.CITY].filter(Boolean).join(' · '), cx, 1315, { z: 40, font: 'body', color: th.accent, a: ap(lt, 1.8) });
+      // Ganesh ji (or the couple) in the temple's doorway, lit by the lamps
+      figure(ctx, D.sacred ? ganeshArt(film) : coupleArt(film), cx, FIN ? 1630 : 1790, (D.sacred ? 380 : 420) * (FIN ? .7 : 1), ap(lt, 1.6, 1.2), { halo: 'rgba(255,205,120,.5)', shadow: !D.sacred });
     },
     panel(ctx, film, th, a) {
       const r = { x: 110, y: 270, w: W - 220, h: 1380 }; r.cx = r.x + r.w / 2;
@@ -2010,25 +2728,56 @@ const Films = (() => {
   // A concept's last screen: its names screen again, then the credit
   function conceptFinale(ctx, film, th, D, sc, lt, C) {
     if (C.finale) return C.finale(ctx, film, th, D, sc, lt);
-    C.title(ctx, film, th, D, sc, lt);
+    FIN = true; try { C.title(ctx, film, th, D, sc, lt); } finally { FIN = false; }
     credit(ctx, th, D, lt, 1690, th.dark ? '#fff' : th.accent);
   }
 
   // ---------- The player ----------
+  // Which painted stage and which figure a function's day screen takes
+  function stageKind(film, fn) {
+    if (fn === 'wedding' && film.occ !== 'wedding') return 'reception';
+    if (fn === 'family' && film.occ === 'birthday') return 'sangeet';
+    return fn;
+  }
+  function dayArt(film, fn) {
+    const own = ART_OF[film.occ] || 'wedding', n = film.cast;
+    const kind = { haldi: 'haldi', mehendi: 'mehendi', sangeet: film.occ === 'sangeet' || film.occ === 'wedding' ? 'sangeet' : own, baraat: 'wedding', ganesh: 'ganesha',
+      wedding: own, reception: film.occ === 'wedding' ? 'reception' : own, family: own, vidai: 'wedding' }[fn] || own;
+    return pickArt(kind, n + (kind === own ? 0 : 1));
+  }
+  const coupleArt = film => pickArt(ART_OF[film.occ] || 'wedding', film.cast);
+  const ganeshArt = film => pickArt('ganesha', film.cast);
+  // every picture a film may show, loaded when it is set
+  function filmArt(film, P) {
+    const ids = new Set([coupleArt(film)]);
+    if (P.D.sacred) ids.add(ganeshArt(film));
+    P.scenes.forEach(sc => { if (sc.k === 'day') ids.add(dayArt(film, sceneFn(film, P.D, sc))); });
+    return [...ids].map(artSrc);
+  }
+  let AI_ON = false, FIN = false; // FIN: a names screen drawn again as the finale (its art steps up to leave room for the signature) // an AI picture is filling the scene (the painted stage and figure step back)
   function drawScene(ctx, film, th, P, sc, lt) {
     const C = CONCEPTS[film.concept];
     FACE = C ? C.face : FACE0;
-    if (!C) {
-      if (sc.k !== 'day') { background(ctx, th, lt + sc.t0, null); particles(ctx, th, film.fx, lt + sc.t0, false); }
-      return SCENES[sc.k](ctx, film, th, P.D, sc, lt);
-    }
-    C.bg(ctx, th, lt + sc.t0, sc);
-    if (C.fx !== 'none') particles(ctx, th, C.fx, lt + sc.t0, false);
-    if (sc.k === 'open') C.open(ctx, film, th, P.D, sc, lt);
-    else if (sc.k === 'title') C.title(ctx, film, th, P.D, sc, lt);
-    else if (sc.k === 'day') C.day(ctx, film, th, P.D, sc, lt);
-    else if (sc.k === 'finale') conceptFinale(ctx, film, th, P.D, sc, lt, C);
-    else SCENES[sc.k](ctx, film, th, P.D, sc, lt);
+    // a slow camera push through every scene
+    const z = 1 + .028 * ease(clamp(lt / sc.d)), cy = H * .46;
+    ctx.save(); ctx.translate(W / 2, cy); ctx.scale(z, z); ctx.translate(-W / 2, -cy);
+    const ai = (!C || C.ai || sc.k === 'day') ? aiScene(sceneFn(film, P.D, sc), film.cast) : null;
+    AI_ON = false;
+    try {
+      if (!C) {
+        if (sc.k !== 'day') { background(ctx, th, lt + sc.t0, null); if (ai) AI_ON = drawAi(ctx, ai, th, lt, sc.d, film.cast); particles(ctx, th, film.fx, lt + sc.t0, false); }
+        else if (ai) AI_ON = drawAi(ctx, ai, th, lt, sc.d, film.cast);
+        return SCENES[sc.k](ctx, film, th, P.D, sc, lt);
+      }
+      C.bg(ctx, th, lt + sc.t0, sc);
+      if (ai) AI_ON = drawAi(ctx, ai, th, lt, sc.d, film.cast);
+      if (C.fx !== 'none') particles(ctx, th, C.fx, lt + sc.t0, false);
+      if (sc.k === 'open') C.open(ctx, film, th, P.D, sc, lt);
+      else if (sc.k === 'title') C.title(ctx, film, th, P.D, sc, lt);
+      else if (sc.k === 'day') C.day(ctx, film, th, P.D, sc, lt);
+      else if (sc.k === 'finale') conceptFinale(ctx, film, th, P.D, sc, lt, C);
+      else SCENES[sc.k](ctx, film, th, P.D, sc, lt);
+    } finally { ctx.restore(); }
   }
   class Player {
     constructor(canvas, scale = .5) {
@@ -2042,12 +2791,25 @@ const Films = (() => {
       this.P = script(this.film, this.lang, card, opts); this.total = this.P.total;
       if (opts.sign === false) { this.P.D.credit = ''; this.P.D.site = ''; }
       this.tl = { scenes: this.P.scenes }; // the Studio's scene buttons
+      // start fetching the film's pictures now (they fade in when they arrive)
+      this.art = HAS_DOM ? filmArt(this.film, this.P) : [];
+      this.art.forEach(loadImg);
+      if (HAS_DOM) sceneList();
+    }
+    // resolves when the film's pictures (and any AI scenes it uses) are in: the poster maker waits for it
+    ready() {
+      if (!HAS_DOM) return Promise.resolve();
+      return Promise.resolve(sceneListP).then(() => {
+        const fns = new Set(this.P.scenes.map(sc => sceneFn(this.film, this.P.D, sc)));
+        const ai = [...fns].flatMap(fn => scenePics(fn)).map(f => `img/scenes/${f}`);
+        return Promise.all([...this.art, ...ai].map(src => loadImg(src).done));
+      }).then(all => { all.forEach(a => { if (a.ok) a.at = 0; }); });
     }
     // The moment shown as the film's picture: the names, fully arrived
     posterTime() { const s = this.P.scenes.find(x => x.k === 'title'); return s.t0 + s.d - .7; }
     draw(t) {
       const { ctx, film } = this, th = themeOf(film), C = CONCEPTS[film.concept], S = this.P.scenes, FADE = C && C.trans === 'slide' ? .7 : .55;
-      t = clamp(t, 0, this.total - .001); NOW = t;
+      t = clamp(t, 0, this.total - .001); NOW = t; SCALE = this.s;
       ctx.setTransform(this.s, 0, 0, this.s, 0, 0);
       const i = S.findIndex(x => t < x.t0 + x.d), sc = S[i < 0 ? S.length - 1 : i], lt = t - sc.t0;
       drawScene(ctx, film, th, this.P, sc, lt);
@@ -2089,7 +2851,8 @@ const Films = (() => {
     return Promise.race([Promise.all([...want, ...hindi]).then(() => document.fonts.ready), new Promise(r => setTimeout(r, 15000))]).catch(() => {});
   }
 
-  return { recolour, W, H, THEMES, FRAMES, OPENINGS, FX, LIST, byId, describe, CONCEPTS, conceptName, themeOf, details, fromCard, script, Player, fontsReady, SCENE_NAME };
+  const artReady = p => p && p.ready ? p.ready() : Promise.resolve();
+  return { artReady, recolour, W, H, THEMES, FRAMES, OPENINGS, FX, LIST, byId, describe, CONCEPTS, conceptName, themeOf, details, fromCard, script, Player, fontsReady, SCENE_NAME };
 })();
 
 if (typeof module !== 'undefined') module.exports = Films;

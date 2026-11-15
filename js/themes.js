@@ -20,7 +20,8 @@ const INTROS = {
   curtains: '🎭 Curtain raise',
   scroll: '📜 Royal scroll',
   giftbox: '🎁 Gift box',
-  cardflip: '💌 Folding card'
+  cardflip: '💌 Folding card',
+  silk: '🤍 Silk curtain reveal'
 };
 
 // How each design is laid out and styled, on top of colours, fonts, decor and opening. Combined so that

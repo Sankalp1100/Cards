@@ -19,7 +19,7 @@ const Core = {
   // so values from a preset never leak into fields the link left out.
   blankCard() {
     return { type: 'wedding', theme: 1, title: '', host1: '', host2: '', nick1: '', nick2: '', tagline: '', date: '', venue: '', message: '', photo: '', mapUrl: '', rsvp: '', events: [], music: true,
-      story: [], families: [], attire: [], gallery: [], venueNote: '', upi: '', giftNote: '', hashtag: '', thanks: '', rsvpForm: false };
+      story: [], families: [], attire: [], gallery: [], venueNote: '', upi: '', giftNote: '', hashtag: '', thanks: '', rsvpForm: false, premium: false };
   },
 
   // The premium sections' lists, and the field that must be filled for an entry to count.
@@ -39,6 +39,8 @@ const Core = {
       } else if (k === 'gallery') {
         const g = (Array.isArray(v) ? v : []).filter(s => typeof s === 'string' && s);
         if (g.length) out.gallery = g;
+      } else if (k === 'premium') {
+        if (v === true) out.premium = true; // the premium experience: silk curtain, scratch-to-reveal date, function chapters, full RSVP
       } else if (k === 'rsvpForm') {
         if (v === true) out.rsvpForm = true; // off unless switched on: the card shows just the RSVP button
       } else if (v !== '' && v != null) out[k] = v;
@@ -59,7 +61,7 @@ const Core = {
     return {
       story, families, attire, gallery,
       venueNote: str(d.venueNote, 200), upi: str(d.upi, 60).replace(/[^\w.@-]/g, ''), giftNote: str(d.giftNote, 200),
-      hashtag: str(d.hashtag, 40).replace(/\s+/g, ''), thanks: str(d.thanks, 200), rsvpForm: d.rsvpForm === true
+      hashtag: str(d.hashtag, 40).replace(/\s+/g, ''), thanks: str(d.thanks, 200), rsvpForm: d.rsvpForm === true, premium: d.premium === true
     };
   },
 

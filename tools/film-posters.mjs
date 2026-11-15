@@ -1,5 +1,5 @@
 // Draws every premium film's picture for the website: `node tools/film-posters.mjs`
-// Opens js/films.js in Chrome, draws each film at its names moment and saves img/films/<id>.jpg (270×480).
+// Opens js/films.js in Chrome, waits for each film's art (img/films-art), draws it at its names moment and saves img/films/<id>.jpg (270×480).
 // Run it again after adding or changing films in js/films.js.
 import fs from 'node:fs';
 import http from 'node:http';
@@ -18,7 +18,9 @@ const server = http.createServer((req, res) => {
   }
   fs.readFile(path.join(ROOT, decodeURIComponent(req.url.split('?')[0])), (err, data) => {
     if (err) { res.writeHead(404); return res.end(); }
-    res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8' });
+    const ext = path.extname(req.url.split('?')[0]).toLowerCase();
+    const type = { '.js': 'text/javascript; charset=utf-8', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg' }[ext] || 'application/octet-stream';
+    res.writeHead(200, { 'content-type': type });
     res.end(data);
   });
 }).listen(0);
@@ -34,9 +36,10 @@ try {
     .catch(() => console.warn('some fonts did not load: pictures may use a stand-in letter'));
   const ids = await page.eval('Films.LIST.map(f => f.id)');
   for (const id of ids) {
-    const url = await page.eval(`(() => {
+    // the film's couple / Ganesh ji pictures (and any AI scenes) must be in before its picture is drawn
+    const url = await page.eval(`(async () => {
       const c = document.getElementById('c'), p = new Films.Player(c, .25);
-      p.set(${JSON.stringify(id)}); p.draw(p.posterTime());
+      p.set(${JSON.stringify(id)}); await Films.artReady(p); p.draw(p.posterTime());
       return c.toDataURL('image/jpeg', .84);
     })()`);
     fs.writeFileSync(path.join(OUT, id + '.jpg'), Buffer.from(url.split(',')[1], 'base64'));

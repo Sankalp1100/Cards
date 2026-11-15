@@ -7,17 +7,17 @@ const SITE_QR = ["0000000000000000000000000000000", "011111110010101110110001111
 const pic = id => (typeof COUPLES !== 'undefined' && COUPLES.find(c => c.id === id)) || null;
 
 // Sudhanshu ❤ Yadu, from their printed card (Jain Cards, Hapur): the reference video's order of scenes, every scene
-// in its own colours with a couple for its function; 59 s, the length of their song.
+// in its own colours with a couple for its function, the details on a carved signboard; 59 s, the length of their song.
 const SY = {
   ganesh: { look: 'temple-golden', d: 6, doors: true, shower: true, ganesha: { y: 620, s: 680 }, zone: [250, 540, 860] },
-  invite: { look: 'jharokha-champagne', d: 5, couple: { y: 1850, s: 640 }, coupleEntry: pic('wedding-05'), zone: [300, 1080, 760] },
-  haldi: { look: 'haldi-saffron', d: 4.5, couple: { y: 1850, s: 600 }, coupleEntry: pic('haldi-03'), zone: [330, 1150, 780] },
-  mehendi: { look: 'mehendi-emerald', d: 4.5, couple: { y: 1850, s: 600 }, coupleEntry: pic('mehendi-02'), zone: [330, 1150, 780] },
-  baraat: { look: 'haveli-pink', d: 6, couple: { y: 1860, s: 520 }, coupleEntry: pic('wedding-07'), zone: [250, 1300, 640] },
-  reception: { look: 'palace-plum', d: 6, couple: { y: 1860, s: 560 }, coupleEntry: pic('reception-03'), zone: [230, 1220, 760] },
-  manuhar: { look: 'clouds-sakura', d: 4, couple: { y: 1860, s: 520 }, coupleEntry: pic('kid-02'), zone: [300, 1250, 800] },
-  regards: { look: 'rosegarden-golden', d: 6, couple: { y: 1860, s: 500 }, coupleEntry: pic('wedding-09'), zone: [270, 1300, 600] },
-  thanks: { look: 'mandap-roseblush', d: 5, sigCorner: true, zone: [330, 1400, 760] }
+  invite: { look: 'jharokha-champagne', change: 'sparkle', enter: 'unfold', d: 5, couple: { y: 1850, s: 640 }, coupleEntry: pic('wedding-05'), zone: [300, 1080, 760] },
+  haldi: { look: 'haldi-saffron', board: 'wood', hang: true, change: 'shutter', enter: 'swing', d: 4.5, couple: { y: 1850, s: 600 }, coupleEntry: pic('haldi-03'), zone: [330, 1150, 780] },
+  mehendi: { look: 'mehendi-emerald', board: 'carved', change: 'petals', enter: 'unfold', d: 4.5, couple: { y: 1850, s: 600 }, coupleEntry: pic('mehendi-02'), zone: [330, 1150, 780] },
+  baraat: { look: 'haveli-pink', board: 'cartouche', change: 'shutter', enter: 'swing', d: 6, couple: { y: 1860, s: 520 }, coupleEntry: pic('wedding-07'), zone: [250, 1300, 640] },
+  reception: { look: 'palace-plum', board: 'carved', hang: true, change: 'sparkle', enter: 'zoom', d: 6, couple: { y: 1860, s: 560 }, coupleEntry: pic('reception-03'), zone: [230, 1220, 760] },
+  manuhar: { look: 'clouds-sakura', board: 'cartouche', hang: true, change: 'bloom', enter: 'swing', d: 4, couple: { y: 1860, s: 520 }, coupleEntry: pic('kid-02'), zone: [300, 1250, 800] },
+  regards: { look: 'rosegarden-golden', board: 'arch', change: 'sparkle', enter: 'unfold', d: 6, couple: { y: 1860, s: 500 }, coupleEntry: pic('wedding-09'), zone: [270, 1300, 600] },
+  thanks: { look: 'mandap-roseblush', board: 'carved', change: 'shutter', enter: 'zoom', d: 5, sigCorner: true, zone: [330, 1400, 760] }
 };
 
 const PROMOS = {
@@ -40,7 +40,7 @@ const PROMOS = {
         { t: 'text', s: 'यदु', f: 'hname', z: 84, col: 'accent', gap: 10 },
         { t: 'text', s: '9 से 13 दिसम्बर 2026', f: 'deva', z: 50, col: 'ink' }
       ] },
-      { name: 'वर', look: 'vrindavan-roseblush', d: 6, zone: [330, 1560, 590], items: [
+      { name: 'वर', look: 'vrindavan-roseblush', board: 'arch', change: 'bloom', enter: 'rise', d: 6, zone: [330, 1560, 590], items: [
         { t: 'text', s: '॥ मंगलम् भगवान विष्णुः मंगलम् गरुड़ध्वजः ॥', f: 'deva', z: 36, col: 'accent', wrap: 2, gap: 22 },
         { t: 'text', s: 'परमपिता परमात्मा की असीम अनुकम्पा से', f: 'hser', z: 40, col: 'ink2', wrap: 2, gap: 18 },
         { t: 'text', s: 'श्रीमती अनीता एवं', f: 'hser', z: 50, col: 'ink', gap: 2 },
@@ -49,7 +49,7 @@ const PROMOS = {
         { t: 'text', s: 'चि॰ सुधांशु', f: 'hname', z: 140, col: 'names', gap: 10 },
         { t: 'text', s: '(सुपौत्र स्व॰ श्रीमती अजय कौर एवं स्व॰ श्री बालचरन सिंह तेवतिया)', f: 'hser', z: 34, col: 'ink2', wrap: 3 }
       ] },
-      { name: 'वधु', look: 'blush-peach', d: 5.5, zone: [380, 1520, 800], items: [
+      { name: 'वधु', look: 'blush-peach', board: 'carved', change: 'shutter', enter: 'unfold', d: 5.5, zone: [380, 1520, 800], items: [
         { t: 'div', word: 'संग', z: 54, gap: 16, hi: true },
         { t: 'text', s: 'आयु॰ यदु', f: 'hname', z: 140, col: 'names', gap: 8 },
         { t: 'text', s: '(सुपुत्री श्रीमती शशी देवी एवं स्व॰ श्री राजसिंह)', f: 'hser', z: 36, col: 'ink2', wrap: 3, gap: 26 },
@@ -72,9 +72,9 @@ const PROMOS = {
         { t: 'text', s: 'बारात निमन्त्रण', f: 'hname', z: 104, col: 'names', gap: 6 },
         { t: 'text', s: 'मान्यवर आप बारात में सादर आमन्त्रित हैं', f: 'hser', z: 36, col: 'ink2', wrap: 2, gap: 14 },
         { t: 'text', s: 'शुक्रवार, 11 दिसम्बर 2026', f: 'deva', z: 50, col: 'ink', gap: 14 },
-        { t: 'text', s: 'घुड़चढ़ी · सायं 4 बजे', f: 'hser', z: 46, col: 'accent', gap: 4 },
-        { t: 'text', s: 'बारात प्रस्थान · सायं 5 बजे', f: 'hser', z: 46, col: 'accent', gap: 14 },
-        { t: 'text', s: 'बारात बस द्वारा बी-60, पंचशील कालोनी, मेरठ रोड, हापुड़ से ‘9Z फार्म’, जी॰टी॰ रोड, चन्देरू, निकट जेल, बुलन्दशहर (उ॰प्र॰) के लिये प्रस्थान करेगी।', f: 'hser', z: 34, col: 'ink', wrap: 4 }
+        { t: 'text', s: 'घुड़चढ़ी · दोपहर 3 बजे', f: 'hser', z: 46, col: 'accent', gap: 4 },
+        { t: 'text', s: 'बारात प्रस्थान · सायं 4 बजे', f: 'hser', z: 46, col: 'accent', gap: 14 },
+        { t: 'text', s: 'बारात बस द्वारा बी-60, पंचशील कालोनी, मेरठ रोड, हापुड़ से ‘प्रेम गार्डन’, जी॰टी॰ रोड, सिकंदराबाद, जिला-बुलन्दशहर (उ॰प्र॰) के लिये प्रस्थान करेगी।', f: 'hser', z: 34, col: 'ink', wrap: 4 }
       ] },
       { name: 'स्वागत', ...SY.reception, items: [
         { t: 'text', s: 'रविवार, 13 दिसम्बर 2026', f: 'deva', z: 48, col: 'accent', gap: 8 },
@@ -126,7 +126,7 @@ const PROMOS = {
         { t: 'text', s: 'Yadu', f: 'script', z: 104, col: 'names', gap: 10 },
         { t: 'text', s: '9 – 13 December 2026', f: 'serif', z: 44, col: 'ink' }
       ] },
-      { name: 'The Families', look: 'vrindavan-roseblush', d: 7, zone: [330, 1560, 590], items: [
+      { name: 'The Families', look: 'vrindavan-roseblush', board: 'arch', change: 'bloom', enter: 'rise', d: 7, zone: [330, 1560, 590], items: [
         { t: 'text', s: 'With the infinite grace of the Almighty, we invite you to celebrate the wedding of', f: 'italic', z: 42, col: 'ink2', wrap: 3, gap: 18 },
         { t: 'text', s: 'Sudhanshu', f: 'script', z: 136, col: 'names', gap: 4 },
         { t: 'text', s: 'S/O Mrs. Anita & Mr. Brahmpal Singh Teotia', f: 'serif', z: 40, col: 'ink', wrap: 2, gap: 4 },
@@ -151,9 +151,9 @@ const PROMOS = {
         { t: 'text', s: 'We cordially invite you to the', f: 'italic', z: 36, col: 'ink2', gap: 4 },
         { t: 'text', s: 'Baraat', f: 'script', z: 136, col: 'names', gap: 8 },
         { t: 'text', s: 'Friday · 11 | December | 2026', f: 'serif', z: 44, col: 'ink', gap: 14 },
-        { t: 'text', s: 'Ghudchadhi · 4:00 PM', f: 'serif', z: 44, col: 'accent', gap: 4 },
-        { t: 'text', s: 'Baraat departs · 5:00 PM', f: 'serif', z: 44, col: 'accent', gap: 14 },
-        { t: 'text', s: 'By bus from B-60, Panchsheel Colony, Meerut Road, Hapur to ‘9Z Farm’, G.T. Road, Chanderu, near Jail, Bulandshahr (U.P.)', f: 'serif', z: 34, col: 'ink', wrap: 4 }
+        { t: 'text', s: 'Ghudchadhi · 3:00 PM', f: 'serif', z: 44, col: 'accent', gap: 4 },
+        { t: 'text', s: 'Baraat departs · 4:00 PM', f: 'serif', z: 44, col: 'accent', gap: 14 },
+        { t: 'text', s: 'By bus from B-60, Panchsheel Colony, Meerut Road, Hapur to ‘Prem Garden’, G.T. Road, Sikandrabad, District Bulandshahr (U.P.)', f: 'serif', z: 34, col: 'ink', wrap: 4 }
       ] },
       { name: 'Reception', ...SY.reception, items: [
         { t: 'text', s: 'You are cordially invited to the', f: 'serif', z: 28, col: 'accent', up: true, ls: 4, gap: 8 },

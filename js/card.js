@@ -196,6 +196,62 @@
     return `<div class="venue-art va-${kind}" aria-hidden="true"><svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice">${s}</svg></div>`;
   }
 
+  // Painted line-art icons (gold strokes in the design's colours) in place of emoji: one per kind of function,
+  // and small ones for the venue pin, dress code and buttons.
+  const ring = (n, r, rx, ry) => Array.from({ length: n }, (_, i) => `<ellipse cx="32" cy="${32 - r}" rx="${rx}" ry="${ry}" transform="rotate(${(360 / n) * i} 32 32)"/>`).join('');
+  const ART = {
+    lotus: '<path d="M32 50C24 42 24 28 32 15c8 13 8 27 0 35Z"/><path d="M32 50C22 48 14 40 12 30c10 0 17 8 20 20Z"/><path d="M32 50c10-2 18-10 20-20-10 0-17 8-20 20Z"/><path d="M32 50C20 52 10 48 4 42c10-4 22 0 28 8Z"/><path d="M32 50c12 2 22-2 28-8-10-4-22 0-28 8Z"/><path d="M16 57h32"/><circle class="ia" cx="32" cy="9" r="2"/>',
+    marigold: `<g>${ring(16, 21, 4.6, 8)}</g><g>${ring(11, 12, 4, 6.5)}</g><circle class="ia" cx="32" cy="32" r="5.5"/>`,
+    paisley: '<path d="M30 57C13 55 7 40 13 28 19 16 36 14 43 5c8 13 12 29 4 41-4 7-10 11-17 11Z"/><path d="M30 49c-8-1-12-8-9-15 3-7 12-8 16-13 5 8 5 18 0 23"/><circle class="ia" cx="29" cy="38" r="3"/><circle cx="16" cy="45" r="1.3"/><circle cx="12" cy="36" r="1.3"/><circle cx="14" cy="26" r="1.3"/><circle cx="21" cy="18" r="1.3"/><circle cx="31" cy="13" r="1.3"/>',
+    notes: '<path d="M22 47V17l27-7v30"/><path d="M22 24l27-7"/><ellipse class="ia" cx="16.5" cy="47.5" rx="6.5" ry="4.8" transform="rotate(-18 16.5 47.5)"/><ellipse class="ia" cx="43.5" cy="40.5" rx="6.5" ry="4.8" transform="rotate(-18 43.5 40.5)"/><path d="M8 14l3 3m40 31l4 4M54 18l3-3"/>',
+    chhatri: '<path d="M7 30C9 16 20 8 32 8s23 8 25 22Z"/><path d="M7 30q6 6 12.5 0 6 6 12.5 0 6 6 12.5 0 6 6 12.5 0"/><path d="M32 8v50M26 58h12"/><path d="M19.5 30C21 19 26 11 32 8m12.5 22C43 19 38 11 32 8"/><circle class="ia" cx="32" cy="5" r="2.4"/><path d="M7 30v7m12.5-7v7M44.5 30v7M57 30v7"/>',
+    kalash: '<path d="M20 31c-8 6-8 20 2 26h20c10-6 10-20 2-26Z"/><path d="M24 26h16v5H24z"/><path class="ia" d="M32 5c6 0 8 8 6 14-2 4-10 4-12 0-2-6 0-14 6-14Z"/><path d="M26 25c-8-2-14-6-18-12 8 0 14 4 18 12Zm12 0c8-2 14-6 18-12-8 0-14 4-18 12Z"/><path d="M17 43h30"/><circle cx="25" cy="49" r="1.4"/><circle cx="32" cy="50" r="1.4"/><circle cx="39" cy="49" r="1.4"/>',
+    flutes: '<path d="M12 10h14l-2 16c-1 4-3 6-5 6s-4-2-5-6Z"/><path d="M19 32v18m-6 0h12"/><path d="M38 10h14l-2 16c-1 4-3 6-5 6s-4-2-5-6Z"/><path d="M45 32v18m-6 0h12"/><path class="ia" d="M32 2l2 5 5 2-5 2-2 5-2-5-5-2 5-2Z"/><path d="M13 17h12m14 0h12"/>',
+    rings: '<circle cx="24" cy="39" r="13"/><circle cx="40" cy="39" r="13"/><path class="ia" d="M24 25l-6-6 6-7 6 7Z"/><path d="M18 19h12"/>',
+    diya: '<path d="M7 40c6 15 44 15 50 0Z"/><path d="M7 40h50"/><path d="M24 52l-3 6h22l-3-6"/><path class="ia" d="M32 10c7 10 7 19 0 25-7-6-7-15 0-25Z"/><path d="M32 22c2 4 2 8 0 10"/>',
+    doli: '<path d="M14 26h36v24H14z"/><path d="M10 26q22-18 44 0"/><path d="M4 30h56"/><path d="M22 34v12m10-12v12m10-12v12"/><circle class="ia" cx="32" cy="12" r="2.4"/>'
+  };
+  const artSVG = (k, cls = 'art') => `<svg class="${cls}" viewBox="0 0 64 64" aria-hidden="true">${ART[k] || ART.lotus}</svg>`;
+  const UI = {
+    pin: '<path d="M12 21.5S4.5 14.2 4.5 9a7.5 7.5 0 0 1 15 0c0 5.2-7.5 12.5-7.5 12.5Z"/><circle cx="12" cy="9" r="2.6"/>',
+    cal: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4m8-4v4"/>',
+    share: '<circle cx="18" cy="5.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="18.5" r="2.5"/><path d="M8.2 10.8l7.6-4.1m-7.6 6.5l7.6 4.1"/>',
+    chat: '<path d="M4 20.5l1.3-4A8.5 8.5 0 1 1 8.4 19.3Z"/><path d="M9 9.5c.4 2.6 2.6 4.9 5.4 5.6"/>',
+    dress: '<path d="M12 7.5a2 2 0 1 1 2-2c0 1.1-2 1.5-2 2.9L3.3 15c-1 .7-.5 2 .7 2h16c1.2 0 1.7-1.3.7-2L12 8.4"/>',
+    clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+    map: '<path d="M9 4L3.5 6v14L9 18l6 2 5.5-2V4L15 6Z"/><path d="M9 4v14m6-12v14"/>'
+  };
+  const ui = k => `<svg class="ui-ic" viewBox="0 0 24 24" aria-hidden="true">${UI[k]}</svg>`;
+
+  // Optional painted scenes (js/scenes.js): only files listed there are ever requested, any of jpg/png/webp.
+  function sceneArt(kinds, seed) {
+    const list = typeof SCENE_ART !== 'undefined' && Array.isArray(SCENE_ART) ? SCENE_ART : [];
+    for (const k of [].concat(kinds)) {
+      const own = list.filter(f => typeof f === 'string' && new RegExp(`^${k}-\\d{1,3}\\.(jpe?g|png|webp)$`, 'i').test(f));
+      if (own.length) return `img/scenes/${own[Math.abs(seed | 0) % own.length]}`;
+    }
+    return '';
+  }
+  const sceneImg = (src, cls) => src ? `<img class="scene-img ${cls}" src="${esc(src)}" alt="" loading="lazy" decoding="async">` : '';
+
+  // Styles without a monogram seal get a crafted badge instead of an emoji when there is no couple picture:
+  // a marquee starburst (Filmy Retro), a neon-tube ring (Neon Night) or a bunch of glossy balloons (Toybox).
+  function badgeHTML(t, d) {
+    const ini = esc(initials(d)), kind = { retro: 'retro', neon: 'neon', toybox: 'toy' }[t.style];
+    if (!kind) return '';
+    let art = '';
+    if (kind === 'retro') {
+      const pts = Array.from({ length: 48 }, (_, i) => { const r = i % 2 ? 50 : 60, a = Math.PI * i / 24; return `${(Math.sin(a) * r).toFixed(1)},${(-Math.cos(a) * r).toFixed(1)}`; }).join(' ');
+      art = `<svg viewBox="-64 -64 128 128" aria-hidden="true"><polygon class="bd-burst" points="${pts}"/><circle class="bd-ring" r="42"/>${Array.from({ length: 20 }, (_, i) => `<circle class="bd-bulb" style="--n:${i % 4}" r="2.3" cx="0" cy="-36" transform="rotate(${i * 18})"/>`).join('')}</svg>`;
+    } else if (kind === 'neon') {
+      art = '<svg viewBox="-64 -64 128 128" aria-hidden="true"><circle class="bd-tube a" r="54"/><circle class="bd-tube b" r="45"/></svg>';
+    } else {
+      const b = (x, y, r, c, rot) => `<g transform="rotate(${rot} ${x} ${y + r * 1.6})"><path class="bd-str" d="M${x} ${y + r * 1.25} q-4 14 2 26"/><ellipse class="bd-ball ${c}" cx="${x}" cy="${y}" rx="${r}" ry="${r * 1.18}"/><path class="bd-knot ${c}" d="M${x - 3} ${y + r * 1.25} h6 l-3 -4z"/><ellipse class="bd-shine" cx="${x - r * .38}" cy="${y - r * .45}" rx="${r * .22}" ry="${r * .34}"/></g>`;
+      art = `<svg viewBox="0 0 128 128" aria-hidden="true">${b(40, 42, 22, 'c2', -14)}${b(88, 42, 22, 'c3', 14)}${b(64, 34, 26, 'c1', 0)}</svg>`;
+    }
+    return `<div class="ornament badge badge-${kind}">${art}<b>${ini}</b></div>`;
+  }
+
   // Shri Ganesh at the very top of the card, above the couple, for the occasions that begin with his blessing (a different one per design)
   const GANESHA_TYPES = ['wedding', 'engagement', 'reception', 'naming', 'ceremony', 'babyshower', 'haldi', 'mehendi', 'roka', 'housewarming', 'mundan', 'janeu', 'festive'];
   function heroGanesha(t, d) {
@@ -208,7 +264,7 @@
   function heroCouple(t, d) {
     if (t.no % 3 === 0) return '';
     const pic = Core.coupleFor(d.type, t.no - Math.floor(t.no / 3));
-    return pic ? `<img class="hero-couple${pic.flip ? ' flip' : ''}" src="img/couples/cut/${esc(pic.id)}.png" alt="" width="${pic.w}" height="${pic.h}" decoding="async">` : '';
+    return pic ? `<div class="couple-stage"><img class="hero-couple${pic.flip ? ' flip' : ''}" src="img/couples/cut/${esc(pic.id)}.png" alt="" width="${pic.w}" height="${pic.h}" decoding="async"></div>` : '';
   }
 
   // Elegant styles show a monogram seal where the emoji would be: the initials inside a fine double ring,
@@ -328,14 +384,17 @@
   // How the invitation opens: the invite's own choice, else the catalog's, else the design's.
   function introOf(d, t) {
     const own = CATALOG[t.no] && CATALOG[t.no].intro;
-    return INTROS[d.intro] ? d.intro : INTROS[own] ? own : t.intro || 'envelope';
+    return INTROS[d.intro] ? d.intro : isPremium(d) ? 'silk' : INTROS[own] ? own : t.intro || 'envelope';
   }
-  const OPEN_MS = { envelope: 1500, doors: 1700, curtains: 1600, scroll: 1800, giftbox: 1500, cardflip: 1700 };
+  const OPEN_MS = { envelope: 1500, doors: 1700, curtains: 1600, scroll: 1800, giftbox: 1500, cardflip: 1700, silk: 2100 };
+  // The premium experience (switched on per card, and always on the website's live demos): the silk curtain, a date to
+  // scratch and reveal, a full-screen chapter for every function and the full RSVP with travel plans.
+  const isPremium = d => d.premium === true || params.has('demo');
   let introKind = 'envelope';
 
   function introMarkup(kind, d, t) {
     const seal = esc(initials(d)), emoji = esc(t.emoji);
-    const inside = `<span>${emoji}</span><small>You're invited</small>`;
+    const inside = `<span class="inside-art">${artSVG('lotus')}</span><small>You're invited</small>`;
     switch (kind) {
       case 'doors': return `
         <div class="doors">
@@ -364,6 +423,13 @@
           <div class="gift-pop">${emoji}</div>
           <div class="gift-box"><b>${seal}</b></div>
           <div class="gift-lid"><i class="bow"></i></div>
+        </div>`;
+      case 'silk': return `
+        <div class="silk">
+          <div class="silk-stage"><div class="silk-mono"><b>${seal}</b></div>
+            <p class="silk-names">${esc(d.host1 || '')}${d.host2 ? ` <i>&amp;</i> ${esc(d.host2)}` : ''}</p><small>request the pleasure of your company</small></div>
+          <div class="silk-drape l"><i class="silk-tie"></i></div><div class="silk-drape r"><i class="silk-tie"></i></div>
+          <div class="silk-pelmet"></div>
         </div>`;
       case 'cardflip': return `
         <div class="fold">
@@ -399,6 +465,76 @@
     $('.open-btn').addEventListener('click', openCard);
   }
 
+  // A function's own mood on its chapter: jewel colours (base, glow, ink), a painted icon, a line under its name
+  // and the painted scene it may use (js/scenes.js). English or Hindi names.
+  const MOODS = [
+    [/haldi|हल्दी|pithi|ubtan/i, ['#9a5a06', '#f2b134', '#fff6df'], 'marigold', 'Smiles, turmeric & sunshine', 'haldi'],
+    [/mehe?n?di|मेह[ँं]?दी|henna/i, ['#173f2e', '#7fbf93', '#fbf6e6'], 'paisley', 'Henna, music & laughter', 'mehendi'],
+    [/sangeet|संगीत|cocktail|dj|night/i, ['#26093f', '#9b3fd0', '#fbf1ff'], 'notes', 'A night of music & dance', 'sangeet'],
+    [/baraat|बारात|ghud|घुड़|sehra|sherabandi/i, ['#6a1a0e', '#e0912b', '#fff4e3'], 'chhatri', 'The grand procession', 'baraat'],
+    [/phera|फेरे|vivah|विवाह|wedding|shaadi|शादी|lagan|varmala|जयमाला/i, ['#55061a', '#d9a33a', '#fff4dc'], 'kalash', 'Seven vows, one forever', 'wedding'],
+    [/reception|रिसेप्शन|स्वागत|प्रीतिभोज|gala|dinner/i, ['#0c1934', '#4a6fae', '#f1f5ff'], 'flutes', 'An elegant evening gala', 'reception'],
+    [/engage|sagai|सगाई|ring|roka|रोका|tilak|तिलक/i, ['#5c1743', '#dc7aa0', '#fff0f6'], 'rings', 'The ring ceremony', 'invite'],
+    [/kirtan|कीर्तन|puja|पूजा|path|पाठ|havan|हवन|mata|jagran|ratjaga|रतजगा|ganesh|गणेश/i, ['#6b3000', '#f0a030', '#fff7e6'], 'diya', 'Blessings to begin with', 'ganesh'],
+    [/vidai|विदाई/i, ['#4c0d2a', '#d4687c', '#fff1f3'], 'doli', 'With love and blessings', 'vidai']
+  ];
+  const moodOf = name => (MOODS.find(m => m[0].test(name)) || [0, null, 'lotus', 'Join us for the celebration', '']).slice(1);
+  const ordinal = n => n + (n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th');
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+  let stageSeed = 0;
+  function stageCard(e, i) {
+    const when = parseDate(e.date), [pal, icon, line, scene] = moodOf(e.name);
+    // A name that starts with its own emoji ("🌸 Haldi") shows without it: the chapter has its own painted icon
+    const m = String(e.name).match(/^((?:\p{Extended_Pictographic}|\p{Emoji_Presentation})[️‍\p{Extended_Pictographic}]*)\s*/u);
+    const title = m ? e.name.slice(m[0].length) : e.name;
+    const vars = pal ? `--c1:${pal[0]};--c2:${pal[1]};--ci:${pal[2]};` : '';
+    const art = scene && sceneArt(scene, stageSeed + i);
+    return `
+      <article class="event stage-ch reveal${pal ? '' : ' own'}${art ? ' has-scene' : ''}" style="--i:0;${vars}">
+        ${sceneImg(art, 'stage-scene')}
+        <div class="stage-mandala" aria-hidden="true">${mandalaSVG()}</div>
+        <i class="stage-frame" aria-hidden="true"></i>
+        <div class="stage-in">
+          <p class="stage-kicker"><span>Chapter</span> ${ROMAN[i] || i + 1}</p>
+          <div class="stage-icon">${artSVG(icon)}</div>
+          <h3 class="stage-title">${esc(title)}</h3>
+          <p class="stage-line">${esc(line)}</p>
+          ${when ? `<div class="stage-date"><b>${when.getDate()}<sup>${ordinal(when.getDate()).slice(-2)}</sup></b><span>${esc(when.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }))}</span></div>
+          <p class="stage-time">${esc(when.toLocaleDateString('en-IN', { weekday: 'long' }))}${Core.hasTime(e.date) ? ` <i>·</i> ${esc(fmtTime(when))}` : ''}</p>` : ''}
+          ${e.venue ? `<p class="stage-venue">${ui('pin')}${esc(e.venue)}</p>` : ''}
+          ${e.dress ? `<p class="stage-dress">${ui('dress')}Dress code: ${esc(e.dress)}</p>` : ''}
+        </div>
+      </article>`;
+  }
+
+  // The full RSVP (premium): who is coming, which functions, meals and help with travel, sent as one WhatsApp message
+  function rsvpFull(d, events) {
+    const travel = ['From the airport', 'From the railway station', 'From the bus stand'].map(o => `<option>${o}</option>`).join('');
+    return `
+          <p class="rsvp-intro">Your presence would mean so much to us. Please send one reply for everyone travelling together.</p>
+          <label>Your full name<input name="who" maxlength="60" value="${esc(guest || '')}" placeholder="Your name"></label>
+          <label>Phone / WhatsApp<input name="phone" inputmode="tel" maxlength="16" placeholder="98765 43210"></label>
+          <div class="rsvp-pills" role="radiogroup" aria-label="Will you attend?">
+            <label><input type="radio" name="att" value="yes" checked><span>Yes! Can’t wait 🎉</span></label>
+            <label><input type="radio" name="att" value="no"><span>Sadly, can’t make it</span></label>
+          </div>
+          <div class="rsvp-more">
+            <div class="rsvp-row">
+              <label>Guests<select name="guests">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => `<option${n === 2 ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
+              <label>Meal<select name="meal"><option>Vegetarian</option><option>Jain</option><option>Non-vegetarian</option></select></label>
+            </div>
+            <label>Who is coming? <small>(one name per line)</small><textarea name="names" rows="3" maxlength="400" placeholder="Your name&#10;Your family"></textarea></label>
+            ${events.length > 1 ? `<fieldset class="rsvp-evs"><legend>Which functions will you join?</legend>${events.slice(0, 8).map(e => `<label><input type="checkbox" name="ev" value="${esc(e.name)}" checked><span>${esc(e.name)}</span></label>`).join('')}</fieldset>` : ''}
+            <p class="rsvp-step">✈️ A little help getting here &amp; back</p>
+            <label>Need a pickup?<select name="pickup"><option value="">No, thank you</option>${travel}</select></label>
+            <div class="rsvp-row rsvp-arr" hidden><label>Arrival date<input type="date" name="arrDate"></label><label>Arrival time<input type="time" name="arrTime"></label></div>
+            <label>Need a drop-off?<select name="drop"><option value="">No, thank you</option>${travel.replace(/From the/g, 'To the')}</select></label>
+            <div class="rsvp-row rsvp-dep" hidden><label>Departure date<input type="date" name="depDate"></label><label>Departure time<input type="time" name="depTime"></label></div>
+            <label>Stay<select name="stay"><option value="">I have my own stay</option><option>Please arrange a room</option></select></label>
+          </div>
+          <label>Message for the hosts <small>(optional)</small><input name="note" maxlength="140" placeholder="Your wishes"></label>`;
+  }
+
   function eventCard(e, i) {
     const when = parseDate(e.date);
     return `
@@ -408,8 +544,8 @@
           ${when ? `<div class="event-date" aria-hidden="true"><b>${when.getDate()}</b><span>${esc(when.toLocaleDateString('en-IN', { month: 'short' }))}</span></div>` : ''}
           <h3>${esc(e.name)}</h3>
           ${when ? `<p class="event-when">${esc(fmtDate(when))}${Core.hasTime(e.date) ? ` · ${esc(fmtTime(when))}` : ''}</p>` : ''}
-          ${e.venue ? `<p>📍 ${esc(e.venue)}</p>` : ''}
-          ${e.dress ? `<p class="dress">✨ Dress code: ${esc(e.dress)}</p>` : ''}
+          ${e.venue ? `<p class="event-venue">${ui('pin')}${esc(e.venue)}</p>` : ''}
+          ${e.dress ? `<p class="dress">${ui('dress')}Dress code: ${esc(e.dress)}</p>` : ''}
         </div>
       </article>`;
   }
@@ -425,6 +561,10 @@
     const mapUrl = safeUrl(d.mapUrl) || (d.venue ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d.venue)}` : '');
     const style = OCCASION_STYLE[d.type] || OCCASION_STYLE.wedding;
     const x = Core.extras(d);
+    const prem = isPremium(d);
+    stageSeed = t.no;
+    // A painted scene behind the first screen (only when listed in js/scenes.js and the card has no own photo)
+    const heroArt = photo ? '' : sceneArt(['invite', 'couple'], t.no);
     const names = d.host2
       ? `<span class="name">${letters(d.host1 || '')}</span><span class="amp">${esc(style.join)}</span><span class="name">${letters(d.host2)}</span>`
       : `<span class="name">${letters(d.host1 || '')}</span>`;
@@ -442,18 +582,19 @@
       </section>`);
     add('fests', 'Celebrations', events.length && `
       <section class="events" id="fests">${head(style.fests, 'The Celebrations')}
-        <div class="timeline">${events.map(eventCard).join('')}</div>
+        ${prem ? `<p class="stage-teaser">The celebrations don’t fit on one page! Scroll down for all the love, laughter &amp; festivities ✨</p><div class="stages">${events.map(stageCard).join('')}</div>` : `<div class="timeline">${events.map(eventCard).join('')}</div>`}
       </section>`);
     add('venue', 'Venue', d.venue && `
       <section class="venue reveal" id="venue">${head('Where we celebrate', 'The Venue', ' plain')}
         <div class="venue-card pcard">${venueArtSVG(t.venueArt || 'palace')}
-          <div class="venue-body"><div class="venue-pin">📍</div><p class="venue-name">${esc(d.venue)}</p>
+          <div class="venue-body"><div class="venue-pin">${ui('pin')}</div><p class="venue-name">${esc(d.venue)}</p>
             ${x.venueNote ? `<p class="venue-note">${esc(x.venueNote)}</p>` : ''}
-            <a class="btn ghost" href="${esc(mapUrl)}" target="_blank" rel="noopener">Get directions</a></div>
+            <a class="btn ghost" href="${esc(mapUrl)}" target="_blank" rel="noopener">${ui('map')}Get directions</a></div>
         </div>
       </section>`);
+    const famArt = sceneArt('family', t.no), thanksArt = sceneArt('thanks', t.no);
     add('families', 'Families', x.families.length && `
-      <section class="families" id="families">${head('Our roots', 'With Love, Our Families')}
+      <section class="families${famArt ? ' has-scene' : ''}" id="families">${sceneImg(famArt, 'fam-scene')}${head('Our roots', 'With Love, Our Families')}
         <div class="fam-grid">${x.families.map((f, i) => `<article class="fam pcard reveal" style="--i:${i}"><div class="fam-mark" aria-hidden="true">${mandalaSVG()}</div>
           ${f.side ? `<h3>${esc(f.side)}</h3>` : ''}<p class="fam-parents">${esc(f.parents)}</p>${f.more ? `<p>${esc(f.more)}</p>` : ''}</article>`).join('')}</div>
       </section>`);
@@ -476,7 +617,7 @@
     add('rsvp', 'RSVP', rsvpNumber(d) && `
       <section class="rsvp reveal" id="rsvp">${head('Kindly reply', 'Will You Join Us?', ' plain')}
         <form class="rsvp-form pcard" id="rsvpForm" autocomplete="off">
-          ${x.rsvpForm ? `
+          ${prem ? rsvpFull(d, events) : x.rsvpForm ? `
           <label>Your name<input name="who" maxlength="60" value="${esc(guest || '')}" placeholder="Your name"></label>
           <div class="rsvp-pills" role="radiogroup" aria-label="Will you attend?">
             <label><input type="radio" name="att" value="yes" checked><span>Joyfully accepting</span></label>
@@ -487,7 +628,7 @@
             <label>Meal<select name="meal"><option>Vegetarian</option><option>Jain</option><option>Non-vegetarian</option></select></label>
           </div>
           <label>Message <small>(optional)</small><input name="note" maxlength="140" placeholder="Wishes for the hosts"></label>` : ''}
-          <a class="btn" id="rsvpBtn" target="_blank" rel="noopener">💬 RSVP on WhatsApp</a>
+          <a class="btn" id="rsvpBtn" target="_blank" rel="noopener">${ui('chat')}RSVP on WhatsApp</a>
         </form>
       </section>`);
 
@@ -512,14 +653,15 @@
         <button class="pmenu-x" id="menuClose" type="button" aria-label="Close menu">✕</button>
         ${menuLinks.map(([id, label], i) => `<a href="#${id}" style="--n:${i}">${esc(label)}</a>`).join('')}
       </nav>
-      <section class="hero layout-${t.layout || 'classic'}" id="top">
+      <section class="hero layout-${t.layout || 'classic'}${heroArt ? ' has-scene' : ''}" id="top">
+        ${heroArt ? `<div class="hero-art">${sceneImg(heroArt, 'hero-scene')}</div>` : ''}
         ${motifSVG(t.motif || 'toran')}
         ${decor(t.decor)}
         ${heroGanesha(t, d)}
         ${heroLayout(t, d, when, {
           // Without a photo the design's emoji takes its place; the polaroid frame also shows the initials as a caption.
           // A couple from the library takes the seal's place on two of every three designs of an occasion that has one
-          visual: photo ? `<div class="photo"><img src="${esc(photo)}" alt=""></div>` : heroCouple(t, d) || (t.emblem ? emblemHTML(d) : `<div class="ornament">${esc(t.emoji)}<small class="orn-cap" aria-hidden="true">${esc(initials(d))}</small></div>`),
+          visual: photo ? `<div class="photo"><img src="${esc(photo)}" alt=""></div>` : (!heroArt && heroCouple(t, d)) || (t.emblem ? emblemHTML(d) : badgeHTML(t, d) || `<div class="ornament">${esc(t.emoji)}<small class="orn-cap" aria-hidden="true">${esc(initials(d))}</small></div>`),
           // Empty lines are left out altogether, so nothing blank shows on the card.
           title: d.title ? `<p class="title fade" style="--d:.2s">${esc(d.title)}</p>` : '',
           names: `<h1 class="names">${names}</h1>${nickLine(d)}`,
@@ -530,6 +672,16 @@
       </section>
 
       <div id="details"></div>
+      ${prem && when ? `
+      <section class="scratch reveal" id="reveal-date">${head('A little surprise', 'Save the Date', ' plain')}
+        <p class="scratch-note">Some dates are meant to be discovered…</p>
+        <div class="scratch-card" id="scratch">
+          <div class="scratch-under"><b>${when.getDate()}<sup>${ordinal(when.getDate()).slice(-2)}</sup></b><span>${esc(when.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }))}</span>
+            <small>${esc(when.toLocaleDateString('en-IN', { weekday: 'long' }))}${Core.hasTime(d.date) ? ` · ${esc(fmtTime(when))}` : ''}</small></div>
+          <canvas class="scratch-cover" aria-label="Scratch to reveal the date"></canvas>
+        </div>
+        <p class="scratch-hint"><i aria-hidden="true"></i>Scratch the gold card with your finger</p>
+      </section>` : ''}
       ${when ? `
       <section class="countdown reveal">${head('The big day', 'Counting down', ' plain')}
         <div class="cd-grid" id="cd">
@@ -542,11 +694,11 @@
       ${sections.map(s => s.html).join('')}
 
       <section class="actions reveal">
-        ${when ? `<a class="btn" id="calBtn" target="_blank" rel="noopener">📅 Save the date</a>` : ''}
-        <button class="btn ghost" id="shareBtn" type="button">🔗 Share</button>
+        ${when ? `<a class="btn" id="calBtn" target="_blank" rel="noopener">${ui('cal')}Save the date</a>` : ''}
+        <button class="btn ghost" id="shareBtn" type="button">${ui('share')}Share</button>
       </section>
 
-<footer class="finale">
+<footer class="finale${thanksArt ? ' has-scene' : ''}">${sceneImg(thanksArt, 'finale-scene')}
         <div class="finale-mandala" aria-hidden="true">${mandalaSVG()}</div>
         <p class="thanks reveal">Thank you</p>
         <p class="thanks-note">${esc(x.thanks || 'For your love, your blessings, and for being part of our celebration.')}</p>
@@ -558,6 +710,8 @@
       </footer>
       <div class="lightbox" id="lightbox" hidden><button type="button" class="lb-x" aria-label="Close photo">✕</button></div>`;
 
+    // A listed scene file that is missing is simply removed (never a broken picture)
+    document.querySelectorAll('#card .scene-img').forEach(img => img.addEventListener('error', () => { img.closest('.has-scene')?.classList.remove('has-scene'); img.remove(); }, { once: true }));
     const who = Core.who(d);
     const inviteUrl = shareLink();
     if (when) {
@@ -575,7 +729,31 @@
     if (rsvpNumber(d)) {
       // The reply link always carries what the guest has filled in so far.
       const num = rsvpNumber(d), form = $('#rsvpForm');
-      const rsvpLink = () => {
+      const fullLink = () => {
+        const f = form.elements, v = k => (f[k] && f[k].value || '').trim(), no = v('att') === 'no';
+        form.querySelector('.rsvp-more').hidden = no;
+        form.querySelector('.rsvp-arr').hidden = !v('pickup');
+        form.querySelector('.rsvp-dep').hidden = !v('drop');
+        const day = (dt, tm) => [dt && new Date(dt + 'T00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }), tm].filter(Boolean).join(', ');
+        const L = [`🙏 RSVP for ${who}'s celebration`, '', `Name: ${v('who') || guest || '-'}`];
+        if (v('phone')) L.push(`Phone: ${v('phone')}`);
+        L.push(`Attending: ${no ? 'Sorry, can’t make it 🙏' : 'Yes! 🎉'}`);
+        if (!no) {
+          L.push(`Guests: ${v('guests')}`);
+          const names = v('names').split(/\n+/).map(x => x.trim()).filter(Boolean);
+          if (names.length) L.push(`Names: ${names.join(', ')}`);
+          const evs = [...form.querySelectorAll('[name=ev]')];
+          if (evs.length) L.push(`Functions: ${evs.filter(c => c.checked).map(c => c.value).join(', ') || 'None'}`);
+          L.push(`Meal: ${v('meal')}`);
+          const arr = day(v('arrDate'), v('arrTime')), dep = day(v('depDate'), v('depTime'));
+          if (v('pickup')) L.push(`Pickup: ${v('pickup')}${arr ? ' · ' + arr : ''}`);
+          if (v('drop')) L.push(`Drop-off: ${v('drop')}${dep ? ' · ' + dep : ''}`);
+          if (v('stay')) L.push(`Stay: ${v('stay')}`);
+        }
+        if (v('note')) L.push(`Message: ${v('note')}`);
+        $('#rsvpBtn').href = `https://api.whatsapp.com/send?phone=${num}&text=${encodeURIComponent(L.join('\n'))}`;
+      };
+      const rsvpLink = form.querySelector('.rsvp-more') ? fullLink : () => {
         const f = form.elements, name = (f.who && f.who.value.trim()) || guest;
         let msg = `Hi! ${name ? name + ' here. ' : ''}Thank you for the invitation to ${who}'s celebration. `;
         if (f.att && f.att.value === 'no') msg += 'Sadly I can’t make it, but sending all my love. 🙏';
@@ -590,6 +768,7 @@
     }
     $('#shareBtn').addEventListener('click', share);
     setupPremium();
+    setupScratch();
     sampleActions(t);
 
     startCountdown(when);
@@ -668,6 +847,67 @@
     // No music button when the invite has music switched off; the builder's preview stays silent.
     // The music never starts by itself: only a tap on the button plays it.
     btn.hidden = preview || data.music === false;
+  }
+
+  // Scratch-to-reveal date: a gold foil the guest rubs away; once most of it is gone the date shines and confetti flies
+  function setupScratch() {
+    const box = $('#scratch');
+    if (!box) return;
+    const cv = box.querySelector('canvas'), ctx = cv.getContext('2d');
+    const done = () => {
+      if (box.classList.contains('done')) return;
+      box.classList.add('done');
+      const r = box.getBoundingClientRect();
+      if (fx) { fx.burst(r.left + r.width / 2, r.top + r.height / 2, 90); setTimeout(() => fx.burst(r.left + r.width / 2, r.top + r.height / 2, 60), 300); }
+    };
+    if (preview) { box.classList.add('done'); return; } // the builder's preview and the video maker show the date straight away
+    const paint = () => {
+      const r = box.getBoundingClientRect(), k = devicePixelRatio || 1;
+      if (!r.width) return;
+      cv.width = Math.round(r.width * k); cv.height = Math.round(r.height * k);
+      ctx.setTransform(k, 0, 0, k, 0, 0);
+      const g = ctx.createLinearGradient(0, 0, r.width, r.height);
+      g.addColorStop(0, '#b8862b'); g.addColorStop(.35, '#f6dc8a'); g.addColorStop(.5, '#fff3c4'); g.addColorStop(.65, '#e9c060'); g.addColorStop(1, '#a8761f');
+      ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = g; ctx.fillRect(0, 0, r.width, r.height);
+      // Brushed-metal streaks, a soft sheen band and a few glints, so it reads as real foil
+      for (let i = 0; i < 90; i++) { const y = (i * 37) % r.height; ctx.fillStyle = `rgba(${i % 2 ? '255,250,225' : '120,80,20'},${(.05 + (i * 13 % 7) / 70).toFixed(3)})`; ctx.fillRect(0, y, r.width, 1); }
+      const sheen = ctx.createLinearGradient(0, 0, r.width, 0);
+      sheen.addColorStop(.3, 'rgba(255,255,255,0)'); sheen.addColorStop(.5, 'rgba(255,255,255,.35)'); sheen.addColorStop(.7, 'rgba(255,255,255,0)');
+      ctx.fillStyle = sheen; ctx.fillRect(0, 0, r.width, r.height);
+      for (let i = 0; i < 40; i++) { ctx.fillStyle = `rgba(255,255,255,${(.2 + (i * 37 % 10) / 20).toFixed(2)})`; ctx.beginPath(); ctx.arc((i * 97) % r.width, (i * 53) % r.height, .6 + i % 3 * .5, 0, 7); ctx.fill(); }
+      // An engraved double frame with corner diamonds
+      ctx.strokeStyle = 'rgba(110,70,10,.45)'; ctx.lineWidth = 1;
+      ctx.strokeRect(10, 10, r.width - 20, r.height - 20); ctx.strokeRect(15, 15, r.width - 30, r.height - 30);
+      ctx.fillStyle = 'rgba(110,70,10,.55)';
+      for (const [x, y] of [[10, 10], [r.width - 10, 10], [10, r.height - 10], [r.width - 10, r.height - 10]]) { ctx.beginPath(); ctx.moveTo(x, y - 5); ctx.lineTo(x + 5, y); ctx.lineTo(x, y + 5); ctx.lineTo(x - 5, y); ctx.fill(); }
+      ctx.fillStyle = 'rgba(85,52,6,.8)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const face = getComputedStyle(document.body).fontFamily;
+      ctx.font = `600 ${Math.round(r.width / 17)}px ${face}`;
+      ctx.fillText('✦  SCRATCH TO REVEAL  ✦', r.width / 2, r.height / 2 - 6);
+      ctx.font = `500 ${Math.round(r.width / 30)}px ${face}`; ctx.fillStyle = 'rgba(85,52,6,.6)';
+      ctx.fillText('THE BIG DAY AWAITS', r.width / 2, r.height / 2 + r.width / 15);
+    };
+    paint();
+    document.fonts.ready.then(paint);
+    let down = false, moves = 0, last = null;
+    const at = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    const scratch = e => {
+      if (!down || box.classList.contains('done')) return;
+      const [x, y] = at(e), w = cv.getBoundingClientRect().width;
+      ctx.globalCompositeOperation = 'destination-out'; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(34, w / 9);
+      ctx.beginPath(); ctx.moveTo(...(last || [x, y])); ctx.lineTo(x, y); ctx.stroke();
+      last = [x, y];
+      if (++moves % 8 === 0) {
+        const px = ctx.getImageData(0, 0, cv.width, cv.height).data;
+        let clear = 0, n = 0;
+        for (let i = 3; i < px.length; i += 4 * 40) { n++; if (px[i] < 40) clear++; }
+        if (clear / n > .45) done();
+      }
+    };
+    cv.addEventListener('pointerdown', e => { down = true; last = null; cv.setPointerCapture(e.pointerId); scratch(e); });
+    cv.addEventListener('pointermove', scratch);
+    ['pointerup', 'pointercancel'].forEach(t => cv.addEventListener(t, () => { down = false; last = null; }));
+    addEventListener('resize', () => { if (!box.classList.contains('done')) paint(); });
   }
 
   function startCountdown(when) {

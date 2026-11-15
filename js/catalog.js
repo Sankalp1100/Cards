@@ -1,5 +1,8 @@
 // The sellable catalog: the 300 templates merged with the per-design settings in config.js, plus poster markup.
 // No DOM access, so it is unit tested in Node (tests/unit.test.js).
+// Where css/poster.css lives, worked out from this script's own address (pages in other folders load it too).
+const POSTER_CSS = (typeof document !== 'undefined' && document.currentScript && document.currentScript.src || '').replace(/js\/catalog\.js(\?.*)?$/, 'css/poster.css') || 'css/poster.css';
+
 const Catalog = {
   entries(site = SITE, catalog = CATALOG) {
     return Templates.all.map(t => {
@@ -289,25 +292,59 @@ const Catalog = {
     return pic ? `<img class="p-couple${pic.flip ? ' flip' : ''}" src="img/couples/cut/${Core.esc(pic.id)}.png" alt="" width="${pic.w}" height="${pic.h}" loading="lazy" decoding="async">` : '';
   },
 
+  // The art in a poster without a couple picture: Shri Ganesh for the occasions that begin with his blessing (elegant
+  // styles), else a gold monogram seal, or the party styles' own badge (marquee starburst, neon ring, glossy balloons).
+  posterArt(e, c) {
+    const ini = Core.esc(Core.initials(c));
+    const ganesha = typeof GANESHA_ART !== 'undefined' && Array.isArray(GANESHA_ART) ? GANESHA_ART : [];
+    const blessed = ['wedding', 'engagement', 'reception', 'naming', 'ceremony', 'babyshower', 'haldi', 'mehendi', 'roka', 'housewarming', 'mundan', 'janeu', 'festive'];
+    if (['ivory', 'palace', 'marigold', 'mehendi', 'pichwai'].includes(e.style) && ganesha.length && blessed.includes(e.occasion)) {
+      const g = ganesha[e.no % ganesha.length];
+      return `<img class="p-ganesha" src="img/art/cut/${Core.esc(g.id)}.png" alt="" width="${g.w}" height="${g.h}" loading="lazy" decoding="async">`;
+    }
+    if (e.style === 'minimal') return '';
+    if (e.style === 'retro') {
+      const pts = Array.from({ length: 40 }, (_, i) => { const r = i % 2 ? 50 : 60, t = Math.PI * i / 20; return `${(Math.sin(t) * r).toFixed(1)},${(-Math.cos(t) * r).toFixed(1)}`; }).join(' ');
+      return `<span class="p-seal p-burst"><svg viewBox="-64 -64 128 128" aria-hidden="true"><polygon points="${pts}"/><circle r="41"/><circle class="in" r="35"/></svg><b>${ini}</b></span>`;
+    }
+    if (e.style === 'neon') return `<span class="p-seal p-tube"><svg viewBox="-64 -64 128 128" aria-hidden="true"><circle r="54"/><circle class="in" r="44"/></svg><b>${ini}</b></span>`;
+    if (e.style === 'toybox') {
+      const id = `pb${e.no}`, ball = (x, y, r, k, rot) => `<g transform="rotate(${rot} ${x} ${y + r * 1.7})"><path class="str" d="M${x} ${y + r * 1.2} q-4 12 1 22"/><ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r * 1.18}" fill="url(#${id}${k})"/><path d="M${x - 3} ${y + r * 1.24} h6 l-3 -4z" fill="url(#${id}${k})"/></g>`;
+      const grad = (k, col) => `<radialGradient id="${id}${k}" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".28" style="stop-color:${col}"/><stop offset="1" style="stop-color:color-mix(in srgb, ${col} 70%, #000)"/></radialGradient>`;
+      return `<span class="p-seal p-balloons"><svg viewBox="0 0 128 128" aria-hidden="true"><defs>${grad('a', 'var(--a)')}${grad('b', 'var(--a2)')}${grad('c', '#ffc93c')}</defs>${ball(38, 44, 20, 'b', -14)}${ball(90, 44, 20, 'c', 14)}${ball(64, 36, 25, 'a', 0)}</svg></span>`;
+    }
+    const dots = Array.from({ length: 36 }, (_, i) => `<circle r="1.1" cx="0" cy="-47" transform="rotate(${i * 10})"/>`).join('');
+    return `<span class="p-seal p-medal2"><svg viewBox="-60 -60 120 120" aria-hidden="true"><circle class="ln" r="53"/><circle class="ln thin" r="56.5"/><g>${dots}</g><circle class="ln" r="40"/><circle class="ln thin" r="37"/></svg><b>${ini}</b></span>`;
+  },
+
   poster(e, tag, attrs) {
     const c = PRESETS[e.occasion].card, v = e.vars, d = Core.parseDate(c.date);
-    const day = d ? String(d.getDate()).padStart(2, '0') : '♥', month = d ? d.toLocaleDateString('en-IN', { month: 'short' }) : '';
     const look = `ps-${e.style || 'ivory'} d-${e.decor} l-${e.layout || 'classic'} s-${e.scene || 'glow'} n-${e.flavor || e.nameStyle || 'shimmer'} f-${e.frame || 'ring'}`;
+    Catalog.posterStyles();
+    const couple = Catalog.posterCouple(e);
     return `
-      <${tag} class="poster ${look}" ${attrs} style="--a:${v['--accent']};--a2:${v['--accent2']};--b:${v['--bg']};--c:${v['--bg2']};--i:${v['--ink']};--fd:${e.fonts.display.replace(/'/g, '&quot;')};--fs:${e.fonts.script.replace(/'/g, '&quot;')}">
+      <${tag} class="poster ${look}" data-pv="2" ${attrs} style="--a:${v['--accent']};--a2:${v['--accent2']};--b:${v['--bg']};--c:${v['--bg2']};--i:${v['--ink']};--fd:${e.fonts.display.replace(/'/g, '&quot;')};--fs:${e.fonts.script.replace(/'/g, '&quot;')}">
         <span class="p-scene" aria-hidden="true"></span>
+        <span class="p-frame" aria-hidden="true"></span>
         ${e.featured ? '<span class="p-badge">🔥 Trending</span>' : ''}
-        <span class="p-mono" aria-hidden="true">${Core.esc(Core.initials(c))}</span>
-        <span class="p-date" aria-hidden="true"><b>${day}</b>${Core.esc(month)}</span>
-        <span class="p-body">
-          ${Catalog.posterCouple(e) || (e.emblem ? `<span class="p-emoji p-medal">${Core.esc(Core.initials(c))}</span>` : `<span class="p-emoji">${e.emoji}</span>`)}
+        <span class="p-body${couple ? ' has-couple' : ''}">
+          ${e.style === 'minimal' && d ? `<span class="p-num" aria-hidden="true">${String(d.getDate()).padStart(2, '0')}</span>` : ''}
+          <span class="p-art">${couple || Catalog.posterArt(e, c)}</span>
           <span class="p-title">${Core.esc(c.title)}</span>
           <span class="p-names">${Core.esc(c.host1)}${c.host2 ? `<i>&amp;</i>${Core.esc(c.host2)}` : ''}</span>
+          ${d ? `<span class="p-date" aria-hidden="true">${d.getDate()} · ${Core.esc(d.toLocaleDateString('en-IN', { month: 'short' }))} · ${d.getFullYear()}</span>` : ''}
           <span class="p-tag">${Core.esc(c.tagline)}</span>
         </span>
         <span class="p-play">▶ Live demo</span>
         <span class="p-by">by ${Core.esc(SITE.designer || 'Sankalp')}</span>
       </${tag}>`;
+  },
+
+  // The posters' own stylesheet (css/poster.css, next to this script's folder), added once to whichever page shows them.
+  posterStyles() {
+    if (typeof document === 'undefined' || document.getElementById('posterCss')) return;
+    const link = Object.assign(document.createElement('link'), { id: 'posterCss', rel: 'stylesheet', href: POSTER_CSS });
+    document.head.appendChild(link);
   },
 
   // Only settings that differ from the defaults are written, so config.js stays short.

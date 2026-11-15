@@ -48,11 +48,37 @@
   // The first design of a style that customers can see, a wedding one when there is one.
   const firstOf = s => designs.filter(d => d.style === s).sort((a, b) => (b.occasion === 'wedding') - (a.occasion === 'wedding') || a.no - b.no)[0];
   const demoLink = d => `card.html?demo#${Catalog.demoCode(d)}`;
+  // Five occasions fanned like a hand of cards, each its own colours, layout and type: a housewarming, a birthday,
+  // a Hindi wedding (in front, in the centre), a baby shower and a haldi
+  const HERO_CARDS = [
+    { k: 'griha', label: 'Griha Pravesh', html: `<i class="hc-garland"></i><i class="hc-mandala"></i>
+      <b class="hc-t">Griha<br>Pravesh</b><small class="hc-s">Housewarming Puja</small>
+      <span class="hc-box"><b>6 Dec</b> · 9 AM</span>
+      <img src="img/hero/griha.webp" srcset="img/hero/griha.webp 1x, img/hero/griha@2x.webp 2x" alt="" width="328" height="420" decoding="async">` },
+    { k: 'bday', label: 'Birthday', html: `<i class="hc-confetti"></i><i class="hc-balloon b1"></i><i class="hc-balloon b2"></i><i class="hc-balloon b3"></i>
+      <small class="hc-s">Happy</small><b class="hc-t">Birthday</b>
+      <span class="hc-pill">Myra turns 5!</span>
+      <img src="img/hero/birthday.webp" srcset="img/hero/birthday.webp 1x, img/hero/birthday@2x.webp 2x" alt="" width="286" height="420" decoding="async">` },
+    { k: 'vivah', label: 'Shubh Vivah', html: `<i class="hc-frame"></i>
+      <img class="hc-god" src="img/hero/ganesha.webp" srcset="img/hero/ganesha.webp 1x, img/hero/ganesha@2x.webp 2x" alt="" width="115" height="160" decoding="async">
+      <b class="hc-t" lang="hi">शुभ विवाह</b><span class="hc-n" lang="hi">दीया <small>संग</small> आरव</span><small class="hc-s" lang="hi">14 दिसम्बर 2026</small>
+      <span class="hc-arch"><img src="img/hero/vivah.webp" srcset="img/hero/vivah.webp 1x, img/hero/vivah@2x.webp 2x" alt="" width="269" height="420" decoding="async"></span>` },
+    { k: 'baby', label: 'Baby Shower', html: `<i class="hc-cloud c1"></i><i class="hc-cloud c2"></i><i class="hc-cloud c3"></i>
+      <b class="hc-t">Oh Baby!</b><small class="hc-s">Baby Shower</small>
+      <span class="hc-moon"><img src="img/hero/babyshower.webp" srcset="img/hero/babyshower.webp 1x, img/hero/babyshower@2x.webp 2x" alt="" width="217" height="420" decoding="async"></span>
+      <span class="hc-names">20 Dec · 4 PM</span>` },
+    { k: 'haldi', label: 'Haldi', html: `<i class="hc-garland"></i><i class="hc-rays"></i>
+      <b class="hc-t">Haldi</b><small class="hc-s">Ceremony</small>
+      <span class="hc-box">12 Dec · 11 AM</span>
+      <img src="img/hero/haldi.webp" srcset="img/hero/haldi.webp 1x, img/hero/haldi@2x.webp 2x" alt="" width="253" height="420" decoding="async">` }
+  ];
   function renderStyles() {
     const styles = Object.keys(STYLES).filter(firstOf);
-    // Hero: three contrasting styles in phone frames.
-    $('#heroPhones').innerHTML = ['palace', 'ivory', 'neon'].filter(firstOf).map((s, i) =>
-      `<div class="hphone h${i + 1}"><i class="hp-notch"></i>${Catalog.poster(firstOf(s), 'div', '')}</div>`).join('');
+    // Hero: four different invitations in phone frames (a Haldi, a Hindi Shubh Vivah, a Sangeet night, a Mehendi),
+    // each with its own colours, layout and type; tapping one opens the films.
+    $('#heroPhones').innerHTML = HERO_CARDS.map((c, i) =>
+      `<a class="hphone h${i + 1}" href="#videos" data-videos aria-label="Watch ${c.label} invitation videos"><i class="hp-notch"></i>
+        <span class="hp-screen hc-${c.k}">${c.html}</span><span class="hp-play" aria-hidden="true"></span></a>`).join('');
     $('#styleReel').innerHTML = styles.map(s => {
       const d = firstOf(s), n = designs.filter(x => x.style === s).length;
       const occ = [...new Set(designs.filter(x => x.style === s).map(x => PRESETS[x.occasion].label))].slice(0, 3).join(' · ');
@@ -141,10 +167,36 @@
         <div class="tpl-meta">
           <span class="serial">Design No. <b>${Templates.serial(d.no)}</b></span>
           <span class="tpl-name">${esc(d.name)}</span>
-          <span class="opening">${INTROS[d.intro]} opening</span>
-          <small><span class="tpl-occ">${PRESETS[d.occasion].icon} ${esc(PRESETS[d.occasion].label)}</span>${price ? `<b class="price">${esc(price)}</b>` : ''}</small>
+          <span class="opening">${iconText(INTROS[d.intro])} opening</span>
+          <small><span class="tpl-occ"><i>${PRESETS[d.occasion].icon}</i> ${esc(PRESETS[d.occasion].label)}</span>${price ? `<b class="price">${esc(price)}</b>` : ''}</small>
         </div>
-        <button type="button" class="btn-small order" data-design="${d.no}">💬 Order ${Templates.serial(d.no)}</button>
+        <button type="button" class="btn-small order" data-design="${d.no}"><svg class="wa-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2zm4.5 12.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 01-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 00-.7.3 3 3 0 00-.9 2.2 5.2 5.2 0 001.1 2.8 11.9 11.9 0 004.6 4c1.7.7 2.4.8 3.2.7a2.8 2.8 0 001.8-1.3 2.3 2.3 0 00.2-1.3c-.1-.1-.2-.2-.4-.3z"/></svg>Order ${Templates.serial(d.no)}</button>
+      </article>`;
+  }
+  // "✉️ Envelope" → the emoji in its own <i> (hidden by CSS, a gold mark shows instead) and the words
+  const iconText = t => { const m = String(t).match(/^(\S+)\s+(.*)$/); return m ? `<i>${m[1]}</i> ${esc(m[2])}` : esc(t); };
+
+  // The premium silk-curtain invitation, always first in the grid (unless a search or another occasion is picked): a poster
+  // of the opening itself (ivory drapes tied back with gold cords, a scalloped pelmet, a gold arch, the monogram and
+  // names), its live demo (every demo opens on the silk curtain) and Order, like the other designs.
+  function silkTile() {
+    const d = designs.find(x => x.occasion === 'wedding' && x.style === 'ivory') || designs.find(x => x.occasion === 'wedding') || designs[0];
+    if (!d) return '';
+    return `
+      <article class="tpl-silk" data-no="${d.no}">
+        <a class="silk-poster" href="card.html?demo#${Catalog.demoCode(d)}" target="_blank" rel="noopener" aria-label="Live demo: premium silk curtain invitation, design ${Templates.serial(d.no)}">
+          <span class="sp-badge">✨ Premium · Silk curtain</span>
+          <span class="sp-arch"><span class="sp-mono">D<i>|</i>A</span><span class="sp-names">Diya <i>&amp;</i> Aarav</span><span class="sp-line">request the pleasure of your company</span></span>
+          <i class="sp-drape l"><i class="sp-cord"></i></i><i class="sp-drape r"><i class="sp-cord"></i></i>
+          <i class="sp-pelmet"></i>
+        </a>
+        <div class="tpl-meta">
+          <span class="serial">Premium · Design No. <b>${Templates.serial(d.no)}</b></span>
+          <span class="tpl-name">Silk Curtain Reveal</span>
+          <span class="opening"><i>🤍</i> Silk curtain opening</span>
+          <small><span class="tpl-occ"><i>${PRESETS[d.occasion].icon}</i> ${esc(PRESETS[d.occasion].label)}</span></small>
+        </div>
+        <button type="button" class="btn-small order-lux" data-design="${d.no}"><svg class="wa-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2zm4.5 12.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 01-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 00-.7.3 3 3 0 00-.9 2.2 5.2 5.2 0 001.1 2.8 11.9 11.9 0 004.6 4c1.7.7 2.4.8 3.2.7a2.8 2.8 0 001.8-1.3 2.3 2.3 0 00.2-1.3c-.1-.1-.2-.2-.4-.3z"/></svg>Order ${Templates.serial(d.no)}</button>
       </article>`;
   }
 
@@ -162,7 +214,7 @@
       ? designs.filter(d => d.featured && Catalog.matches(d, query))
       : designs.filter(d => Catalog.matches(d, query, filter));
     shown = 0;
-    $('#showcase').innerHTML = '';
+    $('#showcase').innerHTML = !query.trim() && (!filter || filter === 'wedding') ? silkTile() : '';
     // One occasion picked: its name under every card would only repeat itself.
     $('#showcase').classList.toggle('one-occ', !!filter && filter !== 'trending');
     $('#noMatch').hidden = list.length > 0;
@@ -197,6 +249,9 @@
     searchTimer = setTimeout(() => { query = e.target.value; refresh(); }, 150);
   });
 
+  // Hero "Chat on WhatsApp": straight to our chat with a short hello (the order section when no number is set)
+  $('#heroWa').href = Core.orderUrl(SITE.whatsapp, 'Hi! I want a premium wedding invitation video. Please share the details.');
+  if (!SITE.whatsapp) $('#heroWa').removeAttribute('target');
   if (designs[0]) $('#demoBtn').href = `card.html?demo#${Catalog.demoCode(designs[0])}`;
 
   // ---------- Live demo picker ----------

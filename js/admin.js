@@ -17,7 +17,7 @@
   const STORE_KEY = 'weddingcard.links', DRAFT_KEY = 'weddingcard.config';
   const GALLERY_PAGE = 40;
 
-  let state = clone(PRESETS.wedding.card);
+  let state = { ...clone(PRESETS.wedding.card), premium: true }; // new cards start with the premium experience
   let touched = false; // the customer's details were typed in, so picking a design must not replace them
   let occasionChosen = false; // an occasion was picked by hand, so picking a design must not change it
   let previewTimer = null;
@@ -288,7 +288,7 @@
     const e = entry(t.no);
     // A fresh invite follows the design's occasion so the sample text and labels match it.
     if (!touched && !occasionChosen && e.occasion !== state.type) {
-      state = { ...clone(PRESETS[e.occasion].card), theme: t.no };
+      state = { ...clone(PRESETS[e.occasion].card), theme: t.no, premium: true };
       fillForm();
     }
     markDesign();
@@ -482,6 +482,7 @@
     renderPhoto();
     form.elements.music.checked = state.music !== false;
     form.elements.rsvpForm.checked = state.rsvpForm === true;
+    form.elements.premium.checked = state.premium === true;
     renderXLists();
     const labels = occasion(state).labels;
     $('#lbl1').textContent = labels[0];
@@ -508,6 +509,7 @@
     else if (t.closest('.xrow')) { const r = t.closest('.xrow'); state[r.dataset.xl][r.dataset.i][t.dataset.xk] = t.value; }
     else if (t.name === 'music') state.music = t.checked;
     else if (t.name === 'rsvpForm') state.rsvpForm = t.checked;
+    else if (t.name === 'premium') state.premium = t.checked;
     else if (FIELDS.includes(t.name)) state[t.name] = t.value;
     else return;
     touched = true;
@@ -553,14 +555,14 @@
 
   $('#sampleBtn').addEventListener('click', () => {
     // The sample text includes example premium sections, so the preview shows the whole page.
-    state = { ...Core.blankCard(), ...clone(occasion(state).card), ...clone(EXTRAS[state.type] || {}), theme: state.theme };
+    state = { ...Core.blankCard(), ...clone(occasion(state).card), ...clone(EXTRAS[state.type] || {}), theme: state.theme, premium: state.premium !== false };
     touched = false;
     fillForm();
     updatePreview(true);
   });
 
   $('#clearBtn').addEventListener('click', () => {
-    state = { ...Core.blankCard(), type: state.type, theme: state.theme, music: state.music };
+    state = { ...Core.blankCard(), type: state.type, theme: state.theme, music: state.music, premium: state.premium !== false };
     touched = true;
     fillForm();
     updatePreview(true);

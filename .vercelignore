@@ -6,5 +6,7 @@ server.mjs
 tests/
 package.json
 README.md
+# Prompts for making the scene pictures (the pictures themselves are published)
+img/scenes/PROMPTS.md
 # Database script, run once in Supabase (not part of the website)
 supabase/

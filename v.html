@@ -79,7 +79,7 @@
       document.title = `${promo.title} · Video Invitation 🎬`;
       $('#skip').href = site;
       const player = new Studio.Player($('#cv'), rec ? 1 : (matchMedia('(max-width: 700px)').matches ? .5 : .75));
-      player.set(promo.card, { ...Studio.defaults(promo.card), look: promo.script[0].look, script: promo.script, opening: promo.opening, ganeshaId: promo.ganeshaId }, SITE);
+      player.set(promo.card, { ...Studio.defaults(promo.card), look: promo.script[0].look, script: promo.script, opening: promo.opening, ganeshaId: promo.ganeshaId, creditSite: true }, SITE);
       let tune = null, muted = false, t0 = 0, raf = 0, done = false;
       const ready = Studio.fontsReady().then(() => { player.draw(0); $('#wait').hidden = true; });
 

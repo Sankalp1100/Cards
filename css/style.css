@@ -434,6 +434,7 @@ body.sheet-open { overflow: hidden; }
 /* How it works: emoji and heading get their own room */
 .stepcard span { display: block; line-height: 1.2; margin-bottom: 4px; }
 .stepcard h3 { margin: 6px 0 8px; padding-right: 44px; }
+@media (min-width: 901px) { .steps .stepcard h3 { padding-right: 0; white-space: nowrap; font-size: clamp(.98rem, 1.2vw, 1.1rem); } }
 
 /* Order form: required marks, nicknames, the field in trouble */
 .req { color: #ff6b8b; font-style: normal; font-weight: 700; }
@@ -1451,3 +1452,345 @@ body.studio-open .fun-progress { display: none; }
 .ds-film small { font-size: .7rem; color: var(--muted); line-height: 1.25; }
 .ds-more { grid-column: 1 / -1; text-align: center; font-size: .82rem; }
 @media (max-width: 520px) { .ds-films { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; } .ds-film small { display: none; } }
+
+/* ==========================================================================
+   Premium hero, in the site's own dark look: gold line ornaments, a two-line headline,
+   the kinds of invitations, four different invitation cards in phone frames,
+   what every order includes, WhatsApp. Text left and phones right on a computer.
+   ========================================================================== */
+.hero.lux {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); grid-template-areas: "text phones" "bottom phones";
+  align-items: center; align-content: center; justify-items: start; text-align: left; column-gap: 40px; row-gap: 18px;
+  width: min(1200px, 100%); min-height: 0; margin: 0 auto; padding: 56px max(24px, env(safe-area-inset-right, 0px)) 56px max(24px, env(safe-area-inset-left, 0px));
+}
+.hero.lux .hero-text { grid-area: text; align-self: end; display: grid; gap: 14px; justify-items: start; }
+.hero.lux .lux-bottom { grid-area: bottom; align-self: start; display: grid; gap: 18px; justify-items: start; width: 100%; }
+.hero.lux .hero-phones { grid-area: phones; }
+
+/* Gold line ornaments either side of the kicker */
+.lux-kicker { display: inline-flex; align-items: center; gap: 12px; font-size: .78rem; font-weight: 700; letter-spacing: .26em; text-transform: uppercase; color: var(--gold); animation: rise .8s both; }
+.lux-orn { flex: none; width: 46px; height: 14px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 46 14' fill='none' stroke='%23ffc95c' stroke-width='1.3'%3E%3Cpath d='M0 7h30'/%3E%3Cpath d='M30 7c3-5 8-5 9 0-1 5-6 5-9 0z'/%3E%3Ccircle cx='43' cy='7' r='2' fill='%23ffc95c' stroke='none'/%3E%3C/svg%3E") center / contain no-repeat; }
+.lux-orn.r { transform: scaleX(-1); }
+.lux-title { display: grid; gap: .04em; font-weight: 800; letter-spacing: -.03em; line-height: .98; }
+.lux-title .l1 { font-family: 'Syne', sans-serif; text-transform: uppercase; font-size: clamp(2.6rem, 4.6vw, 3.9rem); animation: rise 1s cubic-bezier(.2,.9,.3,1.1) both; }
+.lux-rot { display: inline-grid; vertical-align: bottom; }
+.lux-rot em { grid-area: 1 / 1; font-style: italic; padding-right: .08em; opacity: 0; transform: translateY(.45em); transition: opacity .5s ease, transform .6s cubic-bezier(.2,.9,.3,1.1); }
+.lux-rot em.on { opacity: 1; transform: none; }
+.lux-rot em.out { opacity: 0; transform: translateY(-.45em); }
+.lux-title .l2 { font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 400; letter-spacing: 0; color: #f3e3bd; white-space: nowrap; font-size: clamp(1.8rem, 3vw, 2.75rem); line-height: 1.15; animation: rise 1s .12s cubic-bezier(.2,.9,.3,1.1) both; }
+.lux-kinds { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 2px 0 0; animation: rise 1s .25s both; }
+.lux-kinds li { padding: 5px 12px; border-radius: 999px; border: 1px solid rgba(255,201,92,.35); color: #f3e3bd; font-size: .74rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; background: rgba(255,201,92,.06); }
+.lux-sub { margin: 0; max-width: 46ch; color: var(--muted); font-size: 1rem; }
+.lux-feats { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 0; }
+.lux-feats li { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px 8px 10px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); font-size: .86rem; font-weight: 500; white-space: nowrap; }
+.lux-feats svg { flex: none; width: 20px; height: 20px; fill: none; stroke: var(--gold); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.hero.lux .hero-ctas { display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-start; animation: rise 1s .35s both; }
+.lux-wa { display: inline-flex; align-items: center; gap: 10px; }
+.lux-wa svg { width: 22px; height: 22px; fill: currentColor; }
+.lux-demo { font-size: .9rem; font-weight: 700; color: var(--gold); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(255,201,92,.4); margin-top: -6px; }
+.hero.lux .trust { margin: 0; }
+
+/* Four invitation cards in the site's dark phone frames, fanned, on a soft gold glow inside a gold line arch */
+.hero.lux .hero-phones { position: relative; inset: auto; z-index: 0; display: block; width: 100%; height: 480px; margin: 0; overflow: visible; pointer-events: auto; }
+.hero.lux .hero-phones::before { content: ''; position: absolute; left: 50%; top: 50%; width: 92%; height: 96%; transform: translate(-50%, -50%); z-index: -1; pointer-events: none; width: min(100%, 680px);
+  border: 1px solid rgba(255,201,92,.28); border-radius: 999px 999px 28px 28px / 60% 60% 28px 28px;
+  background: radial-gradient(55% 45% at 50% 55%, rgba(255,201,92,.16), rgba(255,201,92,0) 70%), radial-gradient(70% 60% at 50% 40%, rgba(255,61,139,.10), rgba(255,61,139,0) 70%); }
+.hero.lux .hphone { --pw: 160px; width: 172px; padding: 7px; display: block; cursor: pointer; color: inherit; }
+.hero.lux .hphone { transform: translate(calc(-50% + var(--x) + var(--mx, 0) * var(--d) * 1px), calc(-50% + var(--y) + var(--my, 0) * var(--d) * 1px)) rotate(var(--r)) scale(var(--s, 1)); }
+/* Shubh Vivah in front and centre; the others sit higher and smaller behind it, so every title shows */
+.hero.lux .hphone.h1 { --x: -196px; --y: 30px; --r: -14deg; --s: .82; --d: 40; --w: .5s; z-index: 1; }
+.hero.lux .hphone.h2 { --x: -106px; --y: 8px; --r: -7deg; --s: .9; --d: 24; --w: .35s; z-index: 3; }
+.hero.lux .hphone.h3 { --x: 0px; --y: -6px; --r: 0deg; --s: 1.08; --d: 12; --w: .2s; z-index: 5; }
+.hero.lux .hphone.h4 { --x: 106px; --y: 8px; --r: 7deg; --s: .9; --d: 24; --w: .35s; z-index: 3; }
+.hero.lux .hphone.h5 { --x: 196px; --y: 30px; --r: 14deg; --s: .82; --d: 40; --w: .5s; z-index: 1; }
+/* entrance: the cards fan out from the centre */
+.hero.lux .hphone { animation-name: luxFanIn; }
+@keyframes luxFanIn { from { opacity: 0; transform: translate(-50%, calc(-50% + 40px)) rotate(0deg) scale(.85); } }
+/* the side cards' words move toward their visible (outer) side, so a neighbour in front never covers them */
+.hero.lux .hphone:is(.h1, .h2) :is(.hc-t, .hc-s, .hc-n) { right: 34%; }
+.hero.lux .hphone:is(.h4, .h5) :is(.hc-t, .hc-s, .hc-n) { left: 34%; }
+.hero.lux .hphone:is(.h1, .h2) :is(.hc-pill, .hc-box) { left: 33%; }
+.hero.lux .hphone:is(.h4, .h5) :is(.hc-pill, .hc-box) { left: 67%; }
+.hero.lux .hphone.h2 .hc-bday .hc-t { font-size: calc(var(--b) * 2.7); }
+.hero.lux .hphone.h1 .hc-griha .hc-t { font-size: calc(var(--b) * 1.75); }
+.hero.lux .hphone.h4 .hc-baby .hc-t { font-size: calc(var(--b) * 3.1); }
+.hero.lux .hphone.h4 .hc-baby .hc-s { letter-spacing: .14em; }
+.hero.lux .hp-notch { z-index: 6; }
+.hp-screen { --b: calc(var(--pw) / 20); position: relative; display: block; height: 100%; overflow: hidden; border-radius: 28px; font-size: var(--b); line-height: 1.25; isolation: isolate; text-align: center; }
+.hp-screen img { position: absolute; display: block; height: auto; max-width: none; pointer-events: none; }
+.hp-play { position: absolute; right: 16px; bottom: 16px; z-index: 7; width: 34px; height: 34px; border-radius: 50%; background: rgba(10,6,20,.62); box-shadow: 0 0 0 1.5px rgba(255,255,255,.85), 0 6px 14px rgba(0,0,0,.35); transition: transform .25s, background .25s; }
+.hp-play::after { content: ''; position: absolute; left: 13px; top: 10px; border-style: solid; border-width: 7px 0 7px 11px; border-color: transparent transparent transparent #fff; }
+.hero.lux .hphone:hover .hp-play, .hero.lux .hphone:focus-visible .hp-play { transform: scale(1.15); background: var(--pink); }
+.hero.lux .hphone:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
+
+/* 1. Griha Pravesh: saffron and terracotta, a marigold toran, a faint mandala, the family at their decorated door */
+.hc-griha { background: radial-gradient(90% 60% at 50% 25%, #ffb35c, #e7752b 55%, #b2441c); color: #fff4e0; }
+.hc-garland { position: absolute; left: 0; right: 0; top: 0; height: 1.6em; z-index: 1;
+  background: radial-gradient(circle at 50% 30%, #ffd23f 0 .42em, rgba(255,210,63,0) .45em) 0 0 / 1.1em 1.1em repeat-x, radial-gradient(circle at 50% 50%, #2e8b3a 0 .25em, rgba(46,139,58,0) .28em) .55em .55em / 1.1em 1.1em repeat-x; }
+.hc-mandala { position: absolute; left: 50%; top: 36%; width: 26em; height: 26em; margin: -13em 0 0 -13em; z-index: -1; border-radius: 50%; opacity: .35;
+  background: repeating-conic-gradient(rgba(255,240,200,.5) 0deg 4deg, rgba(255,240,200,0) 4deg 15deg); -webkit-mask: radial-gradient(circle, #000 30%, transparent 62%); mask: radial-gradient(circle, #000 30%, transparent 62%); }
+.hc-griha .hc-t { position: absolute; left: 0; right: 0; top: calc(var(--b) * 3.4); font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: calc(var(--b) * 2.2); line-height: 1.12; color: #fff6dc; text-shadow: 0 .08em .2em rgba(110,30,0,.45); }
+.hc-griha .hc-s { position: absolute; left: 0; right: 0; top: calc(var(--b) * 8.9); font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: max(11px, calc(var(--b) * 1.3)); color: #ffe7b8; }
+.hc-griha .hc-box { position: absolute; left: 50%; top: calc(var(--b) * 11.3); transform: translateX(-50%); white-space: nowrap; padding: calc(var(--b) * .4) calc(var(--b) * 1); border-radius: 999px; background: rgba(120,30,0,.35); box-shadow: 0 0 0 1px rgba(255,220,150,.6); font-size: max(11px, calc(var(--b) * 1)); }
+.hc-griha img { left: 50%; bottom: 0; width: 94%; height: auto; transform: translateX(-50%); }
+
+/* 2. Shubh Vivah in Hindi: maroon with a gold double frame, Ganesh ji, Devanagari names, the couple in an arch window */
+.hc-vivah { background: radial-gradient(90% 60% at 50% 20%, #9c1c3e, #5e0a22 70%, #3d0716); color: #ffe7b0; }
+.hc-frame { position: absolute; inset: .7em; z-index: 1; border: 1px solid rgba(255,201,92,.75); border-radius: 1.4em; box-shadow: inset 0 0 0 .25em rgba(94,10,34,1), inset 0 0 0 calc(.25em + 1px) rgba(255,201,92,.55); pointer-events: none; }
+.hc-vivah .hc-god { left: 50%; top: 1.8em; width: 3.4em; transform: translateX(-50%); }
+.hc-vivah .hc-t { position: absolute; left: 0; right: 0; top: calc(var(--b) * 7.2); font-family: 'Yatra One', serif; font-weight: 400; font-size: calc(var(--b) * 2.6); line-height: 1; color: #ffc95c; text-shadow: 0 .06em 0 #6e3a00; }
+.hc-vivah .hc-n { position: absolute; left: 0; right: 0; top: calc(var(--b) * 10.9); font-family: 'Yatra One', serif; font-size: calc(var(--b) * 1.5); color: #fff3d6; }
+.hc-vivah .hc-n small { font-size: .7em; color: #ffc95c; }
+.hc-vivah .hc-s { position: absolute; left: 0; right: 0; top: calc(var(--b) * 13.6); font-size: max(11px, calc(var(--b) * 1.05)); color: #f3d9a4; }
+.hc-arch { position: absolute; left: 50%; bottom: 0; width: 74%; height: 46%; transform: translateX(-50%); overflow: hidden; border-radius: 50% 50% 0 0 / 34% 34% 0 0;
+  background: linear-gradient(180deg, #ffe9c2, #f6c98a); box-shadow: 0 0 0 .2em #ffc95c, 0 0 0 .45em rgba(255,201,92,.25); }
+.hc-arch img { left: 50%; bottom: 0; height: 92%; width: auto; transform: translateX(-50%); }
+
+/* 3. Birthday: candy pastels, balloons and confetti, a bubbly title and a name pill, the birthday girl in front */
+.hc-bday { background: linear-gradient(170deg, #ffe1f0, #f3d4ff 50%, #d8e4ff); color: #7a2a6a; }
+.hc-confetti { position: absolute; inset: 0; z-index: -1; opacity: .8;
+  background: radial-gradient(circle, #ff6fae 0 .22em, rgba(255,111,174,0) .25em) 0 0 / 3.1em 2.9em, radial-gradient(circle, #6fc3ff 0 .2em, rgba(111,195,255,0) .23em) 1.4em 1.2em / 3.3em 3.1em, radial-gradient(circle, #ffd24a 0 .2em, rgba(255,210,74,0) .23em) .7em 2em / 2.7em 3.5em; }
+.hc-balloon { position: absolute; top: calc(var(--b) * 1.6); width: 2.6em; height: 3.1em; border-radius: 50% 50% 46% 46%; z-index: 1; box-shadow: inset -.35em -.4em 0 rgba(0,0,0,.08), inset .4em .4em 0 rgba(255,255,255,.35); }
+.hc-balloon::after { content: ''; position: absolute; left: 50%; top: 100%; width: 1px; height: 3.2em; background: rgba(120,60,110,.45); }
+.hc-balloon.b1 { left: 1em; background: #ff6fae; }
+.hc-balloon.b2 { left: 3.1em; top: calc(var(--b) * 2.6); background: #ffd24a; transform: scale(.8); }
+.hc-balloon.b3 { right: 1.1em; background: #7d8bff; }
+.hc-bday .hc-s { position: absolute; left: 0; right: 0; top: calc(var(--b) * 5.4); font-family: 'Pacifico', cursive; font-size: calc(var(--b) * 1.8); color: #ff4f9a; }
+.hc-bday .hc-t { position: absolute; left: 0; right: 0; top: calc(var(--b) * 7.6); font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: calc(var(--b) * 3.5); line-height: 1; color: #7b3fe4; text-shadow: .06em .06em 0 #fff, .1em .1em 0 rgba(123,63,228,.25); }
+.hc-pill { position: absolute; left: 50%; top: calc(var(--b) * 12.4); transform: translateX(-50%); white-space: nowrap; padding: calc(var(--b) * .4) calc(var(--b) * 1.1); border-radius: 999px; background: #fff; color: #c2367e; font: 600 max(11px, calc(var(--b) * 1.1)) 'Fredoka', sans-serif; box-shadow: 0 .3em .8em rgba(160,60,140,.2); }
+.hc-bday img { left: 50%; bottom: 0; height: 52%; width: auto; transform: translateX(-50%); }
+
+/* 4. Baby shower: sky blue and mint with soft clouds, a script title, the parents-to-be in a round frame */
+.hc-baby { background: linear-gradient(180deg, #cfe9ff, #e3f6f1 60%, #fdf1e4); color: #2f5f7a; }
+.hc-cloud { position: absolute; z-index: 0; width: 6em; height: 2em; border-radius: 2em; background: #fff; opacity: .9; }
+.hc-cloud::before, .hc-cloud::after { content: ''; position: absolute; bottom: 30%; border-radius: 50%; background: #fff; }
+.hc-cloud::before { left: .9em; width: 2.4em; height: 2.4em; }
+.hc-cloud::after { left: 2.6em; width: 3em; height: 3em; }
+.hc-cloud.c1 { left: -1em; top: calc(var(--b) * 4); }
+.hc-cloud.c2 { right: -1.5em; top: calc(var(--b) * 2.2); transform: scale(.8); }
+.hc-cloud.c3 { right: -.5em; top: calc(var(--b) * 23); transform: scale(.7); opacity: .7; }
+.hc-baby .hc-t { position: absolute; left: 0; right: 0; top: calc(var(--b) * 4.4); z-index: 1; font-family: 'Great Vibes', cursive; font-weight: 400; font-size: calc(var(--b) * 3.9); line-height: 1.1; color: #2b6c94; }
+.hc-baby .hc-s { position: absolute; left: 0; right: 0; top: calc(var(--b) * 9.4); z-index: 1; font-family: 'Cinzel', serif; font-size: max(11px, calc(var(--b) * 1.05)); letter-spacing: .3em; text-transform: uppercase; color: #c0577f; padding-left: .3em; }
+.hc-moon { position: absolute; left: 50%; top: calc(var(--b) * 12.6); width: 15.4em; height: 15.4em; transform: translateX(-50%); overflow: hidden; border-radius: 50%; z-index: 1;
+  background: radial-gradient(circle at 50% 40%, #fffaf0, #f7e3c8); box-shadow: 0 0 0 .25em #f2c6d6, 0 0 0 .7em rgba(255,255,255,.6); }
+.hc-moon img { left: 50%; bottom: 0; height: 92%; width: auto; transform: translateX(-50%); }
+.hc-names { position: absolute; left: 0; right: calc(var(--b) * 2); bottom: calc(var(--b) * 1.6); font: 600 max(11px, calc(var(--b) * 1.1)) 'Space Grotesk', sans-serif; letter-spacing: .08em; color: #2f5f7a; }
+
+@media (max-width: 1020px) {
+  .hero.lux { grid-template-columns: minmax(0, 1fr); grid-template-areas: "text" "phones" "bottom"; justify-items: center; text-align: center; padding-top: 36px; row-gap: 14px; }
+  .hero.lux .hero-text, .hero.lux .lux-bottom { justify-items: center; }
+  .hero.lux .hero-ctas, .lux-feats, .lux-kinds { justify-content: center; }
+  .lux-sub { margin: 0 auto; }
+  /* centred: the changing word gets its own centred line, so no gap opens beside a short word */
+  .lux-rot { display: grid; justify-items: center; }
+  .lux-title .l2 { font-size: clamp(1.8rem, 4.6vw, 2.5rem); }
+  .hero.lux .hero-phones { height: 470px; max-width: 640px; }
+}
+@media (max-width: 640px) {
+  .hero.lux { padding: 22px 16px 40px; row-gap: 12px; }
+  .hero.lux .hero-text { gap: 12px; }
+  .lux-kicker { font-size: .62rem; letter-spacing: .14em; gap: 8px; white-space: nowrap; }
+  .lux-orn { width: 26px; }
+  .lux-title .l1 { font-size: clamp(2.2rem, 11vw, 2.9rem); }
+  .lux-title .l2 { font-size: clamp(1.2rem, 7vw, 1.9rem); }
+  .lux-kinds { gap: 6px; }
+  .lux-kinds li { font-size: .62rem; padding: 4px 9px; letter-spacing: .08em; }
+  .hero.lux .hero-phones { height: 340px; }
+  .hero.lux .hero-phones::before { width: 100%; }
+  .hero.lux .hphone { --pw: 132px; width: 140px; padding: 4px; border-radius: 22px; }
+  .hero.lux .hphone:is(.h1, .h5) { display: none; }
+  .hero.lux .hp-screen { border-radius: 18px; }
+  .hero.lux .hp-notch { top: 9px; width: 34px; height: 9px; margin-left: -17px; }
+  .hero.lux .hphone.h2 { --x: -92px; --y: 8px; } .hero.lux .hphone.h3 { --x: 0px; --y: -4px; } .hero.lux .hphone.h4 { --x: 92px; --y: 8px; }
+  .hp-play { right: 8px; bottom: 8px; width: 22px; height: 22px; box-shadow: 0 0 0 1px rgba(255,255,255,.85); }
+  .hp-play::after { left: 8.5px; top: 6.5px; border-width: 4.5px 0 4.5px 7px; }
+  .lux-sub { font-size: .92rem; }
+  /* phone-sized cards: only the big titles, the small print would be unreadable */
+  .hc-griha .hc-s, .hc-griha .hc-box, .hc-vivah .hc-n, .hc-vivah .hc-s, .hc-pill, .hc-baby .hc-s, .hc-names { display: none; }
+  /* what every order includes: one row that scrolls sideways, edge to edge */
+  .lux-feats { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; width: calc(100% + 32px); margin: 0 -16px; padding: 2px 16px; scroll-snap-type: x proximity; }
+  .lux-feats::-webkit-scrollbar { display: none; }
+  .lux-feats li { flex: none; scroll-snap-align: start; font-size: .82rem; }
+  .hero.lux .hero-ctas { flex-direction: column; width: 100%; }
+  .hero.lux .hero-ctas a { width: 100%; justify-content: center; text-align: center; }
+}
+@media (max-width: 380px) {
+  .lux-kicker { letter-spacing: .1em; } .lux-orn { display: none; }
+}
+@media (max-width: 360px) {
+  .hero.lux .hphone { --pw: 122px; width: 130px; }
+  .hero.lux .hphone.h2 { --x: -84px; } .hero.lux .hphone.h4 { --x: 84px; }
+}
+
+
+/* ---------- The premium silk-curtain tile, first in the designs grid ---------- */
+/* its own class (not .tpl), so design counts stay 600; the same box as a design tile */
+.showcase .tpl-silk { display: grid; gap: 10px; padding: 12px; border-radius: 26px; border: 1px solid; min-width: 0; position: relative; transition: transform .3s, border-color .3s; }
+.showcase .tpl-silk:hover { transform: translateY(-4px); }
+@media (max-width: 640px) { .showcase .tpl-silk { padding: 8px; border-radius: 20px; } #showcase .tpl-silk .opening { display: none; } }
+.showcase .tpl-silk { border-color: rgba(255,201,92,.55); background: linear-gradient(180deg, rgba(255,201,92,.12), rgba(255,201,92,.03)); box-shadow: 0 0 0 1px rgba(255,201,92,.2), 0 18px 40px rgba(255,201,92,.12); }
+.showcase .tpl-silk:hover { border-color: rgba(255,201,92,.9); }
+.tpl-silk .tpl-name { color: var(--gold); }
+.silk-poster { position: relative; display: block; aspect-ratio: 9 / 16; border-radius: 20px; overflow: hidden; isolation: isolate; container-type: inline-size; --a: #c9a24a; padding: 0; color: #8a5d14; background: radial-gradient(70% 45% at 50% 52%, #fffaf0, #f4ead6 70%, #e9dcc0); box-shadow: inset 0 0 0 1px #c9a24a88; }
+.silk-poster::before { display: none; }
+.sp-badge { position: absolute; left: 50%; bottom: 4.5cqw; z-index: 5; transform: translateX(-50%); white-space: nowrap; padding: 1.6cqw 4cqw; border-radius: 999px; font: 700 max(10px, 5.2cqw) 'Space Grotesk', sans-serif;
+  color: #3b2508; background: linear-gradient(135deg, #b8862b, #f6dc8a 50%, #b8862b); box-shadow: 0 4px 12px rgba(120,80,20,.35); }
+/* gold arch in the middle with the monogram and names */
+.sp-arch { position: absolute; left: 50%; top: 22%; width: 64%; height: 56%; transform: translateX(-50%); display: grid; align-content: center; justify-items: center; gap: 3cqw; padding: 0 4cqw; text-align: center;
+  border: 1.5px solid #c9a24a; border-radius: 999px 999px 10px 10px; box-shadow: inset 0 0 0 2.6cqw #fffaf0, inset 0 0 0 calc(2.6cqw + 1px) #c9a24a77; }
+.sp-arch::before { content: '✦'; position: absolute; left: 50%; top: -3.6cqw; transform: translateX(-50%); color: #c9a24a; font-size: 6cqw; line-height: 1; background: #fbf4e6; padding: 0 1cqw; }
+.sp-mono { display: flex; align-items: center; justify-content: center; white-space: nowrap; width: 22cqw; height: 22cqw; border-radius: 50%; font: 400 7.6cqw 'Great Vibes', cursive; color: #a8781f; border: 1.5px solid #c9a24a;
+  background: radial-gradient(circle, #fffaf0, #f3e6c6); box-shadow: 0 0 0 1.6cqw rgba(201,162,74,.16); animation: spGlow 3s ease-in-out infinite; }
+.sp-mono i { font-style: normal; font-size: .7em; margin: 0 .05em; color: #c9a24a; }
+.sp-names { font: 400 9.4cqw 'Great Vibes', cursive; line-height: 1.1; color: #8a5d14; white-space: nowrap; }
+.sp-names i { font-size: .62em; color: #b08a3a; }
+.sp-line { font: 600 3.3cqw 'Space Grotesk', sans-serif; letter-spacing: .14em; line-height: 1.6; text-transform: uppercase; color: #9a7a45; }
+@keyframes spGlow { 50% { box-shadow: 0 0 0 2.4cqw rgba(201,162,74,.1), 0 0 5cqw rgba(201,162,74,.35); } }
+/* ivory silk drapes, gathered and tied back with gold cords */
+.sp-drape { position: absolute; top: 0; bottom: 0; width: 30%; z-index: 2;
+  background: repeating-linear-gradient(90deg, #e9dfcb 0, #fffaf1 3.4cqw, #f1e7d4 5.4cqw, #d9cbae 7.8cqw, #faf4e8 10.6cqw);
+  box-shadow: inset 0 -10cqw 14cqw rgba(120,90,40,.2); filter: drop-shadow(0 0 3cqw rgba(80,55,20,.25)); transition: transform .6s cubic-bezier(.7,0,.25,1); }
+.sp-drape.l { left: 0; clip-path: polygon(0 0, 100% 0, 96% 8%, 88% 18%, 76% 30%, 62% 42%, 50% 52%, 46% 58%, 52% 66%, 62% 76%, 74% 88%, 86% 100%, 0 100%); }
+.sp-drape.r { right: 0; clip-path: polygon(100% 0, 0 0, 4% 8%, 12% 18%, 24% 30%, 38% 42%, 50% 52%, 54% 58%, 48% 66%, 38% 76%, 26% 88%, 14% 100%, 100% 100%); }
+.sp-cord { position: absolute; top: 55%; width: 34%; height: 4.6cqw; border-radius: 3cqw; background: linear-gradient(#f6dc8a, #b8862b); box-shadow: 0 1cqw 2cqw rgba(0,0,0,.25); }
+.sp-cord::after { content: ''; position: absolute; top: 80%; width: 3.2cqw; height: 9cqw; border-radius: 0 0 2cqw 2cqw; background: linear-gradient(#e6c068, #a87a24); }
+.sp-drape.l .sp-cord { left: 22%; transform: rotate(-16deg); } .sp-drape.l .sp-cord::after { right: 12%; }
+.sp-drape.r .sp-cord { right: 22%; transform: rotate(16deg); } .sp-drape.r .sp-cord::after { left: 12%; }
+.tpl-silk:hover .sp-drape.l { transform: translateX(-12%); } .tpl-silk:hover .sp-drape.r { transform: translateX(12%); }
+/* the scalloped pelmet across the top, with a gold edge */
+.sp-pelmet { position: absolute; top: 0; left: 0; right: 0; height: 12%; z-index: 3; background: linear-gradient(#e9dcc2, #f8f1e4 70%, #efe3cb);
+  border-bottom: 1.2cqw solid #c9a24a; box-shadow: 0 1cqw 3cqw rgba(90,60,20,.18); }
+.sp-pelmet::before { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 7.4cqw; margin-top: 1.2cqw;
+  background: radial-gradient(circle at 50% 0, #f3e9d6 0 5.6cqw, #c9a24a 5.7cqw 6.6cqw, rgba(201,162,74,0) 6.7cqw) 0 0 / 13.4cqw 100% repeat-x; filter: drop-shadow(0 1cqw 1.2cqw rgba(90,60,20,.2)); }
+.sp-pelmet::after { content: ''; position: absolute; left: 0; right: 0; top: 30%; height: .8cqw; background: linear-gradient(90deg, #b8862b, #f6dc8a, #b8862b); opacity: .85; }
+@media (prefers-reduced-motion: reduce) { .sp-mono { animation: none; } }
+
+/* ==========================================================================
+   Motion (js/motion.js): every section rises in once, numbers count up, the hero sparkles and its phones float,
+   buttons shimmer and ripple, cards lift, the steps draw a line, the bottom bar's active tab has a sliding marker.
+   Transform and opacity only. Hidden states need html.motion (set by the script), so the page reads without JS,
+   and none of it runs for reduced motion.
+   ========================================================================== */
+.mv-rel { position: relative; }
+.mv-ripple { position: absolute; z-index: 0; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(255,255,255,.45), rgba(255,255,255,0) 60%); transform: scale(0); opacity: .9; animation: mvRipple .6s ease-out forwards; }
+@keyframes mvRipple { to { transform: scale(1); opacity: 0; } }
+.lux-sparks { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.lux-sparks i { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #ffe7a8; box-shadow: 0 0 10px 2px rgba(255,201,92,.7); opacity: 0; transform: scale(var(--ss, 1)); }
+.hero.lux { position: relative; isolation: isolate; }
+.bn-mark { position: absolute; left: 0; top: 0; height: 3px; border-radius: 3px; background: var(--grad); opacity: 0; pointer-events: none; transition: transform .4s cubic-bezier(.3,1.2,.4,1), width .4s, opacity .3s; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* scroll reveal */
+  html.motion .mv { opacity: 0; transition: opacity .8s ease var(--mv-d, 0ms), transform .8s cubic-bezier(.2,.9,.3,1.1) var(--mv-d, 0ms); }
+  html.motion .mv-up { transform: translateY(28px); }
+  html.motion .mv-scale { transform: translateY(16px) scale(.94); }
+  html.motion .mv.in { opacity: 1; transform: none; }
+
+  /* top bar slides down on load */
+  .nav { animation: mvNav .8s cubic-bezier(.2,.9,.3,1.1) both; }
+  @keyframes mvNav { from { opacity: 0; transform: translateY(-24px); } }
+
+  /* hero: the gold ornaments draw in, the kinds pop in one by one, sparkles twinkle, phones float after they fan out */
+  .lux-orn { transform-origin: right center; animation: mvDraw .9s ease .3s both; }
+  .lux-orn.r { transform-origin: center; animation-name: mvDrawR; }
+  @keyframes mvDraw { from { transform: scaleX(0); opacity: 0; } }
+  @keyframes mvDrawR { from { transform: scaleX(0) scaleX(-1); opacity: 0; } to { transform: scaleX(-1); } }
+  .lux-kinds li { animation: mvPop .5s cubic-bezier(.3,1.4,.5,1) both; }
+  .lux-kinds li:nth-child(1) { animation-delay: .45s; } .lux-kinds li:nth-child(2) { animation-delay: .52s; } .lux-kinds li:nth-child(3) { animation-delay: .59s; }
+  .lux-kinds li:nth-child(4) { animation-delay: .66s; } .lux-kinds li:nth-child(5) { animation-delay: .73s; }
+  @keyframes mvPop { from { opacity: 0; transform: scale(.7); } }
+  .lux-sparks i { animation: mvTwinkle 3.2s ease-in-out var(--sd, 0s) infinite; }
+  @keyframes mvTwinkle { 0%, 100% { opacity: 0; transform: scale(calc(var(--ss, 1) * .4)); } 50% { opacity: .9; transform: scale(var(--ss, 1)); } }
+  .hero.lux .hp-screen { animation: mvFloat 5s ease-in-out 1.4s infinite; }
+  .hero.lux .hphone:is(.h2, .h4) .hp-screen { animation-delay: 1.9s; } .hero.lux .hphone.h3 .hp-screen { animation-delay: 2.4s; }
+  @keyframes mvFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+  .hero.lux .hero-phones::before { animation: mvGlow 6s ease-in-out infinite; }
+  @keyframes mvGlow { 50% { opacity: .65; } }
+
+  /* a gold light sweeps across the main buttons now and then */
+  .btn-glow, .lux-wa { position: relative; overflow: hidden; }
+  .btn-glow::after, .lux-wa::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 40%; pointer-events: none;
+    background: linear-gradient(100deg, rgba(255,255,255,0), rgba(255,255,255,.45), rgba(255,255,255,0)); transform: translateX(-150%) skewX(-20deg); animation: mvSweep 4.5s ease-in-out 1.5s infinite; }
+  @keyframes mvSweep { 0%, 60% { transform: translateX(-150%) skewX(-20deg); } 85%, 100% { transform: translateX(350%) skewX(-20deg); } }
+  .tpl-silk .sp-badge { overflow: hidden; }
+  .tpl-silk .sp-badge::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, rgba(255,255,255,0) 30%, rgba(255,255,255,.7), rgba(255,255,255,0) 70%); transform: translateX(-120%); animation: mvSweep 3.8s ease-in-out 1s infinite; }
+
+  /* cards lift and glow under the pointer */
+  @media (hover: hover) {
+    .style-card, .tile, .stepcard, .faq details, .hot-slide, .vids-grid > * { transition: transform .35s cubic-bezier(.2,.9,.3,1.2), box-shadow .35s, border-color .3s; }
+    .style-card:hover, .tile:hover, .stepcard:hover, .vids-grid > *:hover { transform: translateY(-3px); box-shadow: 0 18px 40px rgba(0,0,0,.35), 0 0 0 1px rgba(255,201,92,.25); }
+    .faq details:hover { transform: translateY(-2px); }
+    .lux-feats li { transition: transform .3s, border-color .3s; }
+    .lux-feats li:hover { transform: translateY(-3px); border-color: rgba(255,201,92,.5); }
+  }
+  html.motion .tile.rv.in:nth-child(odd) { transition-delay: 60ms; }
+
+  /* how it works: in each gap between the steps a small gold chevron slides in and nudges toward the next step
+     (it sits in the gap only, never over a card); each step number pops */
+  @media (min-width: 901px) {
+    .steps .stepcard:not(:last-child)::after { content: ''; position: absolute; top: 50%; right: -12px; width: 8px; height: 8px; margin-top: -4px; pointer-events: none;
+      border-top: 2px solid var(--gold); border-right: 2px solid var(--gold); transform: rotate(45deg); opacity: 0; }
+    .steps .stepcard.in:not(:last-child)::after { animation: mvChevIn .5s ease .9s forwards, mvChev 1.8s ease-in-out 1.4s infinite; }
+  }
+  @keyframes mvChevIn { to { opacity: .9; } }
+  @keyframes mvChev { 0%, 100% { transform: translateX(0) rotate(45deg); opacity: .9; } 50% { transform: translateX(3px) rotate(45deg); opacity: .45; } }
+  .stepcard.in > b { animation: mvPop .6s cubic-bezier(.3,1.5,.5,1) .4s both; }
+
+  /* marquee items breathe gently */
+  .marquee .track span { display: inline-block; animation: mvBreathe 4s ease-in-out infinite; }
+  .marquee .track span:nth-child(even) { animation-delay: -2s; }
+  @keyframes mvBreathe { 50% { transform: translateY(-3px); } }
+
+  /* bottom bar: the Order button's soft pulse */
+  .bottom-nav .bn-order i { animation: mvPulse 2.4s ease-in-out infinite; }
+  @keyframes mvPulse { 0%, 100% { box-shadow: 0 8px 20px rgba(37,211,102,.45), 0 0 0 0 rgba(37,211,102,.45); } 60% { box-shadow: 0 8px 20px rgba(37,211,102,.45), 0 0 0 12px rgba(37,211,102,0); } }
+
+}
+
+/* ---------- Premium design tiles: one family with the Silk Curtain tile ----------
+   fine gold hairline and soft inner glow, a gold design-number label, a serif title, quiet gold lines for the opening
+   and occasion (their emoji stay in the text for screen readers and tests, a gold mark shows instead), a gold foil
+   Trending chip and a gold Order button with a small WhatsApp icon */
+.showcase .tpl, .showcase .tpl-silk { grid-template-rows: auto 1fr auto; border-color: rgba(255,201,92,.22);
+  background: linear-gradient(180deg, rgba(255,201,92,.06), rgba(255,255,255,.02) 40%, rgba(255,201,92,.035));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.03), inset 0 18px 40px -24px rgba(255,201,92,.25); }
+@media (hover: hover) {
+  .showcase .tpl:hover, .showcase .tpl-silk:hover { transform: translateY(-4px); border-color: rgba(255,201,92,.6);
+    box-shadow: inset 0 0 0 1px rgba(255,201,92,.12), 0 16px 36px rgba(0,0,0,.4), 0 0 26px rgba(255,201,92,.16); }
+}
+.showcase .tpl-meta { align-content: start; gap: 4px; }
+.showcase .serial { font-size: .64rem; letter-spacing: .2em; color: #c9a86a; }
+.showcase .serial b { margin-left: 6px; padding: 1px 8px; border-radius: 6px; font-size: .8rem; letter-spacing: .06em; color: var(--gold); background: rgba(255,201,92,.08); box-shadow: inset 0 0 0 1px rgba(255,201,92,.5); }
+.showcase .tpl-name { font-family: 'DM Serif Display', 'Playfair Display', serif; font-size: 1.12rem; line-height: 1.2; letter-spacing: .01em; color: #fbf3e2; }
+.tpl-silk .tpl-name { color: var(--gold); }
+.showcase .opening, .showcase .tpl-occ { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: .76rem; color: #bfae8a; }
+.showcase .opening i, .showcase .tpl-occ i { display: none; }
+.showcase .opening::before, .showcase .tpl-occ::before { content: ''; flex: none; width: 5px; height: 5px; transform: rotate(45deg); background: var(--gold); opacity: .8; }
+.showcase .tpl-occ::before { border-radius: 50%; transform: none; width: 4px; height: 4px; }
+.showcase .tpl-meta small { color: #bfae8a; }
+/* gold foil Trending chip on the poster */
+.showcase .p-badge { top: 9px; left: 9px; padding: 2px 8px; font-size: .56rem; letter-spacing: .08em; text-transform: uppercase; color: #3b2508;
+  background: linear-gradient(135deg, #b8862b, #f6dc8a 50%, #c9973a); box-shadow: 0 2px 8px rgba(0,0,0,.25), inset 0 0 0 1px rgba(255,255,255,.35); }
+/* the Order button: gold, with a small WhatsApp mark and a shine on hover */
+.showcase .btn-small.order, .showcase .btn-small.order-lux { position: relative; overflow: hidden; justify-self: stretch; gap: 7px; padding: 10px 14px; border-radius: 12px; border: 0;
+  font-weight: 700; letter-spacing: .02em; color: #3b2508; background: linear-gradient(135deg, #c9973a, #f6dc8a 50%, #c9973a);
+  box-shadow: 0 6px 16px rgba(201,151,58,.22), inset 0 0 0 1px rgba(255,255,255,.35); transition: transform .2s, box-shadow .2s, filter .2s; }
+.showcase .btn-small.order:hover, .showcase .btn-small.order-lux:hover { background: linear-gradient(135deg, #c9973a, #f6dc8a 50%, #c9973a); filter: brightness(1.06); box-shadow: 0 10px 22px rgba(201,151,58,.35), inset 0 0 0 1px rgba(255,255,255,.5); }
+.showcase .btn-small.order::after, .showcase .btn-small.order-lux::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 35%; pointer-events: none;
+  background: linear-gradient(100deg, rgba(255,255,255,0), rgba(255,255,255,.55), rgba(255,255,255,0)); transform: translateX(-160%) skewX(-20deg); transition: transform .7s ease; }
+.showcase .btn-small.order:hover::after, .showcase .btn-small.order-lux:hover::after { transform: translateX(380%) skewX(-20deg); }
+.wa-i { flex: none; width: 15px; height: 15px; fill: currentColor; opacity: .85; }
+@media (max-width: 640px) {
+  .showcase .tpl-name { font-size: .95rem; }
+  .showcase .btn-small.order, .showcase .btn-small.order-lux { padding: 9px 8px; font-size: .82rem; }
+  .showcase .serial b { font-size: .7rem; padding: 1px 6px; }
+}
+
+/* 5. Haldi: sunshine yellow with rays and a marigold garland, a script title, the couple in front */
+.hc-haldi { background: linear-gradient(180deg, #ffe27a, #ffc22e 60%, #f7a51c); color: #6b3a00; }
+.hc-haldi .hc-rays { position: absolute; inset: -20%; z-index: -1; background: repeating-conic-gradient(from 0deg at 50% 32%, rgba(255,255,255,.28) 0deg 6deg, rgba(255,255,255,0) 6deg 18deg); }
+.hc-haldi .hc-garland { background: radial-gradient(circle at 50% 30%, #ff7a00 0 .42em, rgba(255,122,0,0) .45em) 0 0 / 1.1em 1.1em repeat-x, radial-gradient(circle at 50% 50%, #2e8b3a 0 .25em, rgba(46,139,58,0) .28em) .55em .55em / 1.1em 1.1em repeat-x; }
+.hc-haldi .hc-t { position: absolute; left: 0; right: 0; top: calc(var(--b) * 3); font-family: 'Great Vibes', cursive; font-weight: 400; font-size: calc(var(--b) * 4.2); line-height: 1.1; color: #8a2b00; text-shadow: 0 2px 0 rgba(255,255,255,.4); }
+.hc-haldi .hc-s { position: absolute; left: 0; right: 0; top: calc(var(--b) * 8); font-family: 'Cinzel', serif; font-size: max(11px, calc(var(--b) * 1)); letter-spacing: .25em; text-transform: uppercase; color: #8a2b00; }
+.hc-haldi .hc-box { position: absolute; left: 50%; top: calc(var(--b) * 10.4); transform: translateX(-50%); white-space: nowrap; padding: calc(var(--b) * .4) calc(var(--b) * 1); border-radius: 999px; background: rgba(255,250,232,.85); color: #6b3a00; font-size: max(11px, calc(var(--b) * 1)); box-shadow: 0 .3em .8em rgba(140,70,0,.18); }
+.hc-haldi img { left: 50%; bottom: 0; height: 52%; width: auto; transform: translateX(-50%); }

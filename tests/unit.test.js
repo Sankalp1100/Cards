@@ -369,9 +369,10 @@ test.describe('Templates', () => {
     }
   });
 
-  test('there are 6 opening styles and each is used by several designs', () => {
-    assert.deepEqual(plain(Object.keys(INTROS)), ['envelope', 'doors', 'curtains', 'scroll', 'giftbox', 'cardflip']);
-    for (const k of Object.keys(INTROS)) assert.ok(all.filter(t => t.intro === k).length >= 10, k);
+  test('there are 6 design openings, each used by several designs, plus the premium silk curtain', () => {
+    assert.deepEqual(plain(Object.keys(INTROS)), ['envelope', 'doors', 'curtains', 'scroll', 'giftbox', 'cardflip', 'silk']);
+    // silk is the premium experience's opening (or picked per card), not a design's own
+    for (const k of Object.keys(INTROS).filter(k => k !== 'silk')) assert.ok(all.filter(t => t.intro === k).length >= 10, k);
     assert.equal(Templates.get(1).intro, 'envelope', '#001 keeps the original envelope');
   });
 

@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>CardAlbum · Animated Wedding &amp; Party Invitations in One Link</title>
-  <meta name="description" content="Animated wedding, haldi, sangeet, birthday, kitty party and ceremony invitations. One link on WhatsApp — every guest gets the full show.">
+  <title>CardAlbum · Animated Invitations for Every Celebration in One Link</title>
+  <meta name="description" content="Animated invitation cards and videos for every celebration: weddings, engagements, birthdays, baby showers, griha pravesh, anniversaries, pujas, kitty and corporate parties. One link on WhatsApp — every guest gets the full show.">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="CardAlbum">
   <meta property="og:title" content="Animated invitations in one magic link 💌">
@@ -35,7 +35,7 @@
   <div class="cursor-glow" aria-hidden="true"></div>
 
   <nav class="nav">
-    <a class="logo" href="#top">💌 <span class="brand">CardAlbum</span></a>
+    <a class="logo" href="#top"><i class="logo-mark" data-gi="heart">💌</i><span class="brand">CardAlbum</span></a>
     <div class="nav-links">
       <a href="#videos" data-videos>Videos</a>
       <a href="#styles">Styles</a>
@@ -49,26 +49,36 @@
     </div>
   </nav>
 
-  <header class="hero" id="top">
+  <!-- Premium hero, in the site's own dark look: gold line ornaments, the headline, the kinds of invitations, four
+       different invitation cards in phone frames (drawn by js/site.js), what every order includes and WhatsApp -->
+  <header class="hero lux" id="top">
     <div class="hero-text">
-      <p class="pill">✨ No app. No login. Just one magic link.</p>
-      <a class="pill pill-new" href="#videos" data-videos>🎬 New: story videos for WhatsApp, <b>100 films</b> →</a>
-      <h1 class="mega">
-        <span class="line">Invites that</span>
-        <span class="line">go <em class="gradient-text">viral</em></span>
-        <span class="line script">at every function</span>
-      </h1>
-      <p class="sub">Your story, every function, the venue, RSVP and gifts: a complete invitation website in one WhatsApp link. For weddings, parties and pujas.</p>
-      <div class="hero-ctas">
-        <a class="btn-glow" data-order href="#order">💬 Order on WhatsApp</a>
-        <a class="btn-line" id="demoBtn" href="card.html" target="_blank" rel="noopener">▶ See a live demo</a>
-      </div>
-      <ul class="trust" aria-label="At a glance">
-        <li><b>600</b> designs</li><li><b>300</b> video looks</li><li><b>1</b> link for all guests</li>
+      <p class="lux-kicker"><i class="lux-orn" aria-hidden="true"></i><span>Invitations · Videos · Design</span><i class="lux-orn r" aria-hidden="true"></i></p>
+      <h1 class="lux-title"><span class="l1">Premium</span><span class="l2">invitations for <span class="lux-rot" id="luxRot"><em class="gradient-text on">every celebration</em><em class="gradient-text">weddings</em><em class="gradient-text">birthdays</em><em class="gradient-text">baby showers</em><em class="gradient-text">griha pravesh</em><em class="gradient-text">anniversaries</em><em class="gradient-text">kitty parties</em></span></span></h1>
+      <ul class="lux-kinds" aria-label="Kinds of invitations">
+        <li>Animated</li><li>Traditional</li><li>Modern</li><li>हिन्दी &amp; English</li><li>Customized</li>
       </ul>
     </div>
-    <!-- Three real designs in phone frames (posters drawn by js/site.js), floating with the mouse -->
-    <div class="floating-cards hero-phones" id="heroPhones" aria-hidden="true"></div>
+    <!-- Four invitation cards, each its own occasion, colours and layout: tap one to watch the films -->
+    <div class="floating-cards hero-phones" id="heroPhones"></div>
+    <div class="lux-bottom">
+      <p class="sub lux-sub">Animated invitation cards and story videos for weddings, birthdays, baby showers, griha pravesh, pujas and parties, with music. Hand-made for your family, designed by Sankalp.</p>
+      <ul class="lux-feats" aria-label="Every order includes">
+        <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 7l3-4h4l-3 4M10 7l3-4h4l-3 4M10 11.5v5l4.5-2.5z"/></svg>Custom video invite</li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.5 3.5l2 2L10 16l-3 1 1-3zM7 17c-1.5 0-3 1-3 3.5 2 0 4-.5 4.5-2"/></svg>Hand-made design</li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6.5 9.5v5M6.5 12h3M9.5 9.5v5M12.5 9.5v5h2a2.5 2.5 0 000-5z"/></svg>HD quality</li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg>Your music</li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9.5 2.5h5"/></svg>Fast delivery</li>
+      </ul>
+      <div class="hero-ctas">
+        <a class="btn-glow lux-wa" id="heroWa" href="#order" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2zm0 18.2a8.2 8.2 0 01-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1112 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 01-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 00-.7.3 3 3 0 00-.9 2.2 5.2 5.2 0 001.1 2.8 11.9 11.9 0 004.6 4c1.7.7 2.4.8 3.2.7a2.8 2.8 0 001.8-1.3 2.3 2.3 0 00.2-1.3c-.1-.1-.2-.2-.4-.3z"/></svg>Chat on WhatsApp</a>
+        <a class="btn-line" data-order href="#order">✨ Get your custom invite</a>
+      </div>
+      <a class="lux-demo" id="demoBtn" href="card.html" target="_blank" rel="noopener">▶ See a live demo</a>
+      <ul class="trust" aria-label="At a glance">
+        <li><b>600</b> designs</li><li><b>100</b> video films</li><li><b>1</b> link for all guests</li>
+      </ul>
+    </div>
   </header>
 
   <div class="marquee-wrap" aria-hidden="true"><div class="marquee">
@@ -108,18 +118,18 @@
   <section class="bento" id="features">
     <div class="sec-intro wide-intro">
       <p class="eyebrow">Inside every invitation</p>
-      <h2 class="section-h">A whole wedding website, <span class="gradient-text">in one link</span></h2>
+      <h2 class="section-h">A whole invitation website, <span class="gradient-text">in one link</span></h2>
     </div>
-    <div class="tile big"><span class="tile-emoji">✉️</span><h3>An opening they'll film</h3><p>An envelope, palace doors, curtains, a royal scroll, a gift box or a folding card, over turning gold mandalas. Then the names arrive.</p></div>
-    <div class="tile"><span class="tile-emoji">💞</span><h3>Your story</h3><p>How you met, the first date, the proposal: a timeline that draws itself as guests scroll.</p></div>
-    <div class="tile"><span class="tile-emoji">📅</span><h3>Every function</h3><p>Haldi, mehendi, sangeet, pheras: date, time, venue and dress code for each.</p></div>
-    <div class="tile"><span class="tile-emoji">🏰</span><h3>The venue, drawn</h3><p>A little illustration of the place, with Google Maps directions in one tap.</p></div>
-    <div class="tile"><span class="tile-emoji">💬</span><h3>RSVP on WhatsApp</h3><p>Guests fill in name, guests and meal, and the reply lands in your WhatsApp.</p></div>
-    <div class="tile"><span class="tile-emoji">🖼️</span><h3>Photo gallery</h3><p>Up to 8 photos that open full screen, plus your couple photo on the cover.</p></div>
-    <div class="tile"><span class="tile-emoji">👗</span><h3>Dress code</h3><p>What to wear for each function, with the colours shown as swatches.</p></div>
-    <div class="tile"><span class="tile-emoji">🎁</span><h3>Gifts by UPI</h3><p>Your UPI ID to copy, or open a UPI app straight from the card.</p></div>
-    <div class="tile wide"><span class="tile-emoji">🙋</span><h3>A personal link for every guest</h3><p>Each guest is greeted by name: <em>“Dear Rahul Uncle”</em>. Save the date, a live countdown and music they can switch on.</p></div>
-    <div class="tile"><span class="tile-emoji">🎬</span><h3>A video for your WhatsApp status</h3><p>A short MP4 of your invitation, stopping on every date and venue, ready to post.</p></div>
+    <div class="tile big"><span class="tile-emoji" data-gi="envelope">✉️</span><h3>An opening they'll film</h3><p>An envelope, palace doors, curtains, a royal scroll, a gift box or a folding card, over turning gold mandalas. Then the names arrive.</p></div>
+    <div class="tile"><span class="tile-emoji" data-gi="hearts">💞</span><h3>Your story</h3><p>How you met, the first date, the proposal: a timeline that draws itself as guests scroll.</p></div>
+    <div class="tile"><span class="tile-emoji" data-gi="calendar">📅</span><h3>Every function</h3><p>Haldi, mehendi, sangeet, pheras: date, time, venue and dress code for each.</p></div>
+    <div class="tile"><span class="tile-emoji" data-gi="venue">🏰</span><h3>The venue, drawn</h3><p>A little illustration of the place, with Google Maps directions in one tap.</p></div>
+    <div class="tile"><span class="tile-emoji" data-gi="chat">💬</span><h3>RSVP on WhatsApp</h3><p>Guests fill in name, guests and meal, and the reply lands in your WhatsApp.</p></div>
+    <div class="tile"><span class="tile-emoji" data-gi="photo">🖼️</span><h3>Photo gallery</h3><p>Up to 8 photos that open full screen, plus your couple photo on the cover.</p></div>
+    <div class="tile"><span class="tile-emoji" data-gi="dress">👗</span><h3>Dress code</h3><p>What to wear for each function, with the colours shown as swatches.</p></div>
+    <div class="tile"><span class="tile-emoji" data-gi="gift">🎁</span><h3>Gifts by UPI</h3><p>Your UPI ID to copy, or open a UPI app straight from the card.</p></div>
+    <div class="tile wide"><span class="tile-emoji" data-gi="guest">🙋</span><h3>A personal link for every guest</h3><p>Each guest is greeted by name: <em>“Dear Rahul Uncle”</em>. Save the date, a live countdown and music they can switch on.</p></div>
+    <div class="tile"><span class="tile-emoji" data-gi="video">🎬</span><h3>A video for your WhatsApp status</h3><p>A short MP4 of your invitation, stopping on every date and venue, ready to post.</p></div>
   </section>
 
   <section class="showcase" id="templates">
@@ -157,10 +167,10 @@
   <section class="how" id="how">
     <h2 class="section-h">How it <span class="gradient-text">works</span></h2>
     <div class="steps">
-      <div class="stepcard"><b>1</b><span>🎨</span><h3>Pick a design</h3><p>Choose any design above and note its number, like <strong>#047</strong>.</p></div>
-      <div class="stepcard"><b>2</b><span>💬</span><h3>Send your details</h3><p>Names, dates, venue, functions and a photo, all on WhatsApp.</p></div>
-      <div class="stepcard"><b>3</b><span>🔗</span><h3>Get your magic link</h3><p>We send you a ready link, plus personal links for each guest if you want them.</p></div>
-      <div class="stepcard"><b>4</b><span>🚀</span><h3>Share &amp; celebrate</h3><p>Forward it on WhatsApp. No app, no download. It opens on every phone.</p></div>
+      <div class="stepcard"><b>1</b><span data-gi="palette">🎨</span><h3>Pick a design</h3><p>Choose any design above and note its number, like <strong>#047</strong>.</p></div>
+      <div class="stepcard"><b>2</b><span data-gi="chat">💬</span><h3>Send your details</h3><p>Names, dates, venue, functions and a photo, all on WhatsApp.</p></div>
+      <div class="stepcard"><b>3</b><span data-gi="link">🔗</span><h3>Get your magic link</h3><p>We send you a ready link, plus personal links for each guest if you want them.</p></div>
+      <div class="stepcard"><b>4</b><span data-gi="rocket">🚀</span><h3>Share &amp; celebrate</h3><p>Forward it on WhatsApp. No app, no download. It opens on every phone.</p></div>
     </div>
   </section>
 
@@ -183,17 +193,17 @@
         <div class="enq-mail" aria-hidden="true"><span class="enq-env">✉️</span><i>💬</i><i>✨</i><i>💌</i></div>
         <p class="eyebrow">Have a question?</p>
         <h2 class="section-h">Send an <span class="gradient-text">enquiry</span></h2>
-        <p class="muted">Tell us what you need. It opens WhatsApp with everything filled in, so you only tap send. We reply within a few hours.</p>
-        <p class="enq-live"><i aria-hidden="true"></i> Usually replies in a few hours</p>
+        <p class="muted">Tell us what you need. It opens WhatsApp with everything filled in, so you only tap send. We usually reply within minutes.</p>
+        <p class="enq-live"><i aria-hidden="true"></i> ⚡ Quick reply · usually within minutes</p>
         <div class="enq-quick">
           <p>⚡ Quick questions <small>tap one, it fills in for you</small></p>
           <div class="enq-quick-list">
-            <button type="button" data-quick="What is the price for an invitation card?">💰 What's the price?</button>
-            <button type="button" data-quick="How soon can my card be ready?">⏱️ How soon is it ready?</button>
-            <button type="button" data-quick="Can you make a story video for WhatsApp as well?">🎬 Video too?</button>
-            <button type="button" data-quick="Can the card be in Hindi?">अ Card in Hindi?</button>
-            <button type="button" data-quick="I already have my card as a PDF. Can you make it from that?">📄 I have a PDF</button>
-            <button type="button" data-quick="Can every guest get a link with their own name?">🙋 Names for each guest?</button>
+            <button type="button" data-quick="What is the price for an invitation card?"><i class="q-ic" data-gi="price">💰</i> What's the price?</button>
+            <button type="button" data-quick="How soon can my card be ready?"><i class="q-ic" data-gi="clock">⏱️</i> How soon is it ready?</button>
+            <button type="button" data-quick="Can you make a story video for WhatsApp as well?"><i class="q-ic" data-gi="video">🎬</i> Video too?</button>
+            <button type="button" data-quick="Can the card be in Hindi?"><i class="q-ic q-letter">अ</i> Card in Hindi?</button>
+            <button type="button" data-quick="I already have my card as a PDF. Can you make it from that?"><i class="q-ic" data-gi="file">📄</i> I have a PDF</button>
+            <button type="button" data-quick="Can every guest get a link with their own name?"><i class="q-ic" data-gi="users">🙋</i> Names for each guest?</button>
           </div>
         </div>
       </div>
@@ -231,13 +241,13 @@
   </section>
 
   <footer class="foot">
-    <p>💌 <span class="brand">CardAlbum</span> · Animated invitations in one link · <a href="credits.html">Photo credits</a></p>
+    <p><i class="logo-mark" data-gi="heart">💌</i> <span class="brand">CardAlbum</span> · Animated invitations in one link · <a href="credits.html">Photo credits</a></p>
     <p id="social"></p>
-    <a class="signature" id="signature" href="#top" aria-label="Crafted with love by Sankalp">
+    <a class="signature" id="signature" href="#top" aria-label="Designed by Sankalp">
       <span class="sig-card" aria-hidden="true">
         <span class="sig-seal"><b>S</b></span>
         <span class="sig-text">
-          <span class="sig-pre">crafted with <i class="sig-heart">♥</i> by</span>
+          <span class="sig-pre">Designed by</span>
           <span class="sig-name"><b style="--i:0">S</b><b style="--i:1">a</b><b style="--i:2">n</b><b style="--i:3">k</b><b style="--i:4">a</b><b style="--i:5">l</b><b style="--i:6">p</b><i class="sig-star">✦</i></span>
           <span class="sig-ink">
             <svg class="sig-line" viewBox="0 0 200 14"><path d="M4 9 C 50 2, 90 14, 130 6 S 185 4, 196 8"/></svg>
@@ -253,11 +263,11 @@
   </footer>
 
   <nav class="bottom-nav" aria-label="Quick menu">
-    <a href="#top" data-sec="top"><i>🏠</i><span>Home</span></a>
-    <a href="#templates" data-sec="templates"><i>🎨</i><span>Designs</span></a>
-    <a class="bn-order" data-order href="#order"><i>💬</i><span>Order</span></a>
-    <a href="#templates" data-trending><i>🔥</i><span>Trending</span></a>
-    <a href="#videos" data-videos><i>🎬</i><span>Videos</span></a>
+    <a href="#top" data-sec="top"><i data-gi="home">🏠</i><span>Home</span></a>
+    <a href="#templates" data-sec="templates"><i data-gi="grid">🎨</i><span>Designs</span></a>
+    <a class="bn-order" data-order href="#order"><i data-gi="chat">💬</i><span>Order</span></a>
+    <a href="#templates" data-trending><i data-gi="flame">🔥</i><span>Trending</span></a>
+    <a href="#videos" data-videos><i data-gi="film">🎬</i><span>Videos</span></a>
   </nav>
 
   <!-- Story video player: one scene with sample names, its fifteen moods, and "Order this video" -->
@@ -474,6 +484,8 @@
   <script src="js/films.js"></script>
   <script src="js/fun.js"></script>
   <script src="js/pickers.js"></script>
+  <script src="js/icons.js"></script>
   <script src="js/site.js"></script>
+  <script src="js/motion.js"></script>
 </body>
 </html>
