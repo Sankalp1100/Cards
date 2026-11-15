@@ -62,7 +62,7 @@
     const defs = document.createElement('div');
     defs.setAttribute('aria-hidden', 'true');
     defs.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
-    defs.innerHTML = '<svg width="0" height="0"><defs><linearGradient id="giGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe7a6"/><stop offset=".5" stop-color="#e2b357"/><stop offset="1" stop-color="#b8862b"/></linearGradient></defs></svg>';
+    defs.innerHTML = '<svg width="0" height="0"><defs><linearGradient id="giGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb547"/><stop offset=".5" stop-color="#ff3d8b"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs></svg>';
     document.body.prepend(defs);
   }
   // swap the emoji of every [data-gi] for its icon (the emoji stays as the label for screen readers)

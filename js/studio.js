@@ -3287,8 +3287,10 @@ const Studio = (() => {
   function drawPhone(c, x, y, ang, s, lit, img, t, card) {
     c.save(); c.translate(x, y); c.rotate(ang); c.scale(s, s);
     const { w, h, inset } = PHONE;
-    c.save(); c.shadowColor = 'rgba(0,0,0,.55)'; c.shadowBlur = 24 + (s - 1) * 120; c.shadowOffsetY = 14 + (s - 1) * 160; c.shadowOffsetX = 8;
-    c.fillStyle = '#1a1a1f'; rrect(c, -w / 2, -h / 2, w, h, 46); c.fill(); c.restore();
+    // its shadow (painted once, blurred) grows softer and further as it is lifted
+    const shadow = reelArt('phoneShadow', w + 160, h + 160, 1, g => { g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = 40; g.shadowOffsetX = 2000; g.fillStyle = '#000'; rrect(g, 80 - 2000, 80, w, h, 46); g.fill(); });
+    c.save(); c.globalAlpha = 1 - (s - 1) * 2; const sp = 1 + (s - 1) * 1.2; c.drawImage(shadow, -w / 2 - 80 * sp + 8, -h / 2 - 80 * sp + 14 + (s - 1) * 160, (w + 160) * sp, (h + 160) * sp); c.restore();
+    c.fillStyle = '#1a1a1f'; rrect(c, -w / 2, -h / 2, w, h, 46); c.fill();
     c.strokeStyle = '#9aa0aa'; c.lineWidth = 3; rrect(c, -w / 2, -h / 2, w, h, 46); c.stroke();
     c.fillStyle = '#6c717a'; c.fillRect(w / 2 - 1, -h * .22, 4, 70); c.fillRect(-w / 2 - 3, -h * .28, 4, 44); c.fillRect(-w / 2 - 3, -h * .16, 4, 44);
     const sx = -w / 2 + inset, sy = -h / 2 + inset, sw = w - inset * 2, sh = h - inset * 2;
@@ -3307,21 +3309,37 @@ const Studio = (() => {
     c.restore();
   }
   // A hand reaching in (seen from above), fingers pointing up, (x, y) = the fingertips
+  // drawn once into a sprite (its soft shadow is costly to blur every frame)
   function hand(c, x, y, ang, s) {
-    c.save(); c.translate(x, y); c.rotate(ang); c.scale(s, s);
-    c.save(); c.shadowColor = 'rgba(0,0,0,.4)'; c.shadowBlur = 30; c.shadowOffsetX = 16; c.shadowOffsetY = 20;
-    const sl = c.createLinearGradient(-110, 0, 110, 0); sl.addColorStop(0, '#d9ccb6'); sl.addColorStop(.5, '#f2e9da'); sl.addColorStop(1, '#cfc1a9');
-    c.fillStyle = sl; c.beginPath(); c.moveTo(-95, 300); c.lineTo(95, 300); c.lineTo(120, 1000); c.lineTo(-120, 1000); c.closePath(); c.fill();
-    const sk = c.createLinearGradient(-80, 0, 80, 0); sk.addColorStop(0, '#d79f7c'); sk.addColorStop(.5, '#f0c3a2'); sk.addColorStop(1, '#cf9472');
-    c.fillStyle = sk;
-    c.beginPath(); c.moveTo(-70, 310); c.bezierCurveTo(-82, 230, -84, 170, -76, 120); c.lineTo(76, 120); c.bezierCurveTo(84, 170, 80, 240, 70, 310); c.closePath(); c.fill();
+    const spr = reelArt('hand', 420, 1150, 1, g => { g.translate(170, 90); handShape(g); });
+    c.save(); c.translate(x, y); c.rotate(ang); c.scale(s, s); c.drawImage(spr, -170, -90); c.restore();
+  }
+  function handShape(c) {
+    c.save();
+    const sk = c.createLinearGradient(-90, 0, 90, 0); sk.addColorStop(0, '#cf9673'); sk.addColorStop(.45, '#f1c6a6'); sk.addColorStop(1, '#c98c6a');
+    const finger = (fx, fy, len, w, a) => {
+      c.save(); c.translate(fx, fy); c.rotate(a);
+      c.beginPath(); c.moveTo(-w / 2, 20); c.lineTo(-w * .42, -len + w * .4); c.quadraticCurveTo(0, -len - w * .25, w * .42, -len + w * .4); c.lineTo(w / 2, 20); c.closePath();
+      c.fillStyle = sk; c.fill(); c.strokeStyle = 'rgba(150,85,55,.35)'; c.lineWidth = 1.6; c.stroke();
+      c.fillStyle = 'rgba(255,232,222,.85)'; c.beginPath(); c.ellipse(0, -len + w * .42, w * .3, w * .38, 0, 0, TAU); c.fill();
+      c.strokeStyle = 'rgba(150,85,55,.25)'; c.lineWidth = 1.4;
+      for (const k of [.42, .7]) { c.beginPath(); c.moveTo(-w * .3, -len * k); c.quadraticCurveTo(0, -len * k + 3, w * .3, -len * k); c.stroke(); }
+      c.restore();
+    };
+    // sleeve with a ribbed cuff
+    c.save(); c.shadowColor = 'rgba(0,0,0,.4)'; c.shadowBlur = 34; c.shadowOffsetX = 18; c.shadowOffsetY = 24;
+    const sl = c.createLinearGradient(-120, 0, 120, 0); sl.addColorStop(0, '#d9ccb6'); sl.addColorStop(.5, '#f4ecdf'); sl.addColorStop(1, '#cbbda5');
+    c.fillStyle = sl; c.beginPath(); c.moveTo(-100, 330); c.lineTo(100, 330); c.lineTo(130, 1000); c.lineTo(-130, 1000); c.closePath(); c.fill();
+    // the palm (the back of the hand)
+    c.fillStyle = sk; c.beginPath(); c.moveTo(-64, 340); c.bezierCurveTo(-76, 270, -84, 190, -74, 130); c.quadraticCurveTo(0, 96, 70, 128); c.bezierCurveTo(80, 190, 76, 270, 64, 340); c.closePath(); c.fill();
     c.restore();
-    c.fillStyle = sk;
-    [[-54, 8, 112], [-18, 0, 128], [18, 6, 122], [52, 22, 100]].forEach(([fx, fy, len]) => { rrect(c, fx - 17, fy, 34, len + 20, 17); c.fill(); });
-    c.save(); c.translate(-74, 190); c.rotate(-.75); rrect(c, -18, -100, 36, 120, 18); c.fill(); c.restore();
-    c.fillStyle = 'rgba(255,236,226,.75)'; [[-54, 8], [-18, 0], [18, 6], [52, 22]].forEach(([fx, fy]) => { c.beginPath(); c.ellipse(fx, fy + 16, 11, 13, 0, 0, TAU); c.fill(); });
-    c.strokeStyle = 'rgba(150,90,60,.35)'; c.lineWidth = 2; [-36, 0, 36].forEach(fx => { c.beginPath(); c.moveTo(fx, 120); c.lineTo(fx, 150); c.stroke(); });
-    c.fillStyle = '#e9e4da'; c.fillRect(-98, 296, 196, 34);
+    finger(-50, 132, 104, 31, -.13); finger(-17, 118, 126, 33, -.04); finger(17, 120, 120, 32, .04); finger(49, 134, 96, 29, .13);
+    finger(-70, 236, 104, 36, -1.0);
+    c.fillStyle = sk; c.beginPath(); c.moveTo(-70, 150); c.quadraticCurveTo(0, 116, 68, 150); c.lineTo(66, 200); c.lineTo(-70, 200); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(150,85,55,.22)'; c.lineWidth = 2; for (const fx of [-34, 0, 34]) { c.beginPath(); c.moveTo(fx, 150); c.lineTo(fx * 1.1, 230); c.stroke(); }
+    c.fillStyle = 'rgba(255,255,255,.12)'; c.beginPath(); c.ellipse(-10, 220, 40, 70, -.1, 0, TAU); c.fill();
+    c.fillStyle = '#ece5d8'; rrect(c, -104, 318, 208, 40, 12); c.fill();
+    c.strokeStyle = 'rgba(150,130,100,.35)'; c.lineWidth = 2; for (let i = -96; i < 100; i += 10) { c.beginPath(); c.moveTo(i, 322); c.lineTo(i, 354); c.stroke(); }
     c.restore();
   }
   // The living room: a wall of framed memories (the big one is their portrait), shelves, plants, the TV on a
@@ -3437,15 +3455,19 @@ const Studio = (() => {
     return reelArt('resort', W, 760, k, c => {
       const R = rng(55), y0 = 0;
       for (let i = 0; i < 26; i++) foliage(c, R, i * 44, y0 + 180 + R() * 30, 70, 60, 40, 110, 30, 30, 40);
-      c.fillStyle = '#f4f1ea'; c.fillRect(120, y0 + 170, 840, 150); c.fillStyle = '#e6e1d6'; c.fillRect(80, y0 + 150, 920, 26); c.fillRect(300, y0 + 110, 480, 50);
-      c.fillStyle = '#2e4c56'; for (let x = 150; x < 940; x += 70) c.fillRect(x, y0 + 200, 50, 90);
-      c.fillStyle = 'rgba(255,255,255,.35)'; for (let x = 150; x < 940; x += 70) c.fillRect(x + 6, y0 + 206, 10, 78);
+      // a two-storey villa: stone and glass, warm lights inside, a deep roof
+      c.fillStyle = '#efe9de'; c.fillRect(260, y0 + 70, 560, 110); c.fillStyle = '#d9cfbf'; c.fillRect(230, y0 + 58, 620, 18);
+      c.fillStyle = '#f4f1ea'; c.fillRect(120, y0 + 180, 840, 140); c.fillStyle = '#ded6c8'; c.fillRect(80, y0 + 166, 920, 22);
+      c.fillStyle = '#b9a07a'; c.fillRect(120, y0 + 188, 120, 132); c.fillRect(840, y0 + 188, 120, 132);
+      for (const [x0, x1, yy, hh] of [[290, 790, 88, 76], [260, 820, 206, 96]]) for (let x = x0; x < x1; x += 62) {
+        const wg = c.createLinearGradient(0, y0 + yy, 0, y0 + yy + hh); wg.addColorStop(0, '#2c4a54'); wg.addColorStop(1, '#ffcf8a'); c.fillStyle = wg; c.fillRect(x, y0 + yy, 46, hh);
+        c.fillStyle = 'rgba(255,255,255,.3)'; c.fillRect(x + 5, y0 + yy + 4, 8, hh - 8); }
       c.fillStyle = '#d9cfbf'; c.fillRect(0, y0 + 320, W, 70);
       c.fillStyle = '#3fb4c8'; c.beginPath(); c.moveTo(150, y0 + 390); c.lineTo(930, y0 + 390); c.lineTo(1080, y0 + 640); c.lineTo(0, y0 + 640); c.closePath(); c.fill();
       const pg = c.createLinearGradient(0, y0 + 390, 0, y0 + 640); pg.addColorStop(0, 'rgba(255,255,255,.35)'); pg.addColorStop(1, 'rgba(0,60,90,.25)'); c.fillStyle = pg; c.fill();
       c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 2; for (let i = 0; i < 26; i++) { const yy = y0 + 400 + R() * 220, xx = 100 + R() * 880; c.beginPath(); c.moveTo(xx, yy); c.quadraticCurveTo(xx + 20, yy - 6, xx + 40, yy); c.stroke(); }
       for (let i = 0; i < 12; i++) { const x = i % 2 ? 60 + R() * 220 : 800 + R() * 220, y = y0 + 560 + R() * 70; lotusPad(c, x, y, 40, 14, R()); if (i % 3 === 0) lotus(c, x, y - 6, 46, .8); }
-      for (const [x, h] of [[70, 420], [1010, 460]]) palm(c, x, y0 + 420, h, x < 500 ? .3 : -.3, R);
+      for (const [x, h] of [[70, 300], [1010, 330]]) palm(c, x, y0 + 470, h, x < 500 ? .3 : -.3, R);
       c.fillStyle = '#5d9450'; c.fillRect(0, y0 + 640, W, 120);
       for (let i = 0; i < 60; i++) blossom(c, R() * W, y0 + 650 + R() * 100, 12 + R() * 8, ['#e2348f', '#ffffff', '#f06aaf', '#ffd166'][i % 4], '#fff', R() * 6);
       for (let i = 0; i < 40; i++) leaf(c, R() * W, y0 + 660 + R() * 100, 60, 20, -Math.PI / 2 + (R() - .5) * 2, '#3f7a3c');
@@ -3472,14 +3494,15 @@ const Studio = (() => {
       c.save(); c.translate(W / 2, H / 2); c.scale(z, z); c.translate(-cx, -cy);
       c.drawImage(tableArt(k, letters), 0, 0, W, H);
       // steam over the latte
-      c.save(); c.globalCompositeOperation = 'screen';
-      for (let i = 0; i < 3; i++) { const ph = t * .7 + i * 2.1; c.strokeStyle = `rgba(255,255,255,${(.18 + .08 * Math.sin(ph)).toFixed(2)})`; c.lineWidth = 14; c.lineCap = 'round';
+      c.save();
+      for (let i = 0; i < 3; i++) { const ph = t * .7 + i * 2.1; c.strokeStyle = `rgba(255,250,240,${(.13 + .06 * Math.sin(ph)).toFixed(2)})`; c.lineWidth = 14; c.lineCap = 'round';
         c.beginPath(); c.moveTo(280 + i * 24, 990); c.bezierCurveTo(250 + i * 24 + Math.sin(ph) * 30, 900, 330 + i * 20 + Math.cos(ph) * 30, 840, 290 + i * 24, 760); c.stroke(); }
       c.restore();
-      const reach = ease3((pt - .4) / 1.3), away = ease3((pt - 3.2) / 1);
-      const hx = lerp(640, 420, reach) + away * 160, hy = lerp(2250, 1500, reach) + away * 900 + lift * -200 * (1 - away);
-      if (reach > 0 && away < 1) hand(c, hx, hy, lerp(-.35, -.18, reach), 1.05);
+      // the hand reaches in, taps the screen awake, and lets go as the phone rises
+      const reach = ease3((pt - .3) / 1.3), tap = Math.sin(clamp((pt - 1.6) / .4) * Math.PI) * 14, away = ease3((pt - 2.25) / .9);
+      const hx = lerp(760, 470, reach) + away * 220, hy = lerp(2350, 1500, reach) + tap + away * 900;
       drawPhone(c, px, py, pa, ps, lit, img, t, card);
+      if (reach > 0 && away < 1) hand(c, hx, hy, lerp(-.42, -.3, reach), 1.02);
       c.restore();
     } else if (s.reel === 'home') {
       // into the portrait (as the phone's photo was) → out to the wall → down to the TV → it lights → through it
@@ -3765,7 +3788,6 @@ const Studio = (() => {
         c.save(); c.globalAlpha = a; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
         c.font = '112px "Great Vibes"';
         const w = Math.max(300, c.measureText(this.ctx.designer).width + 90);
-        c.shadowColor = 'rgba(0,0,0,.3)'; c.shadowBlur = 24; c.shadowOffsetY = 8;
         c.fillStyle = light ? 'rgba(255,253,246,.92)' : 'rgba(10,4,16,.68)'; rrect(c, 36, H - 236, w, 192, 34); c.fill();
         c.shadowColor = 'transparent';
         c.strokeStyle = goldBevel(c, 36, H - 236, 36 + w, H - 44); c.lineWidth = 4; rrect(c, 46, H - 226, w - 20, 172, 28); c.stroke();

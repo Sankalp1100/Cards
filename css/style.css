@@ -1844,3 +1844,48 @@ body.studio-open .fun-progress { display: none; }
 .style-card h3 { font-family: 'DM Serif Display', 'Playfair Display', serif; font-weight: 400; font-size: 1.15rem; color: #fbf3e2; }
 .style-card p { font-size: .8rem; color: #bfae8a; }
 .style-card small { font-size: .72rem; color: #9b8a6a; letter-spacing: .04em; }
+
+/* ================= Modern brand (replaces the gold accents on the home page) =================
+   The site's own palette: pink → orange → violet on deep night, glass cards, a modern geometric wordmark.
+   Gold stays only inside the invitation art itself (posters, phones, cards). */
+:root { --brand: linear-gradient(110deg, #ffb547 0%, #ff3d8b 45%, #8b5cf6 100%); --brand-soft: rgba(255,61,139,.14); --brand-line: rgba(255,255,255,.12); }
+/* wordmark */
+.logo { gap: 10px; font-family: 'Syne', 'Space Grotesk', sans-serif; font-weight: 800; font-size: 1.22rem; letter-spacing: -.01em; }
+.logo span, .foot .brand { font-family: 'Syne', 'Space Grotesk', sans-serif; font-weight: 800; background: var(--brand); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.logo-mark { width: 32px; height: 32px; border-radius: 10px; font-size: 15px; color: #fff; background: var(--brand); box-shadow: 0 6px 18px rgba(255,61,139,.35); }
+.logo-mark .gi { stroke: #fff; }
+.foot .logo-mark { width: 24px; height: 24px; border-radius: 7px; font-size: 12px; }
+/* hero */
+.lux-kicker { color: #ffd0e1; }
+.hero.lux .hphone.h3 .hp-play { background: var(--brand); box-shadow: 0 0 0 4px rgba(255,61,139,.25), 0 10px 24px rgba(0,0,0,.4); }
+.hero.lux .hphone.h3 .hp-play::after { border-color: transparent transparent transparent #fff; }
+.hero.lux .hphone.h3:hover .hp-play { background: var(--brand); filter: brightness(1.1); }
+.hero.lux .hphone:focus-visible { outline-color: var(--pink); }
+/* design + style tiles: glass, white hairline, brand accents */
+.showcase .tpl, .showcase .tpl-silk, .style-card { border-color: var(--brand-line); background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
+@media (hover: hover) {
+  .showcase .tpl:hover, .showcase .tpl-silk:hover { border-color: rgba(255,61,139,.55); box-shadow: 0 16px 36px rgba(0,0,0,.45), 0 0 0 1px rgba(255,61,139,.25), 0 0 30px rgba(139,92,246,.18); }
+}
+.showcase .serial { color: var(--muted); }
+.showcase .serial b { color: #fff; background: var(--brand); box-shadow: none; }
+.showcase .tpl-name, .style-card h3 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; letter-spacing: -.01em; color: #fff; }
+.tpl-silk .tpl-name { background: var(--brand); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.showcase .opening, .showcase .tpl-occ, .showcase .tpl-meta small, .style-card p { color: var(--muted); }
+.style-card small { color: #8d88aa; }
+.showcase .opening::before, .showcase .tpl-occ::before { background: var(--pink); }
+.showcase .p-badge { color: #fff; background: var(--brand); box-shadow: 0 2px 10px rgba(255,61,139,.35); }
+.showcase .btn-small.order, .showcase .btn-small.order-lux, .showcase .btn-small.order:hover, .showcase .btn-small.order-lux:hover {
+  color: #fff; background: var(--brand); box-shadow: 0 8px 20px rgba(255,61,139,.28), inset 0 1px 0 rgba(255,255,255,.25); }
+.showcase .btn-small.order:hover, .showcase .btn-small.order-lux:hover { filter: brightness(1.08); box-shadow: 0 12px 26px rgba(255,61,139,.4), inset 0 1px 0 rgba(255,255,255,.35); }
+/* icons in glass tiles */
+.tile-emoji.gi-on, .stepcard span.gi-on, .occ-tile span.gi-on { border-radius: 16px; background: linear-gradient(135deg, rgba(255,181,71,.14), rgba(255,61,139,.12) 50%, rgba(139,92,246,.14));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.12), 0 6px 18px rgba(0,0,0,.25); }
+.q-letter { color: var(--pink); }
+/* footer signature */
+.signature .sig-card::before { background: conic-gradient(from 0deg, rgba(255,61,139,0) 0 60%, #ffb547 72%, #ff3d8b 82%, #8b5cf6 90%, rgba(139,92,246,0)); }
+.signature .sig-pre, .signature .sig-role { color: var(--muted); }
+.signature .sig-name b { background: var(--brand); -webkit-background-clip: text; background-clip: text; }
+.signature:hover .sig-card { box-shadow: 0 22px 60px rgba(0,0,0,.45), 0 0 30px rgba(255,61,139,.22); }
+
+.lux-orn { flex: none; width: 46px; height: 14px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 46 14' fill='none' stroke='%23ff7aa8' stroke-width='1.3'%3E%3Cpath d='M0 7h30'/%3E%3Cpath d='M30 7c3-5 8-5 9 0-1 5-6 5-9 0z'/%3E%3Ccircle cx='43' cy='7' r='2' fill='%23ff7aa8' stroke='none'/%3E%3C/svg%3E") center / contain no-repeat; }
