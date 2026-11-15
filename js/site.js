@@ -518,7 +518,8 @@
   let tunesScript = null;
   const loadTunes = () => tunesScript || (tunesScript = script('js/tunes.js').catch(e => { tunesScript = null; throw e; }));
   const loadFilms = loadTunes;
-  const loadStudio = () => studioScript || (studioScript = Promise.all([script('js/studio.js'), loadTunes()]).catch(e => { studioScript = null; throw e; }));
+  // the Studio, then the cinema films (js/cinema.js and its bundle of films, which add themselves to it)
+  const loadStudio = () => studioScript || (studioScript = Promise.all([script('js/studio.js').then(() => script('js/cinema.js')).then(() => script('js/cinema/bundle.js')), loadTunes()]).catch(e => { studioScript = null; throw e; }));
   // The look's music while the video plays; 🔇 mutes it (and stays muted for the next video)
   let tune = null, muted = false;
   const tuneOff = () => { if (tune) { tune.close(); tune = null; } };

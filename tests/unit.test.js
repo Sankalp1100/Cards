@@ -795,7 +795,7 @@ test.describe('Server config check', () => {
 
 test.describe('Video Studio', () => {
   const ctx = vm.createContext({ TextEncoder, TextDecoder, btoa, atob, URL, URLSearchParams, console });
-  for (const f of ['config.js', 'themes.js', 'codec.js', 'core.js', 'studio.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', f), 'utf8'), ctx, { filename: f });
+  for (const f of ['config.js', 'themes.js', 'codec.js', 'core.js', 'studio.js', 'cinema.js', 'cinema/bundle.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', f), 'utf8'), ctx, { filename: f });
   const Studio = vm.runInContext('Studio', ctx);
   const card = extra => ({ ...plain(PRESETS.wedding.card), ...extra });
   const story = (c, o = {}) => Studio.timeline(c, { ...Studio.defaults(c), ...o });
@@ -1034,7 +1034,7 @@ test.describe('Story videos on the website', () => {
 
   test('the website lists every Video Studio scene, each with its picture', () => {
     const ctx = vm.createContext({ TextEncoder, TextDecoder, btoa, atob, URL, URLSearchParams, console });
-    for (const f of ['config.js', 'themes.js', 'codec.js', 'core.js', 'studio.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', f), 'utf8'), ctx, { filename: f });
+    for (const f of ['config.js', 'themes.js', 'codec.js', 'core.js', 'studio.js', 'cinema.js', 'cinema/bundle.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', f), 'utf8'), ctx, { filename: f });
     const Studio = vm.runInContext('Studio', ctx);
     const site = fs.readFileSync(path.join(ROOT, 'js', 'site.js'), 'utf8');
     const listed = [...site.slice(site.indexOf('const VIDEO_SCENES'), site.indexOf('];', site.indexOf('const VIDEO_SCENES'))).matchAll(/\['(\w+)', '([^']+)'/g)];
@@ -1048,6 +1048,25 @@ test.describe('Story videos on the website', () => {
     assert.equal(VIDEO_LOOKS.length, 300);
     for (const [id] of VIDEO_LOOKS) assert.ok(fs.statSync(path.join(ROOT, 'img', 'videos', id + '.jpg')).size > 4000, `img/videos/${id}.jpg`);
     for (const [id] of VIDEO_STORIES) assert.ok(fs.statSync(path.join(ROOT, 'img', 'stories', id + '.jpg')).size > 4000, `img/stories/${id}.jpg`);
+  });
+});
+
+test.describe('Cinema films (js/cinema)', () => {
+  test('every film file is in the bundle and registers itself; each has its picture; the pages load the films', () => {
+    const files = fs.readdirSync(path.join(ROOT, 'js', 'cinema')).filter(f => /^story-[a-z]+\.js$/.test(f));
+    const bundle = fs.readFileSync(path.join(ROOT, 'js', 'cinema', 'bundle.js'), 'utf8');
+    for (const f of files) {
+      assert.ok(bundle.includes(fs.readFileSync(path.join(ROOT, 'js', 'cinema', f), 'utf8')), `js/cinema/${f} changed or is new: run node tools/cinema.mjs`);
+      assert.ok(fs.existsSync(path.join(ROOT, 'img', 'stories', f.replace(/\.js$/, '.jpg'))), `img/stories for ${f}: run node tools/cinema.mjs thumbs`);
+    }
+    const ctx = vm.createContext({ TextEncoder, TextDecoder, btoa, atob, URL, URLSearchParams, console });
+    for (const f of ['config.js', 'themes.js', 'codec.js', 'core.js', 'studio.js', 'cinema.js', 'cinema/bundle.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', f), 'utf8'), ctx, { filename: f });
+    const { Studio, Cinema } = vm.runInContext('({ Studio, Cinema })', ctx);
+    assert.deepEqual(plain([...Cinema.films].sort()), files.map(f => f.replace(/\.js$/, '')).sort(), 'every film registered');
+    assert.equal(Object.keys(Studio.STORIES)[0], 'story-lovestory', 'Our Love Story first');
+    for (const id of Cinema.films) assert.ok(Studio.STORIES[id].reel && Studio.STORIES[id].shots, id);
+    for (const page of ['admin.html', 'v.html']) assert.match(fs.readFileSync(path.join(ROOT, page), 'utf8'), /js\/studio\.js[\s\S]*js\/cinema\.js[\s\S]*js\/cinema\/bundle\.js/, page);
+    assert.match(fs.readFileSync(path.join(ROOT, 'js', 'site.js'), 'utf8'), /js\/cinema\/bundle\.js/);
   });
 });
 

@@ -201,40 +201,23 @@ const Studio = (() => {
     if (Core.parseDate(card.date) || clean(card.venue)) S.push({ k: 'date', d: 5.5 });
     S.push({ k: 'end', d: 6 });
     S.push({ k: 'final', d: 5, sigCorner: opt.signature !== false });
-    if (opt.story && STORIES[opt.story] && STORIES[opt.story].reel) reelTimeline(S);
+    const film = opt.story && STORIES[opt.story];
+    if (film && film.reel && film.timeline) { const out = film.timeline(S, K, card, opt); if (Array.isArray(out) && out !== S) S.splice(0, S.length, ...out); }
     if (opt.story && STORIES[opt.story]) storyLooks(S, STORIES[opt.story], opt.story);
     else eventLooks(S, opt.look);
     const title = S.find(s => s.k === 'title'), style = opt.titleStyle || variant(opt.story || opt.look || 'vrindavan').title;
-    title.style = style;
-    if (style === 'board') title.board = ['arch', 'cartouche', 'carved'][(opt.story || opt.look || '').length % 3];
+    if (title) title.style = style;
+    if (title && style === 'board') title.board = ['arch', 'cartouche', 'carved'][(opt.story || opt.look || '').length % 3];
     let t = 0;
     S.forEach(s => { s.t0 = t; t += s.d; });
     return { scenes: S, total: t };
-  }
-  // A moving film: the café table and the home (one shot each) instead of the doors, the title in the sky, the
-  // invitation over the resort, the functions with their own names and a date bar, no separate regards screen
-  function reelTimeline(S) {
-    const at = k => S.findIndex(s => s.k === k);
-    S.splice(at('open'), 1, { k: 'reel', reel: 'table', name: 'Café', d: 5.5 }, { k: 'reel', reel: 'home', name: 'Our Home', d: 7.5, cut: true, change: 'flash' });
-    Object.assign(S[at('title')], { reel: 'sky', d: 4.5, cut: true, change: 'bloom' });
-    delete S[at('title')].couple; delete S[at('title')].zone;
-    Object.assign(S[at('invite')], { reel: 'resort', d: 6.5, change: 'none', board: false, scrim: true, zone: [150, 1150, 860] });
-    if (at('end') >= 0) S.splice(at('end'), 1);
-    let prev = '';
-    S.forEach(s => {
-      if (s.k !== 'event') return;
-      s.datebar = true; s.scrim = true; s.pose = 'full'; s.board = false;
-      s.change = /sangeet|dance|dj|cocktail|reception|संगीत|स्वागत/i.test(prev) ? 'clink' : 'sparkle';
-      prev = s.e.name;
-    });
-    const d = S.find(s => s.k === 'date'); if (d) d.change = 'petals';
   }
   const sceneName = s => s.name || ({ open: 'Opening', title: 'Title', invite: 'Invitation', events: 'Functions', date: 'Venue', end: 'Regards', final: 'Thank You' })[s.k]
     || splitIcon(s.e.name).name || 'Function';
 
   // What each scene says, as a list of lines for the layout below.
   function lines(s, card, opt) {
-    if (s.k === 'custom') return (s.items || []).filter(Boolean).map(it => ({ gap: 12, ...it }));
+    if (s.k === 'custom' || (s.k === 'reel' && s.items)) return (s.items || []).filter(Boolean).map(it => ({ gap: 12, ...it }));
     const hi = opt.lang === 'hi', two = !!clean(card.host2), when = Core.parseDate(card.date), timed = when && Core.hasTime(card.date);
     const T = (str, f, z, col, more) => clean(str) ? { t: 'text', s: clean(str), f, z, col, gap: 12, ...more } : null;
     const label = hi ? HI.label[card.type] || HI.label.wedding : `${(PRESETS[card.type] || PRESETS.wedding).label} Invitation`;
@@ -398,19 +381,6 @@ const Studio = (() => {
   // Each names the look for every part of the story; a function takes the look its name suggests (Haldi, Mehendi,
   // Baraat, Pheras, Reception…), else the film's own next one.
   const STORIES = {
-    // Our Love Story: a film that moves through things, made like the love-story films couples share. A café table
-    // (roses, a latte with their monogram, a phone a hand picks up) → the phone's photo → the same photo framed on
-    // their wall of memories → down to the TV → through it into the sky, where a gold monogram rises → the
-    // invitation over a resort → every function with its own name ('Sunshine Soirée'…) → the venue → thank you.
-    'story-lovestory': { name: 'Our Love Story', note: 'A café table, a phone, a wall of memories, then through the TV into the sky: a love story that moves', tune: 'romantic',
-      reel: true, open: 'clouds-champagne', title: 'clouds-champagne', invite: 'clouds-champagne', events: ['haldi', 'lights', 'mandap-ivory'],
-      date: 'rosegarden-golden', end: 'rosegarden-golden', final: 'blush-champagne', ganesha: 'ganesha-01', names: ['Myra', 'Arjun'],
-      fn: [[/haldi|pithi|ubtan|हल्दी|हलदी|पीठी|उबटन/i, 'haldi'], [/mehe?n?d|मेहँदी|मेहंदी|मेंहदी/i, 'mehendi-rani'], [/baraat|barat|ghud|ghod|sehra|बारात|घुड़चढ़ी|घुडचढी|सेहरा/i, 'haveli-roseblush'],
-        [/sangeet|dance|dj|garba|dandiya|cocktail|संगीत|गरबा|डांडिया/i, 'lights'], [/lunch|daylight|brunch/i, 'temple-golden'], [/phera|vivah|wedding|varmala|jaimala|mandap|shaadi|फेरे|विवाह|शादी|वरमाला|जयमाला|मंडप/i, 'mandap-ivory'],
-        [/reception|dinner|bhoj|swagat|स्वागत|रिसेप्शन|प्रीतिभोज|भोज/i, 'palace-rose']],
-      titles: [[/haldi|pithi|ubtan|हल्दी/i, 'Sunshine Soirée'], [/mehe?n?d|मेहँदी|मेहंदी/i, 'Henna & Hues'], [/sangeet|dance|dj|cocktail|संगीत/i, 'Glitz, Glam & Grooves'],
-        [/baraat|barat|ghud|बारात/i, 'The Grand Arrival'], [/lunch|daylight|brunch/i, 'The Daylight Gala'], [/phera|vivah|wedding|mandap|फेरे|विवाह/i, 'The Sacred Vows'],
-        [/reception|dinner|स्वागत/i, 'An Evening of Elegance'], [/ring|engage|sagai|सगाई/i, 'The Promise'], [/puja|pooja|ganesh|पूजा/i, 'A Sacred Beginning']] },
     // Shahi Parampara: the film made for Sudhanshu & Yadu, for every order. Doors open on Ganesh ji, then each
     // function in its own colours (fn: the look a function's name takes) with a couple for it.
     'story-shahi': { name: 'Shahi Parampara', note: 'Curtains open on Ganesh ji, and every function in its own colours', tune: 'royal', opening: 'curtains',
@@ -451,7 +421,7 @@ const Studio = (() => {
       const own = s.k === 'event' && ((st.fn || []).find(([re]) => re.test(s.e.name)) || [])[1];
       const byName = s.k === 'event' && (own || eventLook(s.e.name, videoNo(key), f, prev, false));
       if (s.k === 'event') f++;
-      s.look = byName || ({ open: st.open, reel: st.open, title: st.title, invite: st.invite, date: st.date, end: st.end, final: st.final })[s.k]
+      s.look = (s.look && LOOKS[s.look] && s.look) || byName || ({ open: st.open, reel: st.open, title: st.title, invite: st.invite, date: st.date, end: st.end, final: st.final })[s.k]
         || st.events[n++ % st.events.length];
       if (!LOOKS[s.look]) s.look = s.look.split('-')[0]; // a mood a scene does not have: its own first look
       prev = s.look.split('-')[0];
@@ -3210,65 +3180,6 @@ const Studio = (() => {
     for (let i = 0; i < 26; i++) { const bx = x + (R() - .5) * s * 1.5, by = y + (R() - .5) * s * .9; blossom(c, bx, by, s * (.14 + R() * .08), R() > .3 ? '#e2348f' : '#f06aaf', '#ffd1e8', R() * 6, 3); }
   }
   // The café table from above: floor, a round table, roses in kraft paper, a latte with their monogram, keys
-  function tableArt(k, letters) {
-    return reelArt(`table-${letters.join('')}`, W, H, k, c => {
-      const R = rng(77);
-      planks(c, 0, 0, W, H, '#5b3b24', R);
-      c.save(); c.shadowColor = 'rgba(0,0,0,.55)'; c.shadowBlur = 60; c.shadowOffsetX = 18; c.shadowOffsetY = 30;
-      c.beginPath(); c.arc(620, 880, 760, 0, TAU); c.fillStyle = '#8a5530'; c.fill(); c.restore();
-      c.save(); c.beginPath(); c.arc(620, 880, 760, 0, TAU); c.clip();
-      planks(c, -200, 0, W + 400, H, '#a86f43', R, false);
-      const g = c.createRadialGradient(480, 600, 100, 620, 880, 780); g.addColorStop(0, 'rgba(255,220,170,.28)'); g.addColorStop(.7, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(40,18,6,.45)');
-      c.fillStyle = g; c.fillRect(0, 0, W, H);
-      c.restore();
-      c.strokeStyle = '#6a3c1e'; c.lineWidth = 14; c.beginPath(); c.arc(620, 880, 752, 0, TAU); c.stroke();
-      c.strokeStyle = 'rgba(255,220,170,.35)'; c.lineWidth = 3; c.beginPath(); c.arc(620, 880, 742, 0, TAU); c.stroke();
-      // roses in kraft paper (top right)
-      c.save(); c.translate(820, 330); c.rotate(-.55);
-      c.save(); c.shadowColor = 'rgba(30,12,2,.45)'; c.shadowBlur = 30; c.shadowOffsetY = 16;
-      for (const [w0, col] of [[300, '#c9a27a'], [250, '#b88f66']]) { c.fillStyle = col; c.beginPath(); c.moveTo(-w0, -60); c.lineTo(w0, -60); c.lineTo(46, 520); c.lineTo(-46, 520); c.closePath(); c.fill(); }
-      c.restore();
-      c.strokeStyle = 'rgba(90,60,30,.35)'; c.lineWidth = 2; for (const x of [-120, 0, 110]) { c.beginPath(); c.moveTo(x, -50); c.lineTo(x * .12, 500); c.stroke(); }
-      const rb = c.createLinearGradient(-80, 300, 80, 340); rb.addColorStop(0, '#e9a4b4'); rb.addColorStop(.5, '#f8d3dc'); rb.addColorStop(1, '#d98a9e');
-      c.fillStyle = rb; c.beginPath(); c.moveTo(-98, 300); c.lineTo(98, 300); c.lineTo(92, 336); c.lineTo(-92, 336); c.closePath(); c.fill();
-      for (const d of [-1, 1]) { c.beginPath(); c.moveTo(d * 10, 330); c.quadraticCurveTo(d * 40, 420, d * 26, 500); c.lineTo(d * 44, 492); c.quadraticCurveTo(d * 56, 420, d * 22, 330); c.fill(); }
-      for (let i = 0; i < 22; i++) leaf(c, (R() - .5) * 460, -60 + (R() - .5) * 220, 110 + R() * 60, 34, R() * TAU, R() > .5 ? '#3f7a3c' : '#5d9450');
-      const spots = [[0, -80, 92], [-150, -40, 80], [150, -50, 82], [-80, -200, 78], [90, -200, 80], [-220, -150, 64], [220, -160, 66], [0, 40, 70], [-10, -300, 66]];
-      spots.forEach(([x, y, r], i) => rose(c, x, y, r, i % 3 ? '#ffc3d1' : '#ffd9e2', i % 3 ? '#e0607e' : '#e98aa2', R() * 3));
-      for (let i = 0; i < 40; i++) { c.fillStyle = 'rgba(255,255,255,.9)'; c.beginPath(); c.arc((R() - .5) * 460, -80 + (R() - .5) * 300, 5 + R() * 4, 0, TAU); c.fill(); }
-      c.restore();
-      // a little card by the flowers
-      c.save(); c.translate(500, 640); c.rotate(.12); c.shadowColor = 'rgba(0,0,0,.3)'; c.shadowBlur = 12; c.shadowOffsetY = 6;
-      c.fillStyle = '#e8d3b4'; c.fillRect(-90, -55, 180, 110); c.shadowColor = 'transparent';
-      c.fillStyle = '#7a4a26'; c.font = '44px "Great Vibes"'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('Forever', 0, 4); c.restore();
-      // the latte: saucer, cup, foam with their monogram
-      const lx = 300, ly = 1010;
-      c.save(); c.shadowColor = 'rgba(30,12,2,.5)'; c.shadowBlur = 36; c.shadowOffsetX = 10; c.shadowOffsetY = 20;
-      c.fillStyle = '#f2ece4'; c.beginPath(); c.arc(lx, ly, 190, 0, TAU); c.fill(); c.restore();
-      const sg = c.createRadialGradient(lx - 50, ly - 60, 20, lx, ly, 190); sg.addColorStop(0, '#ffffff'); sg.addColorStop(1, '#ddd3c6'); c.fillStyle = sg; c.beginPath(); c.arc(lx, ly, 186, 0, TAU); c.fill();
-      c.fillStyle = '#f7f3ee'; rrect(c, lx + 110, ly - 26, 110, 52, 26); c.fill();
-      c.save(); c.shadowColor = 'rgba(0,0,0,.25)'; c.shadowBlur = 14; c.fillStyle = '#ffffff'; c.beginPath(); c.arc(lx, ly, 140, 0, TAU); c.fill(); c.restore();
-      const fg = c.createRadialGradient(lx, ly, 10, lx, ly, 120); fg.addColorStop(0, '#f1dcb9'); fg.addColorStop(.7, '#d9ae78'); fg.addColorStop(1, '#8a5428');
-      c.fillStyle = fg; c.beginPath(); c.arc(lx, ly, 120, 0, TAU); c.fill();
-      c.strokeStyle = 'rgba(250,236,210,.85)'; c.lineWidth = 4;
-      for (let i = 0; i < 3; i++) { c.beginPath(); c.arc(lx, ly + 6, 96 - i * 9, Math.PI * .15, Math.PI * .85); c.stroke(); }
-      c.fillStyle = 'rgba(110,62,26,.82)'; c.font = `700 ${letters.length > 1 ? 92 : 120}px "Cinzel Decorative"`; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.save(); c.shadowColor = 'rgba(110,62,26,.6)'; c.shadowBlur = 6;
-      if (letters.length > 1) { c.fillText(letters[0], lx - 26, ly - 18); c.fillText(letters[1], lx + 30, ly + 22); } else c.fillText(letters[0] || '♥', lx, ly);
-      c.restore();
-      // keys with a leather tag
-      c.save(); c.translate(760, 1190); c.rotate(.4);
-      c.shadowColor = 'rgba(0,0,0,.45)'; c.shadowBlur = 10; c.shadowOffsetY = 6;
-      c.strokeStyle = '#b9bcc4'; c.lineWidth = 8; c.beginPath(); c.arc(0, 0, 36, 0, TAU); c.stroke();
-      for (const [a, len] of [[.4, 150], [1.2, 130]]) { c.save(); c.rotate(a); const kg = c.createLinearGradient(0, -12, 0, 12); kg.addColorStop(0, '#e8eaee'); kg.addColorStop(1, '#8d929c'); c.fillStyle = kg;
-        c.beginPath(); c.arc(56, 0, 24, 0, TAU); c.fill(); c.fillRect(70, -9, len, 18); for (let t2 = 0; t2 < 4; t2++) c.fillRect(100 + t2 * 22, 9, 10, 10 + (t2 % 2) * 6); c.restore(); }
-      c.fillStyle = '#7a4524'; c.save(); c.rotate(-1.2); rrect(c, 30, -24, 110, 48, 16); c.fill(); c.restore();
-      c.restore();
-      // warm window light across the table
-      const wl = c.createLinearGradient(0, 0, W, H); wl.addColorStop(0, 'rgba(255,226,170,.22)'); wl.addColorStop(.5, 'rgba(255,226,170,0)'); wl.addColorStop(1, 'rgba(0,0,0,.25)');
-      c.fillStyle = wl; c.fillRect(0, 0, W, H);
-    });
-  }
   // A couple's photo: their cut-out picture cropped to the faces over a warm sunset backdrop
   function portrait(c, img, x, y, w, h, t, zoom = 1) {
     c.save(); c.beginPath(); c.rect(x, y, w, h); c.clip();
@@ -3342,80 +3253,6 @@ const Studio = (() => {
     c.strokeStyle = 'rgba(150,130,100,.35)'; c.lineWidth = 2; for (let i = -96; i < 100; i += 10) { c.beginPath(); c.moveTo(i, 322); c.lineTo(i, 354); c.stroke(); }
     c.restore();
   }
-  // The living room: a wall of framed memories (the big one is their portrait), shelves, plants, the TV on a
-  // bookshelf, a rug. 1080 wide, 2700 tall; the camera moves down it.
-  const HOME = { h: 2700, frame: { x: 540, y: 640, w: 470, h: 600, border: 26, mat: 46 }, tv: { x: 540, y: 1690, w: 700, h: 394 } };
-  function homeArt(k) {
-    return reelArt('home', W, HOME.h, k, c => {
-      const R = rng(909);
-      const wg = c.createLinearGradient(0, 0, 0, HOME.h); wg.addColorStop(0, '#f0dfc8'); wg.addColorStop(1, '#e2c7a6'); c.fillStyle = wg; c.fillRect(0, 0, W, HOME.h);
-      for (let i = 0; i < 9000; i++) { c.fillStyle = `rgba(120,80,40,${R() * .05})`; c.fillRect(R() * W, R() * HOME.h, 2, 2); }
-      glow(c, 160, 300, 900, 'rgba(255,246,226,.55)');
-      const frame = (x, y, w, h, wood, inner) => {
-        c.save(); c.shadowColor = 'rgba(60,35,15,.35)'; c.shadowBlur = 22; c.shadowOffsetX = 8; c.shadowOffsetY = 14;
-        c.fillStyle = wood; c.fillRect(x - w / 2, y - h / 2, w, h); c.restore();
-        c.strokeStyle = 'rgba(0,0,0,.2)'; c.lineWidth = 2; c.strokeRect(x - w / 2 + 2, y - h / 2 + 2, w - 4, h - 4);
-        c.fillStyle = '#fbf8f2'; const b = Math.min(w, h) * .06; c.fillRect(x - w / 2 + b, y - h / 2 + b, w - b * 2, h - b * 2);
-        if (inner) inner(x - w / 2 + b * 2.2, y - h / 2 + b * 2.2, w - b * 4.4, h - b * 4.4);
-      };
-      const hills = (x, y, w, h) => { c.save(); c.beginPath(); c.rect(x, y, w, h); c.clip(); sky(c, [[0, '#cfe3ee'], [1, '#f6e2c6']], y, y + h); c.fillStyle = '#f3c77c'; c.beginPath(); c.arc(x + w * .7, y + h * .35, h * .1, 0, TAU); c.fill();
-        [['#9db884', .55], ['#7a9e6a', .68], ['#5c8452', .82]].forEach(([col, k2]) => { c.fillStyle = col; c.beginPath(); c.moveTo(x, y + h); for (let i = 0; i <= 8; i++) c.lineTo(x + w * i / 8, y + h * k2 - Math.sin(i * 1.3 + k2 * 9) * h * .08); c.lineTo(x + w, y + h); c.fill(); }); c.restore(); };
-      const botanical = (x, y, w, h) => { c.fillStyle = '#f3efe4'; c.fillRect(x, y, w, h); eucalyptus(c, x + w * .2, y + h * .85, h * .75, -1.25, '#8fae94'); };
-      const abstract = (x, y, w, h) => { c.fillStyle = '#efe4d2'; c.fillRect(x, y, w, h); c.fillStyle = '#d99a6c'; c.beginPath(); c.arc(x + w * .4, y + h * .45, w * .26, 0, TAU); c.fill(); c.fillStyle = '#7f9a86'; c.beginPath(); c.ellipse(x + w * .6, y + h * .7, w * .3, h * .12, 0, 0, TAU); c.fill(); };
-      const F = HOME.frame;
-      // the big portrait frame (its photo is drawn live); the other frames around it
-      frame(F.x, F.y, F.w, F.h, '#b98b5a');
-      c.fillStyle = '#fbf8f2'; c.fillRect(F.x - F.w / 2 + F.border, F.y - F.h / 2 + F.border, F.w - F.border * 2, F.h - F.border * 2);
-      [[170, 260, 200, 250, '#c49a6c', hills], [170, 600, 180, 220, '#3d2b1f', botanical], [175, 900, 220, 170, '#c49a6c', abstract],
-        [905, 240, 210, 170, '#3d2b1f', hills], [910, 520, 190, 240, '#c49a6c', null], [900, 830, 170, 200, '#c49a6c', botanical], [540, 210, 230, 150, '#3d2b1f', abstract]]
-        .forEach(([x, y, w, h, wood, inner]) => frame(x, y, w, h, wood, inner));
-      // a floating shelf with plants and books
-      c.fillStyle = '#8a5a34'; c.fillRect(640, 1080, 380, 22); c.fillStyle = 'rgba(0,0,0,.15)'; c.fillRect(640, 1102, 380, 10);
-      const pot = (x, y, s, col) => { c.fillStyle = col; c.beginPath(); c.moveTo(x - s * .5, y - s * .7); c.lineTo(x + s * .5, y - s * .7); c.lineTo(x + s * .38, y); c.lineTo(x - s * .38, y); c.fill(); foliage(c, R, x, y - s * 1.2, s * .9, s * .7, 70, 115, 36, s * .4, 45); };
-      pot(700, 1080, 90, '#e9e2d6'); pot(960, 1080, 80, '#c9774a');
-      ['#7a2e2e', '#2e4a6a', '#c9a24a', '#3d6a4a'].forEach((col, i) => { c.fillStyle = col; c.fillRect(790 + i * 26, 1080 - 110 + i * 6, 22, 110 - i * 6); });
-      // a hanging plant
-      c.strokeStyle = '#c8b48a'; c.lineWidth = 3; for (const dx of [-30, 0, 30]) { c.beginPath(); c.moveTo(1000, 0); c.lineTo(1000 + dx, 330); c.stroke(); }
-      pot(1000, 400, 90, '#f0ebe2');
-      for (let i = 0; i < 6; i++) { c.strokeStyle = '#4f8a44'; c.lineWidth = 4; c.beginPath(); c.moveTo(980 + i * 8, 400); c.quadraticCurveTo(960 + i * 12, 520, 990 + i * 6, 640 + i * 20); c.stroke(); for (let j = 0; j < 8; j++) leaf(c, 980 + i * 8 - j * 2, 410 + j * 30 + i * 3, 30, 12, Math.PI / 2 + (j % 2 ? .8 : -.8), '#5d9a4c', false); }
-      // the bookshelf console under the TV
-      const top = 1960;
-      c.save(); c.shadowColor = 'rgba(60,35,15,.4)'; c.shadowBlur = 30; c.shadowOffsetY = 16; c.fillStyle = '#9a6a3e'; c.fillRect(60, top, 960, 470); c.restore();
-      c.fillStyle = '#b07c4c'; c.fillRect(50, top - 22, 980, 30);
-      for (const [sy, sh] of [[top + 30, 200], [top + 250, 200]]) {
-        c.fillStyle = '#5a3a20'; c.fillRect(90, sy, 900, sh);
-        let bx = 100;
-        while (bx < 960) {
-          const bw = 18 + R() * 26, bh = sh * (.62 + R() * .32);
-          if (R() < .12) { c.fillStyle = '#e9e2d6'; c.beginPath(); c.ellipse(bx + 30, sy + sh - 40, 30, 40, 0, 0, TAU); c.fill(); bx += 70; continue; }
-          c.fillStyle = ['#8a2e2e', '#2e4a6a', '#c9a24a', '#3d6a4a', '#e2d3b4', '#6a3a5a', '#b45a2a'][Math.floor(R() * 7)];
-          c.fillRect(bx, sy + sh - bh, bw, bh); c.fillStyle = 'rgba(255,255,255,.18)'; c.fillRect(bx + 3, sy + sh - bh + 10, bw - 6, 4);
-          bx += bw + 2;
-        }
-      }
-      // plants either side of the TV
-      for (const [x, s] of [[110, 230], [970, 210]]) { c.fillStyle = '#d9cfbf'; rrect(c, x - s * .35, top - s * .7, s * .7, s * .7, 14); c.fill(); foliage(c, R, x, top - s * 1.25, s * .8, s * .7, 260, 112, 34, s * .28, 50); for (let i = 0; i < 8; i++) blossom(c, x + (R() - .5) * s, top - s * (1 + R() * .6), 16, R() > .5 ? '#e2348f' : '#ffb238', '#fff', R() * 6); }
-      // floor and rug
-      c.fillStyle = '#a77a52'; c.fillRect(0, 2440, W, HOME.h - 2440);
-      const rg = (x, y, w, h) => { c.fillStyle = '#9c2f2f'; c.fillRect(x, y, w, h); c.fillStyle = '#1f3e6a'; c.fillRect(x + 30, y + 30, w - 60, h - 60); c.fillStyle = '#d9b66a'; c.fillRect(x + 60, y + 60, w - 120, h - 120); c.fillStyle = '#9c2f2f'; c.fillRect(x + 80, y + 80, w - 160, h - 160);
-        for (let i = 0; i < 12; i++) { c.fillStyle = i % 2 ? '#f0e2c0' : '#1f3e6a'; const cx = x + 120 + i * (w - 240) / 11; c.beginPath(); c.moveTo(cx, y + 110); c.lineTo(cx + 22, y + 140); c.lineTo(cx, y + 170); c.lineTo(cx - 22, y + 140); c.fill(); }
-        rangoli(c, x + w / 2, y + h * .55, 90); };
-      rg(40, 2480, 1000, 260);
-      const sh = c.createLinearGradient(0, 2440, 0, 2520); sh.addColorStop(0, 'rgba(40,20,8,.35)'); sh.addColorStop(1, 'rgba(40,20,8,0)'); c.fillStyle = sh; c.fillRect(0, 2440, W, 80);
-    });
-  }
-  function tv(c, x, y, w, h, on, skyCv) {
-    c.save(); c.shadowColor = 'rgba(30,15,5,.45)'; c.shadowBlur = 30; c.shadowOffsetY = 14; c.fillStyle = '#121216'; rrect(c, x - w / 2, y - h / 2, w, h, 10); c.fill(); c.restore();
-    c.fillStyle = '#2a2a30'; c.fillRect(x - 100, y + h / 2, 200, 16); c.fillRect(x - 160, y + h / 2 + 16, 320, 10);
-    const sx = x - w / 2 + 12, sy = y - h / 2 + 12, sw = w - 24, sh = h - 24;
-    c.fillStyle = '#050508'; c.fillRect(sx, sy, sw, sh);
-    if (on > 0) {
-      c.save(); c.beginPath(); c.rect(sx, sy, sw, sh); c.clip(); c.globalAlpha = on;
-      const k = Math.max(sw / W, sh / H); c.drawImage(skyCv, x - W * k / 2, y - H * k / 2, W * k, H * k);
-      c.restore();
-      if (on < 1) { c.fillStyle = `rgba(255,255,255,${(1 - on) * .9})`; c.fillRect(sx, y - 2 - (1 - on) * 6, sw, 4 + (1 - on) * 12); }
-    } else { const gl = c.createLinearGradient(sx, sy, sx + sw, sy + sh); gl.addColorStop(0, 'rgba(255,255,255,.07)'); gl.addColorStop(.6, 'rgba(255,255,255,0)'); c.fillStyle = gl; c.fillRect(sx, sy, sw, sh); }
-  }
   // The gold monogram: two initials, deep 3D gold, interlocked, with small roses where they meet
   function monogramArt(letters, k) {
     return reelArt(`mono-${letters.join('')}`, 1000, 900, k, c => {
@@ -3450,29 +3287,6 @@ const Studio = (() => {
     c.fillStyle = 'rgba(255,255,255,.65)'; c.fillRect(-4, 0, 8, 170); c.beginPath(); c.ellipse(0, 172, 60, 12, 0, 0, TAU); c.fill();
     c.restore();
   }
-  // The resort at the foot of the invitation: a modern villa, a pool with lotus, palms and flowers
-  function resortArt(k) {
-    return reelArt('resort', W, 760, k, c => {
-      const R = rng(55), y0 = 0;
-      for (let i = 0; i < 26; i++) foliage(c, R, i * 44, y0 + 180 + R() * 30, 70, 60, 40, 110, 30, 30, 40);
-      // a two-storey villa: stone and glass, warm lights inside, a deep roof
-      c.fillStyle = '#efe9de'; c.fillRect(260, y0 + 70, 560, 110); c.fillStyle = '#d9cfbf'; c.fillRect(230, y0 + 58, 620, 18);
-      c.fillStyle = '#f4f1ea'; c.fillRect(120, y0 + 180, 840, 140); c.fillStyle = '#ded6c8'; c.fillRect(80, y0 + 166, 920, 22);
-      c.fillStyle = '#b9a07a'; c.fillRect(120, y0 + 188, 120, 132); c.fillRect(840, y0 + 188, 120, 132);
-      for (const [x0, x1, yy, hh] of [[290, 790, 88, 76], [260, 820, 206, 96]]) for (let x = x0; x < x1; x += 62) {
-        const wg = c.createLinearGradient(0, y0 + yy, 0, y0 + yy + hh); wg.addColorStop(0, '#2c4a54'); wg.addColorStop(1, '#ffcf8a'); c.fillStyle = wg; c.fillRect(x, y0 + yy, 46, hh);
-        c.fillStyle = 'rgba(255,255,255,.3)'; c.fillRect(x + 5, y0 + yy + 4, 8, hh - 8); }
-      c.fillStyle = '#d9cfbf'; c.fillRect(0, y0 + 320, W, 70);
-      c.fillStyle = '#3fb4c8'; c.beginPath(); c.moveTo(150, y0 + 390); c.lineTo(930, y0 + 390); c.lineTo(1080, y0 + 640); c.lineTo(0, y0 + 640); c.closePath(); c.fill();
-      const pg = c.createLinearGradient(0, y0 + 390, 0, y0 + 640); pg.addColorStop(0, 'rgba(255,255,255,.35)'); pg.addColorStop(1, 'rgba(0,60,90,.25)'); c.fillStyle = pg; c.fill();
-      c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 2; for (let i = 0; i < 26; i++) { const yy = y0 + 400 + R() * 220, xx = 100 + R() * 880; c.beginPath(); c.moveTo(xx, yy); c.quadraticCurveTo(xx + 20, yy - 6, xx + 40, yy); c.stroke(); }
-      for (let i = 0; i < 12; i++) { const x = i % 2 ? 60 + R() * 220 : 800 + R() * 220, y = y0 + 560 + R() * 70; lotusPad(c, x, y, 40, 14, R()); if (i % 3 === 0) lotus(c, x, y - 6, 46, .8); }
-      for (const [x, h] of [[70, 300], [1010, 330]]) palm(c, x, y0 + 470, h, x < 500 ? .3 : -.3, R);
-      c.fillStyle = '#5d9450'; c.fillRect(0, y0 + 640, W, 120);
-      for (let i = 0; i < 60; i++) blossom(c, R() * W, y0 + 650 + R() * 100, 12 + R() * 8, ['#e2348f', '#ffffff', '#f06aaf', '#ffd166'][i % 4], '#fff', R() * 6);
-      for (let i = 0; i < 40; i++) leaf(c, R() * W, y0 + 660 + R() * 100, 60, 20, -Math.PI / 2 + (R() - .5) * 2, '#3f7a3c');
-    });
-  }
   // The look the film's own screens use for their words (fonts, colours) and their moving things
   function reelLook(kind) {
     const B = LOOKS['clouds-champagne'];
@@ -3481,81 +3295,12 @@ const Studio = (() => {
       col: { names: '#8a1f3c', ink: '#3b2414', ink2: '#5e4428', accent: '#9a5b16', gold: '#b8862b' }, shadow: ['rgba(255,252,240,.9)', 10],
       fx: sky2 ? (c, t) => { petals(c, t, 16, ['#f48fb1', '#ffffff', '#f06aaf'], 61); sparks(c, t, 8, '#f3d27a', 19); } : (c, t) => motes(c, t, 10, 'rgba(255,236,190,A)', 9, 8) };
   }
-  // One frame of a film scene: its own camera through its own things (pt: seconds into the scene)
+  // One frame of a film's shot: the registered film draws it (js/cinema/<id>.js, its shots[name])
   function drawReel(c, s, pt, t, P) {
-    const k = Math.min(1.25, Math.max(.5, P.k)), card = P.card, img = libImage(P.couple), letters = P.ctx.letters, u = pt / s.d;
-    if (s.reel === 'table') {
-      // phone: lying on the table → lit by a tap → lifted towards the camera; the camera then flies into its screen
-      const lift = ease3((pt - 2.3) / 1.3), px = lerp(390, 540, lift), py = lerp(1360, 1080, lift), pa = lerp(-.2, 0, lift), ps = lerp(1, 1.18, lift);
-      const lit = ease((pt - 1.8) / .35);
-      const zEnd = Math.max(W / ((PHONE.w - PHONE.inset * 2) * 1.18), H / ((PHONE.h - PHONE.inset * 2) * 1.18)) * 1.02;
-      const fly = ease3((pt - 2.9) / (s.d - 3.05)), z = lerp(1.06 + .05 * clamp(pt / 2.9), zEnd, fly);
-      const cx = lerp(560, px, fly), cy = lerp(940, py, fly);
-      c.save(); c.translate(W / 2, H / 2); c.scale(z, z); c.translate(-cx, -cy);
-      c.drawImage(tableArt(k, letters), 0, 0, W, H);
-      // steam over the latte
-      c.save();
-      for (let i = 0; i < 3; i++) { const ph = t * .7 + i * 2.1; c.strokeStyle = `rgba(255,250,240,${(.13 + .06 * Math.sin(ph)).toFixed(2)})`; c.lineWidth = 14; c.lineCap = 'round';
-        c.beginPath(); c.moveTo(280 + i * 24, 990); c.bezierCurveTo(250 + i * 24 + Math.sin(ph) * 30, 900, 330 + i * 20 + Math.cos(ph) * 30, 840, 290 + i * 24, 760); c.stroke(); }
-      c.restore();
-      // the hand reaches in, taps the screen awake, and lets go as the phone rises
-      const reach = ease3((pt - .3) / 1.3), tap = Math.sin(clamp((pt - 1.6) / .4) * Math.PI) * 14, away = ease3((pt - 2.25) / .9);
-      const hx = lerp(760, 470, reach) + away * 220, hy = lerp(2350, 1500, reach) + tap + away * 900;
-      drawPhone(c, px, py, pa, ps, lit, img, t, card);
-      if (reach > 0 && away < 1) hand(c, hx, hy, lerp(-.42, -.3, reach), 1.02);
-      c.restore();
-    } else if (s.reel === 'home') {
-      // into the portrait (as the phone's photo was) → out to the wall → down to the TV → it lights → through it
-      const F = HOME.frame, T2 = HOME.tv, pw = F.w - F.border * 2 - F.mat * 2, ph2 = F.h - F.border * 2 - F.mat * 2;
-      const z0 = Math.max(W / pw, H / ph2) * 1.02, out = ease3(pt / 2.6), down = ease3((pt - 2.7) / 1.7), on = ease((pt - 4.5) / .6);
-      const zTv = Math.max(W / (T2.w - 24), H / (T2.h - 24)) * 1.05, into = clamp((pt - 5.2) / (s.d - 5.2)) ** 2.4;
-      let z = lerp(z0, 1, out), cy = lerp(F.y, 960, out), cx = 540;
-      cy = lerp(cy, 1620, down); z = lerp(z, 1.04, down);
-      z = lerp(z, zTv, into); cy = lerp(cy, T2.y, into);
-      c.save(); c.translate(W / 2, H / 2); c.scale(z, z); c.translate(-cx, -cy);
-      c.drawImage(homeArt(k), 0, 0, W, HOME.h);
-      portrait(c, img, F.x - pw / 2, F.y - ph2 / 2, pw, ph2, t);
-      // two small memories in the gallery
-      portrait(c, img, 910 - 70, 520 - 95, 140, 190, t, 1.6);
-      tv(c, T2.x, T2.y, T2.w, T2.h, on, skyArt(k));
-      c.restore();
-      if (into > .55) { c.fillStyle = `rgba(255,252,245,${((into - .55) / .45 * .85).toFixed(2)})`; c.fillRect(0, 0, W, H); }
-    } else if (s.reel === 'sky') {
-      const z = 1 + .06 * u;
-      c.save(); c.translate(W / 2, H / 2); c.scale(z, z); c.translate(-W / 2, -H / 2); c.drawImage(skyArt(k), 0, 0, W, H); c.restore();
-      const inn = ease3(pt / 1.6), spray = reelArt('spray', 640, 640, k, g => orchidSpray(g, 40, 40, .62, 470, 5, rng(12)));
-      // orchid sprays grow in from the four corners (one painted spray, mirrored)
-      for (const [fx, fy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {
-        c.save(); c.translate(fx > 0 ? 0 : W, fy > 0 ? 0 : H); c.scale(fx, fy);
-        c.translate((1 - inn) * -260 + Math.sin(t * .6 + fx * 2 + fy) * 6, (1 - inn) * -200);
-        c.drawImage(spray, -40, -40, 640, 640); c.restore();
-      }
-      const m = monogramArt(letters, k), a = ease((pt - .3) / 1.1), sc = .82 + .18 * ease3((pt - .3) / 1.6);
-      c.save(); c.globalAlpha = a; c.translate(W / 2, 820 + Math.sin(t * .8) * 6); c.scale(sc, sc);
-      c.drawImage(m, -500, -560, 1000, 900);
-      c.restore();
-      // a gleam across the monogram
-      const sh = (pt - 1.4) / 1.1;
-      if (sh > 0 && sh < 1) { c.save(); c.globalCompositeOperation = 'screen'; const gx = 140 + sh * 800, g = c.createLinearGradient(gx - 90, 300, gx + 90, 900); g.addColorStop(0, 'rgba(255,248,220,0)'); g.addColorStop(.5, 'rgba(255,248,220,.55)'); g.addColorStop(1, 'rgba(255,248,220,0)'); c.fillStyle = g; c.fillRect(150, 260, 780, 760); c.restore(); }
-      const two = clean(card.host2), na = ease((pt - 1.2) / .9);
-      if (na > .01) {
-        c.save(); c.globalAlpha = na; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = '62px "Cinzel"'; spacing(c, 10);
-        const txt = (two ? `${clean(card.host1)}  &  ${clean(card.host2)}` : clean(card.host1)).toUpperCase(), y = 1270;
-        const ng = c.createLinearGradient(0, y - 34, 0, y + 30); ng.addColorStop(0, '#d9a640'); ng.addColorStop(.5, '#9a6414'); ng.addColorStop(1, '#6e4208');
-        c.shadowColor = 'rgba(255,252,240,.95)'; c.shadowBlur = 22; c.fillStyle = ng; c.fillText(txt, W / 2, y); c.shadowBlur = 6; c.shadowColor = 'rgba(255,240,200,.8)'; c.fillText(txt, W / 2, y);
-        c.shadowColor = 'rgba(255,252,240,.95)'; c.shadowBlur = 14; spacing(c, 6); c.font = 'italic 44px "Cormorant Garamond"'; c.fillStyle = '#6e4208'; c.fillText(dateRange(card, P.opt.lang === 'hi'), W / 2, y + 80);
-        spacing(c, 0); c.restore();
-      }
-    } else if (s.reel === 'resort') {
-      const z = 1.04 - .04 * ease3(u);
-      c.save(); c.translate(W / 2, H / 2); c.scale(z, z); c.translate(-W / 2, -H / 2 - 30 * (1 - u)); c.drawImage(skyArt(k), 0, 0, W, H); c.restore();
-      const rise = ease3(pt / 1.6);
-      c.drawImage(resortArt(k), 0, H - 760 + (1 - rise) * 260, W, 760);
-      const bg = reelArt('bouga', W, 300, k, g => { const R = rng(3); for (let i = 0; i < 7; i++) bougainvillea(g, 40 + i * 170, 70 + (i % 2) * 50, 140, R); });
-      c.drawImage(bg, 0, -20 + Math.sin(t * .7) * 5 - (1 - rise) * 120, W, 300);
-    }
+    const st = STORIES[P.opt.story], shot = st && st.shots && st.shots[s.reel];
+    if (shot) { c.save(); shot(c, s, pt, t, P, K); c.restore(); }
+    else { c.fillStyle = '#20101a'; c.fillRect(0, 0, W, H); }
   }
-
   // The hanging strings of a signboard: pearls on a cream board, marigolds on wood, gold beads on velvet
   function boardStrings(c, B) {
     for (const d of [-1, 1]) {
@@ -3575,7 +3320,11 @@ const Studio = (() => {
     // `k` draws smaller (0.5 = 540×960, for previews on the website's phones); the video itself is made at 1.
     constructor(canvas, k = 1) { this.cv = canvas; this.k = k; this.c = canvas.getContext('2d'); canvas.width = Math.round(W * k); canvas.height = Math.round(H * k); }
     set(card, opt, site = {}) {
-      if (card && card.sampleOf && (opt.story || opt.look)) card = sample(card.sampleOf, opt.story || opt.look);
+      if (card && card.sampleOf && (opt.story || opt.look)) {
+        const was = card.type;
+        card = sample(card.sampleOf, opt.story || opt.look);
+        if (card.type !== was) { const d = defaults(card, opt.lang); opt = { ...opt, blessing: d.blessing, inviteLine: d.inviteLine }; }
+      }
       if (opt.swapNames) card = swapNames(card);
       this.card = card; this.opt = opt; this.L = LOOKS[opt.look] || LOOKS.vrindavan;
       this.tl = timeline(card, opt); this.cache = new Map();
@@ -3612,7 +3361,7 @@ const Studio = (() => {
       return this;
     }
     prepare(s) {
-      const L = s.reel ? (this.reelL[s.reel] || (this.reelL[s.reel] = reelLook(s.reel))) : LOOKS[s.look && this.layers.has(s.look) ? s.look : (LOOKS[this.opt.look] ? this.opt.look : 'vrindavan')] || this.L;
+      const L = s.reel ? this.shotLook(s.reel) : LOOKS[s.look && this.layers.has(s.look) ? s.look : (LOOKS[this.opt.look] ? this.opt.look : 'vrindavan')] || this.L;
       return this.sceneText(s, L, s.zone ? 'center' : this.v.layout, this.pic(s));
     }
     // Scene pictures (js/scenes.js): each scene whose function has pictures takes one, different ones in turn
@@ -3624,7 +3373,8 @@ const Studio = (() => {
       if (!list.length) { this.ready = Promise.resolve(); return; }
       this.tl.scenes.forEach((sc, i) => {
         // a moving film's own shots (café, home, sky) stay its own; its invitation and functions may take a picture
-        const fn = sc.reel && sc.reel !== 'resort' ? null : sceneFn(sc), mine = fn ? list.filter(f => f.toLowerCase().startsWith(fn + '-')) : [];
+        const film = STORIES[this.opt.story] || {};
+        const fn = sc.reel && !(film.pictures || []).includes(sc.reel) ? null : sceneFn(sc), mine = fn ? list.filter(f => f.toLowerCase().startsWith(fn + '-')) : [];
         if (!mine.length) return;
         const fresh = mine.filter(f => !used.has(f)), pool = fresh.length ? fresh : mine, file = pool[hashOf(`${key}:${i}`) % pool.length];
         used.add(file);
@@ -3632,6 +3382,10 @@ const Studio = (() => {
         if (img) this.pics.set(sc, { img, seed: hashOf(file + i) });
       });
       this.ready = Promise.all([...this.pics.values()].map(({ img }) => (img.complete ? null : new Promise(r => { img.addEventListener('load', r, { once: true }); img.addEventListener('error', r, { once: true }); }))));
+    }
+    shotLook(kind) {
+      if (!this.reelL[kind]) { const st = STORIES[this.opt.story] || {}; this.reelL[kind] = (st.look && st.look(kind, K)) || reelLook(kind); }
+      return this.reelL[kind];
     }
     pic(sc) { const x = sc && this.pics.get(sc); return x && x.img.complete && x.img.naturalWidth ? x : null; }
     get total() { return this.tl.total; }
@@ -3670,7 +3424,7 @@ const Studio = (() => {
       const idx = scenes.findIndex(s => t < s.t0 + s.d), s = scenes[idx < 0 ? scenes.length - 1 : idx], p = t - s.t0, last = s === scenes[scenes.length - 1];
       const lookOf = sc => (sc && sc.look && this.layers.has(sc.look) ? sc.look : null);
       const main = LOOKS[this.opt.look] ? this.opt.look : 'vrindavan', lookId = sc => lookOf(sc) || main;
-      const L = s.reel ? (this.reelL[s.reel] || (this.reelL[s.reel] = reelLook(s.reel))) : LOOKS[lookId(s)] || this.L;
+      const L = s.reel ? this.shotLook(s.reel) : LOOKS[lookId(s)] || this.L;
       const prev = scenes[scenes.indexOf(s) - 1], pic = this.pic(s), prevPic = this.pic(prev);
       const keyOf = (sc, pc) => (pc ? pc.img.src : sc.reel ? `reel:${sc.reel}` : lookOf(sc));
       // a film's cut (into the photo, into the sky) is a cut: no fade
@@ -3865,7 +3619,7 @@ const Studio = (() => {
     ['Tara', 'Dev'], ['Nisha', 'Karan'], ['Aditi', 'Shaurya'], ['Pooja', 'Siddharth'], ['Naina', 'Ishaan'], ['Avni', 'Yash'], ['Sneha', 'Varun']];
   const SAMPLE_FAMILIES = [['Sharma', 'Mehta'], ['Agarwal', 'Gupta'], ['Kapoor', 'Malhotra'], ['Iyer', 'Rao'], ['Singh', 'Chauhan'], ['Jain', 'Bansal'], ['Verma', 'Saxena']];
   function sample(scene, key) {
-    const type = SAMPLE_OCC[scene] || 'wedding', card = JSON.parse(JSON.stringify(PRESETS[type].card));
+    const film = key && STORIES[key], type = (film && film.occasion && PRESETS[film.occasion] && film.occasion) || SAMPLE_OCC[scene] || 'wedding', card = JSON.parse(JSON.stringify(PRESETS[type].card));
     // in turn by the video's place (films, then looks), so neighbouring tiles never share names
     const n = key ? videoNo(key) * 5 + (Object.keys(STORIES).includes(key) ? 3 : 0) : 0;
     if (key && clean(card.host2) && /^(wedding|engagement|reception|roka|haldi|sangeet|mehendi)$/.test(type)) [card.host1, card.host2] = (STORIES[key] && STORIES[key].names) || SAMPLE_NAMES[n % SAMPLE_NAMES.length];
@@ -3878,7 +3632,244 @@ const Studio = (() => {
     return card;
   }
 
-  return { W, H, LOOKS, SCENES: SCENE_IDS, STORIES, quotesFor, eventTop, swapNames, variant, coupleFor, POSES, OPENINGS, CHANGES, LAYOUTS_V, ENTRANCES, SITE_QR, HI, hasCouple, dateRange, lookName, thumb, sample, defaults, timeline, lines, parents, splitIcon, ordinal, phone, sceneName, sceneLayer, Player, fontsReady };
+  // ---------- The cinema kit (Studio.kit): what a film in js/cinema/<id>.js draws with ----------
+  // See the guide at the top of js/cinema.js. Everything here is stable API: films read it, never change it.
+
+  // A film registered by Cinema.register(def) becomes a story film like the others (Studio.STORIES), listed first.
+  function addStory(def) {
+    if (!def || !/^story-[a-z]+$/.test(def.id || '')) throw new Error(`Cinema: a film id looks like 'story-name' (${def && def.id})`);
+    if (!def.shots || !def.timeline) throw new Error(`Cinema: ${def.id} needs shots and a timeline`);
+    const lk = def.looks || {};
+    STORIES[def.id] = { name: def.name, note: def.note, tune: def.tune || 'romantic', reel: true, order: def.order == null ? 100 : def.order,
+      open: lk.open || 'clouds-champagne', title: lk.title || lk.open || 'clouds-champagne', invite: lk.invite || lk.open || 'clouds-champagne',
+      events: lk.events || ['rosegarden', 'lights', 'mandap'], date: lk.date || 'rosegarden-golden', end: lk.end || lk.date || 'rosegarden-golden', final: lk.final || 'blush-champagne',
+      fn: def.fn || [], titles: def.titles || [], names: def.names, ganesha: def.ganesha, occasion: def.occasion, opening: def.opening,
+      timeline: def.timeline, shots: def.shots, pictures: def.pictures || [], look: def.look, thumb: def.thumb, def };
+    // the films first (by their order, then id), then the classic story films
+    const all = Object.entries(STORIES), films = all.filter(([, x]) => x.reel).sort((a, b) => a[1].order - b[1].order || (a[0] < b[0] ? -1 : 1));
+    const rest = all.filter(([, x]) => !x.reel);
+    for (const [id] of all) delete STORIES[id];
+    for (const [id, x] of [...films, ...rest]) STORIES[id] = x;
+    return STORIES[def.id];
+  }
+
+  // ---- camera ----
+  // keys: [[time, { x, y, z, r }], …] (x, y: the point at the centre of the screen; z: zoom; r: roll) → the camera at
+  // time t, eased in and out between keys (a key may add its own easing as a third item: [t, cam, K.ease])
+  function camAt(t, keys) {
+    if (!keys.length) return { x: W / 2, y: H / 2, z: 1, r: 0 };
+    let i = 0;
+    while (i < keys.length - 1 && t > keys[i + 1][0]) i++;
+    const [t0, a] = keys[i], [t1, b, fn] = keys[Math.min(i + 1, keys.length - 1)];
+    const u = t1 > t0 ? (fn || ease3)(clamp((t - t0) / (t1 - t0))) : 1;
+    const v = (k, d) => lerp(a[k] == null ? d : a[k], b[k] == null ? (a[k] == null ? d : a[k]) : b[k], u);
+    return { x: v('x', W / 2), y: v('y', H / 2), z: v('z', 1), r: v('r', 0) };
+  }
+  function camera(c, cam) { c.translate(W / 2, H / 2); if (cam.r) c.rotate(cam.r); c.scale(cam.z || 1, cam.z || 1); c.translate(-(cam.x == null ? W / 2 : cam.x), -(cam.y == null ? H / 2 : cam.y)); }
+  // the zoom at which a w × h rectangle fills the screen (a match-cut lands exactly on it)
+  const fillZoom = (w, h, more = 1.02) => Math.max(W / w, H / h) * more;
+
+  // ---- words ----
+  // Lays out and draws a list of items (the same items the scenes use: { t: 'text', s, f, z, col, gap, wrap, up, ls, gold },
+  // { t: 'div', word }, { t: 'mono' }, { t: 'cal', d }, { t: 'datebar', d, timed }, { t: 'qr', rows: K.SITE_QR, z },
+  // { t: 'emoji', s, z }, { t: 'ganeshIcon', z }), each fading up in turn. Keep `items` the same array between frames
+  // (make it once, e.g. in the timeline): its layout is remembered.
+  // o: { zone: [top, bottom, maxWidth], L: palette (K.palette), p: seconds into the shot, d: the shot's length (fades
+  // out at the end), stagger, enter: 'rise' | 'none', t, cx }
+  function words(c, P, items, o = {}) {
+    P.wordCache = P.wordCache || new WeakMap();
+    const L = o.L || reelLook('words');
+    let lay = P.wordCache.get(items);
+    if (!lay) { lay = layout(P.c, { ...L, zone: o.zone || [300, 1600, 860] }, items.filter(Boolean).map(it => ({ gap: 12, ...it }))); P.wordCache.set(items, lay); }
+    const p = o.p == null ? 9 : o.p, out = o.d ? 1 - ease((p - (o.d - .6)) / .6) : 1, stag = o.stagger == null ? .16 : o.stagger;
+    let y = lay.y0;
+    lay.M.forEach((m, i) => {
+      const a = ease((p - .25 - i * stag) / .7) * out;
+      if (a > .01) drawItem(c, L, m, o.cx || W / 2, y + (o.enter === 'none' ? 0 : (1 - a) * 26), p - .25 - i * stag, a, { ...P.ctx, t: o.t || 0, board: !!o.board });
+      y += m.h + m.gap;
+    });
+    return lay;
+  }
+  // A palette for words: a look's fonts and colours with your changes, e.g. K.palette('clouds-champagne', { col: { names: '#8a1f3c' } })
+  function palette(base, over = {}) {
+    const B = LOOKS[base] || LOOKS.vrindavan;
+    return { ...B, ...over, font: { ...B.font, ...(over.font || {}) }, col: { ...B.col, ...(over.col || {}) }, shadow: over.shadow || B.shadow, zone: over.zone || B.zone };
+  }
+  // Gold foil lettering with depth and a gleam (o.t: the time, for the gleam); dark: deep gold for pale backgrounds
+  function foil(c, text, x, y, o = {}) {
+    c.save(); c.font = o.font || '64px "Cinzel"'; c.textAlign = o.align || 'center'; c.textBaseline = 'middle'; if (o.spacing) spacing(c, o.spacing);
+    const w = c.measureText(text).width, z = +((/(\d+(\.\d+)?)px/.exec(c.font) || [0, 64])[1]);
+    const g = c.createLinearGradient(0, y - z * .6, 0, y + z * .5);
+    (o.dark ? [[0, '#d9a640'], [.5, '#9a6414'], [1, '#6e4208']] : [[0, '#fff4c2'], [.45, '#f0c24e'], [.75, '#c08a22'], [1, '#8a5a10']]).forEach(([q, col]) => g.addColorStop(q, col));
+    c.shadowColor = o.dark ? 'rgba(255,250,235,.9)' : 'rgba(60,30,0,.55)'; c.shadowBlur = o.dark ? 16 : 10; c.shadowOffsetY = o.dark ? 0 : 4;
+    c.fillStyle = g; c.fillText(text, x, y);
+    c.shadowColor = 'transparent'; c.lineWidth = Math.max(1, z * .018); c.strokeStyle = 'rgba(110,64,8,.55)'; c.strokeText(text, x, y);
+    if (o.t != null) {
+      const sh = (o.t % 4.6) / 1.3, x0 = o.align === 'left' ? x : o.align === 'right' ? x - w : x - w / 2;
+      if (sh < 1) { const sx = x0 - 120 + sh * (w + 240), sg = c.createLinearGradient(sx - 70, y, sx + 70, y + z * .4);
+        sg.addColorStop(0, 'rgba(255,255,255,0)'); sg.addColorStop(.5, 'rgba(255,252,235,.75)'); sg.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = sg; c.fillText(text, x, y); }
+    }
+    c.restore();
+    return w;
+  }
+
+  // ---- frames, boards, pages ----
+  // A carved gold signboard (painted once per size): o = { style: 'carved' | 'arch' | 'cartouche' | 'wood', tone: 'cream' |
+  // 'velvet' | 'wood', x, y, w, h (the board's top-left and size), base (velvet colour), gem, k (P.k) }
+  const boardCache = new Map();
+  function board(c, o) {
+    const k = clamp(o.k || 1, .5, 2), key = `${o.style}|${o.tone}|${Math.round(o.w)}x${Math.round(o.h)}|${o.base}|${o.gem}@${k}`;
+    let B = boardCache.get(key);
+    if (!B) { B = boardCanvas(o.style || 'carved', o.tone || 'cream', o.w, o.h, o.base || '#3a1030', o.gem || '#c0262d', k); boardCache.set(key, B); if (boardCache.size > 24) boardCache.delete(boardCache.keys().next().value); }
+    c.drawImage(B.cv, o.x - B.ox, o.y - B.oy, B.cv.width / B.k, B.cv.height / B.k);
+  }
+  // A fine gold border with carved corners
+  function goldFrame(c, x, y, w, h, s = 120) {
+    c.save(); c.strokeStyle = goldBevel(c, x, y, x + w, y + h); c.lineWidth = 4; c.strokeRect(x, y, w, h); c.lineWidth = 1.5; c.strokeRect(x + 12, y + 12, w - 24, h - 24);
+    for (const [cx, cy, sx, sy] of [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]]) cornerScroll(c, cx + sx * 10, cy + sy * 10, sx, sy, s * .42);
+    c.restore();
+  }
+  // Velvet (maroon by default) with a faint paisley weave and a gold frame (painted once)
+  function velvet(k, base = '#6b0f1e') {
+    return reelArt(`velvet-${base}`, W, H, k, c => {
+      const g = c.createRadialGradient(W / 2, H * .42, 100, W / 2, H / 2, H * .75); g.addColorStop(0, mix(base, '#ffffff', .12)); g.addColorStop(.6, base); g.addColorStop(1, mix(base, '#000000', .55));
+      c.fillStyle = g; c.fillRect(0, 0, W, H);
+      c.globalAlpha = .06; for (let y = 0; y < H + 180; y += 180) for (let x = (y / 180 % 2) * 90; x < W + 90; x += 180) paisley(c, x, y, 46, 0, '#f2c76b'); c.globalAlpha = 1;
+      goldFrame(c, 26, 26, W - 52, H - 52);
+    });
+  }
+  // Light rays turning slowly behind something (an Om, a monogram); o = { n, r, col: 'r,g,b', a, spin }
+  function rays(c, x, y, t, o = {}) {
+    const n = o.n || 24, r = o.r || 1400, col = o.col || '255,214,140', a = o.a == null ? .2 : o.a;
+    c.save(); c.translate(x, y); c.rotate(t * (o.spin == null ? .05 : o.spin));
+    for (let i = 0; i < n; i++) {
+      c.rotate(TAU / n); const g = c.createLinearGradient(0, 0, 0, -r); g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(1, `rgba(${col},0)`);
+      c.fillStyle = g; c.beginPath(); c.moveTo(-6, 0); c.lineTo(-r * .055, -r); c.lineTo(r * .055, -r); c.lineTo(6, 0); c.fill();
+    }
+    c.restore();
+  }
+  // A page (a canvas) turning over on its left edge like a booklet: u 0 = lying flat, front up … 1 = turned over to the
+  // left, its back showing. Draw the next page flat first, then turn this one over it. o = { strips, depth, shade }
+  function pageTurn(c, u, x, y, w, h, front, back, o = {}) {
+    u = clamp(u);
+    const ang = u * Math.PI, cos = Math.cos(ang), side = cos >= 0 ? front : back, n = o.strips || 28, lift = Math.sin(ang) * (o.depth == null ? .14 : o.depth);
+    const pw = w * Math.abs(cos);
+    if (side && pw > .5) {
+      for (let i = 0; i < n; i++) {
+        const f = i / n, f2 = (i + 1) / n, e = cos >= 0 ? (f + f2) / 2 : 1 - (f + f2) / 2, gh = h * (1 + lift * e);
+        const dx = cos >= 0 ? x + pw * f : x - pw + pw * f;
+        c.drawImage(side, side.width * f, 0, side.width / n + .5, side.height, dx, y + (h - gh) / 2, pw / n + .8, gh);
+      }
+      if (o.shade !== false) {
+        const gx0 = cos >= 0 ? x : x - pw, g = c.createLinearGradient(cos >= 0 ? gx0 : gx0 + pw, 0, cos >= 0 ? gx0 + pw : gx0, 0);
+        g.addColorStop(0, `rgba(0,0,0,${(.35 * Math.sin(ang)).toFixed(3)})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+        c.fillStyle = g; c.fillRect(gx0, y - h * lift / 2, pw, h * (1 + lift));
+      }
+    }
+  }
+  // A card (a canvas) flipping round its middle to show its back: u 0 front … 1 back
+  function cardFlip(c, u, cx, cy, w, h, front, back) {
+    const cos = Math.cos(clamp(u) * Math.PI), side = cos >= 0 ? front : back;
+    if (!side || Math.abs(cos) < .01) return;
+    c.save(); c.translate(cx, cy); c.scale(Math.abs(cos), 1 + (1 - Math.abs(cos)) * .06); c.drawImage(side, -w / 2, -h / 2, w, h); c.restore();
+  }
+  // Cards (canvases) fanning out from one point like a booklet's pages: u 0 stacked … 1 spread
+  function fan(c, cards, u, cx, cy, o = {}) {
+    const w = o.w || 520, spread = o.spread || .9, n = cards.length;
+    cards.forEach((cv, i) => {
+      const a = (n > 1 ? (i - (n - 1) / 2) / ((n - 1) / 2) : 0) * spread / 2 * ease3(u), h = w * cv.height / cv.width;
+      c.save(); c.translate(cx, cy); c.rotate(a); c.shadowColor = 'rgba(0,0,0,.4)'; c.shadowBlur = 26; c.shadowOffsetY = 12; c.drawImage(cv, -w / 2, -h, w, h); c.restore();
+    });
+  }
+  // A round date medallion: the day big, the month under it (o.day: the weekday too); o = { base, hi, day }
+  function dateMedallion(c, x, y, r, d, o = {}) {
+    const base = o.base || '#7a1426';
+    c.save(); c.fillStyle = goldBevel(c, x - r, y - r, x + r, y + r); c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill();
+    const g = c.createRadialGradient(x - r * .3, y - r * .3, 2, x, y, r); g.addColorStop(0, mix(base, '#ffffff', .2)); g.addColorStop(1, mix(base, '#000000', .25));
+    c.fillStyle = g; c.beginPath(); c.arc(x, y, r * .86, 0, TAU); c.fill();
+    c.fillStyle = '#fff6e0'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `700 ${Math.round(r * .74)}px "Cinzel"`;
+    c.fillText(String(d.getDate()).padStart(2, '0'), x, y - r * .14);
+    c.font = `${Math.round(r * .24)}px "Marcellus"`; spacing(c, r * .04); c.fillText(o.hi ? HI.months[d.getMonth()] : MONTHS[d.getMonth()].slice(0, 3).toUpperCase(), x, y + r * .4); spacing(c, 0);
+    if (o.day) { c.font = `italic ${Math.round(r * .2)}px "Cormorant Garamond"`; c.fillText((o.hi ? HI.days : DAYS)[d.getDay()], x, y + r * .64); }
+    c.restore();
+  }
+  // A cream card with functions side by side: rows = [{ icon, name, time }] (e.g. one day of the schedule)
+  function functionCard(c, x, y, w, h, rows, o = {}) {
+    c.save(); c.shadowColor = 'rgba(40,10,10,.35)'; c.shadowBlur = 24; c.shadowOffsetY = 10; c.fillStyle = o.fill || '#fffaf0'; rrect(c, x, y, w, h, o.r == null ? 22 : o.r); c.fill(); c.restore();
+    c.save(); c.strokeStyle = o.line || 'rgba(184,134,43,.6)'; c.lineWidth = 2; rrect(c, x + 8, y + 8, w - 16, h - 16, Math.max(4, (o.r == null ? 22 : o.r) - 6)); c.stroke();
+    const cw = (w - 40) / Math.max(1, rows.length);
+    rows.forEach((rw, i) => {
+      const cx = x + 20 + cw * i + 18, cy = y + h / 2;
+      c.textAlign = 'left'; c.textBaseline = 'middle';
+      if (rw.icon) { c.font = `${Math.round(h * .3)}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`; c.fillText(rw.icon, cx, cy); }
+      const tx = cx + (rw.icon ? h * .42 : 0);
+      c.fillStyle = o.ink || '#4a1a20'; c.font = `${Math.round(h * .27)}px "Gilda Display"`; c.fillText(rw.name, tx, cy - h * .12, cw - (tx - cx) - 8);
+      c.fillStyle = o.accent || '#9a5b16'; c.font = `${Math.round(h * .19)}px "Marcellus"`; c.fillText(rw.time || '', tx, cy + h * .2, cw - (tx - cx) - 8);
+    });
+    c.restore();
+  }
+  // A map pin (its point at x, y)
+  function pin(c, x, y, s, col = '#7a1426') {
+    c.save(); c.translate(x, y); c.fillStyle = col; c.beginPath(); c.moveTo(0, 0); c.bezierCurveTo(-s * .5, -s * .5, -s * .55, -s * 1.1, 0, -s * 1.15);
+    c.bezierCurveTo(s * .55, -s * 1.1, s * .5, -s * .5, 0, 0); c.fill(); c.fillStyle = '#fff6e0'; c.beginPath(); c.arc(0, -s * .72, s * .2, 0, TAU); c.fill(); c.restore();
+  }
+
+  // ---- the card's details ----
+  const eventsOf = card => (card.events || []).filter(e => e && clean(e.name));
+  // The functions day by day: [{ date: Date, events: [{ icon, name, time, venue, e }] }], in order (undated ones last)
+  function days(card, hi) {
+    const out = [];
+    eventsOf(card).forEach(e => {
+      const d = Core.parseDate(e.date), { icon, name } = splitIcon(e.name), key = d ? d.toDateString() : 'none';
+      let day = out.find(x => x.key === key);
+      if (!day) out.push(day = { key, date: d, events: [] });
+      day.events.push({ icon, name, time: d && Core.hasTime(e.date) ? (hi ? hiTime(d) : timeText(d)) : '', venue: clean(e.venue), e });
+    });
+    return out.sort((a, b) => (a.date ? +a.date : 9e15) - (b.date ? +b.date : 9e15));
+  }
+
+  // ---- pictures ----
+  // The couple's picture for this video (a cut-out from the library), or for a function by its name; null while loading
+  const coupleImage = (P, eventName) => libImage(eventName ? eventCouple(clean(eventName), P.opt.story || P.opt.look || '', P.couple) || P.couple : P.couple);
+  const ganeshaImage = P => ganeshaFor(P.opt.story || P.opt.look || '', P.opt.ganeshaId || (STORIES[P.opt.story] || {}).ganesha);
+  // An owner's scene picture for a function (img/scenes, listed in js/scenes.js), loaded; else null (draw your own art)
+  function scenePicture(P, fn, n = 0) {
+    const list = sceneList().filter(f => f.toLowerCase().startsWith(fn + '-'));
+    if (!list.length || P.opt.sceneArt === false) return null;
+    const img = sceneImage(list[(hashOf(P.opt.story || '') + n) % list.length]);
+    return img && img.complete && img.naturalWidth ? img : null;
+  }
+
+  // The kit. Drawing helpers take (c, …) in screen units (1080 × 1920); P is the player (P.card, P.opt, P.k, P.ctx).
+  const K = {
+    W, H, TAU, SITE_QR, MONTHS, DAYS, HI, LOOKS,
+    // numbers and colour
+    clamp, ease, ease3, lerp, rng, hashOf, mix, lum,
+    // canvases: art(key, w, h, k, draw) paints once and remembers (k = P.k, capped 1.25 by films for memory)
+    canvasOf, art: reelArt, glow, sky, rrect,
+    // camera
+    camAt, camera, fillZoom,
+    // words and lettering
+    words, palette, foil, font: fontOf, spacing, lines, layout, drawItem, wrapText,
+    // gold, frames, boards, pages, schedule
+    goldBevel, goldFill, gem, cornerScroll, crestTop, finial, board, boardShape, goldFrame, velvet, rays,
+    pageTurn, cardFlip, fan, dateMedallion, functionCard, pin,
+    // openings and changes between shots (kinds: K.OPENINGS, and flash, iris, wipe, bloom, petals, sparkle, shutter, clink)
+    opening, change, OPENINGS, CHANGES,
+    // particles and light
+    petals, sparks, motes, bokeh, confetti, burst, finish,
+    // props and scenery (see each function in js/studio.js for its arguments)
+    leaf, foliage, blossom, rose, lotus, lotusPad, marigold, mandala, rangoli, paisley, henna, eucalyptus, peacock, feather, chhatri, butterfly, bell,
+    diya, flame, kalash, kandil, lampBody, lampFlames, havan, balloon, cake, giftBox, bunting, flagLine, paperLantern, bulbs, discoBall, lovebird,
+    cloud, softCloud, palm, pine, sunflower, banana, jasmine, gopuram, pillar, drape, orchid, orchidSpray, bougainvillea, planks, flute,
+    phone: drawPhone, PHONE, hand, skyArt, monogramArt, ganesha, drapes, toran, florals,
+    // people and pictures
+    coupleImage, ganeshaImage, portrait, cutout, drawnCouple: couple, scenePicture, drawPicture: drawScenePicture,
+    // the card's details
+    clean, splitIcon, ordinal, parents, dateRange, dayText, timeText, hiDay, hiTime, phoneText: phone, events: eventsOf, days
+  };
+
+  return { W, H, LOOKS, SCENES: SCENE_IDS, STORIES, addStory, kit: K, quotesFor, eventTop, swapNames, variant, coupleFor, POSES, OPENINGS, CHANGES, LAYOUTS_V, ENTRANCES, SITE_QR, HI, hasCouple, dateRange, lookName, thumb, sample, defaults, timeline, lines, parents, splitIcon, ordinal, phone, sceneName, sceneLayer, Player, fontsReady };
 })();
 
 if (typeof module !== 'undefined') module.exports = Studio;

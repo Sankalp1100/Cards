@@ -1178,7 +1178,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     assert.equal(await page.eval(`document.querySelectorAll('#storyGrid .vid-tile').length`), 10, 'lookalike story films left out');
     assert.equal(await page.eval(`document.querySelector('#storyGrid .vid-tile').dataset.look`), 'story-lovestory', 'Our Love Story comes first');
     assert.equal(await page.eval(`document.querySelectorAll('#vidsGrid .vid-tile').length`), 10, 'one tile per scene a story film does not already show');
-    const all = await page.eval(`[...document.querySelectorAll('#videos .vid-tile')].map(t => t.dataset.film || t.dataset.look)`);
+    const all = await page.eval(`[...document.querySelectorAll('#videos .vid-tile:not(.love-tile)')].map(t => t.dataset.film || t.dataset.look)`);
     assert.equal(all.length, 101, '101 films in all');
     assert.equal(new Set(all).size, 101, 'no film twice');
     assert.equal(await page.eval(`[...document.querySelectorAll('#filmGrid [data-film] img')].every(i => i.getAttribute('src') === 'img/films/' + i.closest('[data-film]').dataset.film + '.jpg')`), true);
