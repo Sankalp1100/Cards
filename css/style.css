@@ -1917,3 +1917,5 @@ body.studio-open .fun-progress { display: none; }
 .occ-tile b { overflow-wrap: normal; word-break: normal; hyphens: none; }
 @media (max-width: 640px) { .occ-tile b { font-size: .86rem; line-height: 1.2; } .occ-tile { min-width: 0; } }
 @media (max-width: 380px) { .occ-tile b { font-size: .8rem; } }
+/* premium collection: short captions so the poster shows */
+#filmGrid .vid-cap small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

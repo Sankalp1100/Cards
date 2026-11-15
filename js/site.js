@@ -488,22 +488,24 @@
   // Premium films (js/films.js): Royal Darbar first, 20 at a time; each plays live with sample names
   const FILM_PAGE = 20;
   let filmShown = FILM_PAGE;
+  // The premium collection: Royal Darbar first, then every cinema film (js/cinema: Our Love Story, then one premium
+  // concept per occasion). The older premium films, story films and scenes stay in the code but are not shown.
+  const OLD_STORIES = new Set(['story-shahi', 'story-rajwada', 'story-pastel', 'story-night', 'story-mehfil', 'story-baraat', 'story-garden',
+    'story-destination', 'story-utsav', 'story-raag', 'story-little', 'story-party', 'story-sacred']);
+  const CINEMA = VIDEO_STORIES.filter(([id]) => !OLD_STORIES.has(id));
   function renderFilms() {
-    // Our Love Story (the #1 story film) sits second in this first row, right after Royal Darbar
-    const love = typeof VIDEO_STORIES !== 'undefined' && VIDEO_STORIES.find(v => v[0] === 'story-lovestory');
-    const loveTile = love ? `
-    <button type="button" class="vid-tile love-tile" data-story="${love[0]}" aria-label="Play ${esc(love[1])}">
-      <img src="img/stories/${love[0]}.jpg" alt="" loading="lazy" decoding="async" width="270" height="480">
+    const royal = Films.LIST[0];
+    $('#filmGrid').innerHTML = `
+    <button type="button" class="vid-tile film-tile" data-film="${royal.id}" aria-label="Play the ${esc(royal.name)} premium film">
+      <img src="img/films/${royal.id}.jpg" alt="" loading="lazy" decoding="async" width="270" height="480">
       <span class="vid-play" aria-hidden="true">▶</span>
-      <span class="vid-cap"><b>${esc(love[1])}</b><small>✨ New · cinematic love story · ${esc(love[3])}</small></span>
-    </button>` : '';
-    $('#filmGrid').innerHTML = Films.LIST.slice(0, filmShown).map((f, i) => (i === 1 ? loveTile : '') + `
-    <button type="button" class="vid-tile film-tile" data-film="${f.id}" aria-label="Play the ${esc(f.name)} premium film">
-      <img src="img/films/${f.id}.jpg" alt="" loading="lazy" decoding="async" width="270" height="480">
+      <span class="vid-cap"><b>${esc(royal.name)}</b><small>${esc(Films.describe(royal))}</small></span>
+    </button>` + CINEMA.map(([id, name, note, tuneLabel]) => `
+    <button type="button" class="vid-tile${id === 'story-lovestory' ? ' love-tile' : ''}" data-story="${id}" aria-label="Play ${esc(name)}">
+      <img src="img/stories/${id}.jpg" alt="" loading="lazy" decoding="async" width="270" height="480">
       <span class="vid-play" aria-hidden="true">▶</span>
-      <span class="vid-cap"><b>${esc(f.name)}</b><small>${esc(Films.describe(f))}</small></span>
+      <span class="vid-cap"><b>${esc(name)}</b><small>🎵 ${esc(tuneLabel)} · ${esc(note)}</small></span>
     </button>`).join('');
-    $('#filmMore').hidden = filmShown >= Films.LIST.length;
   }
   renderFilms();
   $('#filmMore').addEventListener('click', () => { filmShown += FILM_PAGE; renderFilms(); });

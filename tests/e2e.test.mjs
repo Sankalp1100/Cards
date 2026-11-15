@@ -1165,22 +1165,17 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
     await page.eval(`document.querySelector('#osClose').click()`);
   });
 
-  test('story videos: 101 different films (81 premium, Royal Darbar first; 10 story films, Our Love Story first; 10 scenes); a premium film plays; a scene plays in its fifteen moods; "Order this video" puts it in the order', async () => {
+  test('story videos: the premium collection (Royal Darbar, then Our Love Story and the cinema films); a premium film plays; a scene plays in its fifteen moods; "Order this video" puts it in the order', async () => {
     await page.viewport(390, 844);
     await page.goto(base + 'index.html');
     await page.eval(`document.querySelector('.bottom-nav [data-videos]').click()`);
     assert.equal(await page.eval(`document.body.dataset.tab`), 'videos');
     assert.equal(await page.eval(`document.querySelector('#filmGrid .vid-tile').dataset.film`), 'film-royal-darbar', 'Royal Darbar comes first');
-    assert.equal(await page.eval(`document.querySelectorAll('#filmGrid [data-film]').length`), 20, '20 premium films at a time');
-    assert.equal(await page.eval(`document.querySelectorAll('#filmGrid .vid-tile')[1].dataset.story`), 'story-lovestory', 'Our Love Story sits second in the first row');
-    for (let i = 0; i < 10 && !(await page.eval(`document.querySelector('#filmMore').hidden`)); i++) await page.eval(`document.querySelector('#filmMore').click()`);
-    assert.equal(await page.eval(`document.querySelectorAll('#filmGrid [data-film]').length`), 81, 'all 81 premium films');
-    assert.equal(await page.eval(`document.querySelectorAll('#storyGrid .vid-tile').length`), 10, 'lookalike story films left out');
-    assert.equal(await page.eval(`document.querySelector('#storyGrid .vid-tile').dataset.look`), 'story-lovestory', 'Our Love Story comes first');
-    assert.equal(await page.eval(`document.querySelectorAll('#vidsGrid .vid-tile').length`), 10, 'one tile per scene a story film does not already show');
-    const all = await page.eval(`[...document.querySelectorAll('#videos .vid-tile:not(.love-tile)')].map(t => t.dataset.film || t.dataset.look)`);
-    assert.equal(all.length, 101, '101 films in all');
-    assert.equal(new Set(all).size, 101, 'no film twice');
+    assert.equal(await page.eval(`document.querySelectorAll('#filmGrid .vid-tile')[1].dataset.story`), 'story-lovestory', 'Our Love Story second');
+    const cine = await page.eval(`[...document.querySelectorAll('#filmGrid [data-story]')].map(t => t.dataset.story)`);
+    assert.ok(cine.length >= 10, 'the premium collection shows the cinema films');
+    assert.equal(new Set(cine).size, cine.length, 'no film twice');
+    assert.ok(!cine.some(id => ['story-shahi', 'story-rajwada', 'story-garden'].includes(id)), 'older story films are not shown');
     assert.equal(await page.eval(`[...document.querySelectorAll('#filmGrid [data-film] img')].every(i => i.getAttribute('src') === 'img/films/' + i.closest('[data-film]').dataset.film + '.jpg')`), true);
     assert.equal(await page.eval(`!!document.querySelector('#vidsMore, #vidsChips, .vids-feature')`), false, 'no repeats behind "Show more", no real client video');
     // a premium film plays in the player, in its own language
