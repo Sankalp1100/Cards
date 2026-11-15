@@ -1794,3 +1794,53 @@ body.studio-open .fun-progress { display: none; }
 .hc-haldi .hc-s { position: absolute; left: 0; right: 0; top: calc(var(--b) * 8); font-family: 'Cinzel', serif; font-size: max(11px, calc(var(--b) * 1)); letter-spacing: .25em; text-transform: uppercase; color: #8a2b00; }
 .hc-haldi .hc-box { position: absolute; left: 50%; top: calc(var(--b) * 10.4); transform: translateX(-50%); white-space: nowrap; padding: calc(var(--b) * .4) calc(var(--b) * 1); border-radius: 999px; background: rgba(255,250,232,.85); color: #6b3a00; font-size: max(11px, calc(var(--b) * 1)); box-shadow: 0 .3em .8em rgba(140,70,0,.18); }
 .hc-haldi img { left: 50%; bottom: 0; height: 52%; width: auto; transform: translateX(-50%); }
+
+/* ---------- Gold line icons (js/icons.js) in small gold-bordered circles, instead of emoji ---------- */
+.gi { width: 1em; height: 1em; fill: none; stroke: url(#giGold); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
+.tile-emoji.gi-on, .stepcard span.gi-on, .occ-tile span.gi-on { display: inline-grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; font-size: 26px; line-height: 1; animation: none;
+  background: radial-gradient(circle at 50% 30%, rgba(255,201,92,.14), rgba(255,201,92,.03)); box-shadow: inset 0 0 0 1px rgba(255,201,92,.45), 0 6px 18px rgba(0,0,0,.25); }
+.tile.big .tile-emoji.gi-on { width: 72px; height: 72px; font-size: 36px; }
+.stepcard span.gi-on { width: 46px; height: 46px; font-size: 22px; margin-bottom: 8px; }
+.occ-tile span.gi-on { width: 46px; height: 46px; font-size: 22px; justify-self: center; }
+@media (max-width: 640px) { .occ-tile span.gi-on { width: 40px; height: 40px; font-size: 19px; justify-self: start; } }
+.q-ic { display: inline-grid; place-items: center; width: 1.5em; height: 1.5em; margin-right: 2px; font-style: normal; vertical-align: -.35em; font-size: 1em; }
+.q-ic .gi { width: 1.1em; height: 1.1em; }
+.q-letter { font-weight: 700; color: var(--gold); }
+.bottom-nav a i.gi-on { display: grid; place-items: center; font-size: 22px; }
+.bottom-nav .bn-order i.gi-on { font-size: 22px; }
+.bottom-nav .bn-order i.gi-on .gi { stroke: #062b13; stroke-width: 2; }
+
+/* ---------- The wordmark: a refined serif in gold with a small gold heart mark ---------- */
+.logo { display: inline-flex; align-items: center; gap: 8px; font-family: 'DM Serif Display', 'Playfair Display', serif; font-weight: 400; font-size: 1.3rem; letter-spacing: .01em; }
+.logo span, .foot .brand { background: linear-gradient(100deg, #ffe7a6, #e2b357 45%, #fff1c8 60%, #c9973a); -webkit-background-clip: text; background-clip: text; color: transparent; font-family: 'DM Serif Display', 'Playfair Display', serif; }
+.logo-mark { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; font-style: normal; font-size: 16px; box-shadow: inset 0 0 0 1px rgba(255,201,92,.5); background: rgba(255,201,92,.08); }
+.foot .logo-mark { width: 24px; height: 24px; font-size: 13px; vertical-align: middle; }
+
+/* ---------- Hero: one gold play button, on the front card ---------- */
+.hero.lux .hphone.h3 .hp-play { left: 50%; right: auto; bottom: 20px; width: 50px; height: 50px; margin-left: -25px; background: linear-gradient(135deg, #c9973a, #f6dc8a 50%, #c9973a);
+  box-shadow: 0 0 0 4px rgba(255,201,92,.25), 0 10px 24px rgba(0,0,0,.4); }
+.hero.lux .hphone.h3 .hp-play::after { left: 19px; top: 15px; border-width: 10px 0 10px 15px; border-color: transparent transparent transparent #3b2508; }
+.hero.lux .hphone.h3:hover .hp-play { transform: scale(1.1); background: linear-gradient(135deg, #c9973a, #fff1c8 50%, #c9973a); }
+@media (max-width: 640px) {
+  .hero.lux .hphone.h3 .hp-play { bottom: 12px; width: 38px; height: 38px; margin-left: -19px; }
+  .hero.lux .hphone.h3 .hp-play::after { left: 14px; top: 11px; border-width: 8px 0 8px 12px; }
+}
+
+/* ---------- Footer signature: "DESIGNED BY" in small caps, "Sankalp" in gold script, a fine gold flourish ---------- */
+.signature .sig-seal, .signature .sig-pen, .signature .sig-star { display: none; }
+.signature .sig-card { gap: 0; padding: 18px 40px 16px; border-radius: 20px; box-shadow: 0 18px 50px rgba(0,0,0,.35); }
+.signature .sig-card::before { background: conic-gradient(from 0deg, rgba(255,201,92,0) 0 60%, #e2b357 75%, #fff1c8 82%, #c9973a 90%, rgba(255,201,92,0)); animation-duration: 8s; }
+.signature .sig-card::after { border-radius: 19px; background: linear-gradient(135deg, #17101f, #0e0a16); }
+.signature .sig-text { display: grid; justify-items: center; text-align: center; }
+.signature .sig-pre { font-size: .66rem; letter-spacing: .42em; color: #c9a86a; padding-left: .42em; }
+.signature .sig-name b { background: linear-gradient(100deg, #ffe7a6, #e2b357 45%, #fff1c8 60%, #c9973a); background-size: 100% 100%; background-position: 0 0; -webkit-background-clip: text; background-clip: text; }
+.signature .sig-line path { stroke: url(#giGold); stroke-width: 1.4; }
+.signature .sig-role { color: #9b8a6a; letter-spacing: .26em; }
+.signature:hover .sig-card { box-shadow: 0 22px 60px rgba(0,0,0,.45), 0 0 30px rgba(255,201,92,.18); }
+
+/* ---------- Styles row: the same premium tile as the designs ---------- */
+.style-card { padding: 10px 10px 14px; border-radius: 24px; border: 1px solid rgba(255,201,92,.22);
+  background: linear-gradient(180deg, rgba(255,201,92,.06), rgba(255,255,255,.02) 40%, rgba(255,201,92,.035)); box-shadow: inset 0 18px 40px -24px rgba(255,201,92,.25); text-align: center; }
+.style-card h3 { font-family: 'DM Serif Display', 'Playfair Display', serif; font-weight: 400; font-size: 1.15rem; color: #fbf3e2; }
+.style-card p { font-size: .8rem; color: #bfae8a; }
+.style-card small { font-size: .72rem; color: #9b8a6a; letter-spacing: .04em; }

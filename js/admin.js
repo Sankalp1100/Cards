@@ -13,7 +13,7 @@
     families: [['side', 'e.g. Bride’s Family', 40], ['parents', 'Parents, e.g. Mr. & Mrs. Mehta', 120], ['more', 'Siblings / more (optional)', 160]],
     attire: [['name', 'Function, e.g. Haldi', 40], ['text', 'e.g. Sunshine yellow', 100], ['colors', '#f4c430,#ffb347', 80]]
   };
-  const SITE_KEYS = ['url', 'brand', 'designer', 'whatsapp', 'instagram', 'price', 'currency'];
+  const SITE_KEYS = ['url', 'brand', 'designer', 'whatsapp', 'instagram', 'price', 'currency', 'maintenance', 'maintenanceMsg', 'maintenanceUntil'];
   const STORE_KEY = 'weddingcard.links', DRAFT_KEY = 'weddingcard.config';
   const GALLERY_PAGE = 40;
 
@@ -2435,7 +2435,8 @@
   // ---------- Settings ----------
   const siteForm = $('#siteForm');
   function fillSettings() {
-    for (const k of SITE_KEYS) siteForm.elements[k].value = cfg.site[k] ?? '';
+    for (const k of SITE_KEYS) if (k !== 'maintenance') siteForm.elements[k].value = cfg.site[k] ?? '';
+    siteForm.elements.maintenance.checked = cfg.site.maintenance === true;
     siteForm.elements.whatsapp.value = tenDigits(cfg.site.whatsapp);
     showMobileHint(siteForm.elements.whatsapp);
   }
@@ -2443,6 +2444,7 @@
   // so auto-save never puts a half-typed number on the live site.
   const CHECKED = ['url', 'whatsapp'];
   siteForm.addEventListener('input', e => {
+    if (e.target.name === 'maintenance') return; // saved on change
     if (SITE_KEYS.includes(e.target.name) && !CHECKED.includes(e.target.name)) {
       cfg.site[e.target.name] = e.target.value.trim();
       saveDraft();
@@ -2450,6 +2452,10 @@
   });
   siteForm.addEventListener('change', e => {
     const k = e.target.name, value = e.target.value.trim();
+    if (k === 'maintenance') {
+      cfg.site.maintenance = e.target.checked;
+      toast(e.target.checked ? '🚧 Maintenance mode is ON: the home page shows "Something crazy is coming"' : '✅ Maintenance mode is OFF: the home page is back');
+    }
     if (k === 'url') {
       let u = value;
       if (u && !/^https?:\/\//i.test(u)) u = 'https://' + u;

@@ -129,7 +129,7 @@
 .poster[data-pv].ps-minimal .p-names { font: 400 min(2.2rem, 15cqw)/1 var(--fd, serif); letter-spacing: -.01em; background: none; -webkit-text-fill-color: var(--i); color: var(--i); filter: none; }
 .poster[data-pv].ps-minimal .p-names i { font-family: var(--fs, cursive); font-size: .62em; -webkit-text-fill-color: var(--a); margin: .1em 0; }
 .poster[data-pv].ps-minimal .p-title { letter-spacing: .4em; }
-.poster[data-pv] .p-num { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: -1; font: 400 64cqw/1 var(--fd, serif); color: transparent; -webkit-text-stroke: 1px color-mix(in srgb, var(--a) 45%, transparent); opacity: .5; pointer-events: none; }
+.poster[data-pv] .p-num { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: -1; font: 400 112cqw/1 var(--fd, serif); color: transparent; -webkit-text-stroke: 1px color-mix(in srgb, var(--a) 40%, transparent); opacity: .45; letter-spacing: -.04em; pointer-events: none; }
 .poster[data-pv].ps-minimal .p-date { color: var(--a); }
 .poster[data-pv].ps-minimal .p-play { color: var(--i); border-color: color-mix(in srgb, var(--i) 40%, transparent); border-radius: 2px; background: transparent; }
 .poster[data-pv].ps-minimal .p-by { color: var(--i); }
@@ -188,3 +188,4 @@
 .hot-slide .poster[data-pv] .p-seal { width: 30cqw; height: 30cqw; }
 .hot-slide .poster[data-pv] .p-ganesha { height: 26cqw; }
 @media (prefers-reduced-motion: reduce) { .poster[data-pv] .p-art::before { animation: none !important; } }
+.poster[data-pv].ps-ivory .p-date { color: color-mix(in srgb, var(--a) 70%, #8a6420); }

@@ -626,3 +626,8 @@ main > section[data-page][hidden] { display: none !important; }
 .st-drop.off, .au-drop.off { opacity: .35; filter: grayscale(.7); pointer-events: none; }
 .st-drop.chosen, .au-drop.chosen { box-shadow: 0 0 0 3px rgba(74,222,128,.35); }
 .st-src-reset { display: block; margin: 10px auto 0; }
+
+/* Settings → Maintenance mode */
+.maint-box { display: grid; gap: 10px; padding: 14px 16px; border: 1px solid rgba(233,185,73,.4); border-radius: 14px; background: rgba(233,185,73,.06); }
+.maint-box legend { padding: 0 6px; font-weight: 700; }
+.maint-box .switch { display: flex; align-items: center; gap: 10px; }

@@ -1321,7 +1321,7 @@ body.has-demo-bar:not(.scrolled) .demo-bar { transform: translateY(160%); opacit
 }
 body {
   /* Foil: a metal ramp (dark gold, bright gold, a white-hot highlight) and a narrow shine that sweeps across */
-  --foil: linear-gradient(100deg, #8f6619 0%, #d9b158 18%, #fff0bf 30%, #e2b955 40%, #a97c25 55%, #f0d38a 72%, #b98a30 86%, #8a6216 100%);
+  --foil: linear-gradient(100deg, #b8913f 0%, #e3c06a 18%, #fff0bf 30%, #e6bf5e 42%, #c0923a 56%, #f2d690 72%, #c99c42 86%, #b38936 100%);
   --shine: linear-gradient(105deg, transparent 38%, rgba(255,255,255,.85) 50%, transparent 62%);
   --gold-line: color-mix(in srgb, #d6ae55 60%, var(--accent));
   --tex: var(--tex-dark); --tex-o: .4;

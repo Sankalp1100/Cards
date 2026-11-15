@@ -30,7 +30,8 @@
     // "What are you celebrating?": one tile per occasion with its number of designs.
     $('#occPicker').innerHTML = occasions.map(k => {
       const n = designs.filter(d => d.occasion === k).length;
-      return `<button type="button" class="occ-tile" data-pick="${k}"><span>${PRESETS[k].icon}</span><b>${esc(PRESETS[k].label)}</b><small>${n} designs</small></button>`;
+      const ic = window.GoldIcons && GoldIcons.occasion(k);
+      return `<button type="button" class="occ-tile" data-pick="${k}">${ic ? `<span class="gi-on">${ic}</span>` : `<span>${PRESETS[k].icon}</span>`}<b>${esc(PRESETS[k].label)}</b><small>${n} designs</small></button>`;
     }).join('');
     renderHot();
     renderStyles();
@@ -51,36 +52,45 @@
   // Five occasions fanned like a hand of cards, each its own colours, layout and type: a housewarming, a birthday,
   // a Hindi wedding (in front, in the centre), a baby shower and a haldi
   const HERO_CARDS = [
-    { k: 'griha', label: 'Griha Pravesh', html: `<i class="hc-garland"></i><i class="hc-mandala"></i>
+    { k: 'griha', occ: 'housewarming', label: 'Griha Pravesh', html: `<i class="hc-garland"></i><i class="hc-mandala"></i>
       <b class="hc-t">Griha<br>Pravesh</b><small class="hc-s">Housewarming Puja</small>
       <span class="hc-box"><b>6 Dec</b> · 9 AM</span>
       <img src="img/hero/griha.webp" srcset="img/hero/griha.webp 1x, img/hero/griha@2x.webp 2x" alt="" width="328" height="420" decoding="async">` },
-    { k: 'bday', label: 'Birthday', html: `<i class="hc-confetti"></i><i class="hc-balloon b1"></i><i class="hc-balloon b2"></i><i class="hc-balloon b3"></i>
+    { k: 'bday', occ: 'birthday', label: 'Birthday', html: `<i class="hc-confetti"></i><i class="hc-balloon b1"></i><i class="hc-balloon b2"></i><i class="hc-balloon b3"></i>
       <small class="hc-s">Happy</small><b class="hc-t">Birthday</b>
       <span class="hc-pill">Myra turns 5!</span>
       <img src="img/hero/birthday.webp" srcset="img/hero/birthday.webp 1x, img/hero/birthday@2x.webp 2x" alt="" width="286" height="420" decoding="async">` },
-    { k: 'vivah', label: 'Shubh Vivah', html: `<i class="hc-frame"></i>
+    { k: 'vivah', occ: 'wedding', label: 'Shubh Vivah', html: `<i class="hc-frame"></i>
       <img class="hc-god" src="img/hero/ganesha.webp" srcset="img/hero/ganesha.webp 1x, img/hero/ganesha@2x.webp 2x" alt="" width="115" height="160" decoding="async">
       <b class="hc-t" lang="hi">शुभ विवाह</b><span class="hc-n" lang="hi">दीया <small>संग</small> आरव</span><small class="hc-s" lang="hi">14 दिसम्बर 2026</small>
       <span class="hc-arch"><img src="img/hero/vivah.webp" srcset="img/hero/vivah.webp 1x, img/hero/vivah@2x.webp 2x" alt="" width="269" height="420" decoding="async"></span>` },
-    { k: 'baby', label: 'Baby Shower', html: `<i class="hc-cloud c1"></i><i class="hc-cloud c2"></i><i class="hc-cloud c3"></i>
+    { k: 'baby', occ: 'babyshower', label: 'Baby Shower', html: `<i class="hc-cloud c1"></i><i class="hc-cloud c2"></i><i class="hc-cloud c3"></i>
       <b class="hc-t">Oh Baby!</b><small class="hc-s">Baby Shower</small>
       <span class="hc-moon"><img src="img/hero/babyshower.webp" srcset="img/hero/babyshower.webp 1x, img/hero/babyshower@2x.webp 2x" alt="" width="217" height="420" decoding="async"></span>
       <span class="hc-names">20 Dec · 4 PM</span>` },
-    { k: 'haldi', label: 'Haldi', html: `<i class="hc-garland"></i><i class="hc-rays"></i>
+    { k: 'haldi', occ: 'haldi', label: 'Haldi', html: `<i class="hc-garland"></i><i class="hc-rays"></i>
       <b class="hc-t">Haldi</b><small class="hc-s">Ceremony</small>
       <span class="hc-box">12 Dec · 11 AM</span>
       <img src="img/hero/haldi.webp" srcset="img/hero/haldi.webp 1x, img/hero/haldi@2x.webp 2x" alt="" width="253" height="420" decoding="async">` }
   ];
   function renderStyles() {
     const styles = Object.keys(STYLES).filter(firstOf);
-    // Hero: four different invitations in phone frames (a Haldi, a Hindi Shubh Vivah, a Sangeet night, a Mehendi),
-    // each with its own colours, layout and type; tapping one opens the films.
-    $('#heroPhones').innerHTML = HERO_CARDS.map((c, i) =>
-      `<a class="hphone h${i + 1}" href="#videos" data-videos aria-label="Watch ${c.label} invitation videos"><i class="hp-notch"></i>
-        <span class="hp-screen hc-${c.k}">${c.html}</span><span class="hp-play" aria-hidden="true"></span></a>`).join('');
+    // Hero: five invitations in phone frames, each for its own occasion; tapping one opens the live demo of a design
+    // for that occasion (the front card carries the play button).
+    $('#heroPhones').innerHTML = HERO_CARDS.map((c, i) => {
+      const d = designs.find(x => x.occasion === c.occ) || designs[0];
+      return `<a class="hphone h${i + 1}" href="${demoLink(d)}" target="_blank" rel="noopener" aria-label="Live demo: ${c.label} invitation"><i class="hp-notch"></i>
+        <span class="hp-screen hc-${c.k}">${c.html}</span>${i === 2 ? '<span class="hp-play" aria-hidden="true"></span>' : ''}</a>`;
+    }).join('');
+    const usedOcc = new Set();
+    const styleDesign = s => {
+      const all = designs.filter(x => x.style === s).sort((a, b) => a.no - b.no);
+      const d = all.find(x => !usedOcc.has(x.occasion)) || all[0];
+      usedOcc.add(d.occasion);
+      return d;
+    };
     $('#styleReel').innerHTML = styles.map(s => {
-      const d = firstOf(s), n = designs.filter(x => x.style === s).length;
+      const d = styleDesign(s), n = designs.filter(x => x.style === s).length;
       const occ = [...new Set(designs.filter(x => x.style === s).map(x => PRESETS[x.occasion].label))].slice(0, 3).join(' · ');
       return `<article class="style-card">
         ${Catalog.poster(d, 'a', `href="${demoLink(d)}" target="_blank" rel="noopener" aria-label="Live demo of the ${esc(STYLES[s].label)} style: design ${Templates.serial(d.no)}"`)}
@@ -141,6 +151,7 @@
     DB.loadCatalog().then(live => {
       const before = JSON.stringify([SITE, CATALOG]);
       Object.assign(SITE, live.site);
+      if (typeof Maintenance !== 'undefined') Maintenance.apply(SITE); // switched on/off in the control panel, takes effect at once
       for (const k of Object.keys(CATALOG)) delete CATALOG[k];
       Object.assign(CATALOG, live.catalog);
       if (JSON.stringify([SITE, CATALOG]) === before) return;

@@ -334,6 +334,13 @@
           <label>Price for every design <small>(empty hides prices)</small> <input name="price" inputmode="numeric" placeholder="999"></label>
           <label>Currency <input name="currency" maxlength="4"></label>
         </div>
+        <fieldset class="maint-box">
+          <legend>🚧 Maintenance mode</legend>
+          <label class="switch"><input type="checkbox" name="maintenance"> <span></span> Show the "Something crazy is coming" page on the home page</label>
+          <small class="muted">Card links, videos and this panel keep working. Open the site with <code>?preview</code> at the end to see the real home page while it is on.</small>
+          <label>Message <small>(optional)</small> <input name="maintenanceMsg" maxlength="200" placeholder="We are crafting an all-new, premium CardAlbum…"></label>
+          <label>Launch date and time <small>(optional, shows a countdown)</small> <input name="maintenanceUntil" type="datetime-local"></label>
+        </fieldset>
       </form>
       <div class="panel publish-box">
         <div>

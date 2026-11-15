@@ -897,7 +897,7 @@ test.describe('browser', { skip: !chromePath && 'Chrome/Edge not found' }, () =>
       await page.eval(`document.querySelector('#stMoods [data-look="lotusnight-dawn"]').click()`);
       assert.equal(await page.eval(`document.querySelector('#stMoods .on').textContent`), 'Dawn');
       // Story films and the language
-      assert.equal(await page.eval(`document.querySelectorAll('#stStories [data-story]').length`), 13, 'thirteen story films');
+      assert.equal(await page.eval(`document.querySelectorAll('#stStories [data-story]').length`), 14, 'fourteen story films');
       await page.eval(`document.querySelector('#stStories [data-story="story-rajwada"]').click()`);
       assert.equal(await page.eval(`document.querySelector('#stStories .on').dataset.story`), 'story-rajwada');
       assert.equal(await page.eval(`document.querySelectorAll('#stMoods .chip').length`), 0, 'a story film has no moods to pick');
