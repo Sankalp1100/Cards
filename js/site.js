@@ -316,12 +316,15 @@
     $('#dsCats').innerHTML = `<button type="button" class="chip${demoCat === 'all' ? ' on' : ''}" data-cat="all">✨ All <b class="n">${Films.LIST.length}</b></button>` +
       cats.map(c => `<button type="button" class="chip${demoCat === c ? ' on' : ''}" data-cat="${c}">${esc(label(c))} <b class="n">${count(c)}</b></button>`).join('');
     const list = demoCat === 'all' ? Films.LIST.slice(0, 24) : Films.LIST.filter(f => (f.concept || 'heritage') === demoCat);
-    $('#dsFilms').innerHTML = list.map(f => `<button type="button" class="ds-film" data-film="${f.id}" aria-label="Play ${esc(f.name)}">
+    // The first story film (Our Love Story) leads the list
+    const lead = demoCat === 'all' && typeof VIDEO_STORIES !== 'undefined' && VIDEO_STORIES[0];
+    $('#dsFilms').innerHTML = (lead ? `<button type="button" class="ds-film" data-story="${lead[0]}" aria-label="Play ${esc(lead[1])}">
+      <img src="img/stories/${lead[0]}.jpg" alt="" loading="lazy" decoding="async" width="135" height="240"><span class="vid-play" aria-hidden="true">▶</span><b>${esc(lead[1])}</b><small>✨ Story film · ${esc(lead[3])}</small></button>` : '') + list.map(f => `<button type="button" class="ds-film" data-film="${f.id}" aria-label="Play ${esc(f.name)}">
       <img src="img/films/${f.id}.jpg" alt="" loading="lazy" decoding="async" width="135" height="240"><span class="vid-play" aria-hidden="true">▶</span><b>${esc(f.name)}</b><small>${esc(Films.describe(f))}</small></button>`).join('') +
       (demoCat === 'all' ? `<p class="ds-more muted">Showing 24 of ${Films.LIST.length}: pick a style above for more.</p>` : '');
   }
   $('#dsCats').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (b) { demoCat = b.dataset.cat; renderDemoFilms(); } });
-  $('#dsFilms').addEventListener('click', e => { const b = e.target.closest('[data-film]'); if (b) { closeDemo(); openFilm(b.dataset.film); } });
+  $('#dsFilms').addEventListener('click', e => { const b = e.target.closest('[data-film], [data-story]'); if (b) { closeDemo(); if (b.dataset.story) openVideo(b.dataset.story); else openFilm(b.dataset.film); } });
   $('#dsChoose').addEventListener('click', e => {
     const b = e.target.closest('[data-demo]');
     if (!b) return;

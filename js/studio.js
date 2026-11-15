@@ -3623,7 +3623,8 @@ const Studio = (() => {
       this.cache = new Map();
       if (!list.length) { this.ready = Promise.resolve(); return; }
       this.tl.scenes.forEach((sc, i) => {
-        const fn = sceneFn(sc), mine = fn ? list.filter(f => f.toLowerCase().startsWith(fn + '-')) : [];
+        // a moving film's own shots (café, home, sky) stay its own; its invitation and functions may take a picture
+        const fn = sc.reel && sc.reel !== 'resort' ? null : sceneFn(sc), mine = fn ? list.filter(f => f.toLowerCase().startsWith(fn + '-')) : [];
         if (!mine.length) return;
         const fresh = mine.filter(f => !used.has(f)), pool = fresh.length ? fresh : mine, file = pool[hashOf(`${key}:${i}`) % pool.length];
         used.add(file);

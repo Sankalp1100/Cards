@@ -76,5 +76,7 @@
     });
   }
   apply();
-  window.GoldIcons = { svg, occasion: k => svg(OCC[k]), apply };
+  // Occasions use colourful 3D icons (Microsoft Fluent Emoji, MIT licence; img/icons/occ/<occasion>.webp)
+  const occ3d = k => OCC[k] ? `<img class="gi3d" src="img/icons/occ/${k}.webp" alt="" width="160" height="160" loading="lazy" decoding="async">` : '';
+  window.GoldIcons = { svg, occasion: occ3d, apply };
 })();
