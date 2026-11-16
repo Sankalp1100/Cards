@@ -5491,16 +5491,20 @@ Cinema.register((K => {
       c.restore();
     });
     // the heart hops from date to date, then lands on the day
-    if (pt > h0 - .5) {
-      const u = (pt - h0) / HOP, i = Math.max(0, Math.min(stops.length - 1, Math.floor(u))), f = clamp(u - i);
+    const heartAt = T => {
+      const u = (T - h0) / HOP, i = Math.max(0, Math.min(stops.length - 1, Math.floor(u))), f = clamp(u - i);
       const A = stops[i], B = stops[Math.min(stops.length - 1, i + 1)];
-      let x, y, sc = 1;
-      if (pt >= land) { x = CX(target.col); y = RY(target.row); sc = 1 - lp; }
-      else {
-        const m = clamp(f / .7), e = m * m * (3 - 2 * m);
-        x = lerp(CX(A.col), CX(B.col), e); y = lerp(RY(A.row), RY(B.row), e) - Math.sin(e * Math.PI) * 70;
-        sc = 1 + Math.sin(e * Math.PI) * .25;
+      if (T >= land) return { x: CX(target.col), y: RY(target.row), sc: 1 - clamp((T - land) / .5), air: 0 };
+      const m = clamp(f / .7), e = m * m * (3 - 2 * m), air = Math.sin(e * Math.PI);
+      return { x: lerp(CX(A.col), CX(B.col), e), y: lerp(RY(A.row), RY(B.row), e) - air * 70, sc: 1 + air * .25, air };
+    };
+    if (pt > h0 - .5) {
+      // a trail of gold dust behind the heart while it flies
+      if (pt < land + .2) for (let j = 10; j >= 1; j--) {
+        const q = heartAt(Math.max(h0, pt - j * .035));
+        if (q.air > .05) glow(c, q.x + Math.sin(j * 2.3) * 6, q.y + 4, (16 - j) * 1.4, `rgba(240,200,120,${(.7 * (1 - j / 11) * q.air).toFixed(2)})`);
       }
+      const { x, y, sc } = heartAt(pt);
       const a = clamp((pt - (h0 - .5)) / .4) * (pt >= land ? 1 - lp : 1);
       if (a > .01) {
         c.save(); c.globalAlpha = a; c.translate(x, y + 2); c.scale(sc, sc); c.rotate(Math.sin(pt * 6) * .12);
@@ -5519,6 +5523,14 @@ Cinema.register((K => {
     // a ring of light and gold sparks where it lands
     if (pt >= land && pt < land + 1.4) {
       const q = (pt - land) / 1.4, x = CX(target.col), y = RY(target.row);
+      // rays of light fan out from the day for a moment
+      c.save(); c.translate(x, y); c.rotate(q * .6); c.globalAlpha = Math.sin(q * Math.PI) * .55;
+      for (let i = 0; i < 16; i++) {
+        c.rotate(TAU / 16); const len = 140 + 160 * ease(q * 1.4) + (i % 2) * 60;
+        const g = c.createLinearGradient(0, 0, len, 0); g.addColorStop(0, 'rgba(255,236,180,.9)'); g.addColorStop(1, 'rgba(255,236,180,0)');
+        c.fillStyle = g; c.beginPath(); c.moveTo(30, -5); c.lineTo(len, -14); c.lineTo(len, 14); c.lineTo(30, 5); c.fill();
+      }
+      c.restore();
       c.save(); c.globalAlpha = 1 - q; c.strokeStyle = '#e8c27a'; c.lineWidth = 6 * (1 - q) + 1; c.beginPath(); c.arc(x, y, 40 + q * 120, 0, TAU); c.stroke(); c.restore();
       K.burst(c, x, y, q, '214,64,90', 22, 150);
       K.burst(c, x, y, Math.min(1, q * 1.2), '232,194,122', 16, 110);
@@ -5537,7 +5549,41 @@ Cinema.register((K => {
     petals(c, t, 26, ['#f4a6b8', '#e9768f', '#ffd3dc', '#c8435f'], 41, 1);
     leak(c, (pt - .6) / 3.2); leak(c, (pt - land) / 2.6);
     c.restore();
-    if (fade < 1) { c.fillStyle = `rgba(253,246,236,${(1 - fade) * .85})`; c.fillRect(0, 0, W, H); }
+    if (fade < 1) { c.fillStyle = `rgba(253,246,236,${(1 - fade) * .5})`; c.fillRect(0, 0, W, H); }
+    silkDoors(c, P, pt, t);
+  }
+
+  // the opening: two doors of blush silk with gold borders, sealed with red wax bearing the couple's initials;
+  // the seal glows and lifts away, and the doors glide apart
+  function silkDoors(c, P, pt, t) {
+    const op = ease((pt - .6) / 1.3);
+    if (op >= 1) return;
+    const k = kOf(P), half = still('door', W / 2, H, k, d => {
+      const g = d.createLinearGradient(0, 0, W / 2, 0); g.addColorStop(0, '#f1d9cc'); g.addColorStop(.7, '#f8e8de'); g.addColorStop(1, '#ead0c0');
+      d.fillStyle = g; d.fillRect(0, 0, W / 2, H);
+      for (let x = 20; x < W / 2; x += 34) { d.fillStyle = `rgba(255,255,255,${(.08 + .06 * Math.sin(x * .07)).toFixed(3)})`; d.fillRect(x, 0, 14, H); }
+      d.strokeStyle = '#c99a45'; d.lineWidth = 4; d.strokeRect(36, 36, W / 2 - 54, H - 72); d.lineWidth = 1.5; d.strokeRect(52, 52, W / 2 - 86, H - 104);
+      d.save(); d.translate(W / 2 - 18, H / 2); d.strokeStyle = 'rgba(184,134,43,.5)'; d.lineWidth = 2;
+      for (let i = 0; i < 9; i++) { d.beginPath(); d.arc(0, 0, 120 + i * 70, Math.PI * .55, Math.PI * 1.45); d.stroke(); }
+      d.restore();
+    });
+    const off = op * (W / 2 + 40);
+    c.save(); c.translate(-off, 0); c.drawImage(half, 0, 0, W / 2, H); c.restore();
+    c.save(); c.translate(W + off, 0); c.scale(-1, 1); c.drawImage(half, 0, 0, W / 2, H); c.restore();
+    // the wax seal
+    const sa = 1 - ease((pt - .4) / .45), sz = 1.5 + .3 * ease((pt - .35) / .5);
+    if (sa > .01) {
+      const { groom, bride } = groomBride(P), ini = `${groom[0] || ''}${bride[0] ? ' ' + bride[0] : ''}`.toUpperCase();
+      c.save(); c.globalAlpha = sa; c.translate(W / 2, H / 2); c.scale(sz, sz);
+      glow(c, 0, 0, 200, `rgba(255,220,160,${(.4 + .3 * Math.sin(pt * 8)).toFixed(2)})`);
+      c.fillStyle = '#9b1b2c'; c.beginPath();
+      for (let i = 0; i <= 24; i++) { const an = i / 24 * TAU, r = 96 + (i % 2 ? 7 : -3); c.lineTo(Math.cos(an) * r, Math.sin(an) * r); }
+      c.fill();
+      const wg = c.createRadialGradient(-26, -26, 6, 0, 0, 84); wg.addColorStop(0, '#d9485a'); wg.addColorStop(1, '#7d1222'); c.fillStyle = wg; c.beginPath(); c.arc(0, 0, 80, 0, TAU); c.fill();
+      c.strokeStyle = '#e8c27a'; c.lineWidth = 3; c.beginPath(); c.arc(0, 0, 66, 0, TAU); c.stroke();
+      say(c, ini.replace(' ', ' & '), 0, 4, 'title', 50, '#f6dc9c', 1, 120);
+      c.restore();
+    }
   }
 
   function groomBride(P) {
