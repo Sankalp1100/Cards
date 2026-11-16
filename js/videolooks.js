@@ -2,6 +2,7 @@
 // Story videos section. Made from js/studio.js by a script; tests/unit.test.js checks they still match.
 const VIDEO_STORIES = [
   ["story-lovestory","Our Love Story","A café table, a phone, a wall of memories, then through the TV into the sky: a love story that moves","Romantic Piano"],
+  ["story-savedate","Save The Date","A jhoomar of roses swings over a cream page as a little heart hops across the calendar and lands on the wedding day, then the couple’s names in script","Romantic Piano"],
   ["story-folio","The Golden Folio","An Om of gold dust, Shri Ganesh, palace doors, then a maroon-and-gold booklet whose pages turn: every day, the venue, the families","Shehnai Mangal"],
   ["story-shubhvivah","Shubh Vivah","Temple bells and diyas at dawn, a kalash under unrolling torans, then a walk from courtyard to courtyard: every function painted with the couple and a Devanagari signboard","Shehnai Mangal"],
   ["story-crystalgala","The Crystal Ballroom","A red carpet at night, a crystal chandelier lighting tier by tier, a champagne tower, a candlelit banquet, a mirror-ball dance floor","Grand Cinematic"],
