@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
   } catch (e) {
     return res.status(400).json({ saved: false, published: false, message: e.message });
   }
-  if (!token) return res.status(200).json({ saved: false, published: false, message: 'Publishing from the website needs GITHUB_TOKEN in Vercel → Settings → Environment Variables (see README).' });
+  if (!token) return res.status(200).json({ saved: false, published: false, message: 'Publishing from the website needs GITHUB_TOKEN in Vercel → Settings → Environment Variables.' });
 
   const url = `https://api.github.com/repos/${repo}/contents/js/config.js`;
   const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'wedding-card-admin' };

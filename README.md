@@ -1,91 +1,48 @@
 # 💌 CardAlbum
 
-Animated invitations for weddings, sangeet, engagements, kitty parties, birthdays, kids' parties, baby showers, naming ceremonies, pujas and anniversaries.
+Animated invitations for weddings, sangeet, engagements, kitty parties, birthdays, kids' parties, baby showers, naming ceremonies, pujas and anniversaries, shared as a single link.
 
-Customers browse **600 numbered designs** (30 for each of the 20 occasions) on the website and order one on WhatsApp by its number (e.g. *#047*). You type that number in the **admin panel**, fill in their details and get the links. Each guest opens their link and gets the whole show: an envelope with a wax seal that opens, a confetti blast, music, petals, balloons and fireworks, the couple's or child's photo, a live countdown, the function timeline, directions, Save the Date and RSVP on WhatsApp.
+**Live site:** https://cardalbum.vercel.app
 
-There's no database. Every invitation is packed inside its own link, so you can make unlimited links.
+Customers browse **600 numbered designs** (30 for each of the 20 occasions) and order one on WhatsApp by its number (e.g. *#047*). Each guest opens their link and gets the whole show: an envelope with a wax seal that opens, a confetti blast, music, petals, balloons and fireworks, the couple's or child's photo, a live countdown, the function timeline, directions, Save the Date and RSVP on WhatsApp.
+
+## Screenshots
+
+<!-- Add a clean screenshot at docs/screenshot.png and replace this comment with:
+![CardAlbum designs](docs/screenshot.png) -->
+
+See the designs live at https://cardalbum.vercel.app.
+
+## Features
+
+- **600 designs, 20 occasions**, each with its own number that never changes.
+- **10 hand-designed styles**: Royal Ivory, Palace Night, Bloom, Modern Minimal, Marigold, Mehendi, Pichwai Lotus, Filmy Retro, Neon Night and Toybox.
+- **6 opening animations**: envelope, palace doors, curtain raise, royal scroll, gift box, folding card.
+- **Premium invitation page**: story, celebrations, venue illustration, families, gallery, dress code, gifts (UPI), RSVP form and a thank-you finale.
+- **Personal links**: one link per guest (*"Dear Rahul Uncle,"*).
+- **Trending designs** that change every day by themselves.
+- **Video export**: films the real card as a 9:16 MP4 for WhatsApp status or Instagram.
+- **Synthesized music** and particle effects, no audio files.
+- **Mobile first**: bottom tab bar on phones.
+- Designed with ♥ by Sankalp.
+
+The admin panel is password protected.
 
 ## Pages
 
-| Page | Who uses it |
+| Page | What it is |
 |---|---|
-| `index.html` | Sales website: 600 designs with their numbers, a "What are you celebrating?" picker, search by number, occasion and 🔥 Trending filters, live demos, Order on WhatsApp |
-| `card.html` | The animated invitation your guests open (opened from the website it shows *"Sample of design #047 · Order"*) |
-| `admin.html` | **Admin panel**: on your PC (`Start Admin.cmd`) or online at `/admin.html` behind a password: create invites, links, videos, catalog, settings, publish |
+| `index.html` | Sales website: all designs, occasion picker, search by number, trending, live demos, order on WhatsApp |
+| `card.html` | The animated invitation guests open |
 
-Customers can't make cards themselves: the website only shows designs and order buttons.
+## Tech stack
 
-## Open the admin panel
+- Plain HTML, CSS and JavaScript (no framework, no build step)
+- Supabase (database and login)
+- Vercel (hosting)
+- Node.js built-in test runner, headless Chrome/Edge for browser tests
 
-**Online (phone or any computer):** https://cardalbum.vercel.app/admin.html. The browser asks for a login (user name `card.com`). To change the login, add `ADMIN_USER` and `ADMIN_PASSWORD` in Vercel → Settings → Environment Variables and redeploy; this also keeps them out of the public code.
-
-To **Publish** from the online panel, Vercel needs a GitHub token once: on GitHub create a *fine-grained token* for the `Cards` repo with **Contents: Read and write**, then add it in Vercel as `GITHUB_TOKEN` and redeploy. Without it, Publish online downloads `config.js` instead.
-
-**On your PC:**
-
-```
-npm run admin
-```
-
-It opens `http://localhost:5050/admin.html` in your browser. Keep that window open while you work.
-
-**Easiest on Windows:** double-click **`Start Admin.cmd`** in this folder. (If `npm run admin` says *"running scripts is disabled"*, that is PowerShell blocking npm; the `.cmd` file avoids it.)
-
-1. **Design number.** Type the number the customer sent (e.g. `47`). The design is selected and its occasion's sample text is loaded. Or browse **Designs** and tap one.
-2. **Occasion.** Change it if needed (10 types).
-3. **Customer details.** Names, date, venue, message, functions (tap a suggestion like *+ 🌼 Haldi*), photo upload, RSVP number, music. *Clear all* empties the form; the sample text stays as grey hints. The phone on the right shows the real card live.
-4. **Get links.** Leave guest names empty for one link, or one name per line for a personal link each (*"Dear Rahul Uncle,"*). Copy, WhatsApp or Copy all.
-5. **My links.** Search, copy, open, **Edit** (loads it back into the editor), delete, **Download CSV**.
-
-### Catalog and settings (what the website shows)
-
-- **Catalog:** for each of the 600 designs: name, occasion, price, **On site** (show/hide), **🔥 Trending** (your own picks: always among the trending designs). Search by number, filter, show/hide many at once.
-- **Trending changes every day by itself:** every morning at 8:00 (India time) the website picks a fresh set of 10 trending designs, the same for every visitor all day: your own Trending picks plus designs drawn for the day from different occasions, in a new order. They are shown first, with a 🔥 badge, and in the Trending tab. No server or schedule is needed: the date decides.
-- **Settings:** live website address, brand, WhatsApp number for orders, Instagram, price for every design, currency.
-- **Auto-save:** every change is saved to the website by itself about 2 seconds after you stop typing (several quick edits become one save). It writes `js/config.js`, commits and pushes **only that file** to GitHub, and Vercel updates the live site in about a minute. The bar at the top shows *Saving…* then *✅ Saved*. This works when the panel is opened with `Start Admin.cmd`, or online once `GITHUB_TOKEN` is set in Vercel; otherwise changes stay on that device and **🚀 Publish** downloads `config.js`.
-- Opened without `npm run admin` (double-clicking `admin.html`), Publish downloads `config.js` instead: put it in the `js` folder and deploy.
-
-**First time:** set the **Live website address** in Settings (your Vercel domain, e.g. `https://your-site.vercel.app/`) and Publish. Every link you make uses that address, so it opens on any phone.
-
-## Notes
-
-- **Design numbers never change**: links store the number. Old links that used a design name (`royal`, `neon`, …) still open the same design.
-- **Photos:** uploads are cropped and shrunk to about 2–10 KB so they fit inside the link. You can also paste a public image URL instead.
-- **Admin security:** the live admin files and `/api` are checked by `middleware.js` (Vercel) before anything is sent; without the password nothing loads. `server.mjs` and `Start Admin.cmd` are never uploaded. Turn off GitHub Pages for the repo, it would publish the admin without a password.
-- **Opening styles:** every design opens with one of 6 animations: ✉️ envelope, 🚪 palace doors, 🎭 curtain raise, 📜 royal scroll, 🎁 gift box, 💌 folding card. Change it per design in Catalog, or per invite in the editor.
-- **10 trending styles:** every design is one hand-designed style in its own colours: Royal Ivory, Palace Night, Bloom, Modern Minimal, Marigold, Mehendi, Pichwai Lotus, Filmy Retro, Neon Night or Toybox (js/themes.js `STYLES`). A style sets the fonts, decoration, opening and how every section looks; each design adds its own colour and one of its style's layouts. Elegant styles show a gold monogram medallion instead of an emoji. Each occasion rotates through the styles that suit it, never the same style twice in a row, and tests check no two designs of an occasion look alike.
-- **Premium page (every design):** after the opening, each card is a full invitation website. It has a sticky monogram bar with a menu, a hanging motif over the names (marigold toran, bunting, lanterns, temple bells, diyas or a flower garland), a countdown, and then chapters that each show only when filled: **Story** (a gold thread that draws itself as guests scroll), **Celebrations**, **Venue** (drawn as a palace on a lake, temple, garden, city or home, with glowing windows), **Families**, **Gallery** (tap a photo to open it full screen), **Dress code** with colour swatches, **Gifts** (UPI ID to copy, or open a UPI app), an **RSVP form** (name, attending, guests, meal, message, sent on WhatsApp), and a **Thank-you** finale with the hashtag. Fill them in the panel under *Premium sections*; *Sample text* shows an example of each. Customers can also add their story, families, dress code, UPI and hashtag in the website's order form under *Make it special*, and *Fill everything* brings it in.
-- **Signature:** every card ends with *"Designed with ♥ by Sankalp"* and every poster on the website says *by Sankalp*. To change the name, fill in **Designer name** in the admin Settings (empty = Sankalp).
-- **Posters** on the website use each design's own fonts, layout, background, frame and name finish.
-- **Order form rules:** names (both for couples), date and venue are required; past dates can't be picked; mobile numbers must be 10 digits (saved with 91). Nicknames are optional and show under the names on the card. Long names shrink to fit, so nothing is cut.
-- **Videos:** in *Get links*, **🎬 Download video** films the real card (about 22 s, 9:16, with music) and saves an MP4 for WhatsApp status or Instagram. Needs Chrome or Edge on a computer; Chrome asks once to share the tab.
-- **Phones:** the website and the admin have a bottom tab bar on phones.
-- **Link history** is stored in your browser. Use Download CSV for a backup.
-- **Adding an occasion:** add it to `PRESETS` and a recipe to `RECIPES` in `js/themes.js`.
-
-## Files
-
-```
-index.html / admin.html / card.html
-server.mjs      admin panel server on your PC: serves the folder, saves + publishes config.js
-middleware.js   password for the online admin (Vercel)
-api/            online publish (GitHub) + shared config check
-css/style.css   site + shared styles     css/admin.css  admin panel
-css/card.css    invitation animations
-js/config.js    site settings + catalog (written by Publish)
-js/themes.js    600 numbered designs + 20 occasion presets (the later ten occasions are #301-#600)
-js/catalog.js   designs merged with the catalog settings, posters, search (unit tested)
-js/codec.js     invite data <-> link
-js/core.js      shared pure helpers (unit tested)
-js/particles.js petals, marigolds, balloons, hearts, sparkles, confetti, fireworks (cached sprites)
-js/music.js     synthesized background music (no audio files)
-js/card.js      invitation viewer
-js/admin.js     admin panel
-js/site.js      sales website
-```
-
-## Tests
+## Run the tests
 
 ```
 npm test            # everything (about 9 minutes: every one of the 600 designs is opened in a browser)
@@ -93,7 +50,4 @@ npm run test:unit   # logic only, under 1 second, no browser needed
 npm run test:e2e    # drives the real pages in headless Chrome/Edge
 ```
 
-No packages to install: it uses Node's built-in test runner (Node 20+). The browser tests find Chrome or Edge automatically (set `CHROME_PATH` to override) and are skipped if neither is installed.
-
-- `tests/unit.test.js`: link encoding, URL safety, escaping, dates; all 600 designs complete, unique, readable (contrast) and stable; catalog settings, search, prices, config file; the server's config check.
-- `tests/e2e.test.mjs`: the sales site (numbers, search, filters, show more, order buttons), the envelope, countdown, personal links, RSVP, all 600 designs, old links, injection attempts, broken links, smoothness, the full admin flow (design number, editor, photo, links, history, catalog, settings, undo), the panel server's safety checks, and phone widths.
+No packages to install: Node 20+ is enough. The browser tests find Chrome or Edge automatically (set `CHROME_PATH` to override) and are skipped if neither is installed.

@@ -1,15 +1,11 @@
 // Vercel Routing Middleware: puts the admin panel and its API behind a login on the live site (HTTP Basic Auth).
-// The browser shows a login box. User name: ADMIN_USER in Vercel, otherwise ADMIN_USER_DEFAULT below.
-// Password: ADMIN_PASSWORD in Vercel, otherwise the one whose salted SHA-256 is ADMIN_HASH below.
-// Setting both in Vercel (Settings → Environment Variables) keeps them out of this public code.
-// The admin panel itself now asks for the Supabase login (js/db.js), so only the server-side /api (GitHub
-// publishing) still needs this password.
+// The login is read ONLY from the environment variables ADMIN_USER and ADMIN_PASSWORD. There is no built-in
+// default: if either is missing, every request is refused.
+// The admin panel itself asks for the Supabase login (js/db.js), so only the server-side /api needs this.
 // /api/maplink is public: guests' cards never call it, the admin panel does while typing a map link.
 export const config = { matcher: ['/api/((?!maplink).*)'] };
 
 const SALT = 'wedding-card-admin:';
-const ADMIN_USER_DEFAULT = 'card.com';
-const ADMIN_HASH = 'c5d3ec6e9f4df866229c6d78dafbb997f8ddb407b5b22c8e84614e8d1250e446';
 
 async function sha256(text) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -25,6 +21,9 @@ function same(a, b) {
 }
 
 export async function loginOk(header, env = {}) {
+  // No credentials configured: deny, never fall back to a default.
+  const expectedUserRaw = typeof env.user === 'string' ? env.user.trim() : '';
+  if (!expectedUserRaw || typeof env.password !== 'string' || !env.password) return false;
   const [scheme, value] = String(header || '').split(' ');
   if (scheme !== 'Basic' || !value) return false;
   let decoded;
@@ -32,8 +31,8 @@ export async function loginOk(header, env = {}) {
   const colon = decoded.indexOf(':');
   if (colon < 0) return false;
   const user = decoded.slice(0, colon).trim().toLowerCase(), password = decoded.slice(colon + 1);
-  const expectedUser = (env.user || ADMIN_USER_DEFAULT).trim().toLowerCase();
-  const expectedPass = env.password ? await sha256(SALT + env.password) : ADMIN_HASH;
+  const expectedUser = expectedUserRaw.toLowerCase();
+  const expectedPass = await sha256(SALT + env.password);
   // Both are always checked, so a wrong user name takes as long as a wrong password.
   const userOk = same(await sha256(SALT + user), await sha256(SALT + expectedUser));
   const passOk = same(await sha256(SALT + password), expectedPass);

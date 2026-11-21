@@ -206,17 +206,20 @@ test.describe('Publishing', () => {
     const mw = await import('../middleware.js');
     assert.deepEqual([...mw.config.matcher], ['/api/((?!maplink).*)']);
     const basic = s => 'Basic ' + Buffer.from(s).toString('base64');
-    // Built-in login (no Vercel variables): card.com / admin@90
-    assert.equal(await mw.loginOk(basic('card.com:admin@90')), true);
-    assert.equal(await mw.loginOk(basic(' Card.com :admin@90')), true, 'user name ignores case and spaces');
-    assert.equal(await mw.loginOk(basic('admin:admin@90')), false, 'wrong user name');
-    assert.equal(await mw.loginOk(basic('card.com:admin@91')), false, 'wrong password');
-    assert.equal(await mw.loginOk(basic('card.com:')), false, 'empty password');
-    // Vercel variables override both
-    const env = { user: 'boss', password: 's3cret pass' };
-    assert.equal(await mw.loginOk(basic('boss:s3cret pass'), env), true);
-    assert.equal(await mw.loginOk(basic('card.com:admin@90'), env), false, 'built-in login stops working once variables are set');
-    assert.equal(await mw.loginOk(basic('boss:wrong'), env), false);
+    // Dummy test values only, never a real login.
+    const env = { user: 'test-user', password: 'test-pass 123' };
+    assert.equal(await mw.loginOk(basic('test-user:test-pass 123'), env), true);
+    assert.equal(await mw.loginOk(basic(' Test-User :test-pass 123'), env), true, 'user name ignores case and spaces');
+    assert.equal(await mw.loginOk(basic('other:test-pass 123'), env), false, 'wrong user name');
+    assert.equal(await mw.loginOk(basic('test-user:test-pass 124'), env), false, 'wrong password');
+    assert.equal(await mw.loginOk(basic('test-user:'), env), false, 'empty password');
+    // No Vercel variables: nobody gets in, there is no built-in default login
+    for (const missing of [{}, { user: 'test-user' }, { password: 'test-pass 123' }, { user: '  ', password: 'x' }, { user: 'test-user', password: '' }]) {
+      assert.equal(await mw.loginOk(basic('test-user:test-pass 123'), missing), false, JSON.stringify(missing));
+    }
+    assert.equal(await mw.loginOk(basic(':')), false, 'empty login with no variables');
+    const src = fs.readFileSync(path.join(ROOT, 'middleware.js'), 'utf8');
+    assert.doesNotMatch(src, /DEFAULT|[0-9a-f]{64}/, 'no default user name or password hash in the code');
     for (const h of [null, '', 'Bearer x', 'Basic', 'Basic %%%', basic('no-colon')]) assert.equal(await mw.loginOk(h, env), false, String(h));
     const res = await mw.default({ headers: new Headers() });
     assert.equal(res.status, 401);

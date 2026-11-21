@@ -2495,7 +2495,7 @@
     $('#publishHelp').innerHTML = server
       ? '✅ <b>Auto-save is on.</b> Every change here is saved to the website by itself and is live in about a minute. You only need this button to retry.'
       : status.online
-        ? 'Auto-save to the website needs <b>GITHUB_TOKEN</b> in Vercel (see README). Until then, changes stay on this device and this button downloads <b>config.js</b>.'
+        ? 'Auto-save to the website needs <b>GITHUB_TOKEN</b> in Vercel. Until then, changes stay on this device and this button downloads <b>config.js</b>.'
         : 'Open the panel with <b>Start Admin.cmd</b> and every change saves to the website by itself. Opened as a file, this button downloads <b>config.js</b> instead.';
     offlineHelp = status.online
       ? '📝 Saved on this device only. To save to the website automatically, add GITHUB_TOKEN in Vercel (see Settings).'

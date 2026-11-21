@@ -4,3 +4,6 @@ Thumbs.db
 *.log
 .vscode/
 .idea/
+
+# Private admin setup guide (stays on this PC only)
+ADMIN-SETUP.md
