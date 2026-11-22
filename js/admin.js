@@ -2741,11 +2741,34 @@
     $('#forgotBtn').textContent = mode === 'login' ? 'Forgot password?' : '← Back to login';
     $('#loginMsg').textContent = msg;
     $('#loginMsg').classList.remove('ok');
+    hidePasswords();
     (mode === 'set' ? f.password : f.email).focus();
   }
   const friendly = m => /invalid login|invalid_grant|invalid credentials/i.test(m) ? 'Wrong email or password.'
     : /rate|too many|security purposes/i.test(m) ? 'Too many tries. Please wait a minute and try again.'
       : /fetch|network|abort/i.test(m) ? 'No internet connection. Please try again.' : m;
+
+  // The eye beside a password box shows or hides what was typed
+  function setEye(btn, show) {
+    const input = btn.parentElement.querySelector('input'), svg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+    input.type = show ? 'text' : 'password';
+    btn.setAttribute('aria-pressed', String(show));
+    btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    btn.innerHTML = show
+      ? svg('<path d="M10.6 5.1A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-2.9 3.9M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M3 3l18 18"/>')
+      : svg('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>');
+  }
+  function hidePasswords() { document.querySelectorAll('#loginForm .pw-eye').forEach(b => setEye(b, false)); }
+  document.querySelectorAll('#loginForm .pw-eye').forEach(btn => {
+    setEye(btn, false);
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      const input = btn.parentElement.querySelector('input'), at = input.selectionStart;
+      setEye(btn, input.type === 'password');
+      input.focus();
+      try { input.setSelectionRange(at, at); } catch (err) { /* some inputs refuse a caret position */ }
+    });
+  });
 
   $('#forgotBtn').addEventListener('click', () => showLogin(loginMode === 'login' ? 'forgot' : 'login'));
   $('#loginForm').addEventListener('submit', async e => {

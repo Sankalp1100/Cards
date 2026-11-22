@@ -696,8 +696,8 @@
       <h1 id="loginTitle">Admin login</h1>
       <p class="muted" id="loginNote">Log in with your admin email and password.</p>
       <label id="emailRow">Email <input name="email" type="email" autocomplete="username" inputmode="email"></label>
-      <label id="pwRow">Password <input name="password" type="password" autocomplete="current-password"></label>
-      <label id="pw2Row" hidden>Repeat the password <input name="password2" type="password" autocomplete="new-password"></label>
+      <label id="pwRow">Password <span class="pw-wrap"><input name="password" type="password" autocomplete="current-password"><button type="button" class="pw-eye" aria-label="Show password" aria-pressed="false"></button></span></label>
+      <label id="pw2Row" hidden>Repeat the password <span class="pw-wrap"><input name="password2" type="password" autocomplete="new-password"><button type="button" class="pw-eye" aria-label="Show password" aria-pressed="false"></button></span></label>
       <button type="submit" class="btn-glow" id="loginBtn">Log in</button>
       <button type="button" class="link-btn" id="forgotBtn">Forgot password?</button>
       <p class="login-msg" id="loginMsg" role="alert"></p>

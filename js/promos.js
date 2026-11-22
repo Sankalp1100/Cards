@@ -21,6 +21,93 @@ const SY = {
 };
 
 const PROMOS = {
+  // Aanya ❤ Shivam Gupta, from their printed card and envelope (New Kondli, Delhi → Ghaziabad): a big, lively film
+  // with the dhol. Temple gates open on Ganesh ji, then the bride, the groom, each function in its own colours,
+  // the venue, the children's request and the family, ending on the QR code and the signature.
+  'aanya-shivam': {
+    title: 'आन्या ❤ शिवम · शुभ विवाह',
+    card: { type: 'wedding', host1: 'Aanya', host2: 'Shivam' },
+    music: 'baraat',
+    opening: 'gates', ganeshaId: 'ganesha-06',
+    script: [
+      { name: 'श्री गणेश', look: 'temple-royalnight', d: 5.5, doors: true, shower: true, ganesha: { y: 600, s: 700 }, zone: [250, 540, 880], items: [
+        { t: 'text', s: '॥ श्री गणेशाय नमः ॥', f: 'deva', z: 80, col: 'names', gold: true, gap: 18 },
+        { t: 'text', s: 'वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ।', f: 'hser', z: 40, col: 'ink', wrap: 2, gap: 6 },
+        { t: 'text', s: 'निर्विघ्नं कुरु मे देव सर्वकार्येषु सर्वदा॥', f: 'hser', z: 40, col: 'ink', wrap: 2 }
+      ] },
+      { name: 'शुभ विवाह', look: 'jharokha-champagne', change: 'sparkle', enter: 'zoom', d: 5, couple: { y: 1850, s: 640 }, coupleEntry: pic('wedding-11'), zone: [300, 1080, 760], items: [
+        { t: 'mono', z: 220, gap: 22 },
+        { t: 'text', s: 'शुभ विवाह', f: 'hname', z: 124, col: 'names', gap: 8 },
+        { t: 'text', s: 'आन्या', f: 'hname', z: 88, col: 'accent', gap: 0 },
+        { t: 'text', s: 'संग', f: 'hser', z: 42, col: 'ink2', gap: 0 },
+        { t: 'text', s: 'शिवम', f: 'hname', z: 88, col: 'accent', gap: 10 },
+        { t: 'text', s: 'बुधवार, 2 दिसम्बर 2026', f: 'deva', z: 50, col: 'ink' }
+      ] },
+      { name: 'वधु', look: 'rosegarden-roseblush', board: 'arch', change: 'bloom', enter: 'rise', d: 6, zone: [330, 1560, 600], items: [
+        { t: 'text', s: '॥ मान्यवर ॥', f: 'deva', z: 40, col: 'accent', gap: 16 },
+        { t: 'text', s: 'परमपिता परमात्मा की असीम अनुकम्पा से', f: 'hser', z: 40, col: 'ink2', wrap: 2, gap: 16 },
+        { t: 'text', s: 'श्रीमती लाडली गुप्ता एवं', f: 'hser', z: 50, col: 'ink', gap: 2 },
+        { t: 'text', s: 'श्री चन्द्र शेखर गुप्ता', f: 'hser', z: 54, col: 'ink', gap: 14 },
+        { t: 'text', s: 'अपनी सुपुत्री', f: 'hser', z: 42, col: 'ink2', gap: 6 },
+        { t: 'text', s: 'आयु॰ आन्या गुप्ता', f: 'hname', z: 118, col: 'names', gap: 10 },
+        { t: 'text', s: '(सुपौत्री स्व॰ श्रीमती शांति देवी एवं स्व॰ श्री रामनाथ गुप्ता)', f: 'hser', z: 34, col: 'ink2', wrap: 3, gap: 6 },
+        { t: 'text', s: 'निवासी: न्यू कोण्डली, दिल्ली-96', f: 'hser', z: 36, col: 'accent' }
+      ] },
+      { name: 'वर', look: 'palace-golden', board: 'carved', change: 'shutter', enter: 'unfold', d: 6, zone: [360, 1520, 780], items: [
+        { t: 'div', word: 'संग', z: 54, gap: 16, hi: true },
+        { t: 'text', s: 'चि॰ शिवम गुप्ता', f: 'hname', z: 124, col: 'names', gap: 10 },
+        { t: 'text', s: '(सुपौत्र श्रीमती गौरा देवी एवं श्री राधे श्याम गुप्ता)', f: 'hser', z: 34, col: 'ink2', wrap: 3, gap: 4 },
+        { t: 'text', s: '(सुपुत्र श्रीमती माधुरी गुप्ता एवं श्री महेश गुप्ता)', f: 'hser', z: 34, col: 'ink2', wrap: 3, gap: 6 },
+        { t: 'text', s: 'निवासी: गाजियाबाद (उ॰प्र॰)', f: 'hser', z: 36, col: 'accent', gap: 22 },
+        { t: 'text', s: 'के शुभ विवाहोत्सव', f: 'hname', z: 78, col: 'accent', gap: 10 },
+        { t: 'text', s: 'की इस मधुर बेला पर आपको सादर आमंत्रित करते हैं। कृपया समयानुसार पधारकर वर-कन्या को अपना शुभ-आशीर्वाद प्रदान कर हमें अनुगृहित करें।', f: 'hser', z: 34, col: 'ink', wrap: 4 }
+      ] },
+      { name: 'बारात स्वागत', look: 'haveli-pink', board: 'cartouche', change: 'shutter', enter: 'swing', d: 4.5, couple: { y: 1860, s: 540 }, coupleEntry: pic('wedding-07'), zone: [260, 1250, 680], items: [
+        { t: 'text', s: 'बुधवार, 2 दिसम्बर 2026', f: 'deva', z: 46, col: 'accent', gap: 8 },
+        { t: 'text', s: 'बारात स्वागत', f: 'hname', z: 128, col: 'names', gap: 8 },
+        { t: 'text', s: 'सायं 7:00 बजे', f: 'hser', z: 52, col: 'ink' }
+      ] },
+      { name: 'प्रीतिभोज', look: 'palace-plum', board: 'carved', hang: true, change: 'sparkle', enter: 'zoom', d: 4.5, couple: { y: 1860, s: 560 }, coupleEntry: pic('reception-02'), zone: [260, 1220, 740], items: [
+        { t: 'text', s: 'बुधवार, 2 दिसम्बर 2026', f: 'deva', z: 46, col: 'accent', gap: 8 },
+        { t: 'text', s: 'प्रीतिभोज', f: 'hname', z: 132, col: 'names', gap: 8 },
+        { t: 'text', s: 'सायं 8:00 बजे', f: 'hser', z: 52, col: 'ink' }
+      ] },
+      { name: 'विदाई', look: 'lotusnight-golden', board: 'arch', change: 'petals', enter: 'rise', d: 4.5, couple: { y: 1860, s: 520 }, coupleEntry: pic('wedding-09'), zone: [300, 1250, 700], items: [
+        { t: 'text', s: 'गुरुवार, 3 दिसम्बर 2026', f: 'deva', z: 46, col: 'accent', gap: 8 },
+        { t: 'text', s: 'विदाई', f: 'hname', z: 140, col: 'names', gap: 8 },
+        { t: 'text', s: 'तारों की छाँव में', f: 'hser', z: 52, col: 'ink' }
+      ] },
+      { name: 'विवाह स्थल', look: 'marigold-royal', board: 'carved', change: 'bloom', enter: 'unfold', d: 5, zone: [330, 1400, 780], items: [
+        { t: 'text', s: 'विवाह स्थल', f: 'deva', z: 50, col: 'accent', gap: 12 },
+        { t: 'text', s: 'आशीर्वाद बैंक्वेट हॉल', f: 'hname', z: 90, col: 'names', wrap: 2, gap: 12 },
+        { t: 'text', s: 'बेहरामपुर, ग्रीन होटल के पास', f: 'hser', z: 42, col: 'ink', gap: 4 },
+        { t: 'text', s: 'मोका, नवा रेजिडेंसी, गाजियाबाद', f: 'hser', z: 42, col: 'ink' }
+      ] },
+      { name: 'बाल आग्रह', look: 'clouds-sakura', board: 'cartouche', hang: true, change: 'bloom', enter: 'swing', d: 5, couple: { y: 1860, s: 500 }, coupleEntry: pic('kid-01'), zone: [300, 1250, 800], items: [
+        { t: 'text', s: 'बाल आग्रह', f: 'deva', z: 50, col: 'accent', gap: 14 },
+        { t: 'text', s: 'नन्हे नन्हे पाँव हमारे,', f: 'hname', z: 70, col: 'names', gap: 2 },
+        { t: 'text', s: 'कैसे आयें बुलाने को…', f: 'hname', z: 70, col: 'names', gap: 14 },
+        { t: 'text', s: 'मेरी दीदी / मौसी की शादी में भूल ना जाना आने को……', f: 'hser', z: 40, col: 'ink', wrap: 2, gap: 12 },
+        { t: 'text', s: '— आरुश, दैविक, अभय, आर्यन, उत्कर्ष, विदित, सातवीक', f: 'hser', z: 34, col: 'ink2', wrap: 2 }
+      ] },
+      { name: 'परिवार', look: 'jharokha-rose', board: 'arch', change: 'sparkle', enter: 'unfold', d: 6, zone: [270, 1300, 640], items: [
+        { t: 'text', s: 'विनीत', f: 'deva', z: 44, col: 'accent', gap: 4 },
+        { t: 'text', s: 'श्री त्रिलोक चन्द गुप्ता · श्री संजीव गुप्ता एवं समस्त गुप्ता परिवार', f: 'hser', z: 36, col: 'ink', wrap: 3, gap: 14 },
+        { t: 'text', s: 'दर्शनाभिलाषी', f: 'deva', z: 44, col: 'accent', gap: 4 },
+        { t: 'text', s: 'समस्त समन्धी एवं मित्रगण', f: 'hser', z: 36, col: 'ink', gap: 18 },
+        { t: 'text', s: 'प्रेषक: श्री चन्द्र शेखर गुप्ता', f: 'hname', z: 56, col: 'names', gap: 4 },
+        { t: 'text', s: 'सी-4/21, न्यू कोण्डली, नियर बोबी ढाबा, दिल्ली-110096', f: 'hser', z: 32, col: 'ink2', wrap: 2, gap: 6 },
+        { t: 'text', s: '8448168859 · 9953702838 · 9318331155', f: 'serif', z: 32, col: 'ink' }
+      ] },
+      { name: 'आपकी प्रतीक्षा', look: 'mandap-golden', board: 'carved', change: 'shutter', enter: 'zoom', d: 5, sigCorner: true, zone: [330, 1400, 760], items: [
+        { t: 'text', s: 'आपकी प्रतीक्षा में', f: 'hname', z: 104, col: 'names', gap: 4 },
+        { t: 'text', s: 'गुप्ता परिवार', f: 'deva', z: 52, col: 'accent', gap: 36 },
+        { t: 'qr', rows: SITE_QR, z: 260, gap: 34 },
+        { t: 'text', s: 'Your invitation, made like this', f: 'italic', z: 36, col: 'ink2', gap: 6 },
+        { t: 'text', s: 'cardalbum.vercel.app', f: 'serif', z: 44, col: 'names' }
+      ] }
+    ]
+  },
   'sudhanshu-yadu': {
     title: 'सुधांशु ❤ यदु · शुभ विवाह',
     card: { type: 'wedding', host1: 'Sudhanshu', host2: 'Yadu' },

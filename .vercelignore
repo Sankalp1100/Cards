@@ -10,3 +10,4 @@ README.md
 img/scenes/PROMPTS.md
 # Database script, run once in Supabase (not part of the website)
 supabase/
+img/scenes/3D-FILM-PROMPTS.md
